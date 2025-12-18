@@ -1,93 +1,85 @@
-import time
+import allure
 import pytest
-from web_pages.cchq_login_web_page import *
-from web_pages.cchq_home_web_page import *
 from web_pages.connect_home_web_page import *
+from web_pages.cchq_login_web_page import LoginPage
 from web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 
 
 @pytest.mark.web
-def test_create_opportunity_in_connect(web_driver, config):
-    valid_login_cchq_and_signin_connect(web_driver, config)
-    create_opportunity_in_connect_page(web_driver, config)
-    time.sleep(10)
+def test_olp1_create_opportunity_in_connect(web_driver, test_data, config):
+    data = test_data.get("OLP_1")
+    cchq_login_page = LoginPage(web_driver)
+
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq_and_signin_connect(web_driver, config)
+
+    with allure.step("Add Opportunity in Connect Page"):
+        create_opportunity_in_connect_page(web_driver, data)
+
 
 @pytest.mark.web
-def test_payment_unit_in_opportunity_connect(web_driver, config):
-    valid_login_cchq_and_signin_connect(web_driver, config)
-    create_opportunity_in_connect_page(web_driver, config)
-    time.sleep(3)
-    create_payment_unit_in_connect_page(web_driver, config)
+def test_olp2_payment_unit_in_opportunity_connect(web_driver, test_data, config):
+    olp1_data = test_data.get("OLP_1")
+    olp2_data = test_data.get("OLP_2")
+    cchq_login_page = LoginPage(web_driver)
+
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq_and_signin_connect(web_driver, config)
+
+    with allure.step("Add Opportunity in Connect Page with required fields"):
+        create_opportunity_in_connect_page(web_driver, olp1_data)
+
+    with allure.step("Add Payment Unit in Connect Page"):
+        create_payment_unit_in_connect_page(web_driver, olp2_data)
+
     time.sleep(10)
 
-def valid_login_cchq_and_signin_connect(web_driver, config):
-    lp = LoginPage(web_driver)
-    cchq_url = config.get("cchq_url")
-    web_driver.get(cchq_url)
-    lp.verify_login_page_title("Welcome")
-    lp.enter_username_and_password(
-        config.get("hq_username"),
-        config.get("hq_password")
-    )
-    time.sleep(3)
-    hp = HomePage(web_driver)
-    hp.verify_home_page_title("Welcome")
-    navigate_to_connect_page(web_driver, config)
-    signin_to_connect_page_using_cchq(web_driver, config)
-    time.sleep(3)
-
-def navigate_to_connect_page(web_driver, config):
-    connect_url = config.get("connect_url")
-    bp = BaseWebPage(web_driver)
-    bp.open_url_in_new_tab(connect_url)
-    assert connect_url in web_driver.current_url
-
-def signin_to_connect_page_using_cchq(web_driver, config):
-    chp = ConnectHomePage(web_driver)
-    chp.click_signin_link()
-    time.sleep(3)
-    chp.click_login_with_cchq()
-
-def create_opportunity_in_connect_page(web_driver, config):
+def create_opportunity_in_connect_page(web_driver, data):
     cop = ConnectOpportunitiesPage(web_driver)
     cop.click_add_opportunity_btn()
     time.sleep(1)
-    cop.enter_name_in_opportunity("Demo Opportunity")
-    cop.enter_currency_in_opportunity("INR")
-    cop.enter_short_description_in_opportunity("This is a Demo Opportunity")
-    cop.select_hq_server_in_opportunity("CommCareHQ (https://www.commcarehq.org)")
-    cop.enter_description_in_opportunity("Demo Opportunity")
-    cop.select_api_key_in_opportunity("fccc...0784")
-    cop.select_learn_app_domain_in_opportunity("connetqa-prod")
-    cop.select_deliver_app_domain_in_opportunity("connetqa-prod")
-    cop.select_learn_app_in_opportunity("Learn App")
-    cop.select_deliver_app_in_opportunity("Delivey App [Job 1]")
-    cop.enter_learn_app_description_in_opportunity("This is Learn App")
-    cop.enter_passing_score_in_opportunity("40")
+    cop.enter_name_in_opportunity(data["opportunity_name"])
+    cop.enter_currency_in_opportunity(data["currency"])
+    cop.enter_short_description_in_opportunity(data["short_description"])
+    cop.select_hq_server_in_opportunity(data["hq_server"])
+    cop.enter_description_in_opportunity(data["description"])
+    cop.select_api_key_in_opportunity(data["api_key"])
+    cop.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
+    cop.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+    cop.select_learn_app_in_opportunity(data["learn_app"])
+    cop.select_deliver_app_in_opportunity(data["deliver_app"])
+    cop.enter_learn_app_description_in_opportunity(data["learn_app_description"])
+    cop.enter_passing_score_in_opportunity(data["passing_score"])
     cop.click_submit_btn()
+    time.sleep(3)
 
-def create_payment_unit_in_connect_page(web_driver, config):
+def create_payment_unit_in_connect_page(web_driver, data):
     cop = ConnectOpportunitiesPage(web_driver)
     cop.click_add_payment_unit_button()
-    cop.enter_name_in_opportunity("Payment Unit 1")
-    cop.enter_amount_in_payment_unit_of_opportunity("100")
-    cop.enter_description_in_opportunity("Payment Unit 1")
-    cop.enter_max_total_in_payment_unit_of_opportunity("1000")
-    cop.enter_max_daily_in_payment_unit_of_opportunity("10")
+    cop.enter_name_in_opportunity(data["payment_unit_name"])
+    cop.enter_amount_in_payment_unit_of_opportunity(data["amount"])
+    cop.enter_description_in_opportunity(data["description"])
+    cop.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
+    cop.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
     time.sleep(3)
-    cop.enter_start_date_in_payment_unit_of_opportunity("01/01/2026")
+    cop.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
     time.sleep(3)
-    cop.enter_end_date_in_payment_unit_of_opportunity("01/01/2027")
+    cop.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
     time.sleep(3)
-    cop.select_required_deliver_units_checkbox("Optional Delivery")
+    cop.select_required_deliver_units_checkbox(data["required_deliver_units"])
     time.sleep(3)
     cop.click_submit_btn()
 
 @pytest.mark.web
-def test_invite_worker_to_opportunity_connect(web_driver, config):
-    valid_login_cchq_and_signin_connect(web_driver, config)
-    invite_workers_to_opportunity(web_driver, "Demo Opportunity", ["+919999999999", "+918888888888", "+917777777777"])
+def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
+    cchq_login_page = LoginPage(web_driver)
+
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq_and_signin_connect(web_driver, config)
+
+    with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
+        invite_workers_to_opportunity(web_driver, "Demo Opportunity", ["+919999999999", "+918888888888", "+917777777777"])
 
 def invite_workers_to_opportunity(web_driver, opp, num_list):
     cop = ConnectOpportunitiesPage(web_driver)

@@ -1,0 +1,28 @@
+OLP_1:
+  opportunity_name: "Demo Opportunity"
+  currency: "INR"
+  short_description: "This is a demo opportunity"
+  hq_server: "CommCareHQ (https://www.commcarehq.org)"
+  description: "Demo Opportunity"
+  api_key: "fccc...0784"
+  learn_app_domain: "connetqa-prod"
+  deliver_app_domain: "connetqa-prod"
+  learn_app: "Learn App"
+  deliver_app: "Delivey App [Job 1]"
+  learn_app_description: "This is Learn App"
+  passing_score: "40"
+
+OLP_2:
+  payment_unit_name: "Payment Unit 1"
+  amount: "100"
+  description: "Payment Unit 1"
+  max_total: "1000"
+  max_daily: "10"
+  start_date: "01-01-2026"
+  end_date: "01-01-2027"
+  required_deliver_units: "Delivery"
+
+OLP_3:
+  start_date: "01-01-2026"
+  end_date: "01-01-2027"
+  no_of_connect_workers: "10"
