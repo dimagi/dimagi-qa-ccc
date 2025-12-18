@@ -42,7 +42,7 @@ def web_driver(request, config):
     if "web" not in request.keywords:
         return None
 
-    driver = create_web_driver(config)
+    driver = create_web_driver()
     yield driver
     driver.quit()
 
