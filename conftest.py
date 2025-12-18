@@ -1,0 +1,77 @@
+import allure
+import pytest
+from allure_commons.types import AttachmentType
+
+from utils.helpers import ConfigLoader
+from drivers.appium_driver import create_mobile_driver
+from drivers.web_driver import create_web_driver
+from utils.reporting import attach_mobile_screenshot, attach_web_screenshot
+from utils.helpers import TestDataLoader
+
+
+# Load environment (prod/stage)
+def pytest_addoption(parser):
+    parser.addoption(
+        "--env",
+        action="store",
+        default=None,
+        help="Environment to run tests against: prod or stage"
+    )
+
+@pytest.fixture(scope="session")
+def config(request):
+    env = request.config.getoption("--env")
+    return ConfigLoader(env)
+
+# MOBILE DRIVER FIXTURE (only created if test needs it)
+@pytest.fixture
+def mobile_driver(request, config):
+    # only create the driver if the test asks for it
+    if "mobile" not in request.keywords:
+        return None
+
+    driver = create_mobile_driver(config)
+    yield driver
+    driver.terminate_app("org.commcare.dalvik")
+    driver.quit()
+
+
+# WEB DRIVER FIXTURE (only created if test needs it)
+@pytest.fixture
+def web_driver(request, config):
+    if "web" not in request.keywords:
+        return None
+
+    driver = create_web_driver(config)
+    yield driver
+    driver.quit()
+
+
+# Attach screenshots on failure (mobile & web)
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item):
+    outcome = yield
+    result = outcome.get_result()
+
+    if result.when == "call" and result.failed:
+        # Attach failure reason
+        allure.attach(
+            str(result.longrepr),
+            name="Failure Reason",
+            attachment_type=AttachmentType.TEXT
+        )
+
+        # Attach screenshots
+        mobile = item.funcargs.get("mobile_driver")
+        web = item.funcargs.get("web_driver")
+
+        if mobile:
+            attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
+
+        if web:
+            attach_web_screenshot(web, "Web Failure Screenshot")
+
+
+@pytest.fixture(scope="session")
+def test_data():
+    return TestDataLoader()

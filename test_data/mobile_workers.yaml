@@ -1,0 +1,23 @@
+PID_4:
+  country_code: "+7426"
+  phone_number: "7426000"
+  username: "Deb Test 8/12"
+  backup_code: "742600"
+
+PID_5:
+  country_code: "+7426"
+  phone_number: "7426000"
+  username: "Deb Test 8/12"
+  backup_code: "742600"
+
+PID_6_1:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"
+
+PID_6_2:
+  country_code: "+7426"
+  phone_number: "7426005"
+  username: "Deb Test 161202"
+  backup_code: "742605"

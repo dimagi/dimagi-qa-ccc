@@ -1,0 +1,32 @@
+home_page:
+  navigation_drawer_btn: "//android.view.ViewGroup[@resource-id='org.commcare.dalvik:id/action_bar']/android.widget.ImageButton"
+  nav_drawer_signin_btn: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+  header_username: "org.commcare.dalvik:id/header_user_name"
+  about_commcare_txt: "//android.widget.TextView[@text='About CommCare']"
+  more_option_btn: "//androidx.appcompat.widget.LinearLayoutCompat/android.widget.ImageView"
+  forget_personalid_user_btn: "//android.widget.TextView[@text='Forget PersonalID user']"
+
+  opportunities_btn: "//android.widget.TextView[@text='Opportunities']/parent::android.widget.LinearLayout"
+  commcare_app_btn: "//android.widget.TextView[@text='CommCare Apps']/parent::android.widget.LinearLayout"
+  messaging_btn: "//android.widget.TextView[@text='Messaging']/parent::android.widget.LinearLayout"
+  work_history_btn: "//android.widget.TextView[@text='Work History']/parent::android.widget.LinearLayout"
+  notifications_btn: "//android.widget.TextView[@text='Notifications']/parent::android.widget.LinearLayout"
+  about_commcare_btn: "//android.widget.TextView[@text='About CommCare']/parent::android.widget.LinearLayout"
+
+login_page:
+  phone_input: "org.commcare.dalvik:id/connect_primary_phone_input"
+  country_code: "org.commcare.dalvik:id/countryCode"
+  terms_checkbox: "org.commcare.dalvik:id/connect_consent_check"
+  continue_btn: "//android.widget.Button[@text='CONTINUE']" # generic
+
+  use_fingerprint_txt: "org.commcare.dalvik:id/connect_verify_title"
+  configure_fingerprint_btn: "org.commcare.dalvik:id/connect_verify_fingerprint_button"
+  demo_user_confirm: "org.commcare.dalvik:id/snackbar_text"
+  ok_btn: "//android.widget.Button[@text='OK']" # generic
+
+  name_input: "org.commcare.dalvik:id/nameTextValue"
+  backup_code_welcome_text: "org.commcare.dalvik:id/welcome_back"
+  backup_code_input: "org.commcare.dalvik:id/connect_backup_code_input"
+  popup_msg_txt: "org.commcare.dalvik:id/connect_message_message" # generic
+
+

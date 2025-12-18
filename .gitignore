@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Pytest
+.pytest_cache/
+
+# Allure reports
+allure-results/
+allure-report/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# idea file
+.idea
