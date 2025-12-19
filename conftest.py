@@ -17,20 +17,32 @@ def pytest_addoption(parser):
         default=None,
         help="Environment to run tests against: prod or stage"
     )
+    parser.addoption(
+        "--run_on",
+        action="store",
+        default="local",
+        help="Execution target: local or browserstack")
+
 
 @pytest.fixture(scope="session")
 def config(request):
     env = request.config.getoption("--env")
     return ConfigLoader(env)
 
+
+@pytest.fixture(scope="session")
+def run_on(request):
+    return request.config.getoption("--run_on")
+
+
 # MOBILE DRIVER FIXTURE (only created if test needs it)
 @pytest.fixture
-def mobile_driver(request, config):
+def mobile_driver(request, config, run_on):
     # only create the driver if the test asks for it
     if "mobile" not in request.keywords:
         return None
 
-    driver = create_mobile_driver(config)
+    driver = create_mobile_driver(config, run_on)
     yield driver
     driver.terminate_app("org.commcare.dalvik")
     driver.quit()

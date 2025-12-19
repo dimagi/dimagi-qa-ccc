@@ -4,6 +4,10 @@ import time
 def simulate_fingerprint(finger_id=1):
     subprocess.run(["adb", "emu", "finger", "touch", str(finger_id)])
 
+def open_notification():
+    subprocess.run(["adb", "shell", "cmd", "statusbar", "expand-notifications"])
+
+
 def background_app(driver, seconds=3):
     driver.background_app(seconds)
 

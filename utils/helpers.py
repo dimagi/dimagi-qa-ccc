@@ -19,8 +19,8 @@ class ConfigLoader:
     def get(self, key):
         return self.config.get(key)
 
-    def caps(self):
-        return self.android_caps
+    def caps(self, run_on):
+        return self.android_caps[run_on]
 
 
 class LocatorLoader:

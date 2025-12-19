@@ -34,3 +34,6 @@ class BasePage:
             return True
         except:
             return False
+
+    def get_elements(self, locator, timeout=10):
+        return self.wait.until(EC.presence_of_all_elements_located(locator))

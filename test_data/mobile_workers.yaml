@@ -21,3 +21,27 @@ PID_6_2:
   phone_number: "7426005"
   username: "Deb Test 161202"
   backup_code: "742605"
+
+CONNECT_1:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"
+
+CONNECT_2:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"
+
+CONNECT_3:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"
+
+CONNECT_5:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"

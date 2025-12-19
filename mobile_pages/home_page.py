@@ -1,3 +1,5 @@
+import time
+
 from mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -11,7 +13,9 @@ class HomePage(BasePage):
     HEADER_USERNAME = locators.get("home_page", "header_username")
     ABOUT_COMMCARE_TXT = locators.get("home_page", "about_commcare_txt")
     MORE_OPTION = locators.get("home_page", "more_option_btn")
-    FORGET_PERSONALID = locators.get("home_page", "forget_personalid_user_btn")
+    FORGET_PERSONAL_ID = locators.get("home_page", "forget_personalid_user_btn")
+    REFRESH_OPPORTUNITIES = locators.get("home_page", "refresh_opportunities_btn")
+    GOTO_CONNECT = locators.get("home_page", "go_to_connect_btn")
 
     OPPORTUNITIES_BTN = locators.get("side_menu", "opportunities_btn")
     COMMCARE_APP_BTN = locators.get("side_menu", "commcare_app_btn")
@@ -36,8 +40,8 @@ class HomePage(BasePage):
         self.wait_for_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NAVIGATION_DRAWER)
         self.click_element(self.MORE_OPTION)
-        self.wait_for_element(self.FORGET_PERSONALID)
-        self.click_element(self.FORGET_PERSONALID)
+        self.wait_for_element(self.FORGET_PERSONAL_ID)
+        self.click_element(self.FORGET_PERSONAL_ID)
 
         self.wait_for_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NAVIGATION_DRAWER)
@@ -57,5 +61,22 @@ class HomePage(BasePage):
             assert self.is_displayed(item), f"Side menu option not visible: {item}"
 
     def verify_refresh_opportunity(self):
-        pass
+        self.wait_for_element(self.NAVIGATION_DRAWER)
+        self.click_element(self.NAVIGATION_DRAWER)
+        self.click_element(self.MORE_OPTION)
+
+        self.wait_for_element(self.REFRESH_OPPORTUNITIES)
+        assert (self.is_displayed(self.REFRESH_OPPORTUNITIES))
+        self.click_element(self.REFRESH_OPPORTUNITIES)
+
+
+    def verify_go_to_connect(self):
+        assert (self.is_displayed(self.GOTO_CONNECT))
+
+    def nav_to_opportunities(self):
+            if not self.is_displayed(self.OPPORTUNITIES_BTN):
+                self.click_element(self.NAVIGATION_DRAWER)
+            self.click_element(self.OPPORTUNITIES_BTN)
+            time.sleep(2)
+
 

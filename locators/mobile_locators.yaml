@@ -5,6 +5,8 @@ home_page:
   about_commcare_txt: "//android.widget.TextView[@text='About CommCare']"
   more_option_btn: "//androidx.appcompat.widget.LinearLayoutCompat/android.widget.ImageView"
   forget_personalid_user_btn: "//android.widget.TextView[@text='Forget PersonalID user']"
+  refresh_opportunities_btn: "//android.widget.TextView[@text='Refresh Opportunities]"
+  go_to_connect_btn: ""
 
   opportunities_btn: "//android.widget.TextView[@text='Opportunities']/parent::android.widget.LinearLayout"
   commcare_app_btn: "//android.widget.TextView[@text='CommCare Apps']/parent::android.widget.LinearLayout"
@@ -30,3 +32,30 @@ login_page:
   popup_msg_txt: "org.commcare.dalvik:id/connect_message_message" # generic
 
 
+notifications:
+  invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
+  invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
+
+opportunity_page:
+  opp_list_card: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/rootCardView']"
+  opp_list_title: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"
+  opp_list_date: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
+  opp_list_type: ".//android.widget.TextView[contains(@text,'Opportunity')]"
+
+  job_title_txt: "org.commcare.dalvik:id/tv_job_title"
+  job_description_txt: "org.commcare.dalvik:id/tv_job_description"
+  view_more_btn: "org.commcare.dalvik:id/tv_view_more"
+  job_end_date_txt: "org.commcare.dalvik:id/connect_job_end_date"
+
+  learn_details_txt: "//android.widget.TextView[@text='Learn Details']"
+  learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
+  intro_learn_module_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
+  intro_learn_summary_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
+  goto_learn_app_btn: "org.commcare.dalvik:id/connect_job_intro_start_button"
+
+  close_delivery_details_btn: "org.commcare.dalvik:id/imgCloseDialog"
+  delivery_details_review_txt: "org.commcare.dalvik:id/connect_review"
+  total_visit_txt: "org.commcare.dalvik:id/connect_delivery_total_visits_text"
+  delivery_days_txt: "org.commcare.dalvik:id/connect_delivery_days_text"
+  delivery_max_daily_txt: "org.commcare.dalvik:id/connect_delivery_max_daily_text"
+  delivery_budget_txt: "org.commcare.dalvik:id/connect_delivery_budget_text"

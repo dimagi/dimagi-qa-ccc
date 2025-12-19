@@ -1,12 +1,27 @@
 {
-  "platformName": "Android",
-  "automationName": "UiAutomator2",
-  "deviceName": "Pixel_7",
-  "platformVersion": "13",
-  "appPackage": "org.commcare.dalvik",
-  "appActivity": "org.commcare.activities.DispatchActivity",
-  "noReset": true,
-  "autoGrantPermissions": true,
-  "newCommandTimeout": 300,
-  "adbExecTimeout": 30000
+  "local": {
+    "platformName": "Android",
+    "automationName": "UiAutomator2",
+    "deviceName": "Pixel_7",
+    "platformVersion": "13",
+    "appPackage": "org.commcare.dalvik",
+    "appActivity": ".activities.CommCareActivity",
+    "noReset": true,
+    "autoGrantPermissions": true,
+    "newCommandTimeout": 300,
+    "adbExecTimeout": 30000
+  },
+
+  "browserstack": {
+    "platformName": "Android",
+    "automationName": "UiAutomator2",
+    "deviceName": "Google Pixel 7",
+    "os_version": "13.0",
+    "app": "bs://<app-id>",
+    "project": "Dimagi Mobile Automation",
+    "build": "PID Regression",
+    "name": "PID Tests",
+    "browserstack.user": "YOUR_USERNAME",
+    "browserstack.key": "YOUR_ACCESS_KEY"
+  }
 }
