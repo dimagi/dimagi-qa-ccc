@@ -50,10 +50,25 @@ class LocatorLoader:
 
 import yaml
 
+# class TestDataLoader:
+#     def __init__(self, file_path="test_data/mobile_workers.yaml"):
+#         with open(file_path, "r") as f:
+#             self.data = yaml.safe_load(f)
+#
+#     def get(self, tc_id):
+#         if tc_id not in self.data:
+#             raise KeyError(f"No test data found for {tc_id}")
+#         return self.data[tc_id]
+
+
 class TestDataLoader:
-    def __init__(self, file_path="test_data/mobile_workers.yaml"):
-        with open(file_path, "r") as f:
-            self.data = yaml.safe_load(f)
+    def __init__(self, file_paths=["test_data/mobile_workers.yaml", "test_data/web_test_data.yaml"]):
+        self.data = {}
+        for file_path in file_paths:
+            with open(file_path, "r") as f:
+                file_data = yaml.safe_load(f)
+                if file_data:
+                    self.data.update(file_data)
 
     def get(self, tc_id):
         if tc_id not in self.data:

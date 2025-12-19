@@ -1,3 +1,52 @@
-home page:
+home_page:
+  welcome_title: "//h1[@class='mb-3 mt-5']"
 
-login page:
+login_page:
+  welcome_title: "//h2[@class='text-center mt-3']"
+  username_field: "//input[@id='id_auth-username']"
+  password_field: "//input[@id='id_auth-password']"
+  signin_button: "//button[text()='Sign In']"
+  cookie_accept_button: "hs-eu-confirmation-button"
+
+connect_home_page:
+  signin_link: "log-in-link"
+  login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
+  authorize_button: "//input[@type='submit' and @name='allow']"
+  opportunities_navbar_item: "//a[@href='/a/dg_connect/opportunity/']"
+
+connect_opportunities_page:
+  add_opportunity_btn: "//a[@href='/a/dg_connect/opportunity/init/']"
+  name_input: "id_name"
+  currency_input: "id_currency"
+  short_description_input: "id_short_description"
+  hq_server_dropdown: "id_hq_server"
+  description_input: "id_description"
+  api_key_dropdown: "id_api_key"
+  learn_app_domain_dropdown: "id_learn_app_domain"
+  deliver_app_domain_dropdown: "id_deliver_app_domain"
+  learn_app_dropdown: "id_learn_app"
+  deliver_app_dropdown: "id_deliver_app"
+  learn_app_description: "id_learn_app_description"
+  learn_app_passing_score_input: "id_learn_app_passing_score"
+  submit_button: "submit-id-submit"
+  invite_users_input: "id_users"
+  add_payment_btn: "//button[@type='button']"
+  amount_input: "id_amount"
+  max_total_input: "id_max_total"
+  max_daily_input: "id_max_daily"
+  start_date_input: "id_start_date"
+  end_date_input: "id_end_date"
+  required_delivery_section: "div_id_required_deliver_units"
+  connect_workers_table: "//table[contains(@class, 'base-table')]"
+  max_connect_workers: "id_max_users"
+  setup_budget_btn: "//a[normalize-space(.)='Setup Budget']"
+  payment_units_table: "//table[contains(@class,'base-table')][.//th[normalize-space()='Payment Unit Name']]"
+  total_budget_input: "id_total_budget"
+  opportunities_table: "//table[contains(@class,'base-table')][.//th[normalize-space()='Opportunity']]"
+
+opportunity_dashboard_page:
+  add_worker_icon: "//a[@x-tooltip.raw='Add Worker']"
+  start_date_text: "//div[contains(@class,'infocard')][.//h6[normalize-space()='Start Date']]//p"
+  end_date_text: "//div[contains(@class,'infocard')][.//h6[normalize-space()='End Date']]//p"
+  dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+  progress_funnel: "opp-funnel-container"
