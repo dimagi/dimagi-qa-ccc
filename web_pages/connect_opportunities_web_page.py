@@ -26,6 +26,9 @@ class ConnectOpportunitiesPage(BaseWebPage):
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
     INVITE_USERS_INPUT = locators.get("connect_opportunities_page", "invite_users_input")
+    CONNECT_WORKERS_TABLE = locators.get("connect_opportunities_page", "connect_workers_table")
+    OPPORTUNITIES_TABLE = locators.get("connect_opportunities_page", "opportunities_table")
+
     ADD_PAYMENT_UNIT_BUTTON = locators.get("connect_opportunities_page", "add_payment_btn")
     AMOUNT_INPUT = locators.get("connect_opportunities_page", "amount_input")
     MAX_TOTAL_INPUT = locators.get("connect_opportunities_page", "max_total_input")
@@ -33,7 +36,11 @@ class ConnectOpportunitiesPage(BaseWebPage):
     START_DATE_INPUT = locators.get("connect_opportunities_page", "start_date_input")
     END_DATE_INPUT = locators.get("connect_opportunities_page", "end_date_input")
     REQUIRED_DELIVER_UNITS_SECTION = locators.get("connect_opportunities_page", "required_delivery_section")
-    CONNECT_WORKERS_TABLE = locators.get("connect_opportunities_page", "connect_workers_table")
+    PAYMENT_UNITS_TABLE = locators.get("connect_opportunities_page", "payment_units_table")
+    MAX_CONNECT_WORKERS_INPUT = locators.get("connect_opportunities_page", "max_connect_workers")
+    SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
+    TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
+
 
     def click_add_opportunity_btn(self):
         self.click_element(self.ADD_OPPORTUNITY_BUTTON)
@@ -119,6 +126,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def click_add_payment_unit_button(self):
         self.click_element(self.ADD_PAYMENT_UNIT_BUTTON)
+        self.verify_text_in_url("/payment_units/create")
 
     def enter_amount_in_payment_unit_of_opportunity(self , value):
         self.wait_for_element(self.AMOUNT_INPUT)
@@ -140,9 +148,37 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.scroll_into_view(self.END_DATE_INPUT)
         self.enter_date(self.END_DATE_INPUT, value)
 
-    def select_required_deliver_units_checkbox(self, required_text: str):
+    def select_required_deliver_units_checkbox(self, required_text):
         parent = self.wait_for_element(self.REQUIRED_DELIVER_UNITS_SECTION)
         label = parent.find_element(By.XPATH, f".//label[normalize-space()[contains(., '{required_text}')]]")
         checkbox = label.find_element(By.TAG_NAME, "input")
         if not checkbox.is_selected():
             label.click()
+
+    def verify_payment_unit_present(self, payment_unit_name):
+        table = self.wait_for_element(self.PAYMENT_UNITS_TABLE)
+        rows = table.find_elements(By.XPATH, ".//tbody/tr[not(contains(@class,'detail-row'))]")
+        for row in rows:
+            unit_name_cell = row.find_element(By.XPATH, "./td[2]")
+            if unit_name_cell.text.strip() == payment_unit_name:
+                return
+        raise AssertionError(f"Payment Unit '{payment_unit_name}' not found in UI table")
+
+    def click_setup_budget_button(self):
+        self.click_element(self.SETUP_BUDGET_BUTTON)
+        self.verify_text_in_url("/finalize/")
+
+    def enter_max_connect_workers_in_budget(self, value):
+        self.wait_for_element(self.MAX_CONNECT_WORKERS_INPUT)
+        self.type(self.MAX_CONNECT_WORKERS_INPUT, value)
+
+    def verify_total_budget_value(self, value):
+        time.sleep(1)
+        element = self.wait_for_element(self.TOTAL_BUDGET_INPUT)
+        actual_value = element.get_attribute("value")
+        assert actual_value == value, f"Expected total budget value to be '{value}', but got '{actual_value}'"
+
+    def verify_opportunity_name_in_table(self, opp_name):
+        table = self.wait_for_element(self.OPPORTUNITIES_TABLE)
+        elements = table.find_elements("xpath", f".//td//a[text()='{opp_name}']")
+        assert len(elements) > 0, f"Opportunity '{opp_name}' not found in the table."

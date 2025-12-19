@@ -53,6 +53,8 @@ class BaseWebPage:
     def open_url_in_new_tab(self, url: str):
         self.driver.execute_script(f"window.open('{url}', '_blank');")
         self.switch_to_latest_tab()
+        self.wait.until(EC.url_contains(url))
+        assert url in self.driver.current_url, f"Expected URL '{url}' not opened. Found '{self.driver.current_url}'"
 
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
@@ -106,7 +108,7 @@ class BaseWebPage:
     def enter_date(self, locator, date_value: str):
         element = self.wait.until(EC.visibility_of_element_located(locator))
         try:
-            #element.clear()
+            element.clear()
             element.send_keys(date_value)
         except Exception:
             self.driver.execute_script(
@@ -115,4 +117,7 @@ class BaseWebPage:
                 element,
                 date_value
             )
-
+        actual_value = element.get_attribute("value")
+        assert sorted(actual_value) == sorted(date_value), (
+            f"Failed to set date. Expected '{date_value}', but got '{actual_value}'"
+        )
