@@ -1,7 +1,8 @@
 import time
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
-from web_pages.base_web_page import BaseWebPage
+from pages.web_pages.base_web_page import BaseWebPage
+from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
@@ -182,3 +183,11 @@ class ConnectOpportunitiesPage(BaseWebPage):
         table = self.wait_for_element(self.OPPORTUNITIES_TABLE)
         elements = table.find_elements("xpath", f".//td//a[text()='{opp_name}']")
         assert len(elements) > 0, f"Opportunity '{opp_name}' not found in the table."
+
+
+    def add_worker_in_opportunity(self, num_list):
+        self.enter_invite_users_in_opportunity(num_list)
+        time.sleep(2)
+        self.click_submit_btn()
+        # self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
+        # cop.verify_numbers_in_connect_workers_table(num_list)

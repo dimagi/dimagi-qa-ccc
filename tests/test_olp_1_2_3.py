@@ -1,8 +1,7 @@
 import allure
 import pytest
-from web_pages.connect_home_web_page import *
-from web_pages.cchq_login_web_page import LoginPage
-from web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
+from pages.web_pages.cchq_login_web_page import LoginPage
+from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 
 @pytest.mark.web
 def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):

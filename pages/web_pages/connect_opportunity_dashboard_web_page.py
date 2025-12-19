@@ -1,5 +1,7 @@
+import time
+
 from selenium.webdriver.common.by import By
-from web_pages.base_web_page import BaseWebPage
+from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
@@ -50,3 +52,9 @@ class OpportunityDashboardPage(BaseWebPage):
     def verify_progress_funnel_present(self):
         self.scroll_into_view(self.PROGRESS_FUNNEL)
         self.wait_for_element(self.PROGRESS_FUNNEL).is_displayed()
+
+    def nav_to_add_worker(self, opp):
+        self.click_link_by_text(opp)
+        self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
+        self.is_breadcrumb_item_present("Connect Workers")
+        self.click_add_worker_icon()

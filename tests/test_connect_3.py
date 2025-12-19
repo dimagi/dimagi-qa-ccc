@@ -1,10 +1,10 @@
 import allure
 import pytest
 
-from mobile_pages.notifications import Notifications
-from mobile_pages.opportunity_page import OpportunityPage
-from mobile_pages.personal_id_page import PersonalIDPage
-from mobile_pages.home_page import HomePage
+from pages.mobile_pages.notifications import Notifications
+from pages.mobile_pages.opportunity_page import OpportunityPage
+from pages.mobile_pages.personal_id_page import PersonalIDPage
+from pages.mobile_pages.home_page import HomePage
 
 
 @pytest.mark.mobile

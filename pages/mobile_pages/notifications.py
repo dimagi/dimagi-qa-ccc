@@ -1,6 +1,6 @@
 import time
 
-from mobile_pages.base_page import BasePage
+from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 from utils.utility import open_notification
 

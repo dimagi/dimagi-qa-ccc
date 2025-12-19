@@ -33,6 +33,7 @@ CONNECT_2:
   phone_number: "7426006"
   username: "Automation User 06"
   backup_code: "742606"
+  opportunity_name: "covid_opp"
 
 CONNECT_3:
   country_code: "+7426"
