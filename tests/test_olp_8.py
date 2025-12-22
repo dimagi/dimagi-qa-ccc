@@ -23,7 +23,7 @@ def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_dat
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Opportunity and verify Hamburger menu items"):
+    with allure.step("Navigate to Opportunity and open Verification Flags in Hamburger Menu"):
         connect_opp_page.click_link_by_text(olp8_data["opportunity_name"])
         opp_dashboard_page.click_hamburger_icon()
         opp_dashboard_page.select_hamburger_menu_item(olp8_data["hamburger_menu_item"])
