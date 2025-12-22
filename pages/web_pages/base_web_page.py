@@ -91,7 +91,7 @@ class BaseWebPage:
         self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
 
     def is_breadcrumb_item_present(self, text: str) -> bool:
-        xpath = f"//ul[contains(@class,'breadcrumb')]//a[contains(normalize-space(), '{text}')]"
+        xpath = f"//ul[contains(@class,'breadcrumb')]//a[normalize-space()='{text}']"
         try:
             self.wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             return True
@@ -121,8 +121,3 @@ class BaseWebPage:
         assert sorted(actual_value) == sorted(date_value), (
             f"Failed to set date. Expected '{date_value}', but got '{actual_value}'"
         )
-
-    def wait_until_class_present(self, locator, css_class):
-        element = self.wait_for_element(locator)
-        self.wait.until(lambda d: css_class in element.get_attribute("class"))
-        return self.wait_for_element(locator)
