@@ -40,6 +40,7 @@ def run_on(request):
 def mobile_driver(request, config, run_on):
     # only create the driver if the test asks for it
     if "mobile" not in request.keywords:
+        yield None
         return None
 
     driver = create_mobile_driver(config, run_on)
@@ -52,6 +53,7 @@ def mobile_driver(request, config, run_on):
 @pytest.fixture
 def web_driver(request, config):
     if "web" not in request.keywords:
+        yield None
         return None
 
     driver = create_web_driver()

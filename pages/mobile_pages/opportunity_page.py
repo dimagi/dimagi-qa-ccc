@@ -1,4 +1,4 @@
-from mobile_pages.base_page import BasePage
+from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
@@ -23,10 +23,10 @@ class OpportunityPage(BasePage):
     INTRO_LEARN_SUMMARY_TXT = locators.get("opportunity_page", "intro_learn_summary_txt")
     GOTO_LEARN_APP_BTN = locators.get("opportunity_page", "goto_learn_app_btn")
 
-    OPP_LIST_CARD = locators.get("opportunity_list", "opp_list_card")
-    OPP_LIST_TITLE = locators.get("opportunity_list", "opp_list_title")
-    OPP_LIST_DATE = locators.get("opportunity_list", "opp_list_date")
-    OPP_LIST_TYPE = locators.get("opportunity_list", "opp_list_type")
+    OPP_LIST_CARD = locators.get("opportunity_page", "opp_list_card")
+    OPP_LIST_TITLE = locators.get("opportunity_page", "opp_list_title")
+    OPP_LIST_DATE = locators.get("opportunity_page", "opp_list_date")
+    OPP_LIST_TYPE = locators.get("opportunity_page", "opp_list_type")
 
     def verify_job_card(self):
         menu_items = [

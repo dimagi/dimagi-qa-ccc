@@ -5,8 +5,10 @@
     "deviceName": "Pixel_7",
     "platformVersion": "13",
     "appPackage": "org.commcare.dalvik",
-    "appActivity": ".activities.CommCareActivity",
-    "noReset": true,
+    "appActivity": "org.commcare.activities.DispatchActivity",
+    "autoLaunch": true,
+    "noReset": false,
+    "fullReset": false,
     "autoGrantPermissions": true,
     "newCommandTimeout": 300,
     "adbExecTimeout": 30000

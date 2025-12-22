@@ -1,6 +1,6 @@
 import time
 
-from mobile_pages.base_page import BasePage
+from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
@@ -17,12 +17,12 @@ class HomePage(BasePage):
     REFRESH_OPPORTUNITIES = locators.get("home_page", "refresh_opportunities_btn")
     GOTO_CONNECT = locators.get("home_page", "go_to_connect_btn")
 
-    OPPORTUNITIES_BTN = locators.get("side_menu", "opportunities_btn")
-    COMMCARE_APP_BTN = locators.get("side_menu", "commcare_app_btn")
-    MESSAGING_BTN = locators.get("side_menu", "messaging_btn")
-    WORK_HISTORY_BTN = locators.get("side_menu", "work_history_btn")
-    NOTIFICATIONS_BTN = locators.get("side_menu", "notifications_btn")
-    ABOUT_COMMCARE_BTN = locators.get("side_menu", "about_commcare_btn")
+    OPPORTUNITIES_BTN = locators.get("home_page", "opportunities_btn")
+    COMMCARE_APP_BTN = locators.get("home_page", "commcare_app_btn")
+    MESSAGING_BTN = locators.get("home_page", "messaging_btn")
+    WORK_HISTORY_BTN = locators.get("home_page", "work_history_btn")
+    NOTIFICATIONS_BTN = locators.get("home_page", "notifications_btn")
+    ABOUT_COMMCARE_BTN = locators.get("home_page", "about_commcare_btn")
 
     def open_side_menu(self):
         self.wait_for_element(self.NAVIGATION_DRAWER)

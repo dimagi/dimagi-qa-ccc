@@ -1,7 +1,7 @@
 import time
 
 from selenium.webdriver.common.by import By
-from web_pages.base_web_page import BaseWebPage
+from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 from web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 

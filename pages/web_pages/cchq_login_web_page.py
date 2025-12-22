@@ -1,9 +1,9 @@
 import time
 from selenium.webdriver import Keys
-from web_pages.base_web_page import BaseWebPage
+from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
-from web_pages.cchq_home_web_page import HomePage
-from web_pages.connect_home_web_page import ConnectHomePage
+from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.connect_home_web_page import ConnectHomePage
 
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")

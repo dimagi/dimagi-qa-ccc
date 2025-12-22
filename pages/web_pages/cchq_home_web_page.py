@@ -1,6 +1,4 @@
-import time
-from selenium.webdriver import Keys
-from web_pages.base_web_page import BaseWebPage
+from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
