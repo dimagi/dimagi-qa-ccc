@@ -1,3 +1,5 @@
+import time
+
 import allure
 import pytest
 from pages.web_pages.cchq_home_web_page import HomePage

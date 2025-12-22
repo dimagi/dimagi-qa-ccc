@@ -1,8 +1,6 @@
 import time
-from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
-from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
@@ -26,7 +24,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
     OPP_LEARN_APP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "learn_app_description")
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
-    INVITE_USERS_INPUT = locators.get("connect_opportunities_page", "invite_users_input")
     CONNECT_WORKERS_TABLE = locators.get("connect_opportunities_page", "connect_workers_table")
     OPPORTUNITIES_TABLE = locators.get("connect_opportunities_page", "opportunities_table")
 
@@ -111,12 +108,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def click_submit_btn(self):
         self.scroll_into_view(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
-
-    def enter_invite_users_in_opportunity(self, num_list):
-        input_element = self.wait_for_element(self.INVITE_USERS_INPUT)
-        for each in num_list:
-            input_element.send_keys(each)
-            input_element.send_keys(Keys.ENTER)
 
     def verify_numbers_in_connect_workers_table(self, num_list):
         table = self.wait_for_element(self.CONNECT_WORKERS_TABLE)

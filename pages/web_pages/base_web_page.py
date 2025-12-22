@@ -3,12 +3,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.common.keys import Keys
+from utils.helpers import LocatorLoader
+
+locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
 class BaseWebPage:
     def __init__(self, driver):
         self.driver = driver
         self.wait = WebDriverWait(driver, 30)
+
+    SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
 
     def find(self, locator):
         return self.driver.find_element(*locator)
@@ -91,7 +95,7 @@ class BaseWebPage:
         self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
 
     def is_breadcrumb_item_present(self, text: str) -> bool:
-        xpath = f"//ul[contains(@class,'breadcrumb')]//a[normalize-space()='{text}']"
+        xpath = f"//ul[contains(@class,'breadcrumb')]//a[contains(normalize-space(), '{text}')]"
         try:
             self.wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             return True
@@ -121,3 +125,7 @@ class BaseWebPage:
         assert sorted(actual_value) == sorted(date_value), (
             f"Failed to set date. Expected '{date_value}', but got '{actual_value}'"
         )
+
+    def click_submit_btn(self):
+        self.scroll_into_view(self.SUBMIT_BUTTON)
+        self.click_element(self.SUBMIT_BUTTON)
