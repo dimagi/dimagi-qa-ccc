@@ -204,7 +204,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
         self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
         self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
-        self.select_required_deliver_units_checkbox(data["required_deliver_units"])
+        #self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
         self.verify_payment_unit_present(data["payment_unit_name"])
@@ -218,10 +218,3 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.click_submit_btn()
         time.sleep(3)
         self.verify_opportunity_name_in_table(data["opportunity_name"])
-
-    def add_worker_in_opportunity(self, num_list):
-        self.enter_invite_users_in_opportunity(num_list)
-        time.sleep(2)
-        self.click_submit_btn()
-        # self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
-        # cop.verify_numbers_in_connect_workers_table(num_list)

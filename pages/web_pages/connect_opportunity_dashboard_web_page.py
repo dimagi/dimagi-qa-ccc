@@ -1,9 +1,8 @@
 import time
-
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
-from web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
+from selenium.webdriver.common.keys import Keys
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
@@ -132,6 +131,7 @@ class OpportunityDashboardPage(BaseWebPage):
 
     def click_and_verify_hamburger_menu_items_present(self, expected_items):
         self.click_hamburger_icon()
+        time.sleep(1)
         self.verify_hamburger_menu_items_present(expected_items)
 
     def select_hamburger_menu_item(self, value: str):

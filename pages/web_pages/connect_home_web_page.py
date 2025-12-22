@@ -1,3 +1,5 @@
+import time
+
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 

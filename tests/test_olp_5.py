@@ -1,10 +1,10 @@
 import allure
 import pytest
-from web_pages.cchq_home_web_page import HomePage
-from web_pages.connect_home_web_page import ConnectHomePage
-from web_pages.cchq_login_web_page import LoginPage
-from web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
-from web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
+from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.connect_home_web_page import ConnectHomePage
+from pages.web_pages.cchq_login_web_page import LoginPage
+from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
+from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 
 
 @pytest.mark.web
