@@ -23,15 +23,14 @@ def test_connect_5_verify_opportunity_list(mobile_driver, test_data):
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
-                                 data["mobile_username"],
-                                 data["mobile_backup_code"])   # test number
+                                 data["username"],
+                                 data["backup_code"])   # test number
 
 
     with allure.step("Navigate to Opportunity page"):
         home.nav_to_opportunities()
 
     with allure.step("Handle Fingerprint Authentication"):
-        pid.click_configure_fingerprint()
         pid.handle_fingerprint_auth()
 
     with allure.step("Verify Opportunity List"):

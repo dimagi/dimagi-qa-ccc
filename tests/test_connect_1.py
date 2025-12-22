@@ -18,8 +18,8 @@ def test_connect_1_all_connect_options_side_menu(mobile_driver, test_data):
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
-                                 data["mobile_username"],
-                                 data["mobile_backup_code"])   # test number
+                                 data["username"],
+                                 data["backup_code"])   # test number
 
 
     with allure.step("Verify all connect options in the side menu"):

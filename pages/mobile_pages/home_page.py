@@ -63,8 +63,8 @@ class HomePage(BasePage):
     def verify_refresh_opportunity(self):
         self.wait_for_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NAVIGATION_DRAWER)
+        time.sleep(5)
         self.click_element(self.MORE_OPTION)
-
         self.wait_for_element(self.REFRESH_OPPORTUNITIES)
         assert (self.is_displayed(self.REFRESH_OPPORTUNITIES))
         self.click_element(self.REFRESH_OPPORTUNITIES)

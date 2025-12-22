@@ -18,8 +18,8 @@ def test_pid_4_sign_out(mobile_driver, test_data):
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
-                                 data["mobile_username"],
-                                 data["mobile_backup_code"])   # test number
+                                 data["username"],
+                                 data["backup_code"])   # test number
 
 
     with allure.step("Click Forget user and sign out from the app"):
