@@ -25,7 +25,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
     OPP_LEARN_APP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "learn_app_description")
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
-    INVITE_USERS_INPUT = locators.get("connect_opportunities_page", "invite_users_input")
     CONNECT_WORKERS_TABLE = locators.get("connect_opportunities_page", "connect_workers_table")
     OPPORTUNITIES_TABLE = locators.get("connect_opportunities_page", "opportunities_table")
 
@@ -111,12 +110,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.scroll_into_view(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
 
-    def enter_invite_users_in_opportunity(self, num_list):
-        input_element = self.wait_for_element(self.INVITE_USERS_INPUT)
-        for each in num_list:
-            input_element.send_keys(each)
-            input_element.send_keys(Keys.ENTER)
-
     def verify_numbers_in_connect_workers_table(self, num_list):
         table = self.wait_for_element(self.CONNECT_WORKERS_TABLE)
         rows = table.find_elements(By.XPATH, ".//tbody/tr")
@@ -182,3 +175,45 @@ class ConnectOpportunitiesPage(BaseWebPage):
         table = self.wait_for_element(self.OPPORTUNITIES_TABLE)
         elements = table.find_elements("xpath", f".//td//a[text()='{opp_name}']")
         assert len(elements) > 0, f"Opportunity '{opp_name}' not found in the table."
+
+    def create_opportunity_in_connect_page(self, data):
+        self.click_add_opportunity_btn()
+        time.sleep(1)
+        self.enter_name_in_opportunity(data["opportunity_name"])
+        self.enter_currency_in_opportunity(data["currency"])
+        self.enter_short_description_in_opportunity(data["short_description"])
+        self.select_hq_server_in_opportunity(data["hq_server"])
+        self.enter_description_in_opportunity(data["description"])
+        self.select_api_key_in_opportunity(data["api_key"])
+        self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
+        self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+        self.select_learn_app_in_opportunity(data["learn_app"])
+        self.select_deliver_app_in_opportunity(data["deliver_app"])
+        self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
+        self.enter_passing_score_in_opportunity(data["passing_score"])
+        self.click_submit_btn()
+        time.sleep(3)
+
+    def create_payment_unit_in_connect_page(self, data):
+        self.click_add_payment_unit_button()
+        self.enter_name_in_opportunity(data["payment_unit_name"])
+        self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
+        self.enter_description_in_opportunity(data["description"])
+        self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
+        self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
+        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
+        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        self.select_required_deliver_units_checkbox(data["required_deliver_units"])
+        self.click_submit_btn()
+        time.sleep(3)
+        self.verify_payment_unit_present(data["payment_unit_name"])
+
+    def setup_budget_in_connect_page(self, data):
+        self.click_setup_budget_button()
+        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
+        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])
+        self.verify_total_budget_value(data["total_budget_value"])
+        self.click_submit_btn()
+        time.sleep(3)
+        self.verify_opportunity_name_in_table(data["opportunity_name"])
