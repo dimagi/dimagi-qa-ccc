@@ -8,13 +8,13 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
 
 
 @pytest.mark.web
-def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
-    data = test_data.get("Invite_Workers")
+def test_olp_7_verify_hamburger_menu_items_of_opportunity_in_connect(web_driver, test_data, config):
+    olp7_data = test_data.get("OLP_7")
 
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
-    connect_opp_page = ConnectOpportunitiesPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
+    connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
@@ -23,10 +23,6 @@ def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
-        opp_dashboard_page.nav_to_add_worker(data["opportunity_name"])
-        opp_dashboard_page.enter_users_and_submit_in_opportunity(data["numbers_list"])
-
-    with allure.step("Verify Invited Workers in the Opportunity Page"):
-        opp_dashboard_page.click_dashboard_card_in_opportunity(data["card_title"], data["card_subtitle"])
-        connect_opp_page.verify_numbers_in_connect_workers_table(data["numbers_list"])
+    with allure.step("Navigate to Opportunity and verify Hamburger menu items"):
+        connect_opp_page.click_link_by_text(olp7_data["opportunity_name"])
+        opp_dashboard_page.click_and_verify_hamburger_menu_items_present(olp7_data["hamburger_menu_items"])

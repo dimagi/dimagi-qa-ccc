@@ -1,3 +1,5 @@
+import time
+
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 
@@ -21,4 +23,9 @@ class ConnectHomePage(BaseWebPage):
         self.click_element(self.AUTHORIZE_BUTTON)
         self.click_element(self.OPPORTUNITIES_NAVBAR_LINK)
         self.verify_text_in_url("/opportunity/")
+
+    def signin_to_connect_page_using_cchq(self):
+        self.click_signin_link()
+        time.sleep(3)
+        self.click_login_with_cchq()
 

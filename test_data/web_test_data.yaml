@@ -30,3 +30,37 @@ OLP_3:
 
 OLP_4:
   opportunity_name: "Demo Opportunity"
+
+OLP_5:
+  opportunity_name: "Demo Opportunity"
+  card_title: "Services Delivered"
+  card_subtitle: "Total"
+  tab_name: "Deliver"
+
+OLP_6:
+  opportunity_name: "Demo Opportunity"
+  card_title: "Payments"
+  card_subtitle: "Earned"
+  tab_name: "Payments"
+
+OLP_7:
+  opportunity_name: "Demo Opportunity"
+  hamburger_menu_items: [
+    "Edit Opportunity",
+    "Add Payment Unit",
+    "Catchment Areas",
+    "Add Connect Workers",
+    "Add Budget",
+    "Verification Flags",
+    "Send Message",
+]
+
+OLP_8:
+  opportunity_name: "Demo Opportunity"
+  hamburger_menu_item: "Verification Flags"
+
+Invite_Workers:
+  opportunity_name: "Demo Opportunity"
+  card_title: "Connect Workers"
+  card_subtitle: "Invited"
+  numbers_list: ["+919999999999", "+918888888888", "+917777777777"]

@@ -1,8 +1,8 @@
 import time
-
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
+from selenium.webdriver.common.keys import Keys
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
@@ -13,10 +13,15 @@ class OpportunityDashboardPage(BaseWebPage):
 
 
     ADD_WORKER_ICON = locators.get("opportunity_dashboard_page", "add_worker_icon")
+    INVITE_USERS_INPUT = locators.get("connect_opportunities_page", "invite_users_input")
     START_DATE_TEXT = locators.get("opportunity_dashboard_page", "start_date_text")
     END_DATE_TEXT = locators.get("opportunity_dashboard_page", "end_date_text")
     DASHBOARD_CARD = locators.get("opportunity_dashboard_page","dashboard_card")
     PROGRESS_FUNNEL = locators.get("opportunity_dashboard_page", "progress_funnel")
+    TAB_ITEM_BY_NAME = locators.get("opportunity_dashboard_page", "tab_item_by_name")
+    HAMBURGER_ICON = locators.get("opportunity_dashboard_page", "hamburger_icon")
+    HAMBURGER_CONTEXT_MENU = locators.get("opportunity_dashboard_page", "hamburger_menu")
+    TABLE_ELEMENT = locators.get("opportunity_dashboard_page", "table_element")
 
 
     def click_dashboard_card_in_opportunity(self, title, subtitle):
@@ -53,8 +58,79 @@ class OpportunityDashboardPage(BaseWebPage):
         self.scroll_into_view(self.PROGRESS_FUNNEL)
         self.wait_for_element(self.PROGRESS_FUNNEL).is_displayed()
 
+    def enter_invite_users_in_opportunity(self, num_list):
+        input_element = self.wait_for_element(self.INVITE_USERS_INPUT)
+        for each in num_list:
+            input_element.send_keys(each)
+            input_element.send_keys(Keys.ENTER)
+
     def nav_to_add_worker(self, opp):
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.is_breadcrumb_item_present("Connect Workers")
         self.click_add_worker_icon()
+
+    def enter_users_and_submit_in_opportunity(self, num_list):
+        self.enter_invite_users_in_opportunity(num_list)
+        self.click_submit_btn()
+
+    def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
+        self.click_link_by_text(data["opportunity_name"])
+        self.verify_dashboard_card_details_present("Connect Workers", "Invited")
+        self.verify_dashboard_card_details_present("Connect Workers", "Yet to Accept Invitation")
+        self.verify_dashboard_card_details_present("Connect Workers", "Inactive last 3 days")
+        self.verify_dashboard_card_details_present("Services Delivered", "Total")
+        self.verify_dashboard_card_details_present("Services Delivered", "Pending NM Review")
+        self.verify_dashboard_card_details_present("Payments", "Earned")
+        self.verify_dashboard_card_details_present("Payments", "Due")
+
+    def click_tab_by_name(self, tab_name):
+        by, xpath_template = self.TAB_ITEM_BY_NAME
+        xpath = xpath_template.format(tab_name=tab_name)
+        tab = self.wait_for_element((by, xpath))
+        self.click_element(tab)
+        time.sleep(1)
+        self.verify_tab_is_active(tab_name)
+
+    def verify_tab_is_active(self, tab_name):
+        by, xpath = self.TAB_ITEM_BY_NAME
+        actual_xpath = xpath.format(tab_name=tab_name)
+        tab = self.wait_for_element((by, actual_xpath))
+        class_items = tab.get_attribute("class")
+        assert "active" in class_items, f"Tab '{tab_name}' is not active"
+
+    def click_hamburger_icon(self):
+        self.click_element(self.HAMBURGER_ICON)
+
+    def verify_hamburger_menu_items_present(self, expected_items):
+        menu = self.wait_for_element(self.HAMBURGER_CONTEXT_MENU)
+        menu_texts = [
+            el.text.strip()
+            for el in menu.find_elements(By.XPATH, ".//a[normalize-space()]")
+            if el.text.strip()
+        ]
+        missing_items = [item for item in expected_items if item not in menu_texts]
+        assert not missing_items, (f"Missing menu items: {missing_items}. "f"Available items: {menu_texts}")
+        print(f"All menu items are present: {expected_items}")
+
+    def click_and_verify_hamburger_menu_items_present(self, expected_items):
+        self.click_hamburger_icon()
+        time.sleep(1)
+        self.verify_hamburger_menu_items_present(expected_items)
+
+    def select_hamburger_menu_item(self, value: str):
+        menu = self.wait_for_element(self.HAMBURGER_CONTEXT_MENU)
+        elements = menu.find_elements(By.XPATH, ".//a[normalize-space()]")
+        for each in elements:
+            if each.text.strip() == value:
+                self.click_element(each)
+                if not self.is_breadcrumb_item_present(value):
+                    raise AssertionError(f"Breadcrumb for '{value}' not found after clicking menu item.")
+                return
+        else:
+            raise ValueError(f"Hamburger menu item '{value}' not found.")
+
+    def verify_table_element_present(self):
+        time.sleep(1)
+        element = self.wait_for_element(self.TABLE_ELEMENT)
+        assert element.is_displayed(), "Table element is not present"
