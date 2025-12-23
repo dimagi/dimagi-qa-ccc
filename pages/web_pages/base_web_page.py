@@ -129,3 +129,18 @@ class BaseWebPage:
     def click_submit_btn(self):
         self.scroll_into_view(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
+
+    def _wait_for_page_load(self):
+        self.wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+
+    def navigate_backward(self):
+        self.driver.back()
+        self._wait_for_page_load()
+
+    def navigate_forward(self):
+        self.driver.forward()
+        self._wait_for_page_load()
+
+    def refresh_current_page(self):
+        self.driver.refresh()
+        self._wait_for_page_load()

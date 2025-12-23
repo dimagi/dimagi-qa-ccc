@@ -12,7 +12,11 @@ connect_home_page:
   signin_link: "log-in-link"
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
   authorize_button: "//input[@type='submit' and @name='allow']"
-  opportunities_navbar_item: "//a[@href='/a/dg_connect/opportunity/']"
+  opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
+  programs_navbar_item: "//a[contains(@href, '/program/')]"
+  my_organization_navbar_item: "//i[contains(@class, 'fa-building')]"
+  organization_container: "//ul[contains(@class,'overflow-y-auto')]"
+  organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
 
 connect_opportunities_page:
   add_opportunity_btn: "//a[@href='/a/dg_connect/opportunity/init/']"
@@ -29,7 +33,6 @@ connect_opportunities_page:
   learn_app_description: "id_learn_app_description"
   learn_app_passing_score_input: "id_learn_app_passing_score"
   submit_button: "submit-id-submit"
-  invite_users_input: "id_users"
   add_payment_btn: "//button[@type='button']"
   amount_input: "id_amount"
   max_total_input: "id_max_total"
@@ -45,12 +48,29 @@ connect_opportunities_page:
   opportunities_table: "//table[contains(@class,'base-table')][.//th[normalize-space()='Opportunity']]"
 
 opportunity_dashboard_page:
-  add_worker_icon: "//a[@x-tooltip.raw='Add Worker']"
   start_date_text: "//div[contains(@class,'infocard')][.//h6[normalize-space()='Start Date']]//p"
   end_date_text: "//div[contains(@class,'infocard')][.//h6[normalize-space()='End Date']]//p"
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
   progress_funnel: "opp-funnel-container"
-  tab_item_by_name: "//ul[@id='tabs']//li[.//span[normalize-space()='{tab_name}']]"
   hamburger_icon: "//i[contains(@class,'fa-solid') and (@click or contains(@class,'cursor-pointer'))][1]"
   hamburger_menu: "//div[@x-show='isOpen']"
-  table_element: "table"
+  total_row_deliver_table: "//tr[contains(@class,'border-2')]"
+
+connect_workers_page:
+  add_worker_icon: "//a[@x-tooltip.raw='Add Worker']"
+  invite_users_input: "id_users"
+  table_element: "//table[contains(@class,'base-table')]"
+  tab_item_by_name: "//ul[@id='tabs']//li[.//span[normalize-space()='{tab_name}']]"
+  name_item_in_table: "//td[.//p[text()='{name}']]"
+  count_breakdown_popup: "//div[@x-ref='menu' and contains(@class,'fixed') and not(contains(@style,'display: none'))]"
+
+worker_visits_page:
+  worker_visits_select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
+  worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
+  approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
+  reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
+  approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
+  reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
+  tabs_container: "//div[contains(@class,'tabs')]"
+  visits_tab_item_by_name: "//label[contains(@class,'tab')][contains(normalize-space(), '{tab_name}')]"
+  visit_details_container: "visit-details"

@@ -5,17 +5,19 @@ from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
+from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @pytest.mark.web
-def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_data, config):
-    olp8_data = test_data.get("OLP_8")
+def test_olp_9_ways_to_add_workers_opportunity_in_connect(web_driver, test_data, config):
+    olp9_data = test_data.get("OLP_9")
 
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
+    connect_workers_page = ConnectWorkersPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
@@ -23,8 +25,15 @@ def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_dat
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Opportunity and open Verification Flags in Hamburger Menu"):
-        connect_opp_page.click_link_by_text(olp8_data["opportunity_name"])
+    with allure.step("Navigate to Invite Workers using Hamburger Menu of Opportunity"):
+        connect_opp_page.click_link_by_text(olp9_data["opportunity_name"])
         opp_dashboard_page.click_hamburger_icon()
-        opp_dashboard_page.select_hamburger_menu_item(olp8_data["hamburger_menu_item"])
-        opp_dashboard_page.verify_text_in_url(olp8_data["url_text"])
+        opp_dashboard_page.select_hamburger_menu_item(olp9_data["hamburger_menu_item"])
+        opp_dashboard_page.verify_text_in_url(olp9_data["url_text"])
+        connect_workers_page.verify_invite_users_input_present()
+
+    with allure.step("Navigate to Invite Workers to Opportunity in Connect Dashboard Page"):
+        opp_dashboard_page.navigate_backward()
+        opp_dashboard_page.navigate_to_connect_workers(olp9_data["opportunity_name"])
+        connect_workers_page.nav_to_add_worker()
+        opp_dashboard_page.verify_text_in_url(olp9_data["url_text"])
