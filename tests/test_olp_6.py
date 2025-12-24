@@ -26,7 +26,7 @@ def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, 
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Payments Earned section in Opportunity"):
-        connect_opp_page.click_link_by_text(olp6_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity(olp6_data["card_title"], olp6_data["card_subtitle"])
-        connect_workers_page.verify_tab_is_active(olp6_data["tab_name"])
-        connect_workers_page.verify_table_headers_present(olp6_data["headers_list"])
+        connect_opp_page.click_opportunity_in_opportunity(olp6_data["opportunity_name"])
+        opp_dashboard_page.click_dashboard_card_in_opportunity("Payments", "Earned")
+        connect_workers_page.verify_tab_is_active("Payments")
+        connect_workers_page.verify_payments_table_headers_present()

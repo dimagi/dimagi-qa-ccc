@@ -24,5 +24,5 @@ def test_olp_7_verify_hamburger_menu_items_of_opportunity_in_connect(web_driver,
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Opportunity and verify Hamburger menu items"):
-        connect_opp_page.click_link_by_text(olp7_data["opportunity_name"])
-        opp_dashboard_page.click_and_verify_hamburger_menu_items_present(olp7_data["hamburger_menu_items"])
+        connect_opp_page.click_opportunity_in_opportunity(olp7_data["opportunity_name"])
+        opp_dashboard_page.verify_hamburger_menu_items_present_in_opportunity()

@@ -25,5 +25,5 @@ def test_olp_4_verify_opportunity_details_in_dashboard(web_driver, test_data, co
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Opportunity Dashboard and verify all fields present"):
-        connect_opp_page.click_link_by_text(olp4_data["opportunity_name"])
+        connect_opp_page.click_opportunity_in_opportunity(olp4_data["opportunity_name"])
         opp_dashboard_page.navigate_to_opportunity_and_verify_all_fields_present_in_connect(olp4_data)

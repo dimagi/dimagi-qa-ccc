@@ -9,8 +9,8 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @pytest.mark.web
-def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config):
-    olp5_data = test_data.get("OLP_5")
+def test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity(web_driver, test_data, config):
+    worker_list_view_5_data = test_data.get("WORKER_LIST_VIEW_5")
 
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
@@ -25,8 +25,21 @@ def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_dat
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Services Delivered section and verify table in Opportunity"):
-        connect_opp_page.click_opportunity_in_opportunity(olp5_data["opportunity_name"])
+    with allure.step("Navigate and verify Connect Workers details in Opportunity"):
+        connect_opp_page.click_opportunity_in_opportunity(worker_list_view_5_data["opportunity_name"])
         opp_dashboard_page.click_dashboard_card_in_opportunity("Services Delivered", "Total")
-        connect_workers_page.verify_tab_is_active("Deliver")
+        opp_dashboard_page.verify_text_in_url("workers/deliver")
         connect_workers_page.verify_deliver_table_headers_present()
+
+    # Worker List View_5
+    with allure.step("Verify Total row Delivered column count breakdown in Deliver table"):
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(["Total", "Delivered"])
+
+    with allure.step("Verify Total row Pending column count breakdown in Deliver table"):
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(["Total", "Pending"])
+
+    with allure.step("Verify Total row Approved column count breakdown in Deliver table"):
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(["Total", "Approved"])
+
+    with allure.step("Verify Total row Rejected column count breakdown in Deliver table"):
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(["Total", "Rejected"])
