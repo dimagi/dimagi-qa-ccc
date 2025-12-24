@@ -7,6 +7,14 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("Worker List View")
+@allure.story("Verify count breakdown of worker in Deliver tab of Connect Workers page")
+@allure.tag("Worker_List_View_4")
+@allure.description("""
+    Covered manual test cases:
+        - Worker_List_View_4 : Confirm user can see the breakdown of delivered/flagged visits when they click 
+          on the no of visits under Delivered, Pending, Rejected and Approved columns
+  """)
 
 @pytest.mark.web
 def test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect(web_driver, test_data, config):

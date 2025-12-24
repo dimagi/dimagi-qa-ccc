@@ -1,4 +1,6 @@
 import time
+
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader

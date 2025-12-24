@@ -24,6 +24,7 @@ def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
+        connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
         connect_workers_page.verify_and_delete_if_numbers_present_in_invites(data["numbers_list"])
         connect_workers_page.invite_workers_to_opportunity(data["numbers_list"])

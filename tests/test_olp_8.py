@@ -6,6 +6,13 @@ from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 
+@allure.feature("OLP")
+@allure.story("Verify hamburger menu item Verification Flags in opportunity dashboard page")
+@allure.tag("OLP_8")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_8 : Confirm user is taken to the verification flag on selecting Verification Flags option
+  """)
 
 @pytest.mark.web
 def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_data, config):

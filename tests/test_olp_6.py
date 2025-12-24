@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify Payments Earned section in opportunity dashboard page")
+@allure.tag("OLP_6")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_6 : Verify user see the all the information related to the deliveries under Payments Earned section  
+  """)
 
 @pytest.mark.web
 def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, config):

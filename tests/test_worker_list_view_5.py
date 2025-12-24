@@ -7,6 +7,14 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("Worker List View")
+@allure.story("Verify count breakdown of Total row in Deliver tab of Connect Workers page")
+@allure.tag("Worker_List_View_5")
+@allure.description("""
+    Covered manual test cases:
+        - Worker_List_View_5 : Confirm user can see the breakdown of visits when they click
+          on the total no of visits for the Total row at the bottom of the page
+  """)
 
 @pytest.mark.web
 def test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity(web_driver, test_data, config):

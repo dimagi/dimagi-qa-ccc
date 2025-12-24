@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify hamburger menu item Add Workers in opportunity dashboard page")
+@allure.tag("OLP_9")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_9 : Confirm user is redirected to Add Workers page when they click on the Add Workers option 
+  """)
 
 @pytest.mark.web
 def test_olp_9_ways_to_add_workers_opportunity_in_connect(web_driver, test_data, config):

@@ -6,6 +6,13 @@ from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 
+@allure.feature("OLP")
+@allure.story("Verify hamburger menu options in opportunity dashboard page")
+@allure.tag("OLP_7")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_7 : Confirm user can click on the hamburger option on the opportunity dashboard page and see different options
+  """)
 
 @pytest.mark.web
 def test_olp_7_verify_hamburger_menu_items_of_opportunity_in_connect(web_driver, test_data, config):

@@ -8,6 +8,16 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
 
+@allure.feature("Worker Visit Verification Page")
+@allure.story("Verify tabs in Connect Workers page of opportunity dashboard")
+@allure.tag("Worker_Visit_Verification_Page_1", "Worker_Visit_Verification_Page_2")
+@allure.description("""
+    This automated test consolidates multiple manual test cases
+
+    Covered manual test cases:
+        - Worker_Visit_Verification_Page_1 : Confirm user lands on the Worker Visit Verification Page when they select a worker from the workers list page 
+        - Worker_Visit_Verification_Page_2 : User should be able to Approve or Reject visits from the Workers Visit Verification Page 
+  """)
 
 @pytest.mark.web
 def test_worker_visit_verification_page_1_2_for_deliver_of_opportunity_in_connect(web_driver, test_data, config):

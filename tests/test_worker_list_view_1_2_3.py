@@ -7,6 +7,17 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("Worker List View")
+@allure.story("Verify tabs in Connect Workers page of opportunity dashboard")
+@allure.tag("Worker_List_View_1", "Worker_List_View_2", "Worker_List_View_3")
+@allure.description("""
+    This automated test consolidates multiple manual test cases
+    
+    Covered manual test cases:
+        - Worker_List_View_1 : Confirm user is redirected to the Worker's List page on clicking click on ‘Connect  Workers’
+        - Worker_List_View_2 : Verify user can click on the Learn Tab, on the workers list page and see all the workers learn progress
+        - Worker_List_View_3 : Verify user can access the Deliver tab, with all the delivery information for an opportunity 
+  """)
 
 @pytest.mark.web
 def test_worker_list_view_1_2_3_verify_connect_workers_details_of_opportunity_in_connect(web_driver, test_data, config):

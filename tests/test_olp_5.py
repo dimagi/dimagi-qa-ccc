@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify Services Delivered section in opportunity dashboard page")
+@allure.tag("OLP_5")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_5 : Verify user see the all the information related to the deliveries under Service Deliveries section  
+  """)
 
 @pytest.mark.web
 def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config):
