@@ -11,7 +11,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @pytest.mark.web
-def test_worker_list_view_1_2_3_verify_count_breakdown_of_opportunity_in_connect(web_driver, test_data, config):
+def test_worker_list_view_4_5_6_7_verify_count_breakdown_of_opportunity_in_connect(web_driver, test_data, config):
     worker_list_view_4_5_6_7_data = test_data.get("WORKER_LIST_VIEW_4_5_6_7")
 
     cchq_login_page = LoginPage(web_driver)
