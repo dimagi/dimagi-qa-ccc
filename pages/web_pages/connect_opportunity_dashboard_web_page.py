@@ -12,16 +12,12 @@ class OpportunityDashboardPage(BaseWebPage):
         super().__init__(driver)
 
 
-    ADD_WORKER_ICON = locators.get("opportunity_dashboard_page", "add_worker_icon")
-    INVITE_USERS_INPUT = locators.get("connect_opportunities_page", "invite_users_input")
     START_DATE_TEXT = locators.get("opportunity_dashboard_page", "start_date_text")
     END_DATE_TEXT = locators.get("opportunity_dashboard_page", "end_date_text")
     DASHBOARD_CARD = locators.get("opportunity_dashboard_page","dashboard_card")
     PROGRESS_FUNNEL = locators.get("opportunity_dashboard_page", "progress_funnel")
-    TAB_ITEM_BY_NAME = locators.get("opportunity_dashboard_page", "tab_item_by_name")
     HAMBURGER_ICON = locators.get("opportunity_dashboard_page", "hamburger_icon")
     HAMBURGER_CONTEXT_MENU = locators.get("opportunity_dashboard_page", "hamburger_menu")
-    TABLE_ELEMENT = locators.get("opportunity_dashboard_page", "table_element")
 
 
     def click_dashboard_card_in_opportunity(self, title, subtitle):
@@ -29,9 +25,6 @@ class OpportunityDashboardPage(BaseWebPage):
         actual_xpath = value.format(title=title, subtitle=subtitle)
         self.scroll_into_view((by, actual_xpath))
         self.click_element((by, actual_xpath))
-
-    def click_add_worker_icon(self):
-        self.click_element(self.ADD_WORKER_ICON)
 
     def verify_start_date_card_value_present(self):
         element = self.wait_for_element(self.START_DATE_TEXT)
@@ -58,22 +51,6 @@ class OpportunityDashboardPage(BaseWebPage):
         self.scroll_into_view(self.PROGRESS_FUNNEL)
         self.wait_for_element(self.PROGRESS_FUNNEL).is_displayed()
 
-    def enter_invite_users_in_opportunity(self, num_list):
-        input_element = self.wait_for_element(self.INVITE_USERS_INPUT)
-        for each in num_list:
-            input_element.send_keys(each)
-            input_element.send_keys(Keys.ENTER)
-
-    def nav_to_add_worker(self, opp):
-        self.click_link_by_text(opp)
-        self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
-        self.is_breadcrumb_item_present("Connect Workers")
-        self.click_add_worker_icon()
-
-    def enter_users_and_submit_in_opportunity(self, num_list):
-        self.enter_invite_users_in_opportunity(num_list)
-        self.click_submit_btn()
-
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
         self.click_link_by_text(data["opportunity_name"])
         self.verify_dashboard_card_details_present("Connect Workers", "Invited")
@@ -84,20 +61,9 @@ class OpportunityDashboardPage(BaseWebPage):
         self.verify_dashboard_card_details_present("Payments", "Earned")
         self.verify_dashboard_card_details_present("Payments", "Due")
 
-    def click_tab_by_name(self, tab_name):
-        by, xpath_template = self.TAB_ITEM_BY_NAME
-        xpath = xpath_template.format(tab_name=tab_name)
-        tab = self.wait_for_element((by, xpath))
-        self.click_element(tab)
-        time.sleep(1)
-        self.verify_tab_is_active(tab_name)
-
-    def verify_tab_is_active(self, tab_name):
-        by, xpath = self.TAB_ITEM_BY_NAME
-        actual_xpath = xpath.format(tab_name=tab_name)
-        tab = self.wait_for_element((by, actual_xpath))
-        class_items = tab.get_attribute("class")
-        assert "active" in class_items, f"Tab '{tab_name}' is not active"
+    def navigate_to_connect_workers(self, opp):
+        self.click_link_by_text(opp)
+        self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
 
     def click_hamburger_icon(self):
         self.click_element(self.HAMBURGER_ICON)
@@ -124,13 +90,31 @@ class OpportunityDashboardPage(BaseWebPage):
         for each in elements:
             if each.text.strip() == value:
                 self.click_element(each)
-                if not self.is_breadcrumb_item_present(value):
-                    raise AssertionError(f"Breadcrumb for '{value}' not found after clicking menu item.")
-                return
+                break
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
 
-    def verify_table_element_present(self):
-        time.sleep(1)
-        element = self.wait_for_element(self.TABLE_ELEMENT)
-        assert element.is_displayed(), "Table element is not present"
+
+
+
+
+
+
+    TOTAL_ROW_DELIVER_TABLE = locators.get("opportunity_dashboard_page", "total_row_deliver_table")
+
+    def click_total_column(self, status):
+        total_row = self.wait_for_element(self.TOTAL_ROW_DELIVER_TABLE)
+        if status.lower() in ["approved", "pending", "rejected"]:
+            td_element = total_row.find_element(
+                By.XPATH,
+                f".//div[contains(@x-data,'isOpen')][contains(@hx-get,'status={status.lower()}')]//span"
+            )
+        elif status.lower() == "delivered":
+            td_element = total_row.find_element(
+                By.XPATH,
+                "(//tr[contains(@class,'border-2')]//div[contains(@x-data,'isOpen')])[1]"
+            )
+        self.wait_for_clickable(td_element)
+        td_element.click()
+
+    # https://connect.dimagi.com/a/dg_connect/opportunity/873/workers/deliver/

@@ -36,28 +36,67 @@ OLP_5:
   card_title: "Services Delivered"
   card_subtitle: "Total"
   tab_name: "Deliver"
+  headers_list: ["#", "Name", "Last active", "Payment unit", "Delivery progress", "Delivered", "Pending", "Approved", "Rejected"]
 
 OLP_6:
   opportunity_name: "Demo Opportunity"
   card_title: "Payments"
   card_subtitle: "Earned"
   tab_name: "Payments"
+  headers_list: ["#", "Name", "Last active", "Accrued ()", "Total Paid ()", "Last paid", "Confirm ()"]
 
 OLP_7:
   opportunity_name: "Demo Opportunity"
-  hamburger_menu_items: [
-    "Edit Opportunity",
-    "Add Payment Unit",
-    "Catchment Areas",
-    "Add Connect Workers",
-    "Add Budget",
-    "Verification Flags",
-    "Send Message",
-]
+  hamburger_menu_items: ["Edit Opportunity", "Add Payment Unit", "Catchment Areas", "Add Connect Workers", "Add Budget", "Verification Flags", "Send Message"]
 
 OLP_8:
   opportunity_name: "Demo Opportunity"
   hamburger_menu_item: "Verification Flags"
+  url_text: "verification_flags_config"
+
+OLP_9:
+  opportunity_name: "Demo Opportunity"
+  hamburger_menu_item: "Add Connect Workers"
+  url_text: "user_invite"
+
+WORKER_LIST_VIEW_1:
+  opportunity_name: "Demo Opportunity"
+  card_title: "Connect Workers"
+  card_subtitle: "Invited"
+  url_text: "workers"
+  headers_list: ["#", "Status", "Name", "Phone Number", "Invited Date", "Last Active", "Started Learn", "Completed Learn", "Time to Complete Learning", "First Delivery", "Time to Start Deliver"]
+
+WORKER_LIST_VIEW_2:
+  tab_name: "Learn"
+  headers_list: ["#", "Name", "Last active", "Started Learning", "Modules completed", "Completed Learning", "Assessment", "Attempts", "Learning hours"]
+
+WORKER_LIST_VIEW_3:
+  tab_name: "Deliver"
+  headers_list: ["#", "Name", "Last active", "Payment unit", "Delivery progress", "Delivered", "Pending", "Approved", "Rejected"]
+
+WORKER_LIST_VIEW_4_5_6_7:
+  opportunity_name: "covid_opp"
+  card_title: "Connect Workers"
+  card_subtitle: "Invited"
+  url_text: "workers"
+  tab_name: "Deliver"
+  headers_list: [ "#", "Name", "Last active", "Payment unit", "Delivery progress", "Delivered", "Pending", "Approved", "Rejected" ]
+  item_delivered_params: ["Deb Test 8/12", "Delivered"]
+  item_pending_params: ["Deb Test 8/12", "Pending"]
+  item_approved_params: ["Deb Test 8/12", "Approved"]
+  item_rejected_params: ["Deb Test 8/12", "Rejected"]
+
+WORKER_VISIT_VERIFICATION_PAGE_1:
+  opportunity_name: "covid_opp"
+  card_title: "Connect Workers"
+  card_subtitle: "Invited"
+  url_text: "workers"
+  tab_name: "Deliver"
+  item_name: "Deb Test 8/12"
+  breadcrumb_item: "Visits"
+  all_tabs: ["Pending NM Review", "Approved", "Rejected", "All"]
+  row_data_1: ["09 Dec, 2025 08:41", "test name", True]
+  row_data_2: ["09 Dec, 2025 08:49", "test name", True]
 
 Invite_Workers:
   opportunity_name: "Demo Opportunity"

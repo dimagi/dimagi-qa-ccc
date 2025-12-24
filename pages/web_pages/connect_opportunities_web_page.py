@@ -24,7 +24,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
     OPP_LEARN_APP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "learn_app_description")
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
-    CONNECT_WORKERS_TABLE = locators.get("connect_opportunities_page", "connect_workers_table")
     OPPORTUNITIES_TABLE = locators.get("connect_opportunities_page", "opportunities_table")
 
     ADD_PAYMENT_UNIT_BUTTON = locators.get("connect_opportunities_page", "add_payment_btn")
@@ -108,13 +107,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def click_submit_btn(self):
         self.scroll_into_view(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
-
-    def verify_numbers_in_connect_workers_table(self, num_list):
-        table = self.wait_for_element(self.CONNECT_WORKERS_TABLE)
-        rows = table.find_elements(By.XPATH, ".//tbody/tr")
-        table_numbers = [row.find_element(By.XPATH, "./td[5]").text.strip() for row in rows]
-        for number in num_list:
-            assert number in table_numbers, f"Number '{number}' not found in the table!"
 
     def click_add_payment_unit_button(self):
         self.click_element(self.ADD_PAYMENT_UNIT_BUTTON)
