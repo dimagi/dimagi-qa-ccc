@@ -1,4 +1,6 @@
 import time
+
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
@@ -13,6 +15,9 @@ class ConnectWorkersPage(BaseWebPage):
 
 
     ADD_WORKER_ICON = locators.get("connect_workers_page", "add_worker_icon")
+    CONNECT_WORKERS_TABLE = locators.get("connect_workers_page", "connect_workers_table")
+    DELETE_INVITES_BUTTON = locators.get("connect_workers_page", "delete_invites_btn")
+    DELETE_INVITES_POPUP_BUTTON = locators.get("connect_workers_page", "delete_invites_popup_btn")
     INVITE_USERS_INPUT = locators.get("connect_workers_page", "invite_users_input")
     TAB_ITEM_BY_NAME = locators.get("connect_workers_page", "tab_item_by_name")
     TABLE_ELEMENT = locators.get("connect_workers_page", "table_element")
@@ -21,6 +26,7 @@ class ConnectWorkersPage(BaseWebPage):
 
 
     def click_add_worker_icon(self):
+        self.wait_for_element(self.ADD_WORKER_ICON)
         self.click_element(self.ADD_WORKER_ICON)
 
     def enter_invite_users_in_opportunity(self, num_list):
@@ -43,11 +49,57 @@ class ConnectWorkersPage(BaseWebPage):
         time.sleep(1)
         assert input_element.is_displayed(), "Invite users input is not present"
 
+    def verify_numbers_in_connect_workers_table(self, num_list):
+        table = self.wait_for_element(self.CONNECT_WORKERS_TABLE)
+        rows = table.find_elements(By.XPATH, ".//tbody/tr")
+        table_numbers = [row.find_element(By.XPATH, "./td[5]").text.strip() for row in rows]
+        for number in num_list:
+            assert number in table_numbers, f"Number '{number}' not found in the table!"
+
+    def click_delete_invites_button(self):
+        self.click_element(self.DELETE_INVITES_BUTTON)
+        self.click_element(self.DELETE_INVITES_POPUP_BUTTON)
+
+    def select_and_delete_rows_by_phone_numbers(self, num_list):
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        checkboxes = []
+        for num in num_list:
+            num = num.strip()
+            try:
+                row_xpath = f".//tbody//tr[.//td[normalize-space()='{num}']]"
+                row = table.find_element(By.XPATH, row_xpath)
+                checkboxes.append(row.find_element(By.XPATH, ".//td[1]//input[@type='checkbox']"))
+            except NoSuchElementException:
+                print(f"Phone number not found in table: {num}")
+        if checkboxes:
+            for checkbox in checkboxes:
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", checkbox)
+                if not checkbox.is_selected():
+                    self.click_element(checkbox)
+            self.click_delete_invites_button()
+
+    def is_number_present_in_table(self, number):
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        number = number.strip()
+        row_xpath = f".//tbody//tr[.//td[normalize-space()='{number}']]"
+        rows = table.find_elements(By.XPATH, row_xpath)
+        if not rows:
+            print(f"Phone number not present in table: {number}")
+            return False
+        return True
+
+    def verify_and_delete_if_numbers_present_in_invites(self, num_list):
+        numbers_present = []
+        for each in num_list:
+            if self.is_number_present_in_table(each):
+                numbers_present.append(each)
+        self.select_and_delete_rows_by_phone_numbers(numbers_present)
+        time.sleep(1)
+
     def click_tab_by_name(self, tab_name):
         by, xpath_template = self.TAB_ITEM_BY_NAME
         xpath = xpath_template.format(tab_name=tab_name)
-        tab = self.wait_for_element((by, xpath))
-        self.click_element(tab)
+        self.click_element((by, xpath))
         time.sleep(2)
         self.verify_tab_is_active(tab_name)
 
@@ -91,14 +143,17 @@ class ConnectWorkersPage(BaseWebPage):
         self.click_element(name_column)
         time.sleep(2)
 
-    def click_and_verify_status_count_for_item(self, params):
+    def click_and_verify_status_count_breakdown_for_item(self, params):
         item_name = params[0].strip()
         column_name = params[1].strip().lower()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//span[normalize-space() = '" + column_name.capitalize() + "']]"
         header = table.find_element(By.XPATH, header_xpath)
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
-        row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + item_name + "']]"
+        if item_name.lower() == "total":
+            row_xpath = ".//tbody//tr[td[normalize-space()='Total']]"
+        else:
+            row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + item_name + "']]"
         row = table.find_element(By.XPATH, row_xpath)
         cell_span_xpath = f"./td[{column_index}]//span"
         span_element = row.find_element(By.XPATH, cell_span_xpath)

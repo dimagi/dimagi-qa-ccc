@@ -38,16 +38,16 @@ def test_worker_list_view_1_2_3_verify_count_breakdown_of_opportunity_in_connect
 
     # Worker List View_4
     with allure.step("Verify Delivered column count breakdown in table"):
-        connect_workers_page.click_and_verify_status_count_for_item(worker_list_view_4_5_6_7_data["item_delivered_params"])
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(worker_list_view_4_5_6_7_data["item_delivered_params"])
 
     # Worker List View_5
     with allure.step("Verify Pending column count breakdown in table"):
-        connect_workers_page.click_and_verify_status_count_for_item(worker_list_view_4_5_6_7_data["item_pending_params"])
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(worker_list_view_4_5_6_7_data["item_pending_params"])
 
     # Worker List View_6
     with allure.step("Verify Approved column count breakdown in table"):
-        connect_workers_page.click_and_verify_status_count_for_item(worker_list_view_4_5_6_7_data["item_approved_params"])
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(worker_list_view_4_5_6_7_data["item_approved_params"])
 
     # Worker List View_7
     with allure.step("Verify Rejected column count breakdown in table"):
-        connect_workers_page.click_and_verify_status_count_for_item(worker_list_view_4_5_6_7_data["item_rejected_params"])
+        connect_workers_page.click_and_verify_status_count_breakdown_for_item(worker_list_view_4_5_6_7_data["item_rejected_params"])

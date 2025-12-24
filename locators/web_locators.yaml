@@ -40,7 +40,6 @@ connect_opportunities_page:
   start_date_input: "id_start_date"
   end_date_input: "id_end_date"
   required_delivery_section: "div_id_required_deliver_units"
-  connect_workers_table: "//table[contains(@class, 'base-table')]"
   max_connect_workers: "id_max_users"
   setup_budget_btn: "//a[normalize-space(.)='Setup Budget']"
   payment_units_table: "//table[contains(@class,'base-table')][.//th[normalize-space()='Payment Unit Name']]"
@@ -58,6 +57,9 @@ opportunity_dashboard_page:
 
 connect_workers_page:
   add_worker_icon: "//a[@x-tooltip.raw='Add Worker']"
+  delete_invites_btn: "//*[@id='worker-tab-options']/button[2]"
+  delete_invites_popup_btn: "//*[@id='worker-tab-options']/div[2]/div/div[3]/form/button"
+  connect_workers_table: "//table[contains(@class, 'base-table')]"
   invite_users_input: "id_users"
   table_element: "//table[contains(@class,'base-table')]"
   tab_item_by_name: "//ul[@id='tabs']//li[.//span[normalize-space()='{tab_name}']]"
