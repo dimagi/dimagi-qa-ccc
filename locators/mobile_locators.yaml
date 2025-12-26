@@ -91,3 +91,5 @@ learn_app_page:
   download_delivery_app_btn: "org.commcare.dalvik:id/connect_delivery_button"
 
 
+delivery_app_page:
+  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivey App')]"

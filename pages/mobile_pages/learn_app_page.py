@@ -30,10 +30,12 @@ class LearnAppPage(BasePage):
     START_VISIT_TXT = locators.get("learn_app_page", "start_visit_txt")
     DOWNLOAD_DELIVERY_TXT = locators.get("learn_app_page", "download_delivery_txt")
     DOWNLOAD_DELIVERY_APP_BTN = locators.get("learn_app_page", "download_delivery_app_btn")
-    TOTAL_VISIT_TXT = locators.get("opportunity_page", "total_visit_txt")
-    DELIVERY_DAYS_TXT = locators.get("opportunity_page", "delivery_days_txt")
-    DELIVERY_MAX_DAILY_TXT = locators.get("opportunity_page", "delivery_max_daily_txt")
-    DELIVERY_BUDGET_TXT = locators.get("opportunity_page", "delivery_budget_txt")
+    TOTAL_VISIT_TXT = locators.get("learn_app_page", "total_visit_txt")
+    DELIVERY_DAYS_TXT = locators.get("learn_app_page", "delivery_days_txt")
+    DELIVERY_MAX_DAILY_TXT = locators.get("learn_app_page", "delivery_max_daily_txt")
+    DELIVERY_BUDGET_TXT = locators.get("learn_app_page", "delivery_budget_txt")
+
+    DELIVERY_APP_HEADER_TXT = locators.get("delivery_app_page", "delivery_app_header_txt")
 
     def complete_learn_survey(self, survey_name):
         self.wait_for_element(self.LEARN_APP_START_BTN)
@@ -127,7 +129,11 @@ class LearnAppPage(BasePage):
 
 
     def verify_opportunity_details_screen(self):
+        if self.is_displayed(self.VIEW_JOB_STATUS_BTN):
+            self.click_element(self.VIEW_JOB_STATUS_BTN)
+        time.sleep(2)
         self.click_element(self.VIEW_OPP_DETAILS_BTN)
+
         elements = [
             self.OPP_DETAILS_HEADER_TXT,
             self.DELIVERY_DETAILS_TXT,
@@ -143,3 +149,9 @@ class LearnAppPage(BasePage):
 
         for name, locator in elements.items():
             assert self.is_displayed(locator), f"{name} is not visible"
+
+    def download_delivery_app(self):
+        self.click_element(self.DOWNLOAD_DELIVERY_APP_BTN)
+        time.sleep(2)
+        self.wait_for_element(self.DELIVERY_APP_HEADER_TXT)
+        assert self.is_displayed(self.DELIVERY_APP_HEADER_TXT)
