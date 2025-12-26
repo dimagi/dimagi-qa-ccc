@@ -2,6 +2,7 @@ import time
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
+from utils.utility import simulate_fingerprint
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
@@ -80,3 +81,9 @@ class HomePage(BasePage):
             time.sleep(2)
 
 
+    def open_learn_app(self, opportunity_name):
+        self.wait_for_element(self.GOTO_CONNECT)
+        self.click_element(self.GOTO_CONNECT)
+        time.sleep(2)
+        simulate_fingerprint()
+        # add learn app based on opp name

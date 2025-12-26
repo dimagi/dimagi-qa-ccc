@@ -37,3 +37,9 @@ class BasePage:
 
     def get_elements(self, locator, timeout=10):
         return self.wait.until(EC.presence_of_all_elements_located(locator))
+
+    def navigate_back(self):
+        self.driver.navigate().back()
+
+    def wait_for_element_to_disappear(self, locator):
+        return self.wait.until(EC.invisibility_of_element(locator))

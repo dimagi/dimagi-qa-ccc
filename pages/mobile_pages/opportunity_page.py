@@ -21,12 +21,15 @@ class OpportunityPage(BasePage):
     LEARN_TITLE_TXT = locators.get("opportunity_page", "learn_title_txt")
     INTRO_LEARNING_MODULE_TXT = locators.get("opportunity_page", "intro_learn_module_txt")
     INTRO_LEARN_SUMMARY_TXT = locators.get("opportunity_page", "intro_learn_summary_txt")
-    GOTO_LEARN_APP_BTN = locators.get("opportunity_page", "goto_learn_app_btn")
+    DOWNLOAD_LEARN_APP_BTN = locators.get("opportunity_page", "download_learn_app_btn")
 
     OPP_LIST_CARD = locators.get("opportunity_page", "opp_list_card")
     OPP_LIST_TITLE = locators.get("opportunity_page", "opp_list_title")
     OPP_LIST_DATE = locators.get("opportunity_page", "opp_list_date")
     OPP_LIST_TYPE = locators.get("opportunity_page", "opp_list_type")
+
+    APP_DOWNLOAD_PROGRESS = locators.get("opportunity_page", "download_learn_app_progress_bar")
+    LEARN_APP_START_BTN = locators.get("learn_app_page", "learn_app_start_btn")
 
     def verify_job_card(self):
         menu_items = [
@@ -60,12 +63,13 @@ class OpportunityPage(BasePage):
             self.LEARN_TITLE_TXT,
             self.INTRO_LEARN_SUMMARY_TXT,
             self.INTRO_LEARNING_MODULE_TXT,
-            self.GOTO_LEARN_APP_BTN
+            self.DOWNLOAD_LEARN_APP_BTN
         ]
 
         for item in menu_items:
             assert self.is_displayed(item), f"Learn details not visible: {item}"
 
+        self.navigate_back()
 
     def verify_opportunity_list(self):
         cards = self.get_elements(self.OPP_LIST_CARD)
@@ -79,6 +83,15 @@ class OpportunityPage(BasePage):
             assert name, "Opportunity name missing"
             assert opp_type, "Opportunity type missing"
             assert date, "Opportunity date missing"
+
+    def download_learn_app(self):
+        self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
+        self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
+        self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
+        assert self.is_displayed(self.LEARN_APP_START_BTN), "Learn app start button is not visible"
+
+
+
 
 
 

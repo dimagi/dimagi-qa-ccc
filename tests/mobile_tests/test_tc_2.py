@@ -3,12 +3,20 @@ import pytest
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
 
-
+@allure.feature("PID")
+@allure.story("Login related validations")
+@allure.tag("PID_6")
+@allure.description("""
+  Covered manual test cases:
+  - PID_6 : Verify Account Locked Error Popup
+  """)
 @pytest.mark.mobile
-def test_pid_6_1_wrong_backup_code_error(mobile_driver, test_data):
-    data = test_data.get("PID_6_1")
+def test_account_locked_popup(mobile_driver, test_data):
+    data = test_data.get("PID_6_2")
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
+
+    username = data["username"]
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -24,14 +32,8 @@ def test_pid_6_1_wrong_backup_code_error(mobile_driver, test_data):
     with allure.step("Confirm Demo User popup"):
         pid.demo_user_confirm()
 
-    with allure.step("Enter the Username"):
-        pid.enter_name(data["username"])
+    with allure.step("Enter Username"):
+        pid.enter_name(username)
 
-    with allure.step("Enter Wrong Backup Code 1 time"):
-        pid.enter_backup_code("123456")
-
-    with allure.step("Verify wrong backup code entered error"):
-        assert pid.verify_wrong_backup_code_err()
-
-    with allure.step("Complete Sign In with correct backup code"):
-        pid.enter_backup_code(data["backup_code"])
+    with allure.step("Verify Account Locked Error Popup"):
+        pid.account_locked_error()
