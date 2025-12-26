@@ -4,7 +4,7 @@ from selenium.webdriver.support import expected_conditions as EC
 class BasePage:
     def __init__(self, driver):
         self.driver = driver
-        self.wait = WebDriverWait(driver, 20)
+        self.wait = WebDriverWait(driver, 30)
 
     def wait_for_element(self, locator):
         return self.wait.until(EC.presence_of_element_located(locator))
@@ -37,3 +37,9 @@ class BasePage:
 
     def get_elements(self, locator, timeout=10):
         return self.wait.until(EC.presence_of_all_elements_located(locator))
+
+    def navigate_back(self):
+        self.driver.navigate().back()
+
+    def wait_for_element_to_disappear(self, locator):
+        return self.wait.until(EC.invisibility_of_element(locator))

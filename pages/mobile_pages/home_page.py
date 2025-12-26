@@ -2,6 +2,7 @@ import time
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
+from utils.utility import simulate_fingerprint
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
@@ -63,8 +64,8 @@ class HomePage(BasePage):
     def verify_refresh_opportunity(self):
         self.wait_for_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NAVIGATION_DRAWER)
+        time.sleep(5)
         self.click_element(self.MORE_OPTION)
-
         self.wait_for_element(self.REFRESH_OPPORTUNITIES)
         assert (self.is_displayed(self.REFRESH_OPPORTUNITIES))
         self.click_element(self.REFRESH_OPPORTUNITIES)
@@ -80,3 +81,9 @@ class HomePage(BasePage):
             time.sleep(2)
 
 
+    def open_learn_app(self, opportunity_name):
+        self.wait_for_element(self.GOTO_CONNECT)
+        self.click_element(self.GOTO_CONNECT)
+        time.sleep(2)
+        simulate_fingerprint()
+        # add learn app based on opp name
