@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify hamburger menu item Add Workers in opportunity dashboard page")
+@allure.tag("OLP_9")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_9 : Confirm user is redirected to Add Workers page when they click on the Add Workers option 
+  """)
 
 @pytest.mark.web
 def test_olp_9_ways_to_add_workers_opportunity_in_connect(web_driver, test_data, config):
@@ -26,14 +33,13 @@ def test_olp_9_ways_to_add_workers_opportunity_in_connect(web_driver, test_data,
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Invite Workers using Hamburger Menu of Opportunity"):
-        connect_opp_page.click_link_by_text(olp9_data["opportunity_name"])
-        opp_dashboard_page.click_hamburger_icon()
-        opp_dashboard_page.select_hamburger_menu_item(olp9_data["hamburger_menu_item"])
-        opp_dashboard_page.verify_text_in_url(olp9_data["url_text"])
+        connect_opp_page.click_opportunity_in_opportunity(olp9_data["opportunity_name"])
+        opp_dashboard_page.select_hamburger_menu_item("Add Connect Workers")
+        opp_dashboard_page.verify_text_in_url("user_invite")
         connect_workers_page.verify_invite_users_input_present()
 
     with allure.step("Navigate to Invite Workers to Opportunity in Connect Dashboard Page"):
         opp_dashboard_page.navigate_backward()
         opp_dashboard_page.navigate_to_connect_workers(olp9_data["opportunity_name"])
         connect_workers_page.nav_to_add_worker()
-        opp_dashboard_page.verify_text_in_url(olp9_data["url_text"])
+        opp_dashboard_page.verify_text_in_url("user_invite")

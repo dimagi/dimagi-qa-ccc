@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify Payments Earned section in opportunity dashboard page")
+@allure.tag("OLP_6")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_6 : Verify user see the all the information related to the deliveries under Payments Earned section  
+  """)
 
 @pytest.mark.web
 def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, config):
@@ -26,7 +33,7 @@ def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, 
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Payments Earned section in Opportunity"):
-        connect_opp_page.click_link_by_text(olp6_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity(olp6_data["card_title"], olp6_data["card_subtitle"])
-        connect_workers_page.verify_tab_is_active(olp6_data["tab_name"])
-        connect_workers_page.verify_table_headers_present(olp6_data["headers_list"])
+        connect_opp_page.click_opportunity_in_opportunity(olp6_data["opportunity_name"])
+        opp_dashboard_page.click_dashboard_card_in_opportunity("Payments", "Earned")
+        connect_workers_page.verify_tab_is_active("Payments")
+        connect_workers_page.verify_payments_table_headers_present()

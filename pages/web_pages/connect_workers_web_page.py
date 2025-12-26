@@ -40,7 +40,8 @@ class ConnectWorkersPage(BaseWebPage):
         self.click_add_worker_icon()
         self.verify_invite_users_input_present()
 
-    def enter_users_and_submit_in_opportunity(self, num_list):
+    def invite_workers_to_opportunity(self, num_list):
+        self.nav_to_add_worker()
         self.enter_invite_users_in_opportunity(num_list)
         self.click_submit_btn()
 
@@ -135,6 +136,18 @@ class ConnectWorkersPage(BaseWebPage):
             f"Actual headers found: {actual_headers}"
         )
         print(actual_headers)
+
+    def verify_deliver_table_headers_present(self):
+        self.verify_table_headers_present(["#", "Name", "Last active", "Payment unit", "Delivery progress", "Delivered", "Pending", "Approved", "Rejected"])
+
+    def verify_payments_table_headers_present(self):
+        self.verify_table_headers_present(["#", "Name", "Last active", "Accrued ()", "Total Paid ()", "Last paid", "Confirm ()"])
+
+    def verify_connect_workers_table_headers_present(self):
+        self.verify_table_headers_present(["#", "Status", "Name", "Phone Number", "Invited Date", "Last Active", "Started Learn", "Completed Learn", "Time to Complete Learning", "First Delivery", "Time to Start Deliver"])
+
+    def verify_learn_table_headers_present(self):
+        self.verify_table_headers_present(["#", "Name", "Last active", "Started Learning", "Modules completed", "Completed Learning", "Assessment", "Attempts", "Learning hours"])
 
     def click_name_in_table(self, name):
         by, xpath = self.NAME_ITEM_IN_TABLE

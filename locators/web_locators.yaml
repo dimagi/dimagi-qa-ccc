@@ -17,6 +17,7 @@ connect_home_page:
   my_organization_navbar_item: "//i[contains(@class, 'fa-building')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
   organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
+  organization_name: "//header/div/div/div[1]/button/div/p[1]"
 
 connect_opportunities_page:
   add_opportunity_btn: "//a[@href='/a/dg_connect/opportunity/init/']"
@@ -53,7 +54,6 @@ opportunity_dashboard_page:
   progress_funnel: "opp-funnel-container"
   hamburger_icon: "//i[contains(@class,'fa-solid') and (@click or contains(@class,'cursor-pointer'))][1]"
   hamburger_menu: "//div[@x-show='isOpen']"
-  total_row_deliver_table: "//tr[contains(@class,'border-2')]"
 
 connect_workers_page:
   add_worker_icon: "//a[@x-tooltip.raw='Add Worker']"
@@ -67,10 +67,13 @@ connect_workers_page:
   count_breakdown_popup: "//div[@x-ref='menu' and contains(@class,'fixed') and not(contains(@style,'display: none'))]"
 
 worker_visits_page:
+  worker_visits_table_element: "(//table[contains(@class,'base-table')])[2]"
   worker_visits_select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
   worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
   approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
+  approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
   reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
+  reject_popup_button: "(//button[contains(normalize-space(), 'Reject') and @type='submit'])[1]"
   approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
   reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
   tabs_container: "//div[contains(@class,'tabs')]"

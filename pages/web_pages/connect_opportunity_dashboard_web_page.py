@@ -1,4 +1,6 @@
 import time
+
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
@@ -79,12 +81,13 @@ class OpportunityDashboardPage(BaseWebPage):
         assert not missing_items, (f"Missing menu items: {missing_items}. "f"Available items: {menu_texts}")
         print(f"All menu items are present: {expected_items}")
 
-    def click_and_verify_hamburger_menu_items_present(self, expected_items):
+    def verify_hamburger_menu_items_present_in_opportunity(self):
         self.click_hamburger_icon()
         time.sleep(1)
-        self.verify_hamburger_menu_items_present(expected_items)
+        self.verify_hamburger_menu_items_present(["Edit Opportunity", "Add Payment Unit", "Catchment Areas", "Add Connect Workers", "Add Budget", "Verification Flags", "Send Message"])
 
     def select_hamburger_menu_item(self, value: str):
+        self.click_hamburger_icon()
         menu = self.wait_for_element(self.HAMBURGER_CONTEXT_MENU)
         elements = menu.find_elements(By.XPATH, ".//a[normalize-space()]")
         for each in elements:
@@ -93,28 +96,3 @@ class OpportunityDashboardPage(BaseWebPage):
                 break
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
-
-
-
-
-
-
-
-    TOTAL_ROW_DELIVER_TABLE = locators.get("opportunity_dashboard_page", "total_row_deliver_table")
-
-    def click_total_column(self, status):
-        total_row = self.wait_for_element(self.TOTAL_ROW_DELIVER_TABLE)
-        if status.lower() in ["approved", "pending", "rejected"]:
-            td_element = total_row.find_element(
-                By.XPATH,
-                f".//div[contains(@x-data,'isOpen')][contains(@hx-get,'status={status.lower()}')]//span"
-            )
-        elif status.lower() == "delivered":
-            td_element = total_row.find_element(
-                By.XPATH,
-                "(//tr[contains(@class,'border-2')]//div[contains(@x-data,'isOpen')])[1]"
-            )
-        self.wait_for_clickable(td_element)
-        td_element.click()
-
-    # https://connect.dimagi.com/a/dg_connect/opportunity/873/workers/deliver/

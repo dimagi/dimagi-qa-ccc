@@ -4,7 +4,6 @@ from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
-from selenium.webdriver.common.keys import Keys
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
@@ -14,11 +13,13 @@ class WorkerVisitsPage(BaseWebPage):
         super().__init__(driver)
 
 
-    TABLE_ELEMENT = locators.get("connect_workers_page", "table_element")
+    WORKER_VISITS_TABLE_ELEMENT = locators.get("worker_visits_page", "worker_visits_table_element")
     WORKER_VISITS_ROW = locators.get("worker_visits_page", "worker_visits_row_item")
     WORKER_VISITS_SELECT_ALL_CHECKBOX = locators.get("worker_visits_page", "worker_visits_select_all_checkbox")
     APPROVE_ALL_BUTTON = locators.get("worker_visits_page", "approve_all_button")
+    APPROVE_POPUP_BUTTON = locators.get("worker_visits_page", "approve_popup_button")
     REJECT_ALL_BUTTON = locators.get("worker_visits_page", "reject_all_button")
+    REJECT_POPUP_BUTTON = locators.get("worker_visits_page", "approve_popup_button")
     APPROVE_BUTTON = locators.get("worker_visits_page", "approve_button")
     REJECT_BUTTON = locators.get("worker_visits_page", "reject_button")
     TABS_CONTAINER = locators.get("worker_visits_page", "tabs_container")
@@ -30,7 +31,7 @@ class WorkerVisitsPage(BaseWebPage):
         checkbox = self.wait_for_element(self.WORKER_VISITS_SELECT_ALL_CHECKBOX)
         if checkbox.is_selected() != state:
             checkbox.click()
-        time.sleep(1)
+        time.sleep(2)
         self.verify_approve_and_reject_all_btns_present()
 
     def set_row_checkbox_from_list(self, row_data_list):
@@ -39,7 +40,7 @@ class WorkerVisitsPage(BaseWebPage):
         date, entity_name, check = row_data_list
         by, xpath = self.WORKER_VISITS_ROW
         actual_xpath = xpath.format(date=date, entity_name=entity_name)
-        table = self.wait_for_element(self.TABLE_ELEMENT)
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         row = table.find_element(By.XPATH, actual_xpath)
         checkbox = row.find_element(By.XPATH, ".//td[1]//input[@type='checkbox']")
         self.wait_for_clickable(checkbox)
@@ -54,7 +55,7 @@ class WorkerVisitsPage(BaseWebPage):
         date, entity_name = row_data_list
         by, xpath = self.WORKER_VISITS_ROW
         actual_xpath = xpath.format(date=date, entity_name=entity_name)
-        table = self.wait_for_element(self.TABLE_ELEMENT)
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         row = table.find_element(By.XPATH, actual_xpath)
         date_ele = row.find_element(By.XPATH, f".//td[contains(normalize-space(), '{date}')]")
         self.click_element(date_ele)
@@ -68,15 +69,21 @@ class WorkerVisitsPage(BaseWebPage):
 
     def click_approve_all_btn(self):
         self.click_element(self.APPROVE_ALL_BUTTON)
+        time.sleep(1)
+        self.click_element(self.APPROVE_POPUP_BUTTON)
+        time.sleep(2)
 
     def click_reject_all_btn(self):
         self.click_element(self.REJECT_ALL_BUTTON)
+        time.sleep(1)
+        self.click_element(self.REJECT_POPUP_BUTTON)
+        time.sleep(2)
 
-    def click_approve_btn(self):
+    def click_approve_btn_in_details(self):
         self.scroll_into_view(self.APPROVE_BUTTON)
         self.click_element(self.APPROVE_BUTTON)
 
-    def click_reject_btn(self):
+    def click_reject_btn_in_details(self):
         self.scroll_into_view(self.REJECT_BUTTON)
         self.click_element(self.REJECT_BUTTON)
 
@@ -93,6 +100,9 @@ class WorkerVisitsPage(BaseWebPage):
                 missing_tabs.append(tab)
         assert not missing_tabs, f"Missing tabs: {', '.join(missing_tabs)}"
 
+    def verify_worker_visits_tabs_present(self):
+        self.verify_tabs_present(["Pending NM Review", "Approved", "Rejected", "All"])
+
     def click_tab_by_name(self, tab_name):
         by, xpath = self.VISITS_TAB_ITEM_BY_NAME
         actual_xpath = xpath.format(tab_name=tab_name)
@@ -107,3 +117,24 @@ class WorkerVisitsPage(BaseWebPage):
         tab = self.wait_for_element((by, actual_xpath))
         class_items = tab.get_attribute("class")
         assert "active" in class_items, f"Tab '{tab_name}' is not active"
+
+    def verify_worker_visits_table_headers_present(self):
+        expected_headers = ["Date", "Entity Name", "Deliver Unit", "Payment Unit", "Flags", "Last Activity"]
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
+        headers = table.find_elements(By.XPATH, ".//thead//th")
+        actual_headers = []
+        for th in headers[1:]:
+            text = th.text.strip()
+            if text:
+                actual_headers.append(text)
+        actual_headers_lower = [h.lower() for h in actual_headers]
+        expected_headers_lower = [h.lower() for h in expected_headers]
+        missing_headers = [
+            header for header in expected_headers_lower
+            if header.lower() not in actual_headers_lower
+        ]
+        assert not missing_headers, (
+            f"Missing headers: {missing_headers}\n"
+            f"Actual headers found: {actual_headers}"
+        )
+        print(actual_headers)

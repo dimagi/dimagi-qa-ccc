@@ -19,6 +19,7 @@ class ConnectHomePage(BaseWebPage):
     MY_ORGANIZATION_NAVBAR_LINK = locators.get("connect_home_page", "my_organization_navbar_item")
     ORGANIZATION_CONTAINER = locators.get("connect_home_page", "organization_container")
     ORGANIZATION_DROPDOWN = locators.get("connect_home_page", "organization_dropdown")
+    ORGANIZATION_NAME = locators.get("connect_home_page", "organization_name")
 
 
     def click_signin_link(self):
@@ -49,7 +50,14 @@ class ConnectHomePage(BaseWebPage):
     def click_organization_dropdown(self):
         self.click_element(self.ORGANIZATION_DROPDOWN)
 
+    def is_org_selected(self, organization_name):
+        time.sleep(1)
+        return organization_name in self.get_text(self.ORGANIZATION_NAME)
+
     def select_organization_from_list(self, organization_name):
+        if self.is_org_selected(organization_name):
+            print(f"{organization_name} organization is already selected")
+            return
         self.click_organization_dropdown()
         container = self.wait_for_element(self.ORGANIZATION_CONTAINER)
         item_xpath = ".//li[.//p[normalize-space() = '" + organization_name + "']]"
@@ -58,3 +66,4 @@ class ConnectHomePage(BaseWebPage):
             self.click_element(item)
         except NoSuchElementException:
             print(f"Organization {organization_name} not found")
+            raise NoSuchElementException

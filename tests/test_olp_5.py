@@ -7,6 +7,13 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
+@allure.feature("OLP")
+@allure.story("Verify Services Delivered section in opportunity dashboard page")
+@allure.tag("OLP_5")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_5 : Verify user see the all the information related to the deliveries under Service Deliveries section  
+  """)
 
 @pytest.mark.web
 def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config):
@@ -25,8 +32,8 @@ def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_dat
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Services Delivered section in Opportunity"):
-        connect_opp_page.click_link_by_text(olp5_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity(olp5_data["card_title"], olp5_data["card_subtitle"])
-        connect_workers_page.verify_tab_is_active(olp5_data["tab_name"])
-        connect_workers_page.verify_table_headers_present(olp5_data["headers_list"])
+    with allure.step("Navigate to Services Delivered section and verify table in Opportunity"):
+        connect_opp_page.click_opportunity_in_opportunity(olp5_data["opportunity_name"])
+        opp_dashboard_page.click_dashboard_card_in_opportunity("Services Delivered", "Total")
+        connect_workers_page.verify_tab_is_active("Deliver")
+        connect_workers_page.verify_deliver_table_headers_present()

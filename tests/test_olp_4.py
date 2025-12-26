@@ -7,6 +7,13 @@ from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 
+@allure.feature("OLP")
+@allure.story("Verify opportunity details on the dashboard page ")
+@allure.tag("OLP_4")
+@allure.description("""
+  Covered manual test cases:
+  - OLP_4 : Confirm user can see the opportunity details on the dashboard page 
+  """)
 
 @pytest.mark.web
 def test_olp_4_verify_opportunity_details_in_dashboard(web_driver, test_data, config):
@@ -25,5 +32,5 @@ def test_olp_4_verify_opportunity_details_in_dashboard(web_driver, test_data, co
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Opportunity Dashboard and verify all fields present"):
-        connect_opp_page.click_link_by_text(olp4_data["opportunity_name"])
+        connect_opp_page.click_opportunity_in_opportunity(olp4_data["opportunity_name"])
         opp_dashboard_page.navigate_to_opportunity_and_verify_all_fields_present_in_connect(olp4_data)

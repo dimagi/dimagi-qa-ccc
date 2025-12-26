@@ -5,6 +5,17 @@ from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 
+@allure.feature("OLP")
+@allure.story("Add opportunity in Connect Page")
+@allure.tag("OLP_1", "OLP_2", "OLP_3")
+@allure.description("""
+    This automated test consolidates multiple manual test cases
+    
+    Covered manual test cases:
+        - OLP_1 : Verify user is able to create on opportunity
+        - OLP_2 : Verify user is able to land on the payment unit page
+        - OLP_3 : Verify user is able to land on the Budget page
+  """)
 
 @pytest.mark.web
 def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
