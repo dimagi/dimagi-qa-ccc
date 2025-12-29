@@ -25,6 +25,10 @@ class WorkerVisitsPage(BaseWebPage):
     TABS_CONTAINER = locators.get("worker_visits_page", "tabs_container")
     VISITS_TAB_ITEM_BY_NAME = locators.get("worker_visits_page", "visits_tab_item_by_name")
     VISIT_DETAILS_CONTAINER = locators.get("worker_visits_page", "visit_details_container")
+    USERNAME_SECTION = locators.get("worker_visits_page", "username_section")
+    SUSPEND_BUTTON = locators.get("worker_visits_page", "suspend_button")
+    SUSPEND_USER_REASON_INPUT = locators.get("worker_visits_page", "suspend_user_reason_input")
+    SUSPEND_POPUP_BUTTON = locators.get("worker_visits_page", "suspend_popup_button")
 
 
     def set_select_all_checkbox_worker_visits(self, state):
@@ -152,3 +156,11 @@ class WorkerVisitsPage(BaseWebPage):
             if entity_id_element.is_displayed() and entity_id_element.text == entity_id:
                 self.click_approve_btn_in_details()
                 break
+
+    def suspend_user_in_worker_visits(self, reason):
+        self.click_element(self.USERNAME_SECTION)
+        time.sleep(1)
+        self.click_element(self.SUSPEND_BUTTON)
+        time.sleep(1)
+        self.type(self.SUSPEND_USER_REASON_INPUT, reason)
+        self.click_element(self.SUSPEND_POPUP_BUTTON)

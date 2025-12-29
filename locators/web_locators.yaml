@@ -88,3 +88,7 @@ worker_visits_page:
   tabs_container: "//div[contains(@class,'tabs')]"
   visits_tab_item_by_name: "//label[contains(@class,'tab')][contains(normalize-space(), '{tab_name}')]"
   visit_details_container: "visit-details"
+  username_section: "//*[@id='content']/div/div[1]/div[1]"
+  suspend_button: "//*[@id='content']/div/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[1]/div/button[1]"
+  suspend_user_reason_input: "reason"
+  suspend_popup_button: "//button[contains(text(), 'Suspend') and @type='submit']"

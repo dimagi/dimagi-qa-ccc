@@ -32,7 +32,7 @@ def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, 
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Payments Earned section in Opportunity"):
+    with allure.step("Navigate to Payments Earned section and verify table in Opportunity"):
         connect_opp_page.click_opportunity_in_opportunity(olp6_data["opportunity_name"])
         opp_dashboard_page.click_dashboard_card_in_opportunity("Payments", "Earned")
         connect_workers_page.verify_tab_is_active("Payments")

@@ -114,6 +114,14 @@ class ConnectWorkersPage(BaseWebPage):
         time.sleep(2)
         self.verify_tab_is_active(tab_name)
 
+    def navigate_to_worker_visits(self, worker_name):
+        self.click_tab_by_name("Deliver")
+        time.sleep(1)
+        self.verify_tab_is_active("Deliver")
+        self.click_name_in_table(worker_name)
+        self.is_breadcrumb_item_present("Visits")
+        time.sleep(1)
+
     def verify_tab_is_active(self, tab_name):
         by, xpath = self.TAB_ITEM_BY_NAME
         actual_xpath = xpath.format(tab_name=tab_name)

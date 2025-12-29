@@ -21,6 +21,9 @@ class PersonalIDPage(BasePage):
     BACKUP_CODE_WELCOME_TEXT = locators.get("login_page", "backup_code_welcome_text")
     BACKUP_CODE_INPUT = locators.get("login_page", "backup_code_input")
     POPUP_MESSAGE_TXT = locators.get("login_page", "popup_msg_txt")
+    WRONG_BACKUP_CODE_TXT = locators.get("login_page", "wrong_backup_code_txt")
+    NETWORK_ERROR_TXT = locators.get("login_page", "network_connection_err_txt")
+    PROGRESS_BAR = locators.get("login_page", "progress_bar")
 
     def enter_phone_number(self, phone_number):
         self.type_element(self.PHONE_INPUT, phone_number)
@@ -35,20 +38,26 @@ class PersonalIDPage(BasePage):
         self.click_when_enabled(self.CONTINUE_BTN)
 
     def start_signup(self, country_code, phone_number):
-        """
-        Assumes user is already on Phone Number screen
-        """
         self.enter_country_code(country_code)
         self.enter_phone_number(phone_number)
         self.accept_terms()
+        time.sleep(2)
         self.continue_next()
+        time.sleep(5)
+        self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+
+        if(self.is_displayed(self.NETWORK_ERROR_TXT) == True):
+            print("Network Error")
+            time.sleep(2)
+            self.continue_next()
+            self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+
         self.wait_for_element(self.USE_FINGERPRINT_TXT)
 
     def click_configure_fingerprint(self):
         self.click_element(self.CONFIGURE_FINGERPRINT_BTN)
 
     def handle_fingerprint_auth(self):
-        # small wait for system UI
         time.sleep(2)
         simulate_fingerprint()
 
@@ -85,19 +94,23 @@ class PersonalIDPage(BasePage):
         self.enter_backup_code(mobile_backup_code)
 
     def verify_wrong_backup_code_err(self):
-        self.wait_for_element(self.POPUP_MESSAGE_TXT)
-        wrong_backup_code_txt = self.get_text(self.POPUP_MESSAGE_TXT)
+        self.type_element(self.BACKUP_CODE_INPUT, "123456")
+        self.click_when_enabled(self.CONTINUE_BTN)
+        toast = self.wait_for_element(self.WRONG_BACKUP_CODE_TXT)
+        toast_text = toast.text
+        print(toast_text)
+        assert "You have entered the wrong Backup Code" in toast_text
+        self.wait_for_element(self.OK_BTN)
         self.click_element(self.OK_BTN)
-        assert re.match(
-            rf"You have entered the wrong Backup Code. Please try again. You will need to create a new account after 2 more incorrect attempts.",
-            wrong_backup_code_txt
-        )
+
 
     def account_locked_error(self):
         self.wait_for_element(self.POPUP_MESSAGE_TXT)
         locked_txt = self.get_text(self.POPUP_MESSAGE_TXT)
-        self.click_element(self.OK_BTN)
         assert re.match(
             rf"Your account has been locked. Please contact support",
             locked_txt
         )
+        self.click_element(self.OK_BTN)
+
+

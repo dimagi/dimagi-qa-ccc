@@ -5,8 +5,8 @@ home_page:
   about_commcare_txt: "//android.widget.TextView[@text='About CommCare']"
   more_option_btn: "//androidx.appcompat.widget.LinearLayoutCompat/android.widget.ImageView"
   forget_personalid_user_btn: "//android.widget.TextView[@text='Forget PersonalID user']"
-  refresh_opportunities_btn: "//android.widget.TextView[@text='Refresh Opportunities]"
-  go_to_connect_btn: ""
+  refresh_opportunities_btn: "//android.widget.TextView[@text='Refresh Opportunities']"
+  go_to_connect_btn: "//android.widget.Button[@text='GO TO CONNECT MENU']"
 
   opportunities_btn: "//android.widget.TextView[@text='Opportunities']/parent::android.widget.LinearLayout"
   commcare_app_btn: "//android.widget.TextView[@text='CommCare Apps']/parent::android.widget.LinearLayout"
@@ -29,8 +29,11 @@ login_page:
   name_input: "org.commcare.dalvik:id/nameTextValue"
   backup_code_welcome_text: "org.commcare.dalvik:id/welcome_back"
   backup_code_input: "org.commcare.dalvik:id/connect_backup_code_input"
+  wrong_backup_code_txt: "//android.widget.TextView[contains(@text, 'You have entered the wrong Backup Code')]"
   popup_msg_txt: "org.commcare.dalvik:id/connect_message_message" # generic
 
+  network_connection_err_txt: "//android.widget.TextView[contains(@text, 'network connection')]"
+  progress_bar: "org.commcare.dalvik:id/progress_bar"
 
 notifications:
   invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
@@ -38,9 +41,9 @@ notifications:
 
 opportunity_page:
   opp_list_card: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/rootCardView']"
-  opp_list_title: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"
-  opp_list_date: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
-  opp_list_type: ".//android.widget.TextView[contains(@text,'Opportunity')]"
+  opp_list_title: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"
+  opp_list_date: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
+  opp_list_type: "//android.widget.TextView[contains(@text,'Opportunity')]"
 
   job_title_txt: "org.commcare.dalvik:id/tv_job_title"
   job_description_txt: "org.commcare.dalvik:id/tv_job_description"
@@ -51,7 +54,7 @@ opportunity_page:
   learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
   intro_learn_module_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
   intro_learn_summary_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
-  goto_learn_app_btn: "org.commcare.dalvik:id/connect_job_intro_start_button"
+  download_learn_app_btn: "org.commcare.dalvik:id/connect_job_intro_start_button"
 
   close_delivery_details_btn: "org.commcare.dalvik:id/imgCloseDialog"
   delivery_details_review_txt: "org.commcare.dalvik:id/connect_review"
@@ -59,3 +62,34 @@ opportunity_page:
   delivery_days_txt: "org.commcare.dalvik:id/connect_delivery_days_text"
   delivery_max_daily_txt: "org.commcare.dalvik:id/connect_delivery_max_daily_text"
   delivery_budget_txt: "org.commcare.dalvik:id/connect_delivery_budget_text"
+
+  download_learn_app_progress_bar: "org.commcare.dalvik:id/progress_fragment_determinate"
+
+learn_app_page:
+  learn_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
+  view_job_status_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='View Job Status']"
+  surveys_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/row_txt']"
+  survey_name_btn: "org.commcare.dalvik:id/row_txt"
+  finish_btn: "org.commcare.dalvik:id/nav_prog_bar"
+
+  learn_status_txt: "org.commcare.dalvik:id/connect_learning_status_text"
+  learn_progress_txt: "org.commcare.dalvik:id/connect_learning_progress_text"
+  continue_learning_btn: "org.commcare.dalvik:id/connect_learning_button"
+  score_input: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/form_entry_pane']//android.widget.EditText"
+
+  cert_title_txt: "org.commcare.dalvik:id/connect_learn_cert_title"
+  cert_opp_name_txt: "org.commcare.dalvik:id/connect_learn_cert_subject"
+  cert_worker_name_txt: "org.commcare.dalvik:id/connect_learn_cert_person"
+  cert_complete_date_txt: "org.commcare.dalvik:id/connect_learn_cert_date"
+  view_opp_details_btn: "org.commcare.dalvik:id/connect_learning_button"
+
+  opp_details_header_txt: "//android.widget.TextView[@text='Opportunity Details']"
+  delivery_details_txt: "org.commcare.dalvik:id/connect_delivery_title"
+  review_delivery_details_txt: "org.commcare.dalvik:id/connect_review"
+  start_visit_txt: "org.commcare.dalvik:id/connect_delivery_action_title"
+  download_delivery:  "org.commcare.dalvik:id/connect_delivery_action_details"
+  download_delivery_app_btn: "org.commcare.dalvik:id/connect_delivery_button"
+
+
+delivery_app_page:
+  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivey App')]"
