@@ -103,3 +103,14 @@ delivery_app_page:
   next_btn: "org.commcare.dalvik:id/nav_btn_next"
   finish_btn: "org.commcare.dalvik:id/nav_prog_bar"
 
+  pu_title_txt: "org.commcare.dalvik:id/tvDeliveryTitle"
+  payment_approved_count_txt: "org.commcare.dalvik:id/tvApproved"
+  payment_amount_txt: "org.commcare.dalvik:id/tvDeliveryTotalAmount"
+  remaining_count_txt: "org.commcare.dalvik:id/tvRemaining"
+  pu_next_arrow_btn: "org.commcare.dalvik:id/imgArrowForward"
+
+  delivery_list: "org.commcare.dalvik:id/delivery_list"
+  delivery_item_name_txt: "org.commcare.dalvik:id/delivery_item_name"
+  delivery_item_date_txt: "org.commcare.dalvik:id/delivery_item_date"
+
+

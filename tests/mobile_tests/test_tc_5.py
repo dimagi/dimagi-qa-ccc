@@ -63,8 +63,11 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
     with allure.step("Submit the form on the Delivery App"):
         delivery.submit_form("Registration Form")
 
-    with allure.step("Verify Payment Unit Info"):
+    with allure.step("Verify Payment Unit Info and Visits details"):
         delivery.verify_payment_info()
+
+    with allure.step("Submit the form on the Delivery App without GPS location"):
+        delivery.submit_form("Registration Form", record_loc=False)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
