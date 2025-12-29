@@ -56,17 +56,9 @@ WORKER_LIST_VIEW_4:
 WORKER_LIST_VIEW_5:
   opportunity_name: "covid_opp"
 
-WORKER_LIST_VIEW_8:
-  opportunity_name: "covid_opp"
-
 WORKER_VISIT_VERIFICATION_PAGE_1_2:
   opportunity_name: "covid_opp"
   worker_name: "Deb Test 8/12"
-
-WORKER_VISIT_VERIFICATION_PAGE_3:
-  opportunity_name: "covid_opp"
-  worker_name: "Deb Test 8/12"
-  reason: "Suspend user reason"
 
 Invite_Workers:
   opportunity_name: "Demo Opportunity"

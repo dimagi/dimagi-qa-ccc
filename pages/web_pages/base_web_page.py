@@ -1,4 +1,4 @@
-from selenium.common import TimeoutException, NoSuchElementException
+from selenium.common import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -144,9 +144,3 @@ class BaseWebPage:
     def refresh_current_page(self):
         self.driver.refresh()
         self._wait_for_page_load()
-
-    def find_element_or_fail(self, parent, by, locator, element_name):
-        try:
-            return parent.find_element(by, locator)
-        except NoSuchElementException:
-            raise AssertionError(f"[ERROR] Element not found: {element_name}")
