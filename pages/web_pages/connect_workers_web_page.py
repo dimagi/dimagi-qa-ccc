@@ -23,6 +23,15 @@ class ConnectWorkersPage(BaseWebPage):
     TABLE_ELEMENT = locators.get("connect_workers_page", "table_element")
     NAME_ITEM_IN_TABLE = locators.get("connect_workers_page", "name_item_in_table")
     COUNT_BREAKDOWN_POPUP = locators.get("connect_workers_page", "count_breakdown_popup")
+    FILTER_BUTTON = locators.get("connect_workers_page", "filter_button")
+    FILTERS_MODAL_WINDOW = locators.get("connect_workers_page", "filters_modal_window")
+    FILTER_BADGE = locators.get("connect_workers_page", "filter_badge")
+    LAST_ACTIVE_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page", "last_active_dropdown")
+    HAS_DUPLICATES_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page", "has_duplicates_dropdown")
+    DELIVERIES_FLAGS_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page", "deliveries_with_flags_dropdown")
+    HAS_OVERLIMIT_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page", "has_overlimit_dropdown")
+    DELIVERIES_PENDING_REVIEW_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page","deliveries_with_pending_review_dropdown")
+    APPLY_BTN_FILTER_WINDOW = locators.get("connect_workers_page", "apply_button_filter_window")
 
 
     def click_add_worker_icon(self):
@@ -184,3 +193,145 @@ class ConnectWorkersPage(BaseWebPage):
             if text:
                 texts.add(text)
         print(texts)
+
+    def click_filter_button(self):
+        self.click_element(self.FILTER_BUTTON)
+        self.wait_for_element(self.FILTERS_MODAL_WINDOW)
+
+    def select_last_active_filter_deliver_table(self, value):
+        self.select_by_visible_text(self.LAST_ACTIVE_DROPDOWN_FILTERS_WINDOW, value)
+
+    def select_has_duplicates_filter_deliver_table(self, value):
+        self.select_by_visible_text(self.HAS_DUPLICATES_DROPDOWN_FILTERS_WINDOW, value)
+
+    def select_deliveries_with_flags_filter_deliver_table(self, value):
+        self.select_by_visible_text(self.DELIVERIES_FLAGS_DROPDOWN_FILTERS_WINDOW, value)
+
+    def select_has_overlimit_filter_deliver_table(self, value):
+        self.select_by_visible_text(self.HAS_OVERLIMIT_DROPDOWN_FILTERS_WINDOW, value)
+
+    def select_deliveries_with_pending_review_filter_deliver_table(self, value):
+        self.select_by_visible_text(self.DELIVERIES_PENDING_REVIEW_DROPDOWN_FILTERS_WINDOW, value)
+
+    def click_apply_button_filters_window(self):
+        self.click_element(self.APPLY_BTN_FILTER_WINDOW)
+
+    def verify_active_filter_badge_present(self, value):
+        value = str(value)
+        element = self.wait_for_element(self.FILTER_BADGE)
+        assert element.text == value, f"Filter badge value mismatch {element.text} != {value}"
+        print(element.text)
+
+    def clear_all_filters_deliver_table(self):
+        self.click_filter_button()
+        self.select_last_active_filter_deliver_table("Any time")
+        self.select_has_duplicates_filter_deliver_table("---------")
+        self.select_deliveries_with_flags_filter_deliver_table("---------")
+        self.select_has_overlimit_filter_deliver_table("---------")
+        self.select_deliveries_with_pending_review_filter_deliver_table("---------")
+        self.click_apply_button_filters_window()
+        time.sleep(2)
+
+    def get_last_active_dates_from_deliver_table(self):
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        dates = []
+        header_xpath = ".//thead//th[.//text()[normalize-space()='Last active']]"
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, "Last active Column")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        rows = table.find_elements(By.XPATH, ".//tbody//tr")
+        for row in rows:
+            try:
+                cell = row.find_element(By.XPATH, f"./td[{column_index}]")
+                date_text = cell.text.strip()
+                if date_text:
+                    dates.append(date_text)
+            except Exception:
+                continue
+        return dates
+
+    def is_datetime_within_last_day(self, date_str, days_ago) -> bool:
+        try:
+            given_dt = datetime.strptime(date_str.strip(), "%d-%b-%Y %H:%M")
+            now = datetime.now()
+            lower_bound = now - timedelta(days=days_ago)
+            return lower_bound <= given_dt <= now
+        except ValueError:
+            return False
+
+    def apply_n_verify_last_active_filter_deliver_table(self):
+        self.click_filter_button()
+        self.select_last_active_filter_deliver_table("1 day ago")
+        self.click_apply_button_filters_window()
+        time.sleep(2)
+        self.verify_active_filter_badge_present(1)
+        all_dates = self.get_last_active_dates_from_deliver_table()
+        for each in all_dates:
+            assert self.is_datetime_within_last_day(each,
+                                                    1), f"Filter Error, Last active 1 day ago\nLast active date present: {each}"
+
+    def verify_column_value_in_learn_table(self, worker_name, expected_value, column_name):
+        worker_name, column_name = worker_name.strip(), column_name.strip()
+        expected_value = expected_value.strip()
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        cell_xpath = f"./td[{column_index}]"
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        assert expected_value == cell_element.text.strip(), f"{column_name} value mismatch: {cell_element.text}"
+        print(f"Value of {column_name} for {worker_name}: {expected_value}")
+
+    def verify_column_not_empty_in_learn_table(self, worker_name, column_name):
+        worker_name, column_name = worker_name.strip(), column_name.strip()
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        cell_xpath = f"./td[{column_index}]"
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        assert cell_element.text not in ["", None], f"Value of {column_name} for {worker_name} is empty"
+
+    def verify_modules_completed_status_bar_in_learn_table(self, worker_name, value):
+        worker_name = worker_name.strip()
+        column_name = 'Modules completed'
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{row_xpath} worker")
+        cell_span_xpath = f"./td[{column_index}]//span"
+        span_element = row.find_element(By.XPATH, cell_span_xpath)
+        status_bar_xpath = f"./td[{column_index}]//div//div//div"
+        status_bar_element = row.find_element(By.XPATH, status_bar_xpath)
+        assert value in span_element.text, f"Percentage value '{span_element.text}' mismatch for {worker_name}"
+        assert value in status_bar_element.get_attribute(
+            "style"), f"Status bar value '{status_bar_element.get_attribute("style")}' mismatch for {worker_name}"
+        print(f"Modules Completed Status Bar for {worker_name}: {status_bar_element.get_attribute("style")}")
+        print(f"Modules completed percentage text for {worker_name}: {span_element.text}")
+
+    def verify_green_bar_status_present(self, worker_name):
+        worker_name = worker_name.strip()
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = ".//thead//th[.//div[contains(@class,'bg-black')]]"
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Green status column")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        cell_xpath = f"./td[{column_index}]//div//div"
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        positive_condition = ('positive' in cell_element.get_attribute("class")) and (
+                    'black' not in cell_element.get_attribute("class"))
+        assert positive_condition, f"Green status is not present for {worker_name}"
+        print(f"Green status present for {worker_name}: {cell_element.get_attribute("class")}")
+
+    def verify_worker_passed_with_100_in_learn_table(self, worker_name):
+        self.verify_column_value_in_learn_table(worker_name, "Passed", "Assessment")
+        self.verify_modules_completed_status_bar_in_learn_table(worker_name, "100")
+        self.verify_green_bar_status_present(worker_name)
+        self.verify_column_not_empty_in_learn_table(worker_name, "Attempts")
+        self.verify_column_not_empty_in_learn_table(worker_name, "Completed Learning")
