@@ -93,3 +93,13 @@ learn_app_page:
 
 delivery_app_page:
   delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivey App')]"
+  delivery_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
+  view_job_status_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='View Job Status']"
+  case_list_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/row_txt']"
+  case_forms_btn: "org.commcare.dalvik:id/row_txt"
+  name_input: "//android.widget.TextView[@text='name']/ancestor::android.widget.RelativeLayout/following-sibling::android.widget.EditText"
+  id_input: "//android.widget.TextView[@text='id']/ancestor::android.widget.RelativeLayout/following-sibling::android.widget.EditText"
+  record_location_btn: "//android.widget.Button[@text='RECORD LOCATION']"
+  next_btn: "org.commcare.dalvik:id/nav_btn_next"
+  finish_btn: "org.commcare.dalvik:id/nav_prog_bar"
+
