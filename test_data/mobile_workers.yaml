@@ -15,5 +15,5 @@ TC_3:
   phone_number: "7426006"
   username: "Automation User 06"
   backup_code: "742606"
-  opportunity_name: "covid_opp"
-
+  opportunity_name: "test_opp_221225_01"
+  org_name: "Automation_Test_01"

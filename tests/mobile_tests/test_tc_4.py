@@ -7,6 +7,7 @@ from pages.mobile_pages.opportunity_page import OpportunityPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
+from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
@@ -29,7 +30,7 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
-    connect_opp = ConnectOpportunitiesPage(web_driver)
+    connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
 
@@ -68,7 +69,15 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     with allure.step("Fail the Assessment with less than min score"):
         learn.complete_assessment("10")
 
-    # with allure.step("Verify Assessment Status on Connect portal"):
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.navigate_to_connect_page(config)
+        connect_home_page.signin_to_connect_page_using_cchq()
+
+    with allure.step("Verify Assessment status in learn table for worker"):
+        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
+        connect_workers_page.click_tab_by_name("Learn")
+        connect_workers_page.verify_worker_assessment_status(data["username"], "Failed")
 
     with allure.step("Verify Job Status for Failed Assessment"):
         learn.verify_job_status("FAILED_ASSESSMENT")
@@ -79,4 +88,7 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     with allure.step("Verify Job Status for Passed Assessment"):
         learn.verify_certificate_screen()
 
-    # with allure.step("Verify Assessment Status on Connect portal"):
+    with allure.step("Verify Assessment status in learn table for worker"):
+        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
+        connect_workers_page.click_tab_by_name("Learn")
+        connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")
