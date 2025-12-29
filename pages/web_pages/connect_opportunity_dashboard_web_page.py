@@ -66,6 +66,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_connect_workers(self, opp):
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
+        self.verify_text_in_url("workers")
 
     def click_hamburger_icon(self):
         self.click_element(self.HAMBURGER_ICON)

@@ -40,14 +40,14 @@ def test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect(web
         connect_workers_page.verify_deliver_table_headers_present()
 
     # Worker List View_4
-    with allure.step("Verify Delivered column count breakdown in Deliver table"):
+    with allure.step("Verify Delivered column count breakdown for worker in Deliver table"):
         connect_workers_page.click_and_verify_status_count_breakdown_for_item([worker_list_view_4_data["worker_name"], "Delivered"])
 
-    with allure.step("Verify Pending column count breakdown in Deliver table"):
+    with allure.step("Verify Pending column count breakdown for worker in Deliver table"):
         connect_workers_page.click_and_verify_status_count_breakdown_for_item([worker_list_view_4_data["worker_name"], "Pending"])
 
-    with allure.step("Verify Approved column count breakdown in Deliver table"):
+    with allure.step("Verify Approved column count breakdown for worker in Deliver table"):
         connect_workers_page.click_and_verify_status_count_breakdown_for_item([worker_list_view_4_data["worker_name"], "Approved"])
 
-    with allure.step("Verify Rejected column count breakdown in Deliver table"):
+    with allure.step("Verify Rejected column count breakdown for worker in Deliver table"):
         connect_workers_page.click_and_verify_status_count_breakdown_for_item([worker_list_view_4_data["worker_name"], "Rejected"])

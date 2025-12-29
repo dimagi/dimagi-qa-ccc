@@ -7,17 +7,17 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
-@allure.feature("OLP")
-@allure.story("Verify Payments Earned section in opportunity dashboard page")
-@allure.tag("OLP_6")
+@allure.feature("Worker List View")
+@allure.story("Verify selected filters are applied on the Deliver tab")
+@allure.tag("Worker_List_View_8")
 @allure.description("""
-  Covered manual test cases:
-  - OLP_6 : Verify user see the all the information related to the deliveries under Payments Earned section  
+    Covered manual test cases:
+        - Worker_List_View_8 : Verify selected filters are applied on the delivery tab
   """)
 
 @pytest.mark.web
-def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, config):
-    olp6_data = test_data.get("OLP_6")
+def test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity(web_driver, test_data, config):
+    worker_list_view_8_data = test_data.get("WORKER_LIST_VIEW_8")
 
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
@@ -32,8 +32,13 @@ def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, 
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Navigate to Payments Earned section and verify table in Opportunity"):
-        connect_opp_page.click_opportunity_in_opportunity(olp6_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity("Payments", "Earned")
-        connect_workers_page.verify_tab_is_active("Payments")
-        connect_workers_page.verify_payments_table_headers_present()
+    with allure.step("Navigate and verify Connect Workers details in Opportunity"):
+        connect_opp_page.click_opportunity_in_opportunity(worker_list_view_8_data["opportunity_name"])
+        opp_dashboard_page.click_dashboard_card_in_opportunity("Services Delivered", "Total")
+        opp_dashboard_page.verify_text_in_url("workers/deliver")
+        connect_workers_page.verify_deliver_table_headers_present()
+
+    # Worker List View_8
+    with allure.step("Verify Last Active filter as 1 day ago in Deliver table"):
+        connect_workers_page.clear_all_filters_deliver_table()
+        connect_workers_page.apply_n_verify_last_active_filter_deliver_table()

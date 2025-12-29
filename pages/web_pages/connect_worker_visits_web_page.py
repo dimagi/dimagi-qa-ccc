@@ -25,6 +25,10 @@ class WorkerVisitsPage(BaseWebPage):
     TABS_CONTAINER = locators.get("worker_visits_page", "tabs_container")
     VISITS_TAB_ITEM_BY_NAME = locators.get("worker_visits_page", "visits_tab_item_by_name")
     VISIT_DETAILS_CONTAINER = locators.get("worker_visits_page", "visit_details_container")
+    USERNAME_SECTION = locators.get("worker_visits_page", "username_section")
+    SUSPEND_BUTTON = locators.get("worker_visits_page", "suspend_button")
+    SUSPEND_USER_REASON_INPUT = locators.get("worker_visits_page", "suspend_user_reason_input")
+    SUSPEND_POPUP_BUTTON = locators.get("worker_visits_page", "suspend_popup_button")
 
 
     def set_select_all_checkbox_worker_visits(self, state):
@@ -57,7 +61,8 @@ class WorkerVisitsPage(BaseWebPage):
         actual_xpath = xpath.format(date=date, entity_name=entity_name)
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         row = table.find_element(By.XPATH, actual_xpath)
-        date_ele = row.find_element(By.XPATH, f".//td[contains(normalize-space(), '{date}')]")
+        date_ele_xpath = f".//td[contains(normalize-space(), '{date}')]"
+        date_ele = self.find_element_or_fail(row, By.XPATH, date_ele_xpath, f"Date for {entity_name}")
         self.click_element(date_ele)
         time.sleep(1)
         assert self.wait_for_element(self.VISIT_DETAILS_CONTAINER).is_displayed(), "Details container not present."
@@ -93,7 +98,7 @@ class WorkerVisitsPage(BaseWebPage):
         for tab in expected_tabs:
             tab_xpath = "//label[contains(@class,'tab')][normalize-space(./text()[normalize-space()][1])='" + tab + "']"
             try:
-                element = tabs_container.find_element(By.XPATH, tab_xpath)
+                element = self.find_element_or_fail(tabs_container, By.XPATH, tab_xpath, f"Tab {tab} in Worker Visits")
                 if not element.is_displayed():
                     missing_tabs.append(tab)
             except NoSuchElementException:
@@ -138,3 +143,24 @@ class WorkerVisitsPage(BaseWebPage):
             f"Actual headers found: {actual_headers}"
         )
         print(actual_headers)
+
+    def approve_entity_from_visits_using_name_and_id(self, entity_name, entity_id):
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
+        row_xpath = f".//td[contains(normalize-space(), '{entity_name}')]"
+        rows = table.find_elements(By.XPATH, row_xpath)
+        for each in rows:
+            self.click_element(each)
+            time.sleep(2)
+            assert self.wait_for_element(self.VISIT_DETAILS_CONTAINER).is_displayed(), "Details container not present."
+            entity_id_element = self.find((By.XPATH, "//*[@id='visit-details']/div/div[1]/div[3]/div[2]"))
+            if entity_id_element.is_displayed() and entity_id_element.text == entity_id:
+                self.click_approve_btn_in_details()
+                break
+
+    def suspend_user_in_worker_visits(self, reason):
+        self.click_element(self.USERNAME_SECTION)
+        time.sleep(1)
+        self.click_element(self.SUSPEND_BUTTON)
+        time.sleep(1)
+        self.type(self.SUSPEND_USER_REASON_INPUT, reason)
+        self.click_element(self.SUSPEND_POPUP_BUTTON)

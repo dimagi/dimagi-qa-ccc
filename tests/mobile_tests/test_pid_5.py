@@ -3,27 +3,16 @@ import pytest
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
 
-@allure.feature("PID & CONNECT")
-@allure.story("Login related validations")
-@allure.tag("PID_4", "PID_5", "PID_6_1", "CONNECT_1", "CONNECT_2")
-@allure.description("""
- This automated test consolidates multiple manual test cases
 
-  Covered manual test cases:
-  - PID_5 : Login with valid credentials
-  - PID_4 : Sign out for existing demo user
-  - PID_6_1 : Verify wrong backup code entered error popup
-  - CONNECT_1 : Verify all side menu options shown
-  - CONNECT_2 : Verify Go To Connect button shown
-  """)
 @pytest.mark.mobile
-def test_login_and_home_page(mobile_driver, test_data):
-    data = test_data.get("TC_1")
+def test_pid_5_recover_existing_user(mobile_driver, test_data):
+    data = test_data.get("PID_5")
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
 
     username = data["username"]
 
+    # Step 1: enter existing test number
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
         home.click_signup()
@@ -31,30 +20,27 @@ def test_login_and_home_page(mobile_driver, test_data):
     with allure.step("Enter Mobile Number and Continue"):
         pid.start_signup(data["country_code"], data["phone_number"])   # test number
 
+    # Step 2: device auth (handled via emulator / adb)
     with allure.step("Handle Fingerprint Authentication"):
         pid.click_configure_fingerprint()
         pid.handle_fingerprint_auth()
 
+    # Step 3: Skip OTP for demo user
     with allure.step("Confirm Demo User popup"):
         pid.demo_user_confirm()
 
+    # Step 4: Enter Name
     with allure.step("Enter Username"):
         pid.enter_name(username)
 
+    # Step 5: Verify Backup code welcome text
     with allure.step("Verify Backup Code screen with existing Username"):
         pid.verify_backup_code_screen(username)
 
-    with allure.step("Verify wrong backup code entered error"):
-        pid.verify_wrong_backup_code_err()
-
-    with allure.step("Complete Sign In with correct backup code and Continue"):
+    # Step 6: Enter Backup Code
+    with allure.step("Enter Backup Code and Continue"):
         pid.enter_backup_code(data["backup_code"])
 
+    # Step 7: Verify user logged in
     with allure.step("Verify user logged in to Connect App"):
         assert home.is_username_displayed(username)
-
-    with allure.step("Verify all connect options in the side menu"):
-        home.verify_side_panel_options()
-
-    with allure.step("Verify Go To Connect button shown"):
-        home.verify_go_to_connect()
