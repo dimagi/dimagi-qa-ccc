@@ -64,3 +64,8 @@ def test_worker_visit_verification_page_1_2_for_deliver_of_opportunity_in_connec
     # with allure.step("Change organization"):
     #     connect_home_page.select_organization_from_list("Automation_Test_01")
     ##################
+
+    ################### Step to approve visit using entity name & id - for reference not included in the test case
+    # with allure.step("Approve individual Worker Visit using entity name and ID"):
+    #     worker_visits_page.approve_entity_from_visits_using_name_and_id("test name", "123")
+    ##################

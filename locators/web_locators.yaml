@@ -65,6 +65,15 @@ connect_workers_page:
   tab_item_by_name: "//ul[@id='tabs']//li[.//span[normalize-space()='{tab_name}']]"
   name_item_in_table: "//td[.//p[text()='{name}']]"
   count_breakdown_popup: "//div[@x-ref='menu' and contains(@class,'fixed') and not(contains(@style,'display: none'))]"
+  filter_button: "//*[@id='tab-options']/div/button[1]"
+  filters_modal_window: "//*[@id='tab-options']/div/div[1]/div"
+  filter_badge: "//*[@id='tab-options']/div/button[1]/span"
+  last_active_dropdown: "id_last_active"
+  has_duplicates_dropdown: "id_has_duplicates"
+  deliveries_with_flags_dropdown: "id_has_flags"
+  has_overlimit_dropdown: "id_has_overlimit"
+  deliveries_with_pending_review_dropdown: "id_review_pending"
+  apply_button_filter_window: "//*[@id='tab-options']/div/div[1]/div/div[2]/button[2]"
 
 worker_visits_page:
   worker_visits_table_element: "(//table[contains(@class,'base-table')])[2]"
@@ -79,3 +88,7 @@ worker_visits_page:
   tabs_container: "//div[contains(@class,'tabs')]"
   visits_tab_item_by_name: "//label[contains(@class,'tab')][contains(normalize-space(), '{tab_name}')]"
   visit_details_container: "visit-details"
+  username_section: "//*[@id='content']/div/div[1]/div[1]"
+  suspend_button: "//*[@id='content']/div/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[1]/div/button[1]"
+  suspend_user_reason_input: "reason"
+  suspend_popup_button: "//button[contains(text(), 'Suspend') and @type='submit']"
