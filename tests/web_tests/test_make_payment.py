@@ -26,9 +26,8 @@ def test_make_payment_for_worker_to_opportunity_connect(web_driver, test_data, c
     with allure.step("Make payment for worker in Opportunity of Connect Dashboard Page"):
         connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_payments_earned(data["opportunity_name"])
-        ##### order of params - worker_name, country_code, phone_number, amount, date(yyyy-mm-dd) #####
+        ##### order of params - worker_name, country_code, phone_number, amount #####
         connect_workers_page.make_payment_with_date_for_worker(data["worker_name"],
                                                          data["country_code"],
                                                          data["phone_number"],
-                                                        "100",
-                                                         "2025-12-29")
+                                                        "100")

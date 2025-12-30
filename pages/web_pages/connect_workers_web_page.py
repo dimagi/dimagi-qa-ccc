@@ -389,10 +389,11 @@ class ConnectWorkersPage(BaseWebPage):
         file_input.send_keys(file_path)
         assert file_input.get_attribute("value") != ""
 
-    def make_payment_with_date_for_worker(self, worker_name, country_code, phone_number, amount, date):
+    def make_payment_with_date_for_worker(self, worker_name, country_code, phone_number, amount):
         username = self.fetch_username_from_payments(worker_name)
         full_phone_number = country_code + phone_number
-        self.write_payment_details_to_excel([username, full_phone_number, worker_name, amount, date])
+        curr_date = datetime.now().strftime("%Y-%m-%d")
+        self.write_payment_details_to_excel([username, full_phone_number, worker_name, amount, curr_date])
         self.click_element(self.IMPORT_PAYMENT_ICON)
         self.import_make_payment_file()
         time.sleep(2)
