@@ -35,7 +35,7 @@ OLP_5:
   opportunity_name: "Demo Opportunity"
 
 OLP_6:
-  opportunity_name: "Demo Opportunity"
+  opportunity_name: "covid_opp"
 
 OLP_7:
   opportunity_name: "Demo Opportunity"
@@ -65,7 +65,22 @@ WORKER_VISIT_VERIFICATION_PAGE_3:
   worker_name: "Deb Test 8/12"
   reason: "Suspend user reason"
 
+WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
+  opportunity_name: "covid_opp"
+  worker_name: "Deb Test 8/12"
+
+PAYMENT_PROCESSING_1_2_3:
+  opportunity_name: "covid_opp"
+  worker_name: "Deb Test 8/12"
+
 Invite_Workers:
   opportunity_name: "Demo Opportunity"
   org_name: "dg_connect"
   numbers_list: ["+919999999999", "+918888888888", "+917777777777"]
+
+Make_Payment:
+  opportunity_name: "Test Opp 151201"
+  org_name: "dg_connect"
+  worker_name: "Automation User 10"
+  country_code: "+7426"
+  phone_number: "7426006"

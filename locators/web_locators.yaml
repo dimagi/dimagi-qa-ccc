@@ -74,6 +74,12 @@ connect_workers_page:
   has_overlimit_dropdown: "id_has_overlimit"
   deliveries_with_pending_review_dropdown: "id_review_pending"
   apply_button_filter_window: "//*[@id='tab-options']/div/div[1]/div/div[2]/button[2]"
+  rollback_last_payment_btn: "//button[normalize-space()='Rollback Last Payment']"
+  rollback_popup_btn: "//button[@type='submit' and normalize-space()='Rollback']"
+  import_payment_btn: "//*[@id='tab-options']/div/button[1]"
+  file_upload_import_payment: "importFile_showPaymentImportModal"
+  import_popup_btn: "//button[@type='submit' and normalize-space(.)='Import']"
+  import_status_text: "//*[@id='exportStatus']/a"
 
 worker_visits_page:
   worker_visits_table_element: "(//table[contains(@class,'base-table')])[2]"

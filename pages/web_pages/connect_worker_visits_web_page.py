@@ -122,8 +122,11 @@ class WorkerVisitsPage(BaseWebPage):
         class_items = tab.get_attribute("class")
         assert "active" in class_items, f"Tab '{tab_name}' is not active"
 
-    def verify_worker_visits_table_headers_present(self):
-        expected_headers = ["Date", "Entity Name", "Deliver Unit", "Payment Unit", "Flags", "Last Activity"]
+    def verify_worker_visits_table_headers_present(self, pending=False):
+        if pending:
+            expected_headers = ["Date", "Entity Name", "Deliver Unit", "Payment Unit", "Flags"]
+        else:
+            expected_headers = ["Date", "Entity Name", "Deliver Unit", "Payment Unit", "Flags", "Last Activity"]
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         headers = table.find_elements(By.XPATH, ".//thead//th")
         actual_headers = []

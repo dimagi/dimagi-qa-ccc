@@ -3,7 +3,6 @@ import pytest
 from pages.web_pages.cchq_home_web_page import HomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
-from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
@@ -22,7 +21,6 @@ def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_dat
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
-    connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
 
@@ -33,7 +31,5 @@ def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_dat
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate to Services Delivered section and verify table in Opportunity"):
-        connect_opp_page.click_opportunity_in_opportunity(olp5_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity("Services Delivered", "Total")
-        connect_workers_page.verify_tab_is_active("Deliver")
+        opp_dashboard_page.navigate_to_services_delivered(olp5_data["opportunity_name"])
         connect_workers_page.verify_deliver_table_headers_present()
