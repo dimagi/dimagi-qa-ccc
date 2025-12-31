@@ -97,3 +97,10 @@ class OpportunityDashboardPage(BaseWebPage):
                 break
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
+
+
+    def navigate_to_services_delivered(self, opp):
+        self.click_link_by_text(opp)
+        self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
+        self.verify_text_in_url("workers/deliver")
+        time.sleep(1)

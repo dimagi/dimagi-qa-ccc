@@ -1,6 +1,8 @@
 import allure
 import pytest
 
+from pages.mobile_pages.app_notifications import AppNotifications
+from pages.mobile_pages.delivery_app_page import DeliveryAppPage
 from pages.mobile_pages.learn_app_page import LearnAppPage
 from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
@@ -10,34 +12,38 @@ from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
+from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Learn App related validations")
-@allure.tag("CONNECT_7", "CONNECT_8")
+@allure.story("Delivery App related validations")
+@allure.tag("CONNECT_11", "CONNECT_12")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
-  - CONNECT_7 : Verify user can start learning after downloading the learn app
-  - CONNECT_8 : Verify user isn't allowed to download the app if they fail the assessment 
+  - CONNECT_11 : Confirm when a payment is made to the user, the same is reflected on the mobile 
+  - CONNECT_12 : Verify that user can confirm the payment status from the mobile
   """)
+
 @pytest.mark.mobile
 @pytest.mark.web
-def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_4")
+def test_opportunity_details(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_6")
 
-    # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
+    worker_visits_page = WorkerVisitsPage(web_driver)
 
     # mobile driver and page initiation
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
-    learn = LearnAppPage(mobile_driver)
+    mobile_notifications = MobileNotifications(mobile_driver)
+    app_notification = AppNotifications(mobile_driver)
+    delivery = DeliveryAppPage(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -50,45 +56,37 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
                                  data["username"],
                                  data["backup_code"])   # test number
 
-    with allure.step("Open the learn app page"):
+    with allure.step("Open the delivery app page"):
         home.open_app_from_goto_connect(data["opportunity_name"])
 
-
-    with allure.step("Complete Learning module"):
-        learn.complete_learn_survey("Learn 1")
-
-    with allure.step("Verify In Progress Job Status"):
-        learn.verify_job_status("IN_PROGRESS")
-
-    with allure.step("Complete Learning module"):
-        learn.complete_learn_survey("Learn 2")
-
-    with allure.step("Verify Learn Completed Job Status"):
-        learn.verify_job_status("COMPLETED")
-
-    with allure.step("Fail the Assessment with less than min score"):
-        learn.complete_assessment("10")
+    with allure.step("Navigate to view job status"):
+        delivery.nav_to_view_job()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 
-    with allure.step("Verify Assessment status in learn table for worker"):
-        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
-        connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Failed")
+    with allure.step("Change the organization"):
+        connect_home_page.select_organization_from_list(data["organization_name"])
 
-    with allure.step("Verify Job Status for Failed Assessment"):
-        learn.verify_job_status("FAILED_ASSESSMENT")
+    # with allure.step("Complete the Payment"):
 
-    with allure.step("Pass the Assessment with more than min score"):
-        learn.complete_assessment("90")
+    with allure.step("Verify push notification shown for the payment"):
+        mobile_notifications.open_notifications()
+        mobile_notifications.verify_payment_received()
+        mobile_notifications.click_payment_received()
 
-    with allure.step("Verify Job Status for Passed Assessment"):
-        learn.verify_certificate_screen()
+    with allure.step("Verify App notification shown for the payment"):
+        delivery.nav_to_app_notification()
+        app_notification.verify_payment_received()
 
-    with allure.step("Verify Assessment status in learn table for worker"):
-        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
-        connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")
+    with allure.step("Verify Payment confirmation popup on View Job Status header"):
+        delivery.verify_payment_popup()
+        delivery.verify_transfer_tile_on_payment_tab()
+
+    with allure.step("Deny confirm transferred payment on payment tab"):
+        delivery.confirm_pay_on_payment_tab("No")
+
+    with allure.step("Deny confirm transferred payment on payment tab"):
+        delivery.confirm_pay_on_payment_tab("Yes")

@@ -19,6 +19,7 @@ from pages.mobile_pages.home_page import HomePage
 @pytest.mark.mobile
 def test_login_and_home_page(mobile_driver, test_data):
     data = test_data.get("TC_1")
+
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
 
@@ -58,3 +59,6 @@ def test_login_and_home_page(mobile_driver, test_data):
 
     with allure.step("Verify Go To Connect button shown"):
         home.verify_go_to_connect()
+
+    with allure.step("Sign out from the App by clicking Forget PersonalID User"):
+        home.sign_out()

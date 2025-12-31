@@ -25,6 +25,9 @@ class HomePage(BasePage):
     NOTIFICATIONS_BTN = locators.get("home_page", "notifications_btn")
     ABOUT_COMMCARE_BTN = locators.get("home_page", "about_commcare_btn")
 
+    NOTIFICATIONS_HEADER_TXT = locators.get("app_notification", "notification_header_txt")
+    CHANNELS_HEADER_TXT = locators.get("messaging", "channel_header_txt")
+
     def open_side_menu(self):
         self.wait_for_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NAVIGATION_DRAWER)
@@ -81,9 +84,26 @@ class HomePage(BasePage):
             time.sleep(2)
 
 
-    def open_learn_app(self, opportunity_name):
+    def open_app_from_goto_connect(self, opportunity_name):
         self.wait_for_element(self.GOTO_CONNECT)
         self.click_element(self.GOTO_CONNECT)
         time.sleep(2)
         simulate_fingerprint()
         # add learn app based on opp name
+
+    def nav_to_notifications(self):
+        self.click_element(self.NAVIGATION_DRAWER)
+        self.click_element(self.NOTIFICATIONS_BTN)
+        time.sleep(2)
+        assert self.is_displayed(self.NOTIFICATIONS_HEADER_TXT)
+
+    def nav_to_messaging(self):
+        self.click_element(self.NAVIGATION_DRAWER)
+        self.click_element(self.MESSAGING_BTN)
+        time.sleep(2)
+        assert self.is_displayed(self.CHANNELS_HEADER_TXT)
+
+
+
+
+

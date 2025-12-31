@@ -7,6 +7,14 @@ from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
+
+def find_element_or_fail(parent, by, locator, ele_name):
+    try:
+        return parent.find_element(by, locator)
+    except TimeoutException:
+        raise AssertionError(f"Element not found: {ele_name}")
+
+
 class BaseWebPage:
     def __init__(self, driver):
         self.driver = driver
@@ -144,3 +152,9 @@ class BaseWebPage:
     def refresh_current_page(self):
         self.driver.refresh()
         self._wait_for_page_load()
+
+    def find_element_or_fail(self, parent, by, locator, ele_name):
+        try:
+            return parent.find_element(by, locator)
+        except TimeoutException:
+            raise AssertionError(f"Element not found: {ele_name}")

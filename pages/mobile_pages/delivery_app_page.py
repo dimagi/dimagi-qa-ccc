@@ -6,6 +6,8 @@ from utils.helpers import LocatorLoader
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
 class DeliveryAppPage(BasePage):
+    _name_counter = 1
+    _id_counter = 1000
 
     DELIVERY_APP_HEADER_TXT = locators.get("delivery_app_page", "delivery_app_header_txt")
     DELIVERY_START_BTN = locators.get("delivery_app_page", "delivery_app_start_btn")
@@ -28,6 +30,22 @@ class DeliveryAppPage(BasePage):
     DELIVERY_ITEM_NAME_TXT = locators.get("delivery_app_page", "delivery_item_name_txt")
     DELIVERY_ITEM_DATE_TXT = locators.get("delivery_app_page", "delivery_item_date_txt")
 
+    NOTIFICATION_BTN = locators.get("delivery_app_page", "notification_btn")
+    PAYMENT_CONFIRM_LBL_TXT = locators.get("delivery_app_page", "payment_confirm_lbl_txt")
+    YES_BTN = locators.get("delivery_app_page", "yes_btn")
+    ASK_ME_LATER_BTN = locators.get("delivery_app_page", "ask_me_later_btn")
+
+    TRANSFERRED_TOTAL_TXT = locators.get("delivery_app_page", "transferred_total_txt")
+    PAYMENT_ROWS = locators.get("delivery_app_page", "payment_rows")
+    ROW_AMOUNT_TXT = locators.get("delivery_app_page", "row_amount_txt")
+    ROW_STATUS_TXT = locators.get("delivery_app_page", "row_status_txt")
+    RECEIVED_BTN =locators.get("delivery_app_page", "received_btn")
+    CONFIRM_PAYMENT_POPUP_TXT = locators.get("delivery_app_page", "confirm_pay_popup_btn")
+    PAYMENT_YES_BTN = locators.get("delivery_app_page", "payment_yes_btn")
+    PAYMENT_NO_BTN = locators.get("delivery_app_page", "payment_no_btn")
+    REVERT_BTN = locators.get("delivery_app_page", "revert_btn")
+    CONNECT_MESSAGE_TXT = locators.get("delivery_app_page", "connect_message_txt")
+
     def submit_form(self, form_name, record_loc=True):
         if self.is_displayed(self.DELIVERY_START_BTN):
             self.navigate_back()
@@ -39,15 +57,25 @@ class DeliveryAppPage(BasePage):
                 el.click()
                 break
 
-        self.type_element(self.NAME_INPUT, "Automation User")
+        name = f"Automation User {DeliveryAppPage._name_counter:02d}"
+        user_id = str(DeliveryAppPage._id_counter)
+
+        DeliveryAppPage._name_counter += 1
+        DeliveryAppPage._id_counter += 1
+        self.type_element(self.NAME_INPUT, name)
         self.click_element(self.NEXT_BTN)
-        self.type_element(self.ID_INPUT, "101")
+        self.type_element(self.ID_INPUT, user_id)
         self.click_element(self.NEXT_BTN)
         if record_loc:
             self.click_element(self.RECORD_LOCATION_BTN)
         time.sleep(2)
         self.wait_for_element(self.FINISH_BTN)
         self.click_element(self.FINISH_BTN)
+
+        return {
+            "name": name,
+            "id": user_id
+        }
 
     def verify_payment_info(self):
         assert self.is_displayed(self.PU_TITLE_TXT), "PU title is not displayed"
@@ -69,4 +97,50 @@ class DeliveryAppPage(BasePage):
                 "Delivery item date not displayed"
 
         self.navigate_back()
+
+    def nav_to_view_job(self):
+        self.click_element(self.VIEW_JOB_STATUS_BTN)
+
+    def nav_to_app_notification(self):
+        self.click_element(self.NOTIFICATION_BTN)
+
+    def verify_payment_popup(self):
+        time.sleep(5)
+        assert self.is_displayed(self.PAYMENT_CONFIRM_LBL_TXT), "Payment confirmation not displayed"
+        assert self.is_displayed(self.YES_BTN), "Yes is not displayed"
+        assert self.is_displayed(self.ASK_ME_LATER_BTN), "Ask Me Later is not displayed"
+        self.click_element(self.YES_BTN)
+
+    def verify_transfer_tile_on_payment_tab(self):
+        # transferred total
+        total_txt = self.get_text(self.TRANSFERRED_TOTAL_TXT)
+        total_amount = int("".join(filter(str.isdigit, total_txt)))
+
+        # Iterate
+        rows = self.get_elements(self.PAYMENT_ROWS)
+        calculated_sum = 0
+
+        for row in rows:
+            status = row.find_element(*self.ROW_STATUS_TXT).text.strip().lower()
+            if status == "transferred":
+                amount_txt = row.find_element(*self.ROW_AMOUNT_TXT).text
+                amount = int("".join(filter(str.isdigit, amount_txt)))
+                calculated_sum += amount
+
+        assert calculated_sum == total_amount, (
+            f"Transferred mismatch: UI={total_amount}, Calculated={calculated_sum}"
+        )
+
+    def confirm_pay_on_payment_tab(self, confirm):
+        self.click_element(self.RECEIVED_BTN)
+        self.wait_for_element(self.CONFIRM_PAYMENT_POPUP_TXT)
+        if confirm == "Yes":
+            self.click_element(self.PAYMENT_YES_BTN)
+            time.sleep(2)
+            assert self.wait_for_element(self.REVERT_BTN)
+        else:
+            self.click_element(self.PAYMENT_NO_BTN)
+
+    def verify_suspend_message(self):
+        assert self.get_text(self.CONNECT_MESSAGE_TXT) == "User is Suspended. Please contact admin."
 

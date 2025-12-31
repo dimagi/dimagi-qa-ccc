@@ -2,7 +2,7 @@ import allure
 import pytest
 
 from pages.mobile_pages.learn_app_page import LearnAppPage
-from pages.mobile_pages.notifications import Notifications
+from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
@@ -15,7 +15,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("New Opportunity related validations")
-@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_6")
+@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_6", "CONNECT_14")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
@@ -23,6 +23,8 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   - CONNECT_3 : Verify User receive opportunity invite push notification
   - CONNECT_5 : Verify opportunity list on the opportunity page
   - CONNECT_6 : Verify Learn Modules and download the Learn App
+  - CONNECT_14 : Verify on clicking the opportunities option from the side drawer takes you to the opportunity list page
+  
   """)
 @pytest.mark.mobile
 @pytest.mark.web
@@ -38,9 +40,8 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     # mobile driver and page initiation
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
-    notifications = Notifications(mobile_driver)
+    notifications = MobileNotifications(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    learn = LearnAppPage(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -66,7 +67,7 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
         connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
-        connect_workers_page.invite_workers_to_opportunity(data["phone_number"])
+        connect_workers_page.invite_workers_to_opportunity([data["country_code"]+data["phone_number"]])
 
     with allure.step("Verify push notification shown for the invite"):
         notifications.open_notifications()
@@ -76,7 +77,8 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     with allure.step("Handle Fingerprint Authentication"):
         pid.handle_fingerprint_auth()
 
-    with allure.step("Verify Opportunity Details"):
+    with allure.step("Verify the Opportunity Details"):
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "new opportunity")
         opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()

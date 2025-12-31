@@ -1,3 +1,5 @@
+import time
+
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -27,11 +29,15 @@ class OpportunityPage(BasePage):
     OPP_LIST_TITLE = locators.get("opportunity_page", "opp_list_title")
     OPP_LIST_DATE = locators.get("opportunity_page", "opp_list_date")
     OPP_LIST_TYPE = locators.get("opportunity_page", "opp_list_type")
+    OPP_LIST_JOB_TYPE = locators.get("opportunity_page", "opp_list_job_type")
 
     APP_DOWNLOAD_PROGRESS = locators.get("opportunity_page", "download_learn_app_progress_bar")
     LEARN_APP_START_BTN = locators.get("learn_app_page", "learn_app_start_btn")
+    SYNC_BTN = locators.get("opportunity_page", "sync_btn")
 
     def verify_job_card(self):
+        self.click_element(self.SYNC_BTN)
+        time.sleep(1)
         menu_items = [
             self.JOB_TITLE_TXT,
             self.JOB_DESCRIPTION_TXT,
@@ -69,8 +75,6 @@ class OpportunityPage(BasePage):
         for item in menu_items:
             assert self.is_displayed(item), f"Learn details not visible: {item}"
 
-        self.navigate_back()
-
     def verify_opportunity_list(self):
         cards = self.get_elements(self.OPP_LIST_CARD)
         assert len(cards) > 0, "No opportunities found"
@@ -90,7 +94,19 @@ class OpportunityPage(BasePage):
         self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
         assert self.is_displayed(self.LEARN_APP_START_BTN), "Learn app start button is not visible"
 
-
+    def open_opportunity_from_list(self, opp_name, opp_status):
+        self.click_element(self.SYNC_BTN)
+        time.sleep(1)
+        # Iterate
+        rows = self.get_elements(self.OPP_LIST_CARD)
+        for row in rows:
+            name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
+            status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
+            if name == opp_name.lower() and status == opp_status:
+                print("Opportunity found: {name}, {status}")
+                row.click()
+                time.sleep(2)
+                break
 
 
 

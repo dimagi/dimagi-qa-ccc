@@ -35,11 +35,15 @@ login_page:
   network_connection_err_txt: "//android.widget.TextView[contains(@text, 'network connection')]"
   progress_bar: "org.commcare.dalvik:id/progress_bar"
 
-notifications:
+mobile_notifications:
   invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
   invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
+  expand_btn: "android:id/expand_button"
+  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"
+  payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
 
 opportunity_page:
+  opp_list_job_type: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvJobType']"
   opp_list_card: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/rootCardView']"
   opp_list_title: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"
   opp_list_date: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
@@ -62,8 +66,8 @@ opportunity_page:
   delivery_days_txt: "org.commcare.dalvik:id/connect_delivery_days_text"
   delivery_max_daily_txt: "org.commcare.dalvik:id/connect_delivery_max_daily_text"
   delivery_budget_txt: "org.commcare.dalvik:id/connect_delivery_budget_text"
-
   download_learn_app_progress_bar: "org.commcare.dalvik:id/progress_fragment_determinate"
+  sync_btn: "org.commcare.dalvik:id/action_sync"
 
 learn_app_page:
   learn_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
@@ -87,8 +91,12 @@ learn_app_page:
   delivery_details_txt: "org.commcare.dalvik:id/connect_delivery_title"
   review_delivery_details_txt: "org.commcare.dalvik:id/connect_review"
   start_visit_txt: "org.commcare.dalvik:id/connect_delivery_action_title"
-  download_delivery:  "org.commcare.dalvik:id/connect_delivery_action_details"
+  download_delivery_txt:  "org.commcare.dalvik:id/connect_delivery_action_details"
   download_delivery_app_btn: "org.commcare.dalvik:id/connect_delivery_button"
+  total_visit_txt: "org.commcare.dalvik:id/connect_delivery_total_visits_text"
+  delivery_days_txt: "org.commcare.dalvik:id/connect_delivery_days_text"
+  delivery_max_daily_txt: "org.commcare.dalvik:id/connect_delivery_max_daily_text"
+  delivery_budget_txt: "org.commcare.dalvik:id/connect_delivery_budget_text"
 
 
 delivery_app_page:
@@ -113,4 +121,30 @@ delivery_app_page:
   delivery_item_name_txt: "org.commcare.dalvik:id/delivery_item_name"
   delivery_item_date_txt: "org.commcare.dalvik:id/delivery_item_date"
 
+  payment_confirm_lbl_txt: "org.commcare.dalvik:id/connect_payment_confirm_label"
+  yes_btn: "org.commcare.dalvik:id/connect_payment_confirm_yes_button"
+  ask_me_later_btn: "org.commcare.dalvik:id/connect_payment_confirm_no_button"
 
+  notification_btn: "org.commcare.dalvik:id/action_bell"
+  transferred_total_txt: "org.commcare.dalvik:id/payment_transferred_amount"
+  payment_rows : "org.commcare.dalvik:id/results_list"
+  row_amount_txt : "org.commcare.dalvik:id/name"
+  row_status_txt: "org.commcare.dalvik:id/tv_payment_status"
+  received_btn : "(//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/confirm'])[1]"
+  confirm_pay_popup_btn: "org.commcare.dalvik:id/tv_payment_confirmation_title"
+  payment_yes_btn: "org.commcare.dalvik:id/ri_yes"
+  payment_no_btn: "org.commcare.dalvik:id/ri_no"
+  revert_btn: "(//android.widget.LinearLayout[@resource-id='org.commcare.dalvik:id/llRevertPayment'])[1]"
+  connect_message_txt: "org.commcare.dalvik:id/tvConnectMessage"
+
+app_notification:
+  payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
+  notification_header_txt: "//android.widget.TextView[@text='Notifications']"
+  notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
+  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
+  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
+  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+
+messaging:
+  channel_header_txt: "//android.widget.TextView[@text='Channels']"

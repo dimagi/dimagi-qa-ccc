@@ -12,7 +12,7 @@ from pages.mobile_pages.home_page import HomePage
   """)
 @pytest.mark.mobile
 def test_account_locked_popup(mobile_driver, test_data):
-    data = test_data.get("PID_6_2")
+    data = test_data.get("TC_2")
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
 
