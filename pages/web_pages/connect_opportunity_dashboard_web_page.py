@@ -67,6 +67,19 @@ class OpportunityDashboardPage(BaseWebPage):
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.verify_text_in_url("workers")
+        time.sleep(1)
+
+    def navigate_to_services_delivered(self, opp):
+        self.click_link_by_text(opp)
+        self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
+        self.verify_text_in_url("workers/deliver")
+        time.sleep(1)
+
+    def navigate_to_payments_earned(self, opp):
+        self.click_link_by_text(opp)
+        self.click_dashboard_card_in_opportunity("Payments", "Earned")
+        self.verify_text_in_url("workers/payments")
+        time.sleep(1)
 
     def click_hamburger_icon(self):
         self.click_element(self.HAMBURGER_ICON)

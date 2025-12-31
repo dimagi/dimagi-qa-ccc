@@ -23,7 +23,6 @@ def test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect(web
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
-    connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
 
@@ -34,9 +33,7 @@ def test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect(web
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Navigate and verify Connect Workers details in Opportunity"):
-        connect_opp_page.click_opportunity_in_opportunity(worker_list_view_4_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity("Services Delivered", "Total")
-        opp_dashboard_page.verify_text_in_url("workers/deliver")
+        opp_dashboard_page.navigate_to_services_delivered(worker_list_view_4_data["opportunity_name"])
         connect_workers_page.verify_deliver_table_headers_present()
 
     # Worker List View_4

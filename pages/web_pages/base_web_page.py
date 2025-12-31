@@ -1,19 +1,14 @@
-from selenium.common import TimeoutException
+import os
+
+from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from utils.helpers import LocatorLoader
+from openpyxl import load_workbook
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
-
-
-def find_element_or_fail(parent, by, locator, ele_name):
-    try:
-        return parent.find_element(by, locator)
-    except TimeoutException:
-        raise AssertionError(f"Element not found: {ele_name}")
-
 
 class BaseWebPage:
     def __init__(self, driver):
@@ -156,5 +151,16 @@ class BaseWebPage:
     def find_element_or_fail(self, parent, by, locator, ele_name):
         try:
             return parent.find_element(by, locator)
-        except TimeoutException:
+        except NoSuchElementException:
             raise AssertionError(f"Element not found: {ele_name}")
+
+    def write_payment_details_to_excel(self, params):
+        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        wb = load_workbook(file_path)
+        sheet = wb["Sheet1"]
+        for col in range(1, sheet.max_column + 1):
+            sheet.cell(row=2, column=col).value = None
+        for index, value in enumerate(params, start=1):
+            sheet.cell(row=2, column=index).value = value
+        wb.save(file_path)
+        print(params)
