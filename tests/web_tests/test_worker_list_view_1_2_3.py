@@ -3,7 +3,6 @@ import pytest
 from pages.web_pages.cchq_home_web_page import HomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
-from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
@@ -26,7 +25,6 @@ def test_worker_list_view_1_2_3_verify_connect_workers_details_of_opportunity_in
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = HomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
-    connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
 
@@ -38,9 +36,7 @@ def test_worker_list_view_1_2_3_verify_connect_workers_details_of_opportunity_in
 
     # Worker List View_1
     with allure.step("Navigate and verify Connect Workers details in Opportunity"):
-        connect_opp_page.click_link_by_text(worker_list_view_1_2_3_data["opportunity_name"])
-        opp_dashboard_page.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
-        opp_dashboard_page.verify_text_in_url("workers")
+        opp_dashboard_page.navigate_to_connect_workers(worker_list_view_1_2_3_data["opportunity_name"])
         connect_workers_page.verify_connect_workers_table_headers_present()
 
     # Worker List View_2

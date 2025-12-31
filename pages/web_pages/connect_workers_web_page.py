@@ -1,10 +1,11 @@
+import os
 import time
-
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
 from selenium.webdriver.common.keys import Keys
+from datetime import datetime, timedelta
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
@@ -32,6 +33,12 @@ class ConnectWorkersPage(BaseWebPage):
     HAS_OVERLIMIT_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page", "has_overlimit_dropdown")
     DELIVERIES_PENDING_REVIEW_DROPDOWN_FILTERS_WINDOW = locators.get("connect_workers_page","deliveries_with_pending_review_dropdown")
     APPLY_BTN_FILTER_WINDOW = locators.get("connect_workers_page", "apply_button_filter_window")
+    ROLLBACK_LAST_PAYMENT_BTN = locators.get("connect_workers_page", "rollback_last_payment_btn")
+    ROLLBACK_POPUP_BUTTON = locators.get("connect_workers_page", "rollback_popup_btn")
+    IMPORT_PAYMENT_ICON = locators.get("connect_workers_page", "import_payment_btn")
+    FILE_UPLOAD_IMPORT_PAYMENT = locators.get("connect_workers_page", "file_upload_import_payment")
+    IMPORT_POPUP_BTN = locators.get("connect_workers_page", "import_popup_btn")
+    IMPORT_STATUS_TEXT = locators.get("connect_workers_page", "import_status_text")
 
 
     def click_add_worker_icon(self):
@@ -150,7 +157,7 @@ class ConnectWorkersPage(BaseWebPage):
         self.verify_table_headers_present(["#", "Name", "Last active", "Payment unit", "Delivery progress", "Delivered", "Pending", "Approved", "Rejected"])
 
     def verify_payments_table_headers_present(self):
-        self.verify_table_headers_present(["#", "Name", "Last active", "Accrued ()", "Total Paid ()", "Last paid", "Confirm ()"])
+        self.verify_table_headers_present(["#", "Name", "Last active", "Accrued (INR)", "Total Paid (INR)", "Last paid", "Confirm (INR)"])
 
     def verify_connect_workers_table_headers_present(self):
         self.verify_table_headers_present(["#", "Status", "Name", "Phone Number", "Invited Date", "Last Active", "Started Learn", "Completed Learn", "Time to Complete Learning", "First Delivery", "Time to Start Deliver"])
@@ -164,6 +171,13 @@ class ConnectWorkersPage(BaseWebPage):
         name_column = self.wait_for_element((by, actual_xpath))
         self.click_element(name_column)
         time.sleep(2)
+
+    def navigate_to_worker_visits(self, worker_name):
+        self.click_tab_by_name("Deliver")
+        time.sleep(1)
+        self.click_name_in_table(worker_name)
+        time.sleep(1)
+        self.is_breadcrumb_item_present("Visits")
 
     def click_and_verify_status_count_breakdown_for_item(self, params):
         item_name = params[0].strip()
@@ -335,3 +349,54 @@ class ConnectWorkersPage(BaseWebPage):
         self.verify_green_bar_status_present(worker_name)
         self.verify_column_not_empty_in_learn_table(worker_name, "Attempts")
         self.verify_column_not_empty_in_learn_table(worker_name, "Completed Learning")
+
+    def click_last_paid_date_n_verify_history(self, worker_name):
+        worker_name = worker_name.strip()
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = ".//thead//th[.//a[normalize-space() = 'Last paid']]"
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Last Paid date column Payment table")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
+        row = table.find_element(By.XPATH, row_xpath)
+        cell_span_xpath = f"./td[{column_index}]//span"
+        span_element = row.find_element(By.XPATH, cell_span_xpath)
+        self.click_element(span_element)
+        time.sleep(1)
+        self.verify_count_breakdown_popup_present()
+
+    def rollback_last_payment(self):
+        self.click_element(self.ROLLBACK_LAST_PAYMENT_BTN)
+        time.sleep(1)
+        self.click_element(self.ROLLBACK_POPUP_BUTTON)
+
+    def fetch_username_from_payments(self, worker_name):
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = ".//thead//th[.//a[normalize-space() = 'Name']]"
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Name column Payment table")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
+        row = table.find_element(By.XPATH, row_xpath)
+        cell_span_xpath = f"./td[{column_index}]//div//p[2]"
+        username_ele = row.find_element(By.XPATH, cell_span_xpath)
+        assert username_ele, f"Username for {worker_name} is empty"
+        return username_ele.text.strip()
+
+    def import_make_payment_file(self):
+        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        assert os.path.exists(file_path), f"File not found: {file_path}"
+        print(file_path)
+        file_input = self.wait_for_element(self.FILE_UPLOAD_IMPORT_PAYMENT)
+        file_input.send_keys(file_path)
+        assert file_input.get_attribute("value") != ""
+
+    def make_payment_with_date_for_worker(self, worker_name, country_code, phone_number, amount):
+        username = self.fetch_username_from_payments(worker_name)
+        full_phone_number = country_code + phone_number
+        curr_date = datetime.now().strftime("%Y-%m-%d")
+        self.write_payment_details_to_excel([username, full_phone_number, worker_name, amount, curr_date])
+        self.click_element(self.IMPORT_PAYMENT_ICON)
+        self.import_make_payment_file()
+        time.sleep(2)
+        self.click_element(self.IMPORT_POPUP_BTN)
+        time.sleep(2)
+        assert "All done! View status" in self.get_text(self.IMPORT_STATUS_TEXT), "Import failed"
