@@ -17,7 +17,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Delivery App related validations")
+@allure.story("Payment related validations")
 @allure.tag("CONNECT_11", "CONNECT_12")
 @allure.description("""
   This automated test consolidates multiple manual test cases
@@ -29,18 +29,18 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_opportunity_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_6")
+def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_3_to_7")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
-    worker_visits_page = WorkerVisitsPage(web_driver)
 
     # mobile driver and page initiation
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
+    opportunity = OpportunityPage(mobile_driver)
     mobile_notifications = MobileNotifications(mobile_driver)
     app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
@@ -56,8 +56,9 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
                                  data["username"],
                                  data["backup_code"])   # test number
 
-    with allure.step("Open the delivery app page"):
-        home.open_app_from_goto_connect(data["opportunity_name"])
+    with allure.step("Open the delivery app"):
+        home.open_app_from_goto_connect()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
     with allure.step("Navigate to view job status"):
         delivery.nav_to_view_job()
@@ -68,9 +69,14 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Change the organization"):
-        connect_home_page.select_organization_from_list(data["organization_name"])
+        connect_home_page.select_organization_from_list(data["org_name"])
 
-    # with allure.step("Complete the Payment"):
+    with allure.step("Make payment for the worker in the opportunity of Connect Dashboard Page"):
+        opp_dashboard_page.navigate_to_payments_earned(data["opportunity_name"])
+        connect_workers_page.make_payment_with_date_for_worker(data["username"],
+                                                         data["country_code"],
+                                                         data["phone_number"],
+                                                        "100")
 
     with allure.step("Verify push notification shown for the payment"):
         mobile_notifications.open_notifications()
@@ -88,5 +94,5 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
     with allure.step("Deny confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("No")
 
-    with allure.step("Deny confirm transferred payment on payment tab"):
+    with allure.step("Allow confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("Yes")

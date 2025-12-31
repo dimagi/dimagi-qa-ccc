@@ -6,8 +6,6 @@ from utils.helpers import LocatorLoader
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
 class DeliveryAppPage(BasePage):
-    _name_counter = 1
-    _id_counter = 1000
 
     DELIVERY_APP_HEADER_TXT = locators.get("delivery_app_page", "delivery_app_header_txt")
     DELIVERY_START_BTN = locators.get("delivery_app_page", "delivery_app_start_btn")
@@ -45,23 +43,24 @@ class DeliveryAppPage(BasePage):
     PAYMENT_NO_BTN = locators.get("delivery_app_page", "payment_no_btn")
     REVERT_BTN = locators.get("delivery_app_page", "revert_btn")
     CONNECT_MESSAGE_TXT = locators.get("delivery_app_page", "connect_message_txt")
+    SYNC_WITH_SERVER = locators.get("learn_app_page", "sync_with_server")
+    PRIMARY_VISIT_COUNT = locators.get("delivery_app_page", "primary_visit_count_txt")
 
     def submit_form(self, form_name, record_loc=True):
-        if self.is_displayed(self.DELIVERY_START_BTN):
+        if not self.is_displayed(self.DELIVERY_START_BTN):
             self.navigate_back()
         self.click_element(self.DELIVERY_START_BTN)
         time.sleep(1)
         self.click_element(self.CASE_LIST_BTN)
         for el in self.get_elements(self.CASE_FORMS_BTN):
-            if form_name in el.text.lower():
+            if form_name.lower() in el.text.lower():
                 el.click()
                 break
 
-        name = f"Automation User {DeliveryAppPage._name_counter:02d}"
-        user_id = str(DeliveryAppPage._id_counter)
+        ts = int(time.time() * 1000)  # milliseconds
+        name = f"Automation User {ts}"
+        user_id = ts % 1000000
 
-        DeliveryAppPage._name_counter += 1
-        DeliveryAppPage._id_counter += 1
         self.type_element(self.NAME_INPUT, name)
         self.click_element(self.NEXT_BTN)
         self.type_element(self.ID_INPUT, user_id)
@@ -78,11 +77,13 @@ class DeliveryAppPage(BasePage):
         }
 
     def verify_payment_info(self):
+        self.nav_to_view_job()
         assert self.is_displayed(self.PU_TITLE_TXT), "PU title is not displayed"
         assert self.is_displayed(self.PAYMENT_APPROVED_COUNT_TXT), "Approved count is not displayed"
         assert self.is_displayed(self.PAYMENT_AMOUNT_TXT), "Payment amount is not displayed"
         assert self.is_displayed(self.REMAINING_COUNT_TXT), "Remaining count is not displayed"
         assert self.is_displayed(self.PU_NEXT_ARROW_BTN), "Next arrow button is not displayed"
+        self.click_element(self.PU_NEXT_ARROW_BTN)
 
         # ---------- Submitted Delivery List ----------
         delivery_cards = self.get_elements(self.DELIVERY_LIST)
@@ -144,3 +145,24 @@ class DeliveryAppPage(BasePage):
     def verify_suspend_message(self):
         assert self.get_text(self.CONNECT_MESSAGE_TXT) == "User is Suspended. Please contact admin."
 
+    def sync_with_server(self):
+        self.click_element(self.SYNC_WITH_SERVER)
+        time.sleep(2)
+
+    def complete_daily_visits(self):
+        """
+        Completes daily visits until PRIMARY_VISIT_COUNT reaches max.
+        Example: 0/5 -> 5/5
+        """
+        while True:
+            visit_text = self.get_text(self.PRIMARY_VISIT_COUNT).strip()  # e.g. "2/5"
+            current, total = map(int, visit_text.split("/"))
+            print(f"Daily visit progress: {current}/{total}")
+            if current >= total:
+                break
+            self.submit_form("Registration Form")
+            time.sleep(2)
+
+        # Final assertion
+        assert self.get_text(self.PRIMARY_VISIT_COUNT) == f"{total}/{total}", \
+            "Daily visits did not complete correctly"

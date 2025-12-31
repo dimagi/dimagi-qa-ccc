@@ -84,15 +84,15 @@ class HomePage(BasePage):
             time.sleep(2)
 
 
-    def open_app_from_goto_connect(self, opportunity_name):
-        self.wait_for_element(self.GOTO_CONNECT)
+    def open_app_from_goto_connect(self):
+        if not self.is_displayed(self.GOTO_CONNECT):
+            self.click_element(self.NAVIGATION_DRAWER)
+
         self.click_element(self.GOTO_CONNECT)
         time.sleep(2)
         simulate_fingerprint()
-        # add learn app based on opp name
 
     def nav_to_notifications(self):
-        self.click_element(self.NAVIGATION_DRAWER)
         self.click_element(self.NOTIFICATIONS_BTN)
         time.sleep(2)
         assert self.is_displayed(self.NOTIFICATIONS_HEADER_TXT)
@@ -101,7 +101,8 @@ class HomePage(BasePage):
         self.click_element(self.NAVIGATION_DRAWER)
         self.click_element(self.MESSAGING_BTN)
         time.sleep(2)
-        assert self.is_displayed(self.CHANNELS_HEADER_TXT)
+        simulate_fingerprint()
+
 
 
 

@@ -36,6 +36,7 @@ class LearnAppPage(BasePage):
     DELIVERY_BUDGET_TXT = locators.get("learn_app_page", "delivery_budget_txt")
 
     DELIVERY_APP_HEADER_TXT = locators.get("delivery_app_page", "delivery_app_header_txt")
+    SYNC_WITH_SERVER = locators.get("learn_app_page", "sync_with_server")
 
     def complete_learn_survey(self, survey_name):
         self.wait_for_element(self.LEARN_APP_START_BTN)
@@ -43,7 +44,7 @@ class LearnAppPage(BasePage):
         self.click_element(self.SURVEYS_BTN)
 
         for el in self.get_elements(self.SURVEYS_BTN):
-            if survey_name in el.text.lower():
+            if survey_name in el.text:
                 el.click()
                 break
         self.click_element(self.FINISH_BTN)
@@ -70,7 +71,7 @@ class LearnAppPage(BasePage):
         self.click_element(self.LEARN_APP_START_BTN)
         self.click_element(self.SURVEYS_BTN)
         for el in self.get_elements(self.SURVEYS_BTN):
-            if "Assesss" in el.text.lower():
+            if "assesss" in el.text.lower():
                 el.click()
                 break
         self.type_element(self.SCORE_INPUT, passing_score)
@@ -110,12 +111,18 @@ class LearnAppPage(BasePage):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
 
         # Start / message text
-        assert expected["start_text"] in self.get_text(self.LEARN_APP_START_BTN)
+        time.sleep(5)
+        print(self.get_text(self.LEARNING_STATUS_TXT))
+        print(self.get_text(self.LEARN_PROGRESS_TXT))
+        print(self.get_text(self.CONTINUE_LEARNING_BTN))
+        assert expected["start_text"] in self.get_text(self.LEARNING_STATUS_TXT)
         assert self.get_text(self.LEARN_PROGRESS_TXT) == expected["progress"]
         assert self.get_text(self.CONTINUE_LEARNING_BTN).lower() == expected["continue_btn"]
+        self.navigate_back()
 
     def verify_certificate_screen(self):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
+        time.sleep(2)
         elements = [
             self.CERT_TITLE_TXT,
             self.CERT_OPP_NAME_TXT,
@@ -124,8 +131,8 @@ class LearnAppPage(BasePage):
             self.VIEW_OPP_DETAILS_BTN
         ]
 
-        for name, locator in elements.items():
-            assert self.is_displayed(locator), f"{name} is not visible"
+        for items in elements:
+            assert self.is_displayed(items), f"{items} is not visible"
 
 
     def verify_opportunity_details_screen(self):
@@ -147,11 +154,15 @@ class LearnAppPage(BasePage):
             self.DELIVERY_BUDGET_TXT
         ]
 
-        for name, locator in elements.items():
-            assert self.is_displayed(locator), f"{name} is not visible"
+        for items in elements:
+            assert self.is_displayed(items), f"{items} is not visible"
 
     def download_delivery_app(self):
         self.click_element(self.DOWNLOAD_DELIVERY_APP_BTN)
-        time.sleep(2)
+        time.sleep(5)
         self.wait_for_element(self.DELIVERY_APP_HEADER_TXT)
         assert self.is_displayed(self.DELIVERY_APP_HEADER_TXT)
+
+    def sync_with_server(self):
+        self.click_element(self.SYNC_WITH_SERVER)
+        time.sleep(2)

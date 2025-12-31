@@ -19,22 +19,25 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Notifications, User Suspension related validations")
-@allure.tag("CONNECT_13", "CONNECT_19", "CONNECT_17")
+@allure.story("Messaging related validations")
+@allure.tag("MESSAGING_1", "MESSAGING_2", "MESSAGING_3")
+@allure.tag("MESSAGING_4", "MESSAGING_5", "MESSAGING_6")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
-  - CONNECT_13 : Confirm user can see all the notifications received on the notification history screen 
-  - CONNECT_19 : Verify on clicking the messaging option, user is taken channels list page
-  - CONNECT_17 : Verify when a mobile user is suspended from an opportunity
+  - MESSAGING_1 : Confirm user sees the two new message options on HQ 
+  - MESSAGING_2 : Confirm user is able to configure a conditional alert with new Connect Message 
+  - MESSAGING_3 : Confirm user is able to configure a conditional alert with new Connect Survey
+  - MESSAGING_4 : Confirm user sees the two new message options on HQ when configuring Broadcasts 
+  - MESSAGING_5 : Confirm user is able to configure a broadcast message with new Connect Message option
+  - MESSAGING_6 : Confirm user is able to configure a broadcast message with new Connect Survey option
   
   """)
-
 @pytest.mark.mobile
 @pytest.mark.web
-def test_notification_messaging_section_and_worker_suspension(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_9")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -46,9 +49,7 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
-    message = Message(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -61,31 +62,11 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
                                  data["username"],
                                  data["backup_code"])
 
-    with allure.step("Open the app notifications screen"):
-        home.nav_to_notifications()
-        app_notification.verify_all_notifications()
-
-    with allure.step("Navigate to Messaging option"):
-        home.nav_to_messaging()
-        message.verify_channel_list()
-
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
         connect_home_page.select_organization_from_list(data["org_name"])
 
-    with allure.step("Navigate and verify Connect Workers details in Opportunity"):
-        opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
-        connect_workers_page.click_name_in_table(data["username"])
 
-    with allure.step("Verify Suspend user in Worker Visits page of Opportunity"):
-        worker_visits_page.suspend_user_in_worker_visits("Test Reason")
-
-    with allure.step("Verify Suspend message on app home screen"):
-        home.open_app_from_goto_connect()
-        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
-        delivery.verify_suspend_message()
-
-    # with allure.step("Revoke Suspension of the user"):
 

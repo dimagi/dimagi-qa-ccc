@@ -103,9 +103,10 @@ class OpportunityPage(BasePage):
             name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
             status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
             if name == opp_name.lower() and status == opp_status:
-                print("Opportunity found: {name}, {status}")
+                print(f"Opportunity found: {name}, [{status}]")
                 row.click()
                 time.sleep(2)
+                assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
                 break
 
 

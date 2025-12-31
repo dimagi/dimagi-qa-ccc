@@ -250,7 +250,7 @@ class ConnectWorkersPage(BaseWebPage):
         table = self.wait_for_element(self.TABLE_ELEMENT)
         dates = []
         header_xpath = ".//thead//th[.//text()[normalize-space()='Last active']]"
-        header = find_element_or_fail(table, By.XPATH, header_xpath, "Last active Column")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, "Last active Column")
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
         rows = table.find_elements(By.XPATH, ".//tbody//tr")
         for row in rows:
@@ -288,12 +288,12 @@ class ConnectWorkersPage(BaseWebPage):
         expected_value = expected_value.strip()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
-        header = find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
         row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
-        row = find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
         cell_xpath = f"./td[{column_index}]"
-        cell_element = find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
         assert expected_value == cell_element.text.strip(), f"{column_name} value mismatch: {cell_element.text}"
         print(f"Value of {column_name} for {worker_name}: {expected_value}")
 
@@ -301,12 +301,12 @@ class ConnectWorkersPage(BaseWebPage):
         worker_name, column_name = worker_name.strip(), column_name.strip()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
-        header = find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
         row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
-        row = find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
         cell_xpath = f"./td[{column_index}]"
-        cell_element = find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
         assert cell_element.text not in ["", None], f"Value of {column_name} for {worker_name} is empty"
 
     def verify_modules_completed_status_bar_in_learn_table(self, worker_name, value):
@@ -314,10 +314,10 @@ class ConnectWorkersPage(BaseWebPage):
         column_name = 'Modules completed'
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = (".//thead//th[normalize-space() = '" + column_name + "']")
-        header = find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"{column_name} column")
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
         row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
-        row = find_element_or_fail(table, By.XPATH, row_xpath, f"{row_xpath} worker")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{row_xpath} worker")
         cell_span_xpath = f"./td[{column_index}]//span"
         span_element = row.find_element(By.XPATH, cell_span_xpath)
         status_bar_xpath = f"./td[{column_index}]//div//div//div"
@@ -332,12 +332,12 @@ class ConnectWorkersPage(BaseWebPage):
         worker_name = worker_name.strip()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//div[contains(@class,'bg-black')]]"
-        header = find_element_or_fail(table, By.XPATH, header_xpath, f"Green status column")
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Green status column")
         column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
         row_xpath = (".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]")
-        row = find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
+        row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
         cell_xpath = f"./td[{column_index}]//div//div"
-        cell_element = find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
+        cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
         positive_condition = ('positive' in cell_element.get_attribute("class")) and (
                     'black' not in cell_element.get_attribute("class"))
         assert positive_condition, f"Green status is not present for {worker_name}"

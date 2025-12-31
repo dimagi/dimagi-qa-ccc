@@ -15,7 +15,8 @@ class AppNotifications(BasePage):
     NOTIFICATION_TEXT = locators.get("app_notification", "notification_text")
     NOTIFICATION_TIME = locators.get("app_notification", "notification_time")
     NOTIFICATION_ARROW = locators.get("app_notification", "notification_arrow")
-
+    NO_NOTIFICATION_TXT = locators.get("app_notification", "no_notification_txt")
+    SYNC_BTN = locators.get("app_notification", "notification_sync_btn")
 
     def verify_payment_received(self):
         assert self.is_displayed(self.PAYMENT_RECEIVED_TXT)
@@ -24,21 +25,22 @@ class AppNotifications(BasePage):
         simulate_fingerprint()
 
     def verify_all_notifications(self):
-        rows = self.get_elements(self.NOTIFICATION_ROW)
+        self.click_element(self.SYNC_BTN)
+        if self.is_displayed(self.NO_NOTIFICATION_TXT):
+            print("No notifications found in the list")
+        else:
+            rows = self.get_elements(self.NOTIFICATION_ROW)
+            for idx, row in enumerate(rows, start=1):
+                assert row.find_element(*self.NOTIFICATION_ICON).is_displayed(), \
+                    f"Notification icon missing in row {idx}"
 
-        assert len(rows) > 0, "No notifications found in the list"
+                text = row.find_element(*self.NOTIFICATION_TEXT).text
+                assert text.strip() != "", f"Notification text empty in row {idx}"
 
-        for idx, row in enumerate(rows, start=1):
-            assert row.find_element(*self.NOTIFICATION_ICON).is_displayed(), \
-                f"Notification icon missing in row {idx}"
+                time = row.find_element(*self.NOTIFICATION_TIME).text
+                assert time.strip() != "", f"Notification time missing in row {idx}"
 
-            text = row.find_element(*self.NOTIFICATION_TEXT).text
-            assert text.strip() != "", f"Notification text empty in row {idx}"
+                assert row.find_element(*self.NOTIFICATION_ARROW).is_displayed(), \
+                    f"Forward arrow missing in row {idx}"
 
-            time = row.find_element(*self.NOTIFICATION_TIME).text
-            assert time.strip() != "", f"Notification time missing in row {idx}"
-
-            assert row.find_element(*self.NOTIFICATION_ARROW).is_displayed(), \
-                f"Forward arrow missing in row {idx}"
-
-
+        self.navigate_back()

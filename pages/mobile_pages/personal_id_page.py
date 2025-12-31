@@ -46,12 +46,16 @@ class PersonalIDPage(BasePage):
         time.sleep(5)
         self.wait_for_element_to_disappear(self.PROGRESS_BAR)
 
-        for attempt in range(retries):
-            if self.is_displayed(self.NETWORK_ERROR_TXT):
-                print(f"Network Error: attempt {attempt+1}")
+        if not self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
+            for attempt in range(retries):
+                if not self.is_displayed(self.NETWORK_ERROR_TXT):
+                    break
+                print(f"Network Error: attempt {attempt + 1}")
                 time.sleep(2)
                 self.continue_next()
                 self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+                if self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
+                    break
 
         time.sleep(1)
         self.wait_for_element(self.USE_FINGERPRINT_TXT)

@@ -28,8 +28,8 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_opportunity_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_5")
+def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_3_to_7")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -40,6 +40,7 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
     # mobile driver and page initiation
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
+    opportunity = OpportunityPage(mobile_driver)
     learn = LearnAppPage(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
 
@@ -54,8 +55,9 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
                                  data["username"],
                                  data["backup_code"])   # test number
 
-    with allure.step("Open the learn app page"):
-        home.open_app_from_goto_connect(data["opportunity_name"])
+    with allure.step("Open the opportunity from list"):
+        home.open_app_from_goto_connect()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "learn")
 
     with allure.step("Verify Completed Opportunity details"):
         learn.verify_opportunity_details_screen()
@@ -78,7 +80,7 @@ def test_opportunity_details(web_driver, mobile_driver, config, test_data):
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Change the organization"):
-        connect_home_page.select_organization_from_list(data["organization_name"])
+        connect_home_page.select_organization_from_list(data["org_name"])
 
     with allure.step("Navigate to the Connect Workers details in Opportunity"):
         opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
