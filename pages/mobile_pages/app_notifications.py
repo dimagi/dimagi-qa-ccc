@@ -18,6 +18,7 @@ class AppNotifications(BasePage):
     NO_NOTIFICATION_TXT = locators.get("app_notification", "no_notification_txt")
     SYNC_BTN = locators.get("app_notification", "notification_sync_btn")
 
+
     def verify_payment_received(self):
         assert self.is_displayed(self.PAYMENT_RECEIVED_TXT)
         self.click_element(self.PAYMENT_RECEIVED_TXT)
