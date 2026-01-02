@@ -4,6 +4,7 @@ from pages.web_pages.cchq_home_web_page import HomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
+from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
@@ -16,6 +17,7 @@ def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
     connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
+    # worker_visits_page = WorkerVisitsPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
@@ -38,4 +40,11 @@ def test_invite_worker_to_opportunity_connect(web_driver, test_data, config):
     #     opp_dashboard_page.navigate_to_connect_workers("Test Opp 151201")
     #     connect_workers_page.click_tab_by_name("Learn")
     #     connect_workers_page.verify_worker_passed_with_100_in_learn_table("Automation User 10")
+    ###################
+
+    ################### Step to revoke suspension of worker - for reference not included in the test case
+    # with allure.step("Revoke Suspension for a worker"):
+    #     opp_dashboard_page.navigate_to_services_delivered("covid_opp")
+    #     connect_workers_page.click_name_in_table("Deb Test 8/12")
+    #     worker_visits_page.revoke_suspension_for_worker()
     ###################
