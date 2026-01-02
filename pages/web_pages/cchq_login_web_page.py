@@ -13,11 +13,11 @@ class LoginPage(BaseWebPage):
     def __init__(self, driver):
         super().__init__(driver)
 
-    TITLE_ELE = locators.get("login_page", "welcome_title")
-    USERNAME_ELE = locators.get("login_page", "username_field")
-    PASSWORD_ELE = locators.get("login_page", "password_field")
-    SIGNIN_BUTTON = locators.get("login_page", "signin_button")
-    ACCEPT_COOKIES_BUTTON = locators.get("login_page", "cookie_accept_button")
+    TITLE_ELE = locators.get("cchq_login_page", "welcome_title")
+    USERNAME_ELE = locators.get("cchq_login_page", "username_field")
+    PASSWORD_ELE = locators.get("cchq_login_page", "password_field")
+    SIGNIN_BUTTON = locators.get("cchq_login_page", "signin_button")
+    ACCEPT_COOKIES_BUTTON = locators.get("cchq_login_page", "cookie_accept_button")
 
     def verify_login_page_title(self, title):
         assert title in self.get_text(self.TITLE_ELE)

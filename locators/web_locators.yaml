@@ -1,12 +1,33 @@
-home_page:
+cchq_home_page:
   welcome_title: "//h1[@class='mb-3 mt-5']"
+  messaging_tab: "MessagingTab"
+  breadcrumb_container: "hq-breadcrumbs"
 
-login_page:
+cchq_login_page:
   welcome_title: "//h2[@class='text-center mt-3']"
   username_field: "//input[@id='id_auth-username']"
   password_field: "//input[@id='id_auth-password']"
   signin_button: "//button[text()='Sign In']"
   cookie_accept_button: "hs-eu-confirmation-button"
+
+cchq_messaging_page:
+    new_conditional_alert: "//*[@id='conditional-alert-list']/div[1]/div[1]/div/a[1]"
+    conditional_alert_name_input: "id_conditional-alert-name"
+    continue_btn: "//button[contains(text(), 'Continue')]"
+    case_type_input: "id_criteria-case_type"
+    recipient_input: "//*[@id='div_id_schedule-recipient_types']//textarea"
+    what_to_send_input: "id_schedule-content"
+    save_btn: "//button[text()='Save']"
+    alerts_list_table: "conditional-alert-list"
+    pagination_container: "//ul[@class='pagination']"
+    add_broadcast_btn: "//*[@id='hq-content']/div[2]/a"
+    broadcast_name_input: "id_schedule-schedule_name"
+    send_broadcast_btn: "//*[@id='create-schedule-form']/div[2]/div/button"
+    user_recipients_input: "//*[@id='div_id_schedule-user_recipients']//textarea"
+    message_input: "(//div[./input[@id='id_content-message']]//textarea)[1]"
+    broadcasts_table: "//div[@id='immediate-broadcasts']//table"
+    survey_form_input: "id_content-app_and_form_unique_id"
+    expire_after_input: "id_content-survey_expiration_in_hours"
 
 connect_home_page:
   signin_link: "log-in-link"
@@ -98,3 +119,4 @@ worker_visits_page:
   suspend_button: "//*[@id='content']/div/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[1]/div/button[1]"
   suspend_user_reason_input: "reason"
   suspend_popup_button: "//button[contains(text(), 'Suspend') and @type='submit']"
+  revoke_suspend_button: "//*[@id='content']//button[contains(text(), 'Revoke Suspension')]"

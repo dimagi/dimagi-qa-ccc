@@ -29,6 +29,7 @@ class WorkerVisitsPage(BaseWebPage):
     SUSPEND_BUTTON = locators.get("worker_visits_page", "suspend_button")
     SUSPEND_USER_REASON_INPUT = locators.get("worker_visits_page", "suspend_user_reason_input")
     SUSPEND_POPUP_BUTTON = locators.get("worker_visits_page", "suspend_popup_button")
+    REVOKE_SUSPEND_BUTTON = locators.get("worker_visits_page", "revoke_suspend_button")
 
 
     def set_select_all_checkbox_worker_visits(self, state):
@@ -166,3 +167,16 @@ class WorkerVisitsPage(BaseWebPage):
         time.sleep(1)
         self.type(self.SUSPEND_USER_REASON_INPUT, reason)
         self.click_element(self.SUSPEND_POPUP_BUTTON)
+
+    def revoke_suspension_for_worker(self):
+        self.click_element(self.USERNAME_SECTION)
+        time.sleep(1)
+        self.click_element(self.REVOKE_SUSPEND_BUTTON)
+        time.sleep(1)
+        self.navigate_backward()
+        time.sleep(1)
+        self.reload_page()
+        self.wait_for_page_to_load()
+        self.click_element(self.USERNAME_SECTION)
+        assert self.wait_for_element(self.SUSPEND_BUTTON).is_displayed()
+

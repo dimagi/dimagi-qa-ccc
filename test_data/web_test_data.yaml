@@ -56,6 +56,9 @@ WORKER_LIST_VIEW_4:
 WORKER_LIST_VIEW_5:
   opportunity_name: "covid_opp"
 
+WORKER_LIST_VIEW_8:
+  opportunity_name: "covid_opp"
+
 WORKER_VISIT_VERIFICATION_PAGE_1_2:
   opportunity_name: "covid_opp"
   worker_name: "Deb Test 8/12"
@@ -70,8 +73,20 @@ WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
   worker_name: "Deb Test 8/12"
 
 PAYMENT_PROCESSING_1_2_3:
-  opportunity_name: "covid_opp"
-  worker_name: "Deb Test 8/12"
+  opportunity_name: "Test Opp 151201"
+  worker_name: "Automation User 10"
+
+MESSAGING_1_2_3:
+  ########## ORDER OF PARAMS: Name, Case_Type, List of User-Recipients, Content Message ##########
+  connect_message_alert: ["Connect Message Alert", "visit", ["001b8edd7bc3d3c58a70"], "Test Connect Message Alert"]
+  ########## ORDER OF PARAMS: Name, Case_Type, List of User-Recipients, Survey Form, Expire After ##########
+  connect_survey_alert: ["Connect Survey Alert", "visit", ["001b8edd7bc3d3c58a70"], "Delivery App - ETE > Surveys > Survey", "1"]
+
+MESSAGING_4_5_6:
+  ########## ORDER OF PARAMS: Name, List of User-Recipients, Content Message ##########
+  connect_message_broadcast: ["Connect Message Broadcast", ["001b8edd7bc3d3c58a70"], "Test Connect Message Broadcast"]
+  ########## ORDER OF PARAMS: Name, List of User-Recipients, Survey Form, Expire After ##########
+  connect_survey_broadcast: ["Connect Survey Broadcast", ["001b8edd7bc3d3c58a70"], "Delivery App - ETE > Surveys > Survey", "1"]
 
 Invite_Workers:
   opportunity_name: "Demo Opportunity"
