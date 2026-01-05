@@ -77,7 +77,9 @@ class DeliveryAppPage(BasePage):
         }
 
     def verify_payment_info(self):
+        self.sync_with_server()
         self.nav_to_view_job()
+        time.sleep(1)
         assert self.is_displayed(self.PU_TITLE_TXT), "PU title is not displayed"
         assert self.is_displayed(self.PAYMENT_APPROVED_COUNT_TXT), "Approved count is not displayed"
         assert self.is_displayed(self.PAYMENT_AMOUNT_TXT), "Payment amount is not displayed"

@@ -178,5 +178,6 @@ class WorkerVisitsPage(BaseWebPage):
         self.reload_page()
         self.wait_for_page_to_load()
         self.click_element(self.USERNAME_SECTION)
+        time.sleep(1)
         assert self.wait_for_element(self.SUSPEND_BUTTON).is_displayed()
 

@@ -29,7 +29,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3")
+    data = test_data.get("TC_3_to_7")
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)

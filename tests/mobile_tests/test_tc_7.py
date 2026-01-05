@@ -87,5 +87,5 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
         opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
         delivery.verify_suspend_message()
 
-    # with allure.step("Revoke Suspension of the user"):
-
+    with allure.step("Revoke Suspension for a worker"):
+        worker_visits_page.revoke_suspension_for_worker()

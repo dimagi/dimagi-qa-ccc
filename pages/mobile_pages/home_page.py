@@ -85,12 +85,13 @@ class HomePage(BasePage):
 
 
     def open_app_from_goto_connect(self):
-        if not self.is_displayed(self.GOTO_CONNECT):
+        if self.is_displayed(self.MESSAGING_BTN):
             self.click_element(self.NAVIGATION_DRAWER)
 
         self.click_element(self.GOTO_CONNECT)
         time.sleep(2)
         simulate_fingerprint()
+        assert not self.is_displayed(self.GOTO_CONNECT)
 
     def nav_to_notifications(self):
         self.click_element(self.NOTIFICATIONS_BTN)
