@@ -163,3 +163,9 @@ class BaseWebPage:
             sheet.cell(row=2, column=index).value = value
         wb.save(file_path)
         print(params)
+
+    def wait_for_page_to_load(self):
+        self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+
+    def reload_page(self):
+        self.driver.refresh()
