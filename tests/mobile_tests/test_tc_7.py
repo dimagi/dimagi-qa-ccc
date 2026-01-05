@@ -1,8 +1,11 @@
+from pyexpat.errors import messages
+
 import allure
 import pytest
 
+from pages.mobile_pages.app_notifications import AppNotifications
 from pages.mobile_pages.delivery_app_page import DeliveryAppPage
-from pages.mobile_pages.learn_app_page import LearnAppPage
+from pages.mobile_pages.messaging_page import Message
 from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
@@ -16,19 +19,21 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Delivery App related validations")
-@allure.tag("CONNECT_9", "CONNECT_10")
+@allure.story("Notifications, User Suspension related validations")
+@allure.tag("CONNECT_13", "CONNECT_19", "CONNECT_17")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
-  - CONNECT_9 : Verify user can view the opportunity details and claim the job after completing the learning
-  - CONNECT_10 : Verify on updating a visit status from web, the status of the visit gets updated on the mobile
+  - CONNECT_13 : Confirm user can see all the notifications received on the notification history screen 
+  - CONNECT_19 : Verify on clicking the messaging option, user is taken channels list page
+  - CONNECT_17 : Verify when a mobile user is suspended from an opportunity
+  
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
+def test_notification_messaging_section_and_worker_suspension(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_3_to_7")
 
     cchq_login_page = LoginPage(web_driver)
@@ -41,8 +46,9 @@ def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    learn = LearnAppPage(mobile_driver)
+    app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
+    message = Message(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -53,38 +59,33 @@ def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
                                  data["username"],
-                                 data["backup_code"])   # test number
+                                 data["backup_code"])
 
-    with allure.step("Open the opportunity from list"):
-        home.open_app_from_goto_connect()
-        opportunity.open_opportunity_from_list(data["opportunity_name"], "learn")
+    with allure.step("Open the app notifications screen"):
+        home.nav_to_notifications()
+        app_notification.verify_all_notifications()
 
-    with allure.step("Verify Completed Opportunity details"):
-        learn.verify_opportunity_details_screen()
-
-    with allure.step("Download the Delivery App"):
-        learn.download_delivery_app()
-
-    with allure.step("Submit the form on the Delivery App"):
-        delivery.submit_form("Registration Form")
-
-    with allure.step("Verify Payment Unit Info and Visits details"):
-        delivery.verify_payment_info()
-
-    with allure.step("Submit the form on the Delivery App without GPS location"):
-        result = delivery.submit_form("Registration Form", record_loc=False)
+    with allure.step("Navigate to Messaging option"):
+        home.nav_to_messaging()
+        message.verify_channel_list()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-
-    with allure.step("Change the organization"):
         connect_home_page.select_organization_from_list(data["org_name"])
 
-    with allure.step("Navigate to the Connect Workers details in Opportunity"):
+    with allure.step("Navigate and verify Connect Workers details in Opportunity"):
         opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
         connect_workers_page.click_name_in_table(data["username"])
 
-    with allure.step("Approve individual Worker Visit using entity name and ID"):
-        worker_visits_page.approve_entity_from_visits_using_name_and_id(result["name"], result["id"])
+    with allure.step("Verify Suspend user in Worker Visits page of Opportunity"):
+        worker_visits_page.suspend_user_in_worker_visits("Test Reason")
+
+    with allure.step("Verify Suspend message on app home screen"):
+        home.open_app_from_goto_connect()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
+        delivery.verify_suspend_message()
+
+    with allure.step("Revoke Suspension for a worker"):
+        worker_visits_page.revoke_suspension_for_worker()

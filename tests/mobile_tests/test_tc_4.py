@@ -2,11 +2,12 @@ import allure
 import pytest
 
 from pages.mobile_pages.learn_app_page import LearnAppPage
-from pages.mobile_pages.notifications import Notifications
+from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
+from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
 from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
@@ -24,18 +25,19 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_4")
+def test_learn_app_flow(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_3_to_7")
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
-    connect_opp = ConnectOpportunitiesPage(web_driver)
+    connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)
 
     # mobile driver and page initiation
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
+    opportunity = OpportunityPage(mobile_driver)
     learn = LearnAppPage(mobile_driver)
 
 
@@ -50,33 +52,52 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
                                  data["backup_code"])   # test number
 
     with allure.step("Open the learn app page"):
-        home.open_learn_app(data["opportunity_name"])
+        home.open_app_from_goto_connect()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "new opportunity")
 
+    with allure.step("Download the Learn App"):
+        opportunity.download_learn_app()
 
     with allure.step("Complete Learning module"):
         learn.complete_learn_survey("Learn 1")
 
     with allure.step("Verify In Progress Job Status"):
+        learn.sync_with_server()
         learn.verify_job_status("IN_PROGRESS")
 
     with allure.step("Complete Learning module"):
         learn.complete_learn_survey("Learn 2")
 
     with allure.step("Verify Learn Completed Job Status"):
+        learn.sync_with_server()
         learn.verify_job_status("COMPLETED")
 
     with allure.step("Fail the Assessment with less than min score"):
         learn.complete_assessment("10")
 
-    # with allure.step("Verify Assessment Status on Connect portal"):
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.navigate_to_connect_page(config)
+        connect_home_page.signin_to_connect_page_using_cchq()
+
+    with allure.step("Verify Assessment status in learn table for worker"):
+        connect_home_page.select_organization_from_list(data["org_name"])
+        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
+        connect_workers_page.click_tab_by_name("Learn")
+        connect_workers_page.verify_worker_assessment_status(data["username"], "Failed")
 
     with allure.step("Verify Job Status for Failed Assessment"):
+        learn.sync_with_server()
         learn.verify_job_status("FAILED_ASSESSMENT")
 
     with allure.step("Pass the Assessment with more than min score"):
         learn.complete_assessment("90")
 
     with allure.step("Verify Job Status for Passed Assessment"):
+        learn.sync_with_server()
         learn.verify_certificate_screen()
 
-    # with allure.step("Verify Assessment Status on Connect portal"):
+    with allure.step("Verify Assessment status in learn table for worker"):
+        opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
+        connect_workers_page.click_tab_by_name("Learn")
+        connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")

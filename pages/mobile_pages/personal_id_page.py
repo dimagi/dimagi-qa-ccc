@@ -37,7 +37,7 @@ class PersonalIDPage(BasePage):
     def continue_next(self):
         self.click_when_enabled(self.CONTINUE_BTN)
 
-    def start_signup(self, country_code, phone_number):
+    def start_signup(self, country_code, phone_number, retries=3):
         self.enter_country_code(country_code)
         self.enter_phone_number(phone_number)
         self.accept_terms()
@@ -46,12 +46,18 @@ class PersonalIDPage(BasePage):
         time.sleep(5)
         self.wait_for_element_to_disappear(self.PROGRESS_BAR)
 
-        if(self.is_displayed(self.NETWORK_ERROR_TXT) == True):
-            print("Network Error")
-            time.sleep(2)
-            self.continue_next()
-            self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+        if not self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
+            for attempt in range(retries):
+                if not self.is_displayed(self.NETWORK_ERROR_TXT):
+                    break
+                print(f"Network Error: attempt {attempt + 1}")
+                time.sleep(2)
+                self.continue_next()
+                self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+                if self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
+                    break
 
+        time.sleep(1)
         self.wait_for_element(self.USE_FINGERPRINT_TXT)
 
     def click_configure_fingerprint(self):
