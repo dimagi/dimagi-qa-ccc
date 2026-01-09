@@ -123,22 +123,21 @@ class MessagingPage(BaseWebPage):
         time.sleep(2)
         self.click_element(self.SAVE_BUTTON)
 
-    # def click_last_page_in_pagination(self):
-    #     pagination = self.wait_for_element(self.PAGINATION_CONTAINER)
-    #     page_links = pagination.find_elements(By.XPATH,".//li//a")
-    #     if not page_links:
-    #         return
-    #     last_page_link = page_links[-1]
-    #     self.wait.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "i.fa-spinner")))
-    #     self.driver.execute_script("arguments[0].scrollIntoView(true);", last_page_link)
-    #     self.driver.execute_script("arguments[0].click();", last_page_link)
-    #     time.sleep(15)
+    def click_last_page_in_pagination(self):
+        pagination = self.wait_for_element(self.PAGINATION_CONTAINER)
+        page_numbers = pagination.find_elements(By.XPATH, ".//li/a/span[normalize-space() and number(normalize-space())=number(normalize-space())]")
+        assert page_numbers, "No pagination pages found"
+        last_page = page_numbers[-1]
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", last_page)
+        self.driver.execute_script("arguments[0].click();", last_page)
 
     def is_created_alert_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
-        # self.click_last_page_in_pagination()
-        self.scroll_into_view(self.ALERTS_LIST)
+        self.click_last_page_in_pagination()
+        time.sleep(5)
+        self.wait_for_element(self.NEW_CONDITIONAL_ALERT)
+        self.scroll_into_view(self.NEW_CONDITIONAL_ALERT)
         table_ele = self.wait_for_element(self.ALERTS_LIST)
         name_elements = table_ele.find_elements(By.XPATH, "//tr//td[2]//a")
         assert any(name in n.text for n in name_elements)

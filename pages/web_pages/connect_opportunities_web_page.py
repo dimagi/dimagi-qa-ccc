@@ -1,7 +1,12 @@
 import time
+
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.select import Select
+
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
+from datetime import datetime
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
@@ -13,6 +18,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     ADD_OPPORTUNITY_BUTTON = locators.get("connect_opportunities_page", "add_opportunity_btn")
     OPP_NAME_INPUT = locators.get("connect_opportunities_page", "name_input")
     OPP_CURRENCY_INPUT = locators.get("connect_opportunities_page", "currency_input")
+    OPP_COUNTRY_INPUT = locators.get("connect_opportunities_page", "country_input")
     OPP_SHORT_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "short_description_input")
     OPP_HQ_SERVER_DROPDOWN = locators.get("connect_opportunities_page", "hq_server_dropdown")
     OPP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "description_input")
@@ -25,6 +31,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
     OPPORTUNITIES_TABLE = locators.get("connect_opportunities_page", "opportunities_table")
+    FILTER_BUTTON = locators.get("connect_opportunities_page", "filter_btn")
+    IS_TEST_FILTER_DROPDOWN = locators.get("connect_opportunities_page", "is_test_filter_dropdown")
+    STATUS_FILTER_INPUT = locators.get("connect_opportunities_page", "status_filter_dropdown")
+    APPLY_BUTTON = locators.get("connect_opportunities_page", "apply_btn")
 
     ADD_PAYMENT_UNIT_BUTTON = locators.get("connect_opportunities_page", "add_payment_btn")
     AMOUNT_INPUT = locators.get("connect_opportunities_page", "amount_input")
@@ -43,12 +53,18 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.click_element(self.ADD_OPPORTUNITY_BUTTON)
 
     def enter_name_in_opportunity(self , value):
+        timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
+        self.opp_full_name = value + "_" + timestamp
         self.wait_for_element(self.OPP_NAME_INPUT)
-        self.type(self.OPP_NAME_INPUT, value)
+        self.type(self.OPP_NAME_INPUT, self.opp_full_name)
 
-    def enter_currency_in_opportunity(self , value):
+    def select_currency_in_opportunity(self , value):
         self.wait_for_element(self.OPP_CURRENCY_INPUT)
-        self.type(self.OPP_CURRENCY_INPUT, value)
+        self.select_by_visible_text(self.OPP_CURRENCY_INPUT, value)
+
+    def select_country_in_opportunity(self , value):
+        self.wait_for_element(self.OPP_COUNTRY_INPUT)
+        self.select_by_visible_text(self.OPP_COUNTRY_INPUT, value)
 
     def enter_short_description_in_opportunity(self , value):
         self.wait_for_element(self.OPP_SHORT_DESCRIPTION_INPUT)
@@ -134,7 +150,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def select_required_deliver_units_checkbox(self, required_text):
         parent = self.wait_for_element(self.REQUIRED_DELIVER_UNITS_SECTION)
-        label = parent.find_element(By.XPATH, f".//label[normalize-space()[contains(., '{required_text}')]]")
+        label = parent.find_element(By.XPATH, f".//label[contains(normalize-space(.), '{required_text}')]")
         checkbox = label.find_element(By.TAG_NAME, "input")
         if not checkbox.is_selected():
             label.click()
@@ -171,7 +187,8 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.click_add_opportunity_btn()
         time.sleep(1)
         self.enter_name_in_opportunity(data["opportunity_name"])
-        self.enter_currency_in_opportunity(data["currency"])
+        self.select_currency_in_opportunity(data["currency"])
+        self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
         self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
@@ -194,7 +211,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
         self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
         self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
-        #self.select_required_deliver_units_checkbox(data["required_deliver_units"])
+        self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
         self.verify_payment_unit_present(data["payment_unit_name"])
@@ -208,4 +225,76 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.click_submit_btn()
         time.sleep(3)
         self.verify_opportunity_name_in_table(data["opportunity_name"])
+
+    def click_filter_btn(self):
+        self.click_element(self.FILTER_BUTTON)
+
+    def select_is_test_in_filters(self, value):
+        self.select_by_visible_text(self.IS_TEST_FILTER_DROPDOWN, value)
+
+    def select_status_in_filters(self, params):
+        for each in params:
+            self.select_by_visible_text(self.STATUS_FILTER_INPUT, each)
+            time.sleep(1)
+
+    def click_apply_btn(self):
+        self.click_element(self.APPLY_BUTTON)
+
+    def clear_filters_in_opportunities(self):
+        self.click_filter_btn()
+        self.select_is_test_in_filters("---------")
+        Select(self.wait_for_element(self.STATUS_FILTER_INPUT)).deselect_all()
+        self.click_apply_btn()
+        time.sleep(1)
+
+    def verify_status_for_all_opportunities(self, expected_status):
+        table = self.wait_for_element(self.OPPORTUNITIES_TABLE)
+        headers = table.find_elements(By.XPATH, ".//thead//th")
+        status_col_index = None
+        for index, header in enumerate(headers, start=1):
+            if header.text.strip() == "Status":
+                status_col_index = index
+                break
+        assert status_col_index is not None, "Status column not found in opportunities table"
+        rows = table.find_elements(By.XPATH, ".//tbody/tr")
+        assert rows, "No rows found in opportunities table"
+        for row_num, row in enumerate(rows, start=1):
+            status_element = row.find_element(By.XPATH, f"./td[{status_col_index}]//span[contains(@class,'badge')]")
+            actual_status = status_element.text.strip()
+            assert actual_status == expected_status, (
+                f"Row {row_num}: Expected status '{expected_status}', "
+                f"but found '{actual_status}'"
+            )
+
+    def apply_n_verify_filter_as_active_in_opportunities(self):
+        self.clear_filters_in_opportunities()
+        self.click_filter_btn()
+        self.select_is_test_in_filters("Yes")
+        self.select_status_in_filters(["Active"])
+        self.click_apply_btn()
+        self.wait_for_page_to_load()
+        time.sleep(2)
+        self.verify_status_for_all_opportunities("Active")
+        time.sleep(2)
+
+    def apply_n_verify_filter_as_ended_in_opportunities(self):
+        self.clear_filters_in_opportunities()
+        self.click_filter_btn()
+        self.select_is_test_in_filters("Yes")
+        self.select_status_in_filters(["Ended"])
+        self.click_apply_btn()
+        self.wait_for_page_to_load()
+        time.sleep(2)
+        self.verify_status_for_all_opportunities("Ended")
+        time.sleep(2)
+
+    def apply_n_verify_filter_as_inactive_in_opportunities(self):
+        self.clear_filters_in_opportunities()
+        self.click_filter_btn()
+        self.select_is_test_in_filters("Yes")
+        self.select_status_in_filters(["Inactive"])
+        self.click_apply_btn()
+        self.wait_for_page_to_load()
+        time.sleep(2)
+        self.verify_status_for_all_opportunities("Inactive")
 
