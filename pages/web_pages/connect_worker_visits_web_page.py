@@ -167,6 +167,7 @@ class WorkerVisitsPage(BaseWebPage):
         time.sleep(1)
         self.type(self.SUSPEND_USER_REASON_INPUT, reason)
         self.click_element(self.SUSPEND_POPUP_BUTTON)
+        time.sleep(2)
 
     def revoke_suspension_for_worker(self):
         self.click_element(self.USERNAME_SECTION)

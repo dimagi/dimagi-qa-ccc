@@ -1,3 +1,4 @@
+import re
 import time
 
 from selenium.webdriver import Keys
@@ -180,8 +181,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def verify_opportunity_name_in_table(self, opp_name):
         table = self.wait_for_element(self.OPPORTUNITIES_TABLE)
-        elements = table.find_elements("xpath", f".//td//a[text()='{opp_name}']")
-        assert len(elements) > 0, f"Opportunity '{opp_name}' not found in the table."
+        element = table.find_element("xpath", f".//td//a[text()='{opp_name}']")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+        assert element.is_displayed(), f"Opportunity '{opp_name}' not found in the table."
+        print(f"Opportunity '{opp_name}' present in table.")
 
     def create_opportunity_in_connect_page(self, data):
         self.click_add_opportunity_btn()
@@ -214,7 +217,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
-        self.verify_payment_unit_present(data["payment_unit_name"])
+        self.verify_payment_unit_present(self.opp_full_name)
 
     def setup_budget_in_connect_page(self, data):
         self.click_setup_budget_button()
@@ -224,7 +227,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
         time.sleep(3)
-        self.verify_opportunity_name_in_table(data["opportunity_name"])
+        self.verify_opportunity_name_in_table(self.opp_full_name)
 
     def click_filter_btn(self):
         self.click_element(self.FILTER_BUTTON)
