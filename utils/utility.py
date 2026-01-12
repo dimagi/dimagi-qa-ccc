@@ -1,8 +1,33 @@
 import subprocess
 import time
 
-def simulate_fingerprint(finger_id=1):
-    subprocess.run(["adb", "emu", "finger", "touch", str(finger_id)])
+def simulate_fingerprint(driver=None, run_on="local", finger_id=1, success=True):
+    if run_on == "browserstack":
+        if not driver:
+            raise ValueError("Driver is required for BrowserStack fingerprint simulation")
+
+        driver.execute_script(
+            "browserstack_executor",
+            {
+                "action": "biometricAuthentication",
+                "arguments": {
+                    "type": "fingerprint",
+                    "success": success
+                }
+            }
+        )
+        # driver.execute_script("mobile: sendBiometricMatch", {
+        #     "match": True
+        # })
+        # driver.execute_script(
+        #     'browserstack_executor: {"action":"biometric","arguments":{"biometricMatch":"pass"}}'
+        # )
+    else:
+        # Local emulator
+        subprocess.run(
+            ["adb", "emu", "finger", "touch", str(finger_id)],
+            check=False
+        )
 
 def open_notification():
     subprocess.run(["adb", "shell", "cmd", "statusbar", "expand-notifications"])

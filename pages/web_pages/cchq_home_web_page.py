@@ -6,7 +6,7 @@ from utils.helpers import LocatorLoader
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
-class HomePage(BaseWebPage):
+class CCHQHomePage(BaseWebPage):
 
     def __init__(self, driver):
         super().__init__(driver)

@@ -1,6 +1,7 @@
 import allure
 import pytest
 
+from pages.mobile_pages.app_notifications import AppNotifications
 from pages.mobile_pages.learn_app_page import LearnAppPage
 from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
@@ -15,7 +16,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("New Opportunity related validations")
-@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_6", "CONNECT_14")
+@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_6", "CONNECT_14", "Notification_2")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
@@ -24,6 +25,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   - CONNECT_5 : Verify opportunity list on the opportunity page
   - CONNECT_6 : Verify Learn Modules and download the Learn App
   - CONNECT_14 : Verify on clicking the opportunities option from the side drawer takes you to the opportunity list page
+  - Notification_2: Verify notifications icon is present on the opportunities list page
   
   """)
 @pytest.mark.mobile
@@ -42,6 +44,7 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     home = HomePage(mobile_driver)
     notifications = MobileNotifications(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
+    app_notifications = AppNotifications(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -79,6 +82,8 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
 
     with allure.step("Verify the Opportunity Details"):
         opportunity.open_opportunity_from_list(data["opportunity_name"], "new opportunity")
+        opportunity.click_notification()
+        app_notifications.verify_all_notifications()
         opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()

@@ -18,13 +18,15 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("Payment related validations")
-@allure.tag("CONNECT_11", "CONNECT_12")
+@allure.tag("CONNECT_11", "CONNECT_12", "CONNECT_13", "Notification_5")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
   - CONNECT_11 : Confirm when a payment is made to the user, the same is reflected on the mobile 
   - CONNECT_12 : Verify that user can confirm the payment status from the mobile
+  - CONNECT_13 : Confirm user can see all the notifications received on the notification history screen
+  - Notification_5 : Verify user is redirected to payment screen upon clicking on the payment notification
   """)
 
 @pytest.mark.mobile

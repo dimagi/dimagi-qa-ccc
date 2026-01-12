@@ -62,6 +62,7 @@ class PersonalIDPage(BasePage):
 
     def click_configure_fingerprint(self):
         self.click_element(self.CONFIGURE_FINGERPRINT_BTN)
+        time.sleep(2)
 
     def handle_fingerprint_auth(self):
         time.sleep(2)

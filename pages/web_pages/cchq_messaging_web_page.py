@@ -46,8 +46,9 @@ class MessagingPage(BaseWebPage):
                 break
 
     def enter_name_in_conditional_alert(self, name):
-        timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
-        self.cond_alert_full_name = name + "_" + timestamp
+        ts = int(time.time() * 1000)
+        self.cond_alert_full_name = f"{name} {ts}"
+        print(self.cond_alert_full_name)
         self.type(self.CONDITIONAL_ALERT_NAME_INPUT, self.cond_alert_full_name)
 
     def select_case_type(self, value):
@@ -65,17 +66,18 @@ class MessagingPage(BaseWebPage):
         self.select_by_visible_text(self.WHAT_TO_SEND_INPUT, value)
         time.sleep(2)
 
-    def create_new_connect_message_conditional_alert(self, params):
-        name, case_type, user_recipients, message = params
+    def create_new_connect_message_conditional_alert(self, user_recipients):
         self.click_new_conditional_alert_btn()
         time.sleep(2)
-        self.enter_name_in_conditional_alert(name)
+        self.enter_name_in_conditional_alert("Automation Message Alert")
+        time.sleep(1)
         self.click_continue_btn()
-        self.select_case_type(case_type)
+        self.select_case_type("automation")
         self.click_continue_btn()
+        time.sleep(1)
         self.select_what_to_send_input("Connect Message")
         self.select_user_recipients(user_recipients)
-        self.enter_message_in_broadcast(message)
+        self.enter_message_in_broadcast("Automation Test Message")
         self.click_save_btn()
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
 
@@ -87,18 +89,17 @@ class MessagingPage(BaseWebPage):
         self.scroll_into_view(self.EXPIRE_AFTER_INPUT)
         self.type(self.EXPIRE_AFTER_INPUT, value)
 
-    def create_new_connect_survey_conditional_alert(self, params):
-        name, case_type, user_recipients, survey_form, expire_after = params
+    def create_new_connect_survey_conditional_alert(self, user_recipients):
         self.click_new_conditional_alert_btn()
         time.sleep(2)
-        self.enter_name_in_conditional_alert(name)
+        self.enter_name_in_conditional_alert("Automation Survey Alert")
         self.click_continue_btn()
-        self.select_case_type(case_type)
+        self.select_case_type("automation")
         self.click_continue_btn()
         self.select_what_to_send_input("Connect Survey")
         self.select_user_recipients(user_recipients)
-        self.select_survey_form_for_alert(survey_form)
-        self.enter_expire_after_for_alert(expire_after)
+        self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
+        self.enter_expire_after_for_alert("1")
         self.click_save_btn()
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
 
@@ -150,8 +151,8 @@ class MessagingPage(BaseWebPage):
         self.verify_text_in_url("/broadcasts/add")
 
     def enter_broadcast_name(self, name):
-        timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
-        self.broadcast_full_name = name + "_" + timestamp
+        ts = int(time.time() * 1000)
+        self.broadcast_full_name = f"{name} {ts}"
         self.type(self.BROADCAST_NAME_INPUT, self.broadcast_full_name)
 
     def select_user_recipients(self, params):
@@ -159,7 +160,7 @@ class MessagingPage(BaseWebPage):
         self.click_element(self.USER_RECIPIENT_INPUT)
         for each in params:
             recipient_ele.send_keys(each)
-            time.sleep(1)
+            time.sleep(2)
             recipient_ele.send_keys(Keys.ENTER)
 
     def enter_message_in_broadcast(self, message):
@@ -181,28 +182,26 @@ class MessagingPage(BaseWebPage):
         )
         print(f"Created '{name}' broadcast successfully")
 
-    def create_new_broadcast_with_connect_message_option(self, params):
-        name, user_recipients, message = params
+    def create_new_broadcast_with_connect_message_option(self, user_recipients):
         self.click_add_broadcast_button()
         time.sleep(1)
-        self.enter_broadcast_name(name)
+        self.enter_broadcast_name("Connect Message Broadcast")
         self.select_what_to_send_input("Connect Message")
         self.select_user_recipients(user_recipients)
-        self.enter_message_in_broadcast(message)
+        self.enter_message_in_broadcast("Test Connect Message Broadcast")
         self.click_send_broadcast_btn()
         time.sleep(2)
         self.verify_text_in_url("/broadcasts/")
         self.is_broadcast_name_present_in_list(self.broadcast_full_name)
 
-    def create_new_broadcast_with_connect_survey_option(self, params):
-        name, user_recipients, survey_form, expire_after = params
+    def create_new_broadcast_with_connect_survey_option(self, user_recipients):
         self.click_add_broadcast_button()
         time.sleep(1)
-        self.enter_broadcast_name(name)
+        self.enter_broadcast_name("Connect Survey Broadcast")
         self.select_what_to_send_input("Connect Survey")
         self.select_user_recipients(user_recipients)
-        self.select_survey_form_for_alert(survey_form)
-        self.enter_expire_after_for_alert(expire_after)
+        self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
+        self.enter_expire_after_for_alert("1")
         self.click_send_broadcast_btn()
         time.sleep(2)
         self.verify_text_in_url("/broadcasts/")

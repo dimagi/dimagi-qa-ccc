@@ -1,7 +1,7 @@
 import allure
 import pytest
 from pygments.lexers import data
-from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.cchq_home_web_page import CCHQHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.cchq_messaging_web_page import MessagingPage
 
@@ -22,7 +22,7 @@ def test_messaging_1_2_3_create_n_verify_alerts_with_new_message_options(web_dri
     messaging_1_2_3_data = test_data.get("MESSAGING_1_2_3")
 
     cchq_login_page = LoginPage(web_driver)
-    cchq_home_page = HomePage(web_driver)
+    cchq_home_page = CCHQHomePage(web_driver)
     cchq_messaging_page = MessagingPage(web_driver)
 
     with allure.step("Login to CommCare HQ and verify Welcome title"):

@@ -10,35 +10,19 @@ TC_2:
   username: "Deb Test 161202"
   backup_code: "742605"
 
-#TC_3:
-#  country_code: "+7426"
-#  phone_number: "7426006"
-#  username: "Automation User 06"
-#  backup_code: "742606"
-#  opportunity_name: "test_opp_221225_01"
-#  org_name: "Automation_Test_01"
-
-#TC_3_to_7:
-#  country_code: "+7426"
-#  phone_number: "7426011"
-#  username: "Automation User 11"
-#  backup_code: "742611"
-#  opportunity_name: "test_opp_221225_01"
-#  org_name: "Automation_Test_01"
-
-#TC_3_to_7:
-#  country_code: "+7426"
-#  phone_number: "7426014"
-#  username: "Automation User 14"
-#  backup_code: "742614"
-#  opportunity_name: "test_opp_221225_01"
-#  org_name: "Automation_Test_01"
-
-TC_3_to_7:
+TC_3_to_6:
   country_code: "+7426"
   phone_number: "7426016"
   username: "Automation User 16"
   backup_code: "742616"
+  opportunity_name: "test_opp_221225_01"
+  org_name: "Automation_Test_01"
+
+TC_7:
+  country_code: "+7426"
+  phone_number: "7426014"
+  username: "Automation User 14"
+  backup_code: "742614"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
@@ -51,9 +35,25 @@ TC_8:
   org_name: "Automation_Test_01"
 
 TC_9:
+  country_code_1: "+1"
+  real_phone_number: "7653398585"
+  country_code_2: "+7426"
+  phone_number: "7426000"
+  username: "Deb Test 8/12"
+  backup_code: "742600"
+
+TC_10:
   country_code: "+7426"
-  phone_number: "7426013"
-  username: "Automation User 13"
-  backup_code: "742613"
+  phone_number: "7426011"
+  username: "Automation User 11"
+  backup_code: "742611"
   opportunity_name: "test_opp_221225_01"
+  org_name: "Automation_Test_01"
+
+TC_11:
+  country_code: "+7426"
+  phone_number: "7426006"
+  username: "Automation User 06"
+  backup_code: "742606"
+  opportunity_name: "test_opp_120126_01"
   org_name: "Automation_Test_01"

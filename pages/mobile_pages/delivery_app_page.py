@@ -45,6 +45,7 @@ class DeliveryAppPage(BasePage):
     CONNECT_MESSAGE_TXT = locators.get("delivery_app_page", "connect_message_txt")
     SYNC_WITH_SERVER = locators.get("learn_app_page", "sync_with_server")
     PRIMARY_VISIT_COUNT = locators.get("delivery_app_page", "primary_visit_count_txt")
+    USER_ID = locators.get("delivery_app_page", "logged_in_userid_txt")
 
     def submit_form(self, form_name, record_loc=True):
         if not self.is_displayed(self.DELIVERY_START_BTN):
@@ -168,3 +169,10 @@ class DeliveryAppPage(BasePage):
         # Final assertion
         assert self.get_text(self.PRIMARY_VISIT_COUNT) == f"{total}/{total}", \
             "Daily visits did not complete correctly"
+
+
+    def get_user_id(self):
+        self.wait_for_element(self.USER_ID)
+        id_txt = self.get_text(self.USER_ID).split(":")[1]
+        print(id_txt)
+        return id_txt.strip()

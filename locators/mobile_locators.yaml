@@ -138,18 +138,34 @@ delivery_app_page:
   connect_message_txt: "org.commcare.dalvik:id/tvConnectMessage"
   sync_with_server: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Sync with Server']"
   primary_visit_count_txt: "org.commcare.dalvik:id/tv_primary_visit_count"
+  logged_in_userid_txt: "//android.widget.TextView[contains(@text, 'Logged In')]"
 
 app_notification:
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
   notification_header_txt: "//android.widget.TextView[@text='Notifications']"
-  notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
-  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
-  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
-  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
-  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+#  notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
+#  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
+#  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
+#  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+#  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
   no_notification_txt: "org.commcare.dalvik:id/tvNoNotifications"
   notification_sync_btn: "org.commcare.dalvik:id/notification_cloud_sync"
+  notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
+  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivNotification']"
+  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
+  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
+  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+
 
 messaging:
   channel_header_txt: "//android.widget.TextView[@text='Channels']"
   no_channel_message_txt: "org.commcare.dalvik:id/tv_no_channel_msg"
+  message_txt: "org.commcare.dalvik:id/tvChatMessage"
+  message_time_txt: "org.commcare.dalvik:id/tvChatDate"
+  channel_name_txt: "org.commcare.dalvik:id/tvChannelName"
+  message_input: "org.commcare.dalvik:id/etMessage"
+  send_msg_btn: "org.commcare.dalvik:id/imgSendMessage"
+
+otp_page:
+  one_time_verification_txt: "org.commcare.dalvik:id/connect_phone_verify_title"
+  change_btn: "org.commcare.dalvik:id/connect_phone_verify_change"

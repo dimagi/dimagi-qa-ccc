@@ -19,21 +19,17 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Notifications, User Suspension related validations")
-@allure.tag("CONNECT_17", "CONNECT_19", "Notifications_01")
+@allure.story("Max daily visits related validations")
+@allure.tag("CONNECT_15")
 @allure.description("""
-  This automated test consolidates multiple manual test cases
-
-  Covered manual test cases:
-  - Notifications_01: Verify Notifications option is visible on left hand menu 
-  - CONNECT_19 : Verify on clicking the messaging option, user is taken channels list page
-  - CONNECT_17 : Verify when a mobile user is suspended from an opportunity
+  Covered manual test case:
+  - CONNECT_15 : Verify user can only do the max visits allowed to them on a single day
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_notification_messaging_section_and_worker_suspension(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_7")
+def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_8")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -45,9 +41,8 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
-    message = Message(mobile_driver)
+
 
 
     with allure.step("Click on Sign In / Register"):
@@ -60,13 +55,22 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
                                  data["username"],
                                  data["backup_code"])
 
-    with allure.step("Open the app notifications screen"):
-        home.nav_to_notifications()
-        app_notification.verify_all_notifications()
+    with allure.step("Open the opportunity delivery app"):
+        home.open_app_from_goto_connect()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
-    with allure.step("Navigate to Messaging option"):
-        home.nav_to_messaging()
-        message.verify_channel_list()
+    with allure.step("Complete the daily visits"):
+        delivery.sync_with_server()
+        delivery.complete_daily_visits()
+
+    with allure.step("Complete one more daily visit"):
+        delivery.submit_form("Registration Form")
+
+    with allure.step("Verify daily visit progress not updated"):
+        delivery.verify_daily_visits_progress()
+
+    with allure.step("Verify daily visit count not updated in verification and Payment tab"):
+        delivery.verify_daily_visits_not_updated() # in progress and payment tab
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
@@ -74,17 +78,6 @@ def test_notification_messaging_section_and_worker_suspension(web_driver, mobile
         connect_home_page.signin_to_connect_page_using_cchq()
         connect_home_page.select_organization_from_list(data["org_name"])
 
-    with allure.step("Navigate and verify Connect Workers details in Opportunity"):
-        opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
-        connect_workers_page.click_name_in_table(data["username"])
+    # - On Web UI, user should see a 'Over Limit' status for the form submitted on after
+    #   exceeding the daily limit, under Deliver Forms tab
 
-    with allure.step("Verify Suspend user in Worker Visits page of Opportunity"):
-        worker_visits_page.suspend_user_in_worker_visits("Test Reason")
-
-    with allure.step("Verify Suspend message on app home screen"):
-        home.open_app_from_goto_connect()
-        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
-        delivery.verify_suspend_message()
-
-    with allure.step("Revoke Suspension for a worker"):
-        worker_visits_page.revoke_suspension_for_worker()

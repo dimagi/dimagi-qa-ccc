@@ -1,27 +1,26 @@
 import allure
 import pytest
+
+from pages.mobile_pages.otp_verification_page import OTPVerificationPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
 
-@allure.feature("PID & CONNECT")
+@allure.feature("PID")
 @allure.story("Login related validations")
-@allure.tag("PID_4", "PID_5", "PID_6_1", "CONNECT_1", "CONNECT_2")
+@allure.tag("PID_3")
 @allure.description("""
  This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
-  - PID_5 : Login with valid credentials
-  - PID_4 : Sign out for existing demo user
-  - PID_6_1 : Verify wrong backup code entered error popup
-  - CONNECT_1 : Verify all side menu options shown
-  - CONNECT_2 : Verify Go To Connect button shown
+  - PID_3 : Confirm user can change the phone number by clicking the 'change' option
   """)
 @pytest.mark.mobile
 def test_login_and_home_page(mobile_driver, test_data):
-    data = test_data.get("TC_1")
+    data = test_data.get("TC_9")
 
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
+    otp_page = OTPVerificationPage(mobile_driver)
 
     username = data["username"]
 
@@ -30,12 +29,18 @@ def test_login_and_home_page(mobile_driver, test_data):
         home.click_signup()
 
     with allure.step("Enter Mobile Number and Continue"):
-        pid.start_signup(data["country_code"], data["phone_number"])   # test number
+        pid.start_signup(data["country_code_1"], data["real_phone_number"])   # test number
 
     with allure.step("Handle Fingerprint Authentication"):
         pid.click_configure_fingerprint()
         pid.handle_fingerprint_auth()
 
-    with allure.step("Click Change Number on OTP screen"):
-        pid.click_change_number()
-        pid.handle_fingerprint_auth()
+    with allure.step("Chane Mobile Number and Continue"):
+        otp_page.change_phone_number()
+
+    with allure.step("Sign in with existing demo user"):
+        pid.signin_existing_user(data["country_code_2"],
+                                 data["phone_number"],
+                                 data["username"],
+                                 data["backup_code"])
+
