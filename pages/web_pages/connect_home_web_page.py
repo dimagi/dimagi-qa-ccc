@@ -67,3 +67,4 @@ class ConnectHomePage(BaseWebPage):
         except NoSuchElementException:
             print(f"Organization {organization_name} not found")
             raise NoSuchElementException
+        time.sleep(2)

@@ -1,6 +1,7 @@
 OLP_1:
   opportunity_name: "Demo Opportunity"
-  currency: "INR"
+  currency: "INR (Indian Rupee)"
+  country: "India"
   short_description: "This is a demo opportunity"
   hq_server: "CommCareHQ (https://www.commcarehq.org)"
   description: "Demo Opportunity"
@@ -18,13 +19,13 @@ OLP_2:
   description: "Payment Unit 1"
   max_total: "1000"
   max_daily: "10"
-  start_date: "01-01-2026"    #MM-DD-YYYY
-  end_date: "01-01-2027"    #MM-DD-YYYY
-  required_deliver_units: "Optional Delivery 3"
+  start_date: "01-01-2027"    #MM-DD-YYYY
+  end_date: "01-01-2028"    #MM-DD-YYYY
+  required_deliver_units: "delivery"
 
 OLP_3:
-  start_date: "01-01-2026"    #MM-DD-YYYY
-  end_date: "01-01-2027"    #MM-DD-YYYY
+  start_date: "01-01-2027"    #MM-DD-YYYY
+  end_date: "01-01-2028"    #MM-DD-YYYY
   no_of_connect_workers: "10"
   total_budget_value: "1000000"
 
@@ -45,6 +46,9 @@ OLP_8:
 
 OLP_9:
   opportunity_name: "Demo Opportunity"
+
+OLP_11:
+  org_name: "dg_connect"
 
 WORKER_LIST_VIEW_1_2_3:
   opportunity_name: "Demo Opportunity"
@@ -81,6 +85,17 @@ MESSAGING_4_5_6:
   connect_message_broadcast: ["Connect Message Broadcast", ["001b8edd7bc3d3c58a70"], "Test Connect Message Broadcast"]
   ########## ORDER OF PARAMS: Name, List of User-Recipients, Survey Form, Expire After ##########
   connect_survey_broadcast: ["Connect Survey Broadcast", ["001b8edd7bc3d3c58a70"], "Delivery App - ETE > Surveys > Survey", "1"]
+
+PM_5:
+  org_name: "PM_Automation_01"
+  program_name: "Program 7 Jan 2025 10:13"
+
+PM_6:
+  program_name: "Program 7 Jan 2025 10:13"
+
+PM_7:
+  program_name: "Program 7 Jan 2025 10:13"
+  network_manager: "Automation_Test_02"
 
 Invite_Workers:
   opportunity_name: "Demo Opportunity"

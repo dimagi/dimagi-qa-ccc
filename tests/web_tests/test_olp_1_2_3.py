@@ -33,6 +33,7 @@ def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
+        connect_home_page.select_organization_from_list("Automation_Test_02")
 
     with allure.step("Add Opportunity in Connect Page with required fields"):
         connect_opp_page.create_opportunity_in_connect_page(olp1_data)

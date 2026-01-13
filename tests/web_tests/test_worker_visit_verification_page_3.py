@@ -42,3 +42,4 @@ def test_worker_visit_verification_page_3_verify_suspend_users_from_an_opportuni
     # Worker Visit Verification Page_3
     with allure.step("Verify Suspend user in Worker Visits page of Opportunity"):
         worker_visits_page.suspend_user_in_worker_visits(worker_visit_3_data["reason"])
+        worker_visits_page.revoke_suspension_for_worker()

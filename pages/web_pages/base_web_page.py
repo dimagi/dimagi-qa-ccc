@@ -20,6 +20,9 @@ class BaseWebPage:
     def find(self, locator):
         return self.driver.find_element(*locator)
 
+    def find_all_elements(self, locator):
+        return self.driver.find_elements(*locator)
+
     def click(self, locator):
         self.find(locator).click()
 
@@ -133,20 +136,20 @@ class BaseWebPage:
         self.scroll_into_view(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
 
-    def _wait_for_page_load(self):
+    def wait_for_page_load(self):
         self.wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
 
     def navigate_backward(self):
         self.driver.back()
-        self._wait_for_page_load()
+        self.wait_for_page_load()
 
     def navigate_forward(self):
         self.driver.forward()
-        self._wait_for_page_load()
+        self.wait_for_page_load()
 
     def refresh_current_page(self):
         self.driver.refresh()
-        self._wait_for_page_load()
+        self.wait_for_page_load()
 
     def find_element_or_fail(self, parent, by, locator, ele_name):
         try:

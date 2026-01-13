@@ -64,3 +64,11 @@ def test_worker_visit_verification_page_1_2_for_deliver_of_opportunity_in_connec
     # with allure.step("Approve individual Worker Visit using entity name and ID"):
     #     worker_visits_page.approve_entity_from_visits_using_name_and_id("test name", "123")
     ##################
+
+    ################## Step to verify overlimit flag present - for reference not included in the test case
+    # with allure.step("Verify Over limit flag present for the entity in worker visits"):
+    #     connect_home_page.select_organization_from_list("Automation_Test_01")
+    #     opp_dashboard_page.navigate_to_services_delivered("opp_max_daily_visits_test_01")
+    #     connect_workers_page.click_name_in_table("Automation User 12")
+    #     worker_visits_page.verify_overlimit_flag_present_for_the_entity_in_visits("test user 6")
+    #################
