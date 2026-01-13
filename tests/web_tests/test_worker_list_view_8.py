@@ -16,7 +16,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
-def test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity(web_driver, test_data, config):
+def test_worker_list_view_8_verify_last_active_filter_as_1_day_ago(web_driver, test_data, config):
     worker_list_view_8_data = test_data.get("WORKER_LIST_VIEW_8")
 
     cchq_login_page = LoginPage(web_driver)

@@ -167,6 +167,7 @@ class WorkerVisitsPage(BaseWebPage):
         time.sleep(1)
         self.type(self.SUSPEND_USER_REASON_INPUT, reason)
         self.click_element(self.SUSPEND_POPUP_BUTTON)
+        time.sleep(2)
 
     def revoke_suspension_for_worker(self):
         self.click_element(self.USERNAME_SECTION)
@@ -181,3 +182,13 @@ class WorkerVisitsPage(BaseWebPage):
         time.sleep(1)
         assert self.wait_for_element(self.SUSPEND_BUTTON).is_displayed()
 
+    def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
+        row_xpath = f".//tbody/tr[td[normalize-space()='{entity_name}']]"
+        row_ele = table.find_element(By.XPATH, row_xpath)
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", row_ele)
+        flags_ele = row_ele.find_elements(By.XPATH, "./td[6]//span")
+        flags_list = [flag.text.strip().lower() for flag in flags_ele]
+        print(flags_list)
+        assert "over limit" in flags_list, f"Over limit flag not present for {entity_name}."
+        print(f"Over limit flag present for {entity_name}.")
