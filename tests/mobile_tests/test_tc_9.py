@@ -22,8 +22,6 @@ def test_login_and_home_page(mobile_driver, test_data):
     home = HomePage(mobile_driver)
     otp_page = OTPVerificationPage(mobile_driver)
 
-    username = data["username"]
-
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
         home.click_signup()

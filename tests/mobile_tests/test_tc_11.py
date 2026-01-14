@@ -82,6 +82,9 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_dr
     with allure.step("Verify Broadcast Connect Message shown"):
         message.verify_connect_message()
 
-    # # Messaging_6
-    # with allure.step("Create new Broadcast with Connect Survey Option"):
-    #     cchq_messaging_page.create_new_broadcast_with_connect_survey_option([user_id])
+    # Messaging_6
+    with allure.step("Create new Broadcast with Connect Survey Option"):
+        cchq_messaging_page.create_new_broadcast_with_connect_survey_option([user_id])
+
+    with allure.step("Verify Broadcast Connect Survey shown"):
+        message.fill_survey_form()

@@ -32,7 +32,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+    data = test_data.get("TC_6")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -91,10 +91,12 @@ def test_payment_and_related_notifications(web_driver, mobile_driver, config, te
 
     with allure.step("Verify Payment confirmation popup on View Job Status header"):
         delivery.verify_payment_popup()
-        delivery.verify_transfer_tile_on_payment_tab()
 
     with allure.step("Deny confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("No")
 
     with allure.step("Allow confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("Yes")
+
+    with allure.step("Verify transferred amount with payment rows"):
+        delivery.verify_transfer_tile_on_payment_tab()

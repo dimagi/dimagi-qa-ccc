@@ -1,6 +1,6 @@
 import allure
 import pytest
-from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.cchq_home_web_page import CCHQHomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_programs_web_page import ConnectProgramsPage
@@ -24,7 +24,7 @@ def test_pm_6_verify_status_of_invited_nms_and_create_or_view_opportunities(web_
     pm_7_data = test_data.get("PM_7")
 
     cchq_login_page = LoginPage(web_driver)
-    cchq_home_page = HomePage(web_driver)
+    cchq_home_page = CCHQHomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     connect_programs_page = ConnectProgramsPage(web_driver)
 

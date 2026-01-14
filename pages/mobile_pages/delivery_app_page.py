@@ -114,6 +114,7 @@ class DeliveryAppPage(BasePage):
         assert self.is_displayed(self.YES_BTN), "Yes is not displayed"
         assert self.is_displayed(self.ASK_ME_LATER_BTN), "Ask Me Later is not displayed"
         self.click_element(self.YES_BTN)
+        time.sleep(2)
 
     def verify_transfer_tile_on_payment_tab(self):
         # transferred total
@@ -121,15 +122,13 @@ class DeliveryAppPage(BasePage):
         total_amount = int("".join(filter(str.isdigit, total_txt)))
 
         # Iterate
-        rows = self.get_elements(self.PAYMENT_ROWS)
+        rows = self.get_elements(self.ROW_AMOUNT_TXT)
         calculated_sum = 0
 
         for row in rows:
-            status = row.find_element(*self.ROW_STATUS_TXT).text.strip().lower()
-            if status == "transferred":
-                amount_txt = row.find_element(*self.ROW_AMOUNT_TXT).text
-                amount = int("".join(filter(str.isdigit, amount_txt)))
-                calculated_sum += amount
+            amount_txt = row.text
+            amount = int("".join(filter(str.isdigit, amount_txt)))
+            calculated_sum += amount
 
         assert calculated_sum == total_amount, (
             f"Transferred mismatch: UI={total_amount}, Calculated={calculated_sum}"
@@ -150,7 +149,7 @@ class DeliveryAppPage(BasePage):
 
     def sync_with_server(self):
         self.click_element(self.SYNC_WITH_SERVER)
-        time.sleep(2)
+        time.sleep(3)
 
     def complete_daily_visits(self):
         """
@@ -165,6 +164,7 @@ class DeliveryAppPage(BasePage):
                 break
             self.submit_form("Registration Form")
             time.sleep(2)
+            self.sync_with_server()
 
         # Final assertion
         assert self.get_text(self.PRIMARY_VISIT_COUNT) == f"{total}/{total}", \
@@ -176,3 +176,8 @@ class DeliveryAppPage(BasePage):
         id_txt = self.get_text(self.USER_ID).split(":")[1]
         print(id_txt)
         return id_txt.strip()
+
+    def verify_daily_visits_progress(self):
+        visit_text = self.get_text(self.PRIMARY_VISIT_COUNT).strip()  # e.g. "5/5"
+        current, total = map(int, visit_text.split("/"))
+        assert current == total, "Daily visits did not complete correctly"

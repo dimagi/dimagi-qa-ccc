@@ -15,18 +15,19 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("Learn App related validations")
-@allure.tag("CONNECT_7", "CONNECT_8")
+@allure.tag("CONNECT_6", "CONNECT_7", "CONNECT_8")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
+  - CONNECT_6 : Verify Learn Modules and download the Learn App
   - CONNECT_7 : Verify user can start learning after downloading the learn app
   - CONNECT_8 : Verify user isn't allowed to download the app if they fail the assessment 
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-def test_learn_app_flow(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_3_to_4")
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
@@ -39,7 +40,6 @@ def test_learn_app_flow(web_driver, mobile_driver, config, test_data):
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
     learn = LearnAppPage(mobile_driver)
-
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -101,3 +101,9 @@ def test_learn_app_flow(web_driver, mobile_driver, config, test_data):
         opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
         connect_workers_page.click_tab_by_name("Learn")
         connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")
+
+    with allure.step("Verify Completed Opportunity details"):
+        learn.verify_opportunity_details_screen()
+
+    with allure.step("Download the Delivery App"):
+        learn.download_delivery_app()

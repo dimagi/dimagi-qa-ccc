@@ -68,6 +68,8 @@ opportunity_page:
   delivery_budget_txt: "org.commcare.dalvik:id/connect_delivery_budget_text"
   download_learn_app_progress_bar: "org.commcare.dalvik:id/progress_fragment_determinate"
   sync_btn: "org.commcare.dalvik:id/action_sync"
+  notification_btn: "org.commcare.dalvik:id/action_bell"
+
 
 learn_app_page:
   learn_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
@@ -151,10 +153,10 @@ app_notification:
   no_notification_txt: "org.commcare.dalvik:id/tvNoNotifications"
   notification_sync_btn: "org.commcare.dalvik:id/notification_cloud_sync"
   notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
-  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivNotification']"
-  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
-  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
-  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+  notification_icon: "//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivNotification']"
+  notification_text: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
+  notification_time: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
+  notification_arrow: "//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
 
 
 messaging:

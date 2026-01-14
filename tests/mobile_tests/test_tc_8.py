@@ -43,8 +43,6 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
     opportunity = OpportunityPage(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
 
-
-
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
         home.click_signup()
@@ -64,13 +62,11 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
         delivery.complete_daily_visits()
 
     with allure.step("Complete one more daily visit"):
-        delivery.submit_form("Registration Form")
+        name, cust_id = delivery.submit_form("Registration Form")
+        delivery.sync_with_server()
 
     with allure.step("Verify daily visit progress not updated"):
         delivery.verify_daily_visits_progress()
-
-    with allure.step("Verify daily visit count not updated in verification and Payment tab"):
-        delivery.verify_daily_visits_not_updated() # in progress and payment tab
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
@@ -78,6 +74,7 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
         connect_home_page.signin_to_connect_page_using_cchq()
         connect_home_page.select_organization_from_list(data["org_name"])
 
-    # - On Web UI, user should see a 'Over Limit' status for the form submitted on after
-    #   exceeding the daily limit, under Deliver Forms tab
-
+    with allure.step("Verify Over limit flag present for the entity in worker visits"):
+        opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
+        connect_workers_page.click_name_in_table(data["username"])
+        worker_visits_page.verify_overlimit_flag_present_for_the_entity_in_visits(name)

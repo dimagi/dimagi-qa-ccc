@@ -24,15 +24,16 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
-  Covered manual test cases:
-  - Notifications_01: Verify Notifications option is visible on left hand menu 
+  Covered manual test cases: 
   - CONNECT_19 : Verify on clicking the messaging option, user is taken channels list page
   - CONNECT_17 : Verify when a mobile user is suspended from an opportunity
+  - Notifications_01: Verify Notifications option is visible on left hand menu
+  
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_notification_messaging_section_and_worker_suspension(web_driver, mobile_driver, config, test_data):
+def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_7")
 
     cchq_login_page = LoginPage(web_driver)

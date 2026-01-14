@@ -28,8 +28,8 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_5")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -57,13 +57,7 @@ def test_delivery_app_flow(web_driver, mobile_driver, config, test_data):
 
     with allure.step("Open the opportunity from list"):
         home.open_app_from_goto_connect()
-        opportunity.open_opportunity_from_list(data["opportunity_name"], "learn")
-
-    with allure.step("Verify Completed Opportunity details"):
-        learn.verify_opportunity_details_screen()
-
-    with allure.step("Download the Delivery App"):
-        learn.download_delivery_app()
+        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
     with allure.step("Submit the form on the Delivery App"):
         delivery.submit_form("Registration Form")
