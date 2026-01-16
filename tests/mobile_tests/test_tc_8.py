@@ -1,8 +1,11 @@
+from pyexpat.errors import messages
+
 import allure
 import pytest
 
+from pages.mobile_pages.app_notifications import AppNotifications
 from pages.mobile_pages.delivery_app_page import DeliveryAppPage
-from pages.mobile_pages.learn_app_page import LearnAppPage
+from pages.mobile_pages.messaging_page import Message
 from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
@@ -16,20 +19,17 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 
 @allure.feature("CONNECT")
-@allure.story("Delivery App related validations")
-@allure.tag("CONNECT_9", "CONNECT_10")
+@allure.story("Max daily visits related validations")
+@allure.tag("CONNECT_15")
 @allure.description("""
-  This automated test consolidates multiple manual test cases
-
-  Covered manual test cases:
-  - CONNECT_9 : Verify user can view the opportunity details and claim the job after completing the learning
-  - CONNECT_10 : Verify on updating a visit status from web, the status of the visit gets updated on the mobile
+  Covered manual test case:
+  - CONNECT_15 : Verify user can only do the max visits allowed to them on a single day
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_5")
+def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_8")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -41,9 +41,7 @@ def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, conf
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    learn = LearnAppPage(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
-
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -53,32 +51,30 @@ def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, conf
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
                                  data["username"],
-                                 data["backup_code"])   # test number
+                                 data["backup_code"])
 
-    with allure.step("Open the opportunity from list"):
+    with allure.step("Open the opportunity delivery app"):
         home.open_app_from_goto_connect()
         opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
-    with allure.step("Submit the form on the Delivery App"):
-        delivery.submit_form("Registration Form")
+    with allure.step("Complete the daily visits"):
+        delivery.sync_with_server()
+        delivery.complete_daily_visits()
 
-    with allure.step("Verify Payment Unit Info and Visits details"):
-        delivery.verify_payment_info()
+    with allure.step("Complete one more daily visit"):
+        name, cust_id = delivery.submit_form("Registration Form")
+        delivery.sync_with_server()
 
-    with allure.step("Submit the form on the Delivery App without GPS location"):
-        result = delivery.submit_form("Registration Form", record_loc=False)
+    with allure.step("Verify daily visit progress not updated"):
+        delivery.verify_daily_visits_progress()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-
-    with allure.step("Change the organization"):
         connect_home_page.select_organization_from_list(data["org_name"])
 
-    with allure.step("Navigate to the Connect Workers details in Opportunity"):
+    with allure.step("Verify Over limit flag present for the entity in worker visits"):
         opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
         connect_workers_page.click_name_in_table(data["username"])
-
-    with allure.step("Approve individual Worker Visit using entity name and ID"):
-        worker_visits_page.approve_entity_from_visits_using_name_and_id(result["name"], result["id"])
+        worker_visits_page.verify_overlimit_flag_present_for_the_entity_in_visits(name)

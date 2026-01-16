@@ -1,7 +1,7 @@
 import allure
 import pytest
 from pygments.lexers import data
-from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.cchq_home_web_page import CCHQHomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesPage
@@ -20,7 +20,7 @@ def test_olp_4_verify_opportunity_details_in_dashboard(web_driver, test_data, co
     olp4_data = test_data.get("OLP_4")
 
     cchq_login_page = LoginPage(web_driver)
-    cchq_home_page = HomePage(web_driver)
+    cchq_home_page = CCHQHomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     connect_opp_page = ConnectOpportunitiesPage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)

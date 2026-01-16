@@ -2,7 +2,7 @@ import time
 from selenium.webdriver import Keys
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
-from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.cchq_home_web_page import CCHQHomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 
 

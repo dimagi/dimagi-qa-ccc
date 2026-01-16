@@ -45,7 +45,11 @@ def mobile_driver(request, config, run_on):
 
     driver = create_mobile_driver(config, run_on)
     yield driver
-    driver.terminate_app("org.commcare.dalvik")
+    try:
+        driver.terminate_app("org.commcare.dalvik")
+    except Exception as e:
+        print(f"[WARN] App terminate failed: {e}")
+
     driver.quit()
 
 

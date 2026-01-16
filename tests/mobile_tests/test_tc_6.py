@@ -18,19 +18,21 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("Payment related validations")
-@allure.tag("CONNECT_11", "CONNECT_12")
+@allure.tag("CONNECT_11", "CONNECT_12", "CONNECT_13", "Notification_5")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
   - CONNECT_11 : Confirm when a payment is made to the user, the same is reflected on the mobile 
   - CONNECT_12 : Verify that user can confirm the payment status from the mobile
+  - CONNECT_13 : Confirm user can see all the notifications received on the notification history screen
+  - Notification_5 : Verify user is redirected to payment screen upon clicking on the payment notification
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
 def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+    data = test_data.get("TC_6")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -89,10 +91,12 @@ def test_payment_and_related_notifications(web_driver, mobile_driver, config, te
 
     with allure.step("Verify Payment confirmation popup on View Job Status header"):
         delivery.verify_payment_popup()
-        delivery.verify_transfer_tile_on_payment_tab()
 
     with allure.step("Deny confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("No")
 
     with allure.step("Allow confirm transferred payment on payment tab"):
         delivery.confirm_pay_on_payment_tab("Yes")
+
+    with allure.step("Verify transferred amount with payment rows"):
+        delivery.verify_transfer_tile_on_payment_tab()

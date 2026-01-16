@@ -1,6 +1,6 @@
 import allure
 import pytest
-from pages.web_pages.cchq_home_web_page import HomePage
+from pages.web_pages.cchq_home_web_page import CCHQHomePage
 from pages.web_pages.connect_home_web_page import ConnectHomePage
 from pages.web_pages.cchq_login_web_page import LoginPage
 from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDashboardPage
@@ -23,7 +23,7 @@ def test_worker_visit_verification_page_1_2_for_deliver_of_opportunity_in_connec
     worker_visit_1_2_data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_1_2")
 
     cchq_login_page = LoginPage(web_driver)
-    cchq_home_page = HomePage(web_driver)
+    cchq_home_page = CCHQHomePage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
     connect_workers_page = ConnectWorkersPage(web_driver)

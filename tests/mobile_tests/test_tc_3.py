@@ -1,6 +1,7 @@
 import allure
 import pytest
 
+from pages.mobile_pages.app_notifications import AppNotifications
 from pages.mobile_pages.learn_app_page import LearnAppPage
 from pages.mobile_pages.mobile_notifications import MobileNotifications
 from pages.mobile_pages.opportunity_page import OpportunityPage
@@ -15,21 +16,21 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("New Opportunity related validations")
-@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_6", "CONNECT_14")
+@allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_14", "Notification_2", "Notification_4")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
   - CONNECT_3 : Verify User receive opportunity invite push notification
   - CONNECT_5 : Verify opportunity list on the opportunity page
-  - CONNECT_6 : Verify Learn Modules and download the Learn App
   - CONNECT_14 : Verify on clicking the opportunities option from the side drawer takes you to the opportunity list page
-  
+  - Notification_2: Verify notifications icon is present on the opportunities list page
+  - Notification_4: Verify user lands on opportunity's learn app upon clicking on the opportunity invite notification
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+def test_opportunity_invite_notifications_and_details(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_3_to_4")
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
@@ -42,6 +43,7 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     home = HomePage(mobile_driver)
     notifications = MobileNotifications(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
+    app_notifications = AppNotifications(mobile_driver)
 
 
     with allure.step("Click on Sign In / Register"):
@@ -77,13 +79,14 @@ def test_opportunity_invite_and_details(web_driver, mobile_driver, config, test_
     with allure.step("Handle Fingerprint Authentication"):
         pid.handle_fingerprint_auth()
 
-    with allure.step("Verify the Opportunity Details"):
+    with allure.step("Verify the Opportunity Notifications"):
         opportunity.open_opportunity_from_list(data["opportunity_name"], "new opportunity")
+        opportunity.click_notification()
+        app_notifications.verify_all_notifications()
+
+    with allure.step("Verify the Opportunity Details"):
         opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()
-
-    with allure.step("Download the Learn App"):
-        opportunity.download_learn_app()
 
 

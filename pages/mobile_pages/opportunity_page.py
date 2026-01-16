@@ -34,6 +34,7 @@ class OpportunityPage(BasePage):
     APP_DOWNLOAD_PROGRESS = locators.get("opportunity_page", "download_learn_app_progress_bar")
     LEARN_APP_START_BTN = locators.get("learn_app_page", "learn_app_start_btn")
     SYNC_BTN = locators.get("opportunity_page", "sync_btn")
+    NOTIFICATION_BTN = locators.get("opportunity_page", "notification_btn")
 
     def verify_job_card(self):
         self.click_element(self.SYNC_BTN)
@@ -108,6 +109,10 @@ class OpportunityPage(BasePage):
                 time.sleep(3)
                 # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
                 break
+
+    def click_notification(self):
+        self.wait_for_element(self.NOTIFICATION_BTN)
+        self.click_element(self.NOTIFICATION_BTN)
 
 
 

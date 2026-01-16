@@ -19,11 +19,24 @@
     "automationName": "UiAutomator2",
     "deviceName": "Google Pixel 7",
     "os_version": "13.0",
-    "app": "bs://ed98ce1ef57e7b06e2b48652b946ca29de600cc3",
-    "project": "Dimagi Mobile Automation",
-    "build": "PID Regression",
-    "name": "PID Tests",
-    "browserstack.user": "YOUR_USERNAME",
-    "browserstack.key": "YOUR_ACCESS_KEY"
+    "app": "bs://372474ce3784988b072fcbd4a1473bd9dbfd9b82",
+
+    "noReset": false,
+    "fullReset": false,
+    "autoGrantPermissions": true,
+
+    "bstack:options": {
+      "userName": "${BROWSERSTACK_USERNAME}",
+      "accessKey": "${BROWSERSTACK_ACCESS_KEY}",
+
+      "projectName": "Dimagi Mobile Automation",
+      "buildName": "PID Regression",
+      "sessionName": "PID Tests",
+
+      "debug": true,
+      "networkLogs": true,
+      "enableBiometric": true,
+      "appiumVersion": "2.0.1"
+    }
   }
 }

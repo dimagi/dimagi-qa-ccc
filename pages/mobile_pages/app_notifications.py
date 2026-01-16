@@ -27,21 +27,25 @@ class AppNotifications(BasePage):
 
     def verify_all_notifications(self):
         self.click_element(self.SYNC_BTN)
+
         if self.is_displayed(self.NO_NOTIFICATION_TXT):
             print("No notifications found in the list")
-        else:
-            rows = self.get_elements(self.NOTIFICATION_ROW)
-            for idx, row in enumerate(rows, start=1):
-                assert row.find_element(*self.NOTIFICATION_ICON).is_displayed(), \
-                    f"Notification icon missing in row {idx}"
+            self.navigate_back()
+            return
 
-                text = row.find_element(*self.NOTIFICATION_TEXT).text
-                assert text.strip() != "", f"Notification text empty in row {idx}"
+        icons = self.get_elements(self.NOTIFICATION_ICON)
+        texts = self.get_elements(self.NOTIFICATION_TEXT)
+        times = self.get_elements(self.NOTIFICATION_TIME)
+        arrows = self.get_elements(self.NOTIFICATION_ARROW)
 
-                time = row.find_element(*self.NOTIFICATION_TIME).text
-                assert time.strip() != "", f"Notification time missing in row {idx}"
+        count = len(texts)
+        assert count > 0, "No notifications found"
 
-                assert row.find_element(*self.NOTIFICATION_ARROW).is_displayed(), \
-                    f"Forward arrow missing in row {idx}"
+        for i in range(count):
+            assert icons[i].is_displayed(), f"Notification icon missing at index {i}"
+            assert texts[i].text.strip(), f"Notification text empty at index {i}"
+            assert times[i].text.strip(), f"Notification time missing at index {i}"
+            assert arrows[i].is_displayed(), f"Notification arrow missing at index {i}"
 
         self.navigate_back()
+

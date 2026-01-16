@@ -20,21 +20,21 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @allure.feature("CONNECT")
 @allure.story("Notifications, User Suspension related validations")
-@allure.tag("CONNECT_13", "CONNECT_19", "CONNECT_17")
+@allure.tag("CONNECT_17", "CONNECT_19", "Notifications_01")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
-  Covered manual test cases:
-  - CONNECT_13 : Confirm user can see all the notifications received on the notification history screen 
+  Covered manual test cases: 
   - CONNECT_19 : Verify on clicking the messaging option, user is taken channels list page
   - CONNECT_17 : Verify when a mobile user is suspended from an opportunity
+  - Notifications_01: Verify Notifications option is visible on left hand menu
   
   """)
 
 @pytest.mark.mobile
 @pytest.mark.web
-def test_notification_messaging_section_and_worker_suspension(web_driver, mobile_driver, config, test_data):
-    data = test_data.get("TC_3_to_7")
+def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data):
+    data = test_data.get("TC_7")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
