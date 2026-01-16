@@ -1,4 +1,5 @@
 home_page:
+#  navigation_drawer_btn: "//android.view.ViewGroup[@resource-id='org.commcare.dalvik:id/toolbar']/android.widget.ImageButton"
   navigation_drawer_btn: "//android.view.ViewGroup[@resource-id='org.commcare.dalvik:id/action_bar']/android.widget.ImageButton"
   nav_drawer_signin_btn: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
   header_username: "org.commcare.dalvik:id/header_user_name"
@@ -145,11 +146,6 @@ delivery_app_page:
 app_notification:
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
   notification_header_txt: "//android.widget.TextView[@text='Notifications']"
-#  notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"
-#  notification_text: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
-#  notification_time: ".//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
-#  notification_icon: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
-#  notification_arrow: ".//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
   no_notification_txt: "org.commcare.dalvik:id/tvNoNotifications"
   notification_sync_btn: "org.commcare.dalvik:id/notification_cloud_sync"
   notification_row: "//androidx.recyclerview.widget.RecyclerView[@resource-id='org.commcare.dalvik:id/rvNotifications']/android.view.ViewGroup"

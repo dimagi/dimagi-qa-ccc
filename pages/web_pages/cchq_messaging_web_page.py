@@ -206,3 +206,44 @@ class MessagingPage(BaseWebPage):
         self.verify_text_in_url("/broadcasts/")
         self.is_broadcast_name_present_in_list(self.broadcast_full_name)
 
+
+    def delete_existing_alerts(self, name_prefix):
+        """
+        Deletes all active automation message alerts
+        """
+
+        while True:
+            self.wait_for_page_load()
+
+            rows = self.driver.find_elements(
+                By.XPATH,
+                "//table[contains(@class,'table')]/tbody/tr"
+            )
+
+            deleted_any = False
+
+            for row in rows:
+                try:
+                    name = row.find_element(By.XPATH, "./td[2]").text.strip()
+                    status = row.find_element(By.XPATH, "./td[4]").text.strip().lower()
+
+                    if name_prefix in name and status == "active":
+                        delete_btn = row.find_element(By.XPATH, "./td[1]//button")
+                        delete_btn.click()
+                        time.sleep(2)
+
+                        # confirm delete
+                        self.click_element(
+                            (By.XPATH, "//button[contains(text(),'OK') or contains(text(),'Confirm')]")
+                        )
+
+                        self.reload_page()
+                        deleted_any = True
+                        break  # IMPORTANT: break & re-scan after refresh
+
+                except Exception:
+                    # row got detached due to refresh
+                    continue
+
+            if not deleted_any:
+                break

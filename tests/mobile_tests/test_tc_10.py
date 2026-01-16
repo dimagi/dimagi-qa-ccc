@@ -76,6 +76,7 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
 
     # Messaging_2
     with allure.step("Create new conditional alert with Connect Message option"):
+        cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
         cchq_messaging_page.create_new_connect_message_conditional_alert([user_id])
 
     with allure.step("Verify Connect Message shown"):
@@ -83,6 +84,7 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
 
     # Messaging_3
     with allure.step("Create new conditional alert with Connect Survey option"):
+        cchq_messaging_page.delete_existing_alerts("Automation Survey Alert")
         cchq_messaging_page.create_new_connect_survey_conditional_alert([user_id])
 
     with allure.step("Complete Connect Survey"):

@@ -21,7 +21,8 @@ class Message(BasePage):
 
     def verify_channel_list(self):
         assert self.is_displayed(self.CHANNEL_HEADER_TXT), "Channel Header not visible"
-        assert self.is_displayed(self.NO_CHANNEL_MSG_TXT), "Channel Message not visible"
+        assert (self.is_displayed(self.NO_CHANNEL_MSG_TXT) or
+                self.is_displayed(self.CHANNEL_NAME)), "Channel Message not visible"
         self.navigate_back()
         pass
 

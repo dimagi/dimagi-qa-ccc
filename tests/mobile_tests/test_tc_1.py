@@ -36,6 +36,29 @@ def test_login_and_home_page(mobile_driver, test_data):
         pid.click_configure_fingerprint()
         pid.handle_fingerprint_auth()
 
-    with allure.step("Click Change Number on OTP screen"):
-        pid.click_change_number()
-        pid.handle_fingerprint_auth()
+    with allure.step("Confirm Demo User popup"):
+        pid.demo_user_confirm()
+
+    with allure.step("Enter Username"):
+        pid.enter_name(username)
+
+    with allure.step("Verify Backup Code screen with existing Username"):
+        pid.verify_backup_code_screen(username)
+
+    with allure.step("Verify wrong backup code entered error"):
+        pid.verify_wrong_backup_code_err()
+
+    with allure.step("Complete Sign In with correct backup code and Continue"):
+        pid.enter_backup_code(data["backup_code"])
+
+    with allure.step("Verify user logged in to Connect App"):
+        assert home.is_username_displayed(username)
+
+    with allure.step("Verify all connect options in the side menu"):
+        home.verify_side_panel_options()
+
+    with allure.step("Verify Go To Connect button shown"):
+        home.verify_go_to_connect()
+
+    with allure.step("Sign out from the App by clicking Forget PersonalID User"):
+        home.sign_out()

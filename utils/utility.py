@@ -2,6 +2,7 @@ import subprocess
 import time
 
 def simulate_fingerprint(driver=None, run_on="local", finger_id=1, success=True):
+    # pass
     if run_on == "browserstack":
         if not driver:
             raise ValueError("Driver is required for BrowserStack fingerprint simulation")
@@ -16,12 +17,6 @@ def simulate_fingerprint(driver=None, run_on="local", finger_id=1, success=True)
                 }
             }
         )
-        # driver.execute_script("mobile: sendBiometricMatch", {
-        #     "match": True
-        # })
-        # driver.execute_script(
-        #     'browserstack_executor: {"action":"biometric","arguments":{"biometricMatch":"pass"}}'
-        # )
     else:
         # Local emulator
         subprocess.run(

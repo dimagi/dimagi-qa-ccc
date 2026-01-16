@@ -61,6 +61,7 @@ class PersonalIDPage(BasePage):
         self.wait_for_element(self.USE_FINGERPRINT_TXT)
 
     def click_configure_fingerprint(self):
+        # pass
         self.click_element(self.CONFIGURE_FINGERPRINT_BTN)
         time.sleep(2)
 
@@ -69,6 +70,7 @@ class PersonalIDPage(BasePage):
         simulate_fingerprint()
 
     def demo_user_confirm(self):
+        # pass
         time.sleep(2)
         self.wait_for_element(self.DEMO_USER_CONFIRM)
         self.click_element(self.OK_BTN)
