@@ -15,6 +15,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES80")
 def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config):
     olp5_data = test_data.get("OLP_5")
 

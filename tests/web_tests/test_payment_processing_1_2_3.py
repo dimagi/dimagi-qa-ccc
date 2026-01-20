@@ -20,6 +20,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES95", "TES96", "TES97")
 def test_payment_processing_1_2_3_verify_payments_tab_rollback_payment_of_opportunity(web_driver, test_data, config):
     payment_processing_1_2_3_data = test_data.get("PAYMENT_PROCESSING_1_2_3")
 

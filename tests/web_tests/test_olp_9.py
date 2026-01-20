@@ -16,6 +16,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES84")
 def test_olp_9_ways_to_add_workers_opportunity_in_connect(web_driver, test_data, config):
     olp9_data = test_data.get("OLP_9")
 

@@ -89,6 +89,13 @@ def pytest_runtest_makereport(item):
         if web:
             attach_web_screenshot(web, "Web Failure Screenshot")
 
+    # Append Bugasura TC IDs to test name in xml results
+    marker = item.get_closest_marker("bugasura")
+    if marker:
+        tc_ids = ",".join(marker.args)
+        result.user_properties.append(("bugasura_tc_ids", tc_ids))
+        result.nodeid = f"[{tc_ids}]{item.name}"
+
 
 @pytest.fixture(scope="session")
 def test_data():

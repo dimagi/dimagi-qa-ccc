@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="17" time="516.545" timestamp="2026-01-20T16:36:12.181215+05:30" hostname="DESKTOP-O7B8PBK"><testcase classname="" name="[TES85]test_olp_11_apply_n_verify_filters_in_opportunities" time="40.613"><properties><property name="bugasura_tc_ids" value="TES85" /></properties></testcase><testcase classname="" name="[TES76,TES77,TES78]test_olp_1_2_3_setup_budget_in_connect" time="66.428"><properties><property name="bugasura_tc_ids" value="TES76,TES77,TES78" /></properties><failure message="selenium.common.exceptions.TimeoutException: Message:">web_driver = &lt;selenium.webdriver.chrome.webdriver.WebDriver (session="84d4053b7815cf7b05b82e59833cbc0f")&gt;, test_data = &lt;utils.helpers.TestDataLoader object at 0x000001DD24F882F0&gt;
+config = &lt;utils.helpers.ConfigLoader object at 0x000001DD24F88590&gt;
+
+    @allure.feature("OLP")
+    @allure.story("Add opportunity in Connect Page")
+    @allure.tag("OLP_1", "OLP_2", "OLP_3")
+    @allure.description("""
+        This automated test consolidates multiple manual test cases
+    
+        Covered manual test cases:
+            - OLP_1 : Verify user is able to create on opportunity
+            - OLP_2 : Verify user is able to land on the payment unit page
+            - OLP_3 : Verify user is able to land on the Budget page
+      """)
+    
+    @pytest.mark.web
+    @pytest.mark.bugasura("TES76", "TES77", "TES78")
+    def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
+        olp1_data = test_data.get("OLP_1")
+        olp2_data = test_data.get("OLP_2")
+        olp3_data = test_data.get("OLP_3")
+    
+        cchq_login_page = LoginPage(web_driver)
+        cchq_home_page = CCHQHomePage(web_driver)
+        connect_home_page = ConnectHomePage(web_driver)
+        connect_opp_page = ConnectOpportunitiesPage(web_driver)
+    
+        with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+            cchq_login_page.valid_login_cchq(config)
+            cchq_home_page.verify_home_page_title("Welcome")
+            cchq_login_page.navigate_to_connect_page(config)
+            connect_home_page.signin_to_connect_page_using_cchq()
+            connect_home_page.select_organization_from_list("Automation_Test_02")
+    
+        with allure.step("Add Opportunity in Connect Page with required fields"):
+&gt;           connect_opp_page.create_opportunity_in_connect_page(olp1_data)
+
+tests\web_tests\test_olp_1_2_3.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+pages\web_pages\connect_opportunities_web_page.py:201: in create_opportunity_in_connect_page
+    self.select_learn_app_in_opportunity(data["learn_app"])
+pages\web_pages\connect_opportunities_web_page.py:103: in select_learn_app_in_opportunity
+    self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
+pages\web_pages\base_web_page.py:71: in select_by_visible_text
+    self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;selenium.webdriver.support.wait.WebDriverWait (session="84d4053b7815cf7b05b82e59833cbc0f")&gt;
+method = &lt;function BaseWebPage.select_by_visible_text.&lt;locals&gt;.&lt;lambda&gt; at 0x000001DD24F812D0&gt;, message = ''
+
+    def until(self, method: Callable[[D], Literal[False] | T], message: str = "") -&gt; T:
+        """Wait until the method returns a value that is not False.
+    
+        Calls the method provided with the driver as an argument until the
+        return value does not evaluate to ``False``.
+    
+        Args:
+            method: A callable object that takes a WebDriver instance as an
+                argument.
+            message: Optional message for TimeoutException.
+    
+        Returns:
+            The result of the last call to `method`.
+    
+        Raises:
+            TimeoutException: If 'method' does not return a truthy value within
+                the WebDriverWait object's timeout.
+    
+        Example:
+            &gt;&gt;&gt; from selenium.webdriver.common.by import By
+            &gt;&gt;&gt; from selenium.webdriver.support.ui import WebDriverWait
+            &gt;&gt;&gt; from selenium.webdriver.support import expected_conditions as EC
+            &gt;&gt;&gt;
+            &gt;&gt;&gt; # Wait until an element is visible on the page
+            &gt;&gt;&gt; wait = WebDriverWait(driver, 10)
+            &gt;&gt;&gt; element = wait.until(EC.visibility_of_element_located((By.ID, "exampleId")))
+            &gt;&gt;&gt; print(element.text)
+        """
+        screen = None
+        stacktrace = None
+    
+        end_time = time.monotonic() + self._timeout
+        while True:
+            try:
+                value = method(self._driver)
+                if value:
+                    return value
+            except self._ignored_exceptions as exc:
+                screen = getattr(exc, "screen", None)
+                stacktrace = getattr(exc, "stacktrace", None)
+            if time.monotonic() &gt; end_time:
+                break
+            time.sleep(self._poll)
+&gt;       raise TimeoutException(message, screen, stacktrace)
+E       selenium.common.exceptions.TimeoutException: Message:
+
+.venv\Lib\site-packages\selenium\webdriver\support\wait.py:122: TimeoutException</failure></testcase><testcase classname="" name="[TES79]test_olp_4_verify_opportunity_details_in_dashboard" time="20.753"><properties><property name="bugasura_tc_ids" value="TES79" /></properties></testcase><testcase classname="" name="[TES80]test_olp_5_services_delivered_of_opportunity_in_connect" time="22.156"><properties><property name="bugasura_tc_ids" value="TES80" /></properties></testcase><testcase classname="" name="[TES81]test_olp_6_payments_earned_of_opportunity_in_connect" time="22.325"><properties><property name="bugasura_tc_ids" value="TES81" /></properties></testcase><testcase classname="" name="[TES82]test_olp_7_verify_hamburger_menu_items_of_opportunity_in_connect" time="19.799"><properties><property name="bugasura_tc_ids" value="TES82" /></properties></testcase><testcase classname="" name="[TES83]test_olp_8_verification_flags_of_opportunity_in_connect" time="18.247"><properties><property name="bugasura_tc_ids" value="TES83" /></properties></testcase><testcase classname="" name="[TES84]test_olp_9_ways_to_add_workers_opportunity_in_connect" time="24.203"><properties><property name="bugasura_tc_ids" value="TES84" /></properties></testcase><testcase classname="" name="[TES95,TES96,TES97]test_payment_processing_1_2_3_verify_payments_tab_rollback_payment_of_opportunity" time="25.290"><properties><property name="bugasura_tc_ids" value="TES95,TES96,TES97" /></properties></testcase><testcase classname="" name="[TES98,TES99,TES100]test_pm_6_verify_status_of_invited_nms_and_create_or_view_opportunities" time="31.811"><properties><property name="bugasura_tc_ids" value="TES98,TES99,TES100" /></properties></testcase><testcase classname="" name="[TES86,TES87,TES88]test_worker_list_view_1_2_3_verify_connect_workers_details_of_opportunity_in_connect" time="29.661"><properties><property name="bugasura_tc_ids" value="TES86,TES87,TES88" /></properties></testcase><testcase classname="" name="[TES89]test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect" time="26.795"><properties><property name="bugasura_tc_ids" value="TES89" /></properties></testcase><testcase classname="" name="[TES90]test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity" time="28.597"><properties><property name="bugasura_tc_ids" value="TES90" /></properties></testcase><testcase classname="" name="[TES91]test_worker_list_view_8_verify_last_active_filter_as_1_day_ago" time="26.760"><properties><property name="bugasura_tc_ids" value="TES91" /></properties></testcase><testcase classname="" name="[TES92,TES93,TES101]test_worker_visit_verification_page_1_2_for_deliver_of_opportunity_in_connect" time="38.343"><properties><property name="bugasura_tc_ids" value="TES92,TES93,TES101" /></properties></testcase><testcase classname="" name="[TES94]test_worker_visit_verification_page_3_verify_suspend_users_from_an_opportunity" time="35.929"><properties><property name="bugasura_tc_ids" value="TES94" /></properties></testcase><testcase classname="" name="[TES102,TES103,TES104,TES105]test_worker_visit_verification_page_4_5_6_7_verify_tabs_in_worker_visits_of_opportunity" time="38.181"><properties><property name="bugasura_tc_ids" value="TES102,TES103,TES104,TES105" /></properties></testcase></testsuite></testsuites>
