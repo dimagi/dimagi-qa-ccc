@@ -369,6 +369,20 @@ class ConnectWorkersPage(BaseWebPage):
         time.sleep(1)
         self.click_element(self.ROLLBACK_POPUP_BUTTON)
 
+    def verify_empty_last_paid_date_for_worker(self, worker_name):
+        time.sleep(3)
+        worker_name = worker_name.strip()
+        table = self.wait_for_element(self.TABLE_ELEMENT)
+        header_xpath = ".//thead//th[.//a[normalize-space() = 'Last paid']]"
+        header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Last Paid date column Payment table")
+        column_index = len(header.find_elements(By.XPATH, "preceding-sibling::th")) + 1
+        row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
+        row = table.find_element(By.XPATH, row_xpath)
+        date_cell_xpath = f"./td[{column_index}]"
+        empty_date_element = row.find_element(By.XPATH, date_cell_xpath)
+        assert empty_date_element.text.strip() == "—", f"Rollback payment for worker {worker_name} not completed"
+        print(f"Rollback payment for worker {worker_name} completed")
+
     def fetch_username_from_payments(self, worker_name):
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//a[normalize-space() = 'Name']]"

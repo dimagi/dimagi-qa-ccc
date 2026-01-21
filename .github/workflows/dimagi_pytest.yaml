@@ -46,7 +46,7 @@ jobs:
 
     - name: Notify Slack
       if: always()
-      uses: slackapi/slack-github-action@v1.28.0
+      uses: slackapi/slack-github-action@v2.1.1
       with:
         channel-id: 'C0A1U93R4LU'   #Slack Channel ID
         text: |
@@ -106,7 +106,7 @@ jobs:
 
     - name: Notify Slack
       if: always()
-      uses: slackapi/slack-github-action@v1.28.0
+      uses: slackapi/slack-github-action@v2.1.1
       with:
         channel-id: 'C0A1U93R4LU'   #Slack Channel ID
         text: |
