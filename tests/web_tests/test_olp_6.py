@@ -16,6 +16,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES81")
 def test_olp_6_payments_earned_of_opportunity_in_connect(web_driver, test_data, config):
     olp6_data = test_data.get("OLP_6")
 

@@ -8,8 +8,8 @@ OLP_1:
   api_key: "fccc...0784"
   learn_app_domain: "connetqa-prod"
   deliver_app_domain: "connetqa-prod"
-  learn_app: "Learn App"
-  deliver_app: "Delivey App [Job 1]"
+  learn_app: "Unreleased - Learn App [Job 1]"
+  deliver_app: "Unreleased - Delivey App [Job 2]"
   learn_app_description: "This is Learn App"
   passing_score: "40"
 

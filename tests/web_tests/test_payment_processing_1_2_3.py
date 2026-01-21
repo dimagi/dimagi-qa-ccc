@@ -20,6 +20,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES95", "TES96", "TES97")
 def test_payment_processing_1_2_3_verify_payments_tab_rollback_payment_of_opportunity(web_driver, test_data, config):
     payment_processing_1_2_3_data = test_data.get("PAYMENT_PROCESSING_1_2_3")
 
@@ -42,9 +43,11 @@ def test_payment_processing_1_2_3_verify_payments_tab_rollback_payment_of_opport
         connect_workers_page.verify_payments_table_headers_present()
 
     # Payment Processing_2
-    with allure.step("Verify Last Paid column history breakdown of Payments table"):
+    with allure.step("Make payment and verify Last Paid column history breakdown of Payments table"):
+        connect_workers_page.make_payment_with_date_for_worker(payment_processing_1_2_3_data["worker_name"], "+7426", "7426016", 100)
         connect_workers_page.click_last_paid_date_n_verify_history(payment_processing_1_2_3_data["worker_name"])
 
     # Payment Processing_3
     with allure.step("Verify payment rollback in Last Paid column history breakdown of Payments table"):
         connect_workers_page.rollback_last_payment()
+        connect_workers_page.verify_empty_last_paid_date_for_worker(payment_processing_1_2_3_data["worker_name"])

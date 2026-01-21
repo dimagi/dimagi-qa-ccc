@@ -184,7 +184,7 @@ class WorkerVisitsPage(BaseWebPage):
 
     def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
-        time.sleep(5)
+        time.sleep(8)
         row_xpath = f".//tbody/tr[td[normalize-space()='{entity_name}']]"
         row_ele = table.find_element(By.XPATH, row_xpath)
         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", row_ele)

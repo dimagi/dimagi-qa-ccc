@@ -18,6 +18,7 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES76", "TES77", "TES78")
 def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
     olp1_data = test_data.get("OLP_1")
     olp2_data = test_data.get("OLP_2")

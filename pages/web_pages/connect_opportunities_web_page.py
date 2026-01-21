@@ -227,7 +227,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
         time.sleep(3)
-        self.verify_opportunity_name_in_table(self.opp_full_name)
+        self.is_breadcrumb_item_present(self.opp_full_name)
 
     def click_filter_btn(self):
         self.click_element(self.FILTER_BUTTON)

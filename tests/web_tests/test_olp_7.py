@@ -15,6 +15,7 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES82")
 def test_olp_7_verify_hamburger_menu_items_of_opportunity_in_connect(web_driver, test_data, config):
     olp7_data = test_data.get("OLP_7")
 

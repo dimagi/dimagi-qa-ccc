@@ -16,6 +16,7 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES79")
 def test_olp_4_verify_opportunity_details_in_dashboard(web_driver, test_data, config):
     olp4_data = test_data.get("OLP_4")
 

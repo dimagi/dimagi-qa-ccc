@@ -19,6 +19,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES86", "TES87", "TES88")
 def test_worker_list_view_1_2_3_verify_connect_workers_details_of_opportunity_in_connect(web_driver, test_data, config):
     worker_list_view_1_2_3_data = test_data.get("WORKER_LIST_VIEW_1_2_3")
 

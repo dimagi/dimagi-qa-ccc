@@ -68,6 +68,7 @@ class BaseWebPage:
 
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
+        self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
         Select(element).select_by_visible_text(text)
 
     def scroll_to_top(self):
@@ -173,3 +174,6 @@ class BaseWebPage:
 
     def reload_page(self):
         self.driver.refresh()
+
+    def wait_for_js_alert_present(self):
+        return self.wait.until(EC.alert_is_present())
