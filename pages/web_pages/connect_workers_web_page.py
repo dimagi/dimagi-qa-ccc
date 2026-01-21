@@ -324,8 +324,8 @@ class ConnectWorkersPage(BaseWebPage):
         status_bar_element = row.find_element(By.XPATH, status_bar_xpath)
         assert value in span_element.text, f"Percentage value '{span_element.text}' mismatch for {worker_name}"
         assert value in status_bar_element.get_attribute(
-            "style"), f"Status bar value '{status_bar_element.get_attribute("style")}' mismatch for {worker_name}"
-        print(f"Modules Completed Status Bar for {worker_name}: {status_bar_element.get_attribute("style")}")
+            "style"), f"Status bar value '{status_bar_element.get_attribute('style')}' mismatch for {worker_name}"
+        print(f"Modules Completed Status Bar for {worker_name}: {status_bar_element.get_attribute('style')}")
         print(f"Modules completed percentage text for {worker_name}: {span_element.text}")
 
     def verify_green_bar_status_present(self, worker_name):
@@ -338,10 +338,10 @@ class ConnectWorkersPage(BaseWebPage):
         row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{worker_name} worker")
         cell_xpath = f"./td[{column_index}]//div//div"
         cell_element = self.find_element_or_fail(row, By.XPATH, cell_xpath, f"Learn table column {column_index}")
-        positive_condition = ('positive' in cell_element.get_attribute("class")) and (
-                    'black' not in cell_element.get_attribute("class"))
+        positive_condition = ('positive' in cell_element.get_attribute('class')) and (
+                    'black' not in cell_element.get_attribute('class'))
         assert positive_condition, f"Green status is not present for {worker_name}"
-        print(f"Green status present for {worker_name}: {cell_element.get_attribute("class")}")
+        print(f"Green status present for {worker_name}: {cell_element.get_attribute('class')}")
 
     def verify_worker_assessment_status(self, worker_name, expected__status):
         self.verify_column_value_in_learn_table(worker_name, expected__status, "Assessment")
@@ -413,4 +413,5 @@ class ConnectWorkersPage(BaseWebPage):
         time.sleep(2)
         self.click_element(self.IMPORT_POPUP_BTN)
         time.sleep(2)
+        self.wait_for_element(self.IMPORT_STATUS_TEXT)
         assert "All done! View status" in self.get_text(self.IMPORT_STATUS_TEXT), "Import failed"

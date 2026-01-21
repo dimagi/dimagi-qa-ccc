@@ -48,17 +48,16 @@ jobs:
       if: always()
       uses: slackapi/slack-github-action@v2.1.1
       with:
-        channel-id: 'C0A1U93R4LU'   #Slack Channel ID
-        text: |
-          *DIMAGI Automation Suite - Web Tests*
-          *Job:* `${{ job.name }}`
-          *Workflow:* `${{ github.workflow }}`
-          *Repository:* `${{ github.repository }}`
-          *Branch:* `${{ github.ref_name }}`
-          
-          *Status:* `${{ job.status }}`
-          
-          *Download Allure Report:* `${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts`
+        payload: |
+          {
+            "text": "*DIMAGI Automation Suite – Web Tests*\n\n 
+                      Job: ${{ job.name }}\n 
+                      Workflow: ${{ github.workflow }}\n 
+                      Repository: ${{ github.repository }}\n 
+                      Branch: ${{ github.ref_name }}\n\n 
+                      Status: *${{ job.status }}*\n\n 
+                      Download Allure Report:\n${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts"
+          }
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -108,16 +107,15 @@ jobs:
       if: always()
       uses: slackapi/slack-github-action@v2.1.1
       with:
-        channel-id: 'C0A1U93R4LU'   #Slack Channel ID
-        text: |
-          *DIMAGI Automation Suite - Mobile Tests*
-          *Job:* `${{ job.name }}`
-          *Workflow:* `${{ github.workflow }}`
-          *Repository:* `${{ github.repository }}`
-          *Branch:* `${{ github.ref_name }}`
-          
-          *Status:* `${{ job.status }}`
-          
-          *Download Allure Report:* `${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts`
+        payload: |
+          {
+            "text": "*DIMAGI Automation Suite – Mobile Tests*\n\n 
+                      Job: ${{ job.name }}\n 
+                      Workflow: ${{ github.workflow }}\n 
+                      Repository: ${{ github.repository }}\n 
+                      Branch: ${{ github.ref_name }}\n\n 
+                      Status: *${{ job.status }}*\n\n 
+                      Download Allure Report:\n${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts"
+          }
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
