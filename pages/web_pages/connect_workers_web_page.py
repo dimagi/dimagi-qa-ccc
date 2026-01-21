@@ -413,4 +413,5 @@ class ConnectWorkersPage(BaseWebPage):
         time.sleep(2)
         self.click_element(self.IMPORT_POPUP_BTN)
         time.sleep(2)
+        self.wait_for_element(self.IMPORT_STATUS_TEXT)
         assert "All done! View status" in self.get_text(self.IMPORT_STATUS_TEXT), "Import failed"

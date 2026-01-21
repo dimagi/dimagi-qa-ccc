@@ -184,12 +184,16 @@ class WorkerVisitsPage(BaseWebPage):
 
     def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
-        time.sleep(8)
-        row_xpath = f".//tbody/tr[td[normalize-space()='{entity_name}']]"
-        row_ele = table.find_element(By.XPATH, row_xpath)
-        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", row_ele)
-        flags_ele = row_ele.find_elements(By.XPATH, "./td[6]//span")
-        flags_list = [flag.text.strip().lower() for flag in flags_ele]
-        print(flags_list)
-        assert "over limit" in flags_list, f"Over limit flag not present for {entity_name}."
-        print(f"Over limit flag present for {entity_name}.")
+        row_xpath = (".//tbody/tr[.//td[contains(normalize-space(), %r)]]" % entity_name)
+        try:
+            row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{entity_name} Row")
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", row)
+            flags = row.find_elements(
+                By.XPATH,
+                ".//span[contains(@class,'badge') and "
+                "contains(normalize-space(),'over limit')]"
+            )
+        except Exception:
+            raise Exception
+        assert self.wait.until(lambda driver: len(flags) > 0), f"Over limit flag not present for {entity_name}"
+        print(f"Over limit flag present for {entity_name}")
