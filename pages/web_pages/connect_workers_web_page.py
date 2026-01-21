@@ -324,7 +324,7 @@ class ConnectWorkersPage(BaseWebPage):
         status_bar_element = row.find_element(By.XPATH, status_bar_xpath)
         assert value in span_element.text, f"Percentage value '{span_element.text}' mismatch for {worker_name}"
         assert value in status_bar_element.get_attribute(
-            "style"), f"Status bar value '{status_bar_element.get_attribute("style")}' mismatch for {worker_name}"
+            "style"), f"Status bar value '{status_bar_element.get_attribute('style')}' mismatch for {worker_name}"
         print(f"Modules Completed Status Bar for {worker_name}: {status_bar_element.get_attribute("style")}")
         print(f"Modules completed percentage text for {worker_name}: {span_element.text}")
 
