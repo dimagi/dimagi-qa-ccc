@@ -18,6 +18,11 @@ class MessagingPage(BaseWebPage):
     CONDITIONAL_ALERT_NAME_INPUT = locators.get("cchq_messaging_page", "conditional_alert_name_input")
     CONTINUE_BTN = locators.get("cchq_messaging_page", "continue_btn")
     CASE_TYPE_INPUT = locators.get("cchq_messaging_page", "case_type_input")
+    SELECT_A_FILTER_BUTTON = locators.get("cchq_messaging_page", "select_a_filter_btn")
+    CASE_PROPERTY_FILTER_OPTION = locators.get("cchq_messaging_page", "case_property_filter_option")
+    CASE_PROPERTY_ENTITY_DROPDOWN = locators.get("cchq_messaging_page", "case_property_entity_dropdown")
+    CASE_PROPERTY_EQUALS_DROPDOWN = locators.get("cchq_messaging_page", "case_property_equals_dropdown")
+    CASE_PROPERTY_NAME_INPUT = locators.get("cchq_messaging_page", "case_property_name_input")
     RECIPIENT_INPUT = locators.get("cchq_messaging_page", "recipient_input")
     WHAT_TO_SEND_INPUT = locators.get("cchq_messaging_page", "what_to_send_input")
     SAVE_BUTTON = locators.get("cchq_messaging_page", "save_btn")
@@ -54,6 +59,31 @@ class MessagingPage(BaseWebPage):
     def select_case_type(self, value):
         self.select_by_visible_text(self.CASE_TYPE_INPUT, value)
 
+    def select_case_property_filter(self):
+        self.wait_for_element(self.SELECT_A_FILTER_BUTTON)
+        self.click_element(self.SELECT_A_FILTER_BUTTON)
+        time.sleep(1)
+        self.wait_for_element(self.CASE_PROPERTY_FILTER_OPTION)
+        self.click_element(self.CASE_PROPERTY_FILTER_OPTION)
+
+    def select_case_property_entity_dropdown(self, value):
+        self.wait_for_element(self.CASE_PROPERTY_ENTITY_DROPDOWN)
+        self.select_by_visible_text(self.CASE_PROPERTY_ENTITY_DROPDOWN, value)
+
+    def select_case_property_equals_dropdown(self, value):
+        self.wait_for_element(self.CASE_PROPERTY_EQUALS_DROPDOWN)
+        self.select_by_visible_text(self.CASE_PROPERTY_EQUALS_DROPDOWN, value)
+
+    def enter_name_in_case_property_input(self, value):
+        self.wait_for_element(self.CASE_PROPERTY_NAME_INPUT)
+        self.type(self.CASE_PROPERTY_NAME_INPUT, value)
+
+    def select_n_apply_case_property_filter_with_entity_id(self, name):
+        self.select_case_property_filter()
+        self.select_case_property_entity_dropdown("entity_id")
+        self.select_case_property_equals_dropdown("equals")
+        self.enter_name_in_case_property_input(name)
+
     def select_recipients(self, params):
         recipient_ele = self.wait_for_element(self.RECIPIENT_INPUT)
         for each in params:
@@ -66,13 +96,14 @@ class MessagingPage(BaseWebPage):
         self.select_by_visible_text(self.WHAT_TO_SEND_INPUT, value)
         time.sleep(2)
 
-    def create_new_connect_message_conditional_alert(self, user_recipients):
+    def create_new_connect_message_conditional_alert(self, entity_id_value, user_recipients):
         self.click_new_conditional_alert_btn()
         time.sleep(2)
         self.enter_name_in_conditional_alert("Automation Message Alert")
         time.sleep(1)
         self.click_continue_btn()
         self.select_case_type("automation")
+        self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         time.sleep(1)
         self.select_what_to_send_input("Connect Message")
@@ -89,12 +120,13 @@ class MessagingPage(BaseWebPage):
         self.scroll_into_view(self.EXPIRE_AFTER_INPUT)
         self.type(self.EXPIRE_AFTER_INPUT, value)
 
-    def create_new_connect_survey_conditional_alert(self, user_recipients):
+    def create_new_connect_survey_conditional_alert(self, entity_id_value, user_recipients):
         self.click_new_conditional_alert_btn()
         time.sleep(2)
         self.enter_name_in_conditional_alert("Automation Survey Alert")
         self.click_continue_btn()
         self.select_case_type("automation")
+        self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         self.select_what_to_send_input("Connect Survey")
         self.select_user_recipients(user_recipients)
