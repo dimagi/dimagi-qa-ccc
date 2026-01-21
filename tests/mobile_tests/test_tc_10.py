@@ -14,19 +14,19 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 
 @allure.feature("Messaging")
 @allure.story("Verify Conditional Alert with Connect Message & Connect Survey options")
-@allure.tag("Messaging_1", "Messaging_2", "Messaging_3")
+@allure.tag("Messaging_4", "Messaging_5", "Messaging_6")
 @allure.description("""
   This automated test consolidates multiple manual test cases
 
   Covered manual test cases:
-  - Messaging_1 : Confirm user sees the two new message options on HQ
-  - Messaging_2 : Confirm user is able to configure a conditional alert with new Connect Message 
-  - Messaging_3 : Confirm user is able to configure a conditional alert with new Connect Survey 
+  - Messaging_4 : Confirm user sees the two new message options on HQ when configuring Broadcasts 
+  - Messaging_5 : Confirm user is able to configure a broadcast message with new Connect Message option
+  - Messaging_6 : Confirm user is able to configure a broadcast message with new Connect Survey option
   """)
 
 @pytest.mark.web
 @pytest.mark.mobile
-def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver, web_driver, test_data, config):
+def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_driver, web_driver, test_data, config):
     data = test_data.get("TC_10")
 
     cchq_login_page = LoginPage(web_driver)
@@ -45,14 +45,15 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
         cchq_login_page.valid_login_cchq(config)
         cchq_home_page.verify_home_page_title("Welcome")
 
-    with allure.step("Navigate to Conditional Alerts under Messaging"):
-        cchq_home_page.click_option_under_messaging_tab("Conditional Alerts")
-        cchq_home_page.verify_breadcrumb_text_present_cchq("Conditional Alerts")
+    with allure.step("Navigate to Broadcasts under Messaging"):
+        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
+        cchq_home_page.verify_breadcrumb_text_present_cchq("Broadcasts")
 
-    # Messaging_1
-    with allure.step("Verify new message options available in What to Send dropdown in Conditional Alerts"):
-        cchq_messaging_page.navigate_to_conditional_alerts_n_verify_what_to_send_options(["Connect Message", "Connect Survey"])
-        cchq_home_page.click_option_under_messaging_tab("Conditional Alerts")
+    # Messaging_4
+    with allure.step("Verify new message options available in What to Send dropdown in Broadcasts"):
+        cchq_messaging_page.click_add_broadcast_button()
+        cchq_messaging_page.verify_options_present_in_what_to_send(["Connect Message", "Connect Survey"])
+        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -74,18 +75,16 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
     with allure.step("Navigate to Messaging option"):
         message.open_channel_on_message("connetqa-prod")
 
-    # Messaging_2
-    with allure.step("Create new conditional alert with Connect Message option"):
-        cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
-        cchq_messaging_page.create_new_connect_message_conditional_alert([user_id])
+    # Messaging_5
+    with allure.step("Create new Broadcast with Connect Message Option"):
+        cchq_messaging_page.create_new_broadcast_with_connect_message_option([user_id])
 
-    with allure.step("Verify Connect Message shown"):
+    with allure.step("Verify Broadcast Connect Message shown"):
         message.verify_connect_message()
 
-    # Messaging_3
-    with allure.step("Create new conditional alert with Connect Survey option"):
-        cchq_messaging_page.delete_existing_alerts("Automation Survey Alert")
-        cchq_messaging_page.create_new_connect_survey_conditional_alert([user_id])
+    # Messaging_6
+    with allure.step("Create new Broadcast with Connect Survey Option"):
+        cchq_messaging_page.create_new_broadcast_with_connect_survey_option([user_id])
 
-    with allure.step("Complete Connect Survey"):
+    with allure.step("Verify Broadcast Connect Survey shown"):
         message.fill_survey_form()

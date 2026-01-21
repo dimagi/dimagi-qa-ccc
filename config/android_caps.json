@@ -19,16 +19,18 @@
     "automationName": "UiAutomator2",
     "deviceName": "Google Pixel 7",
     "os_version": "13.0",
-    "app": "bs://372474ce3784988b072fcbd4a1473bd9dbfd9b82",
+    "app": "bs://e753622cdd069d412edf1f6a730379ef3584e725",
+
+    "newCommandTimeout": 600,
+    "adbExecTimeout": 60000,
+    "uiautomator2ServerInstallTimeout": 60000,
+    "uiautomator2ServerLaunchTimeout": 60000,
 
     "noReset": false,
     "fullReset": false,
     "autoGrantPermissions": true,
 
     "bstack:options": {
-      "userName": "${BROWSERSTACK_USERNAME}",
-      "accessKey": "${BROWSERSTACK_ACCESS_KEY}",
-
       "projectName": "Dimagi Mobile Automation",
       "buildName": "PID Regression",
       "sessionName": "PID Tests",

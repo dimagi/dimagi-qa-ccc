@@ -1,7 +1,11 @@
+from selenium.webdriver.common.actions.action_builder import ActionBuilder
+from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 class BasePage:
+    BIOMETRIC_ENABLED = False #default
+
     def __init__(self, driver):
         self.driver = driver
         self.wait = WebDriverWait(driver, 30)
@@ -43,3 +47,20 @@ class BasePage:
 
     def wait_for_element_to_disappear(self, locator):
         return self.wait.until(EC.invisibility_of_element(locator))
+
+    def tap_element(self, locator):
+        element = self.wait_for_element(locator)
+        loc = element.location
+        size = element.size
+
+        x = loc["x"] + size["width"] // 2
+        y = loc["y"] + size["height"] // 2
+
+        finger = PointerInput("touch", "finger")
+        actions = ActionBuilder(self.driver, mouse=finger)
+
+        actions.pointer_action.move_to_location(x, y)
+        actions.pointer_action.pointer_down()
+        actions.pointer_action.pointer_up()
+
+        actions.perform()

@@ -51,14 +51,6 @@ TC_8:
   org_name: "Automation_Test_01"
 
 TC_9:
-  country_code_1: "+1"
-  real_phone_number: "7653398585"
-  country_code_2: "+7426"
-  phone_number: "7426000"
-  username: "Deb Test 8/12"
-  backup_code: "742600"
-
-TC_10:
   country_code: "+7426"
   phone_number: "7426011"
   username: "Automation User 11"
@@ -66,10 +58,11 @@ TC_10:
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
-TC_11:
+TC_10:
   country_code: "+7426"
   phone_number: "7426006"
   username: "Automation User 06"
   backup_code: "742606"
   opportunity_name: "test_opp_120126_01"
   org_name: "Automation_Test_01"
+  user_id: "5bbf8b4664d2cd1b6537"

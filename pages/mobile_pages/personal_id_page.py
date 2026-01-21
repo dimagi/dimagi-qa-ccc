@@ -46,34 +46,36 @@ class PersonalIDPage(BasePage):
         time.sleep(5)
         self.wait_for_element_to_disappear(self.PROGRESS_BAR)
 
-        if not self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
+        if self.is_displayed(self.NETWORK_ERROR_TXT):
             for attempt in range(retries):
-                if not self.is_displayed(self.NETWORK_ERROR_TXT):
-                    break
                 print(f"Network Error: attempt {attempt + 1}")
                 time.sleep(2)
                 self.continue_next()
                 self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+                if not self.is_displayed(self.NETWORK_ERROR_TXT):
+                    break
                 if self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
                     break
+                if self.is_displayed(self.NAME_INPUT):
+                    break
 
-        time.sleep(1)
-        self.wait_for_element(self.USE_FINGERPRINT_TXT)
+            time.sleep(1)
 
     def click_configure_fingerprint(self):
-        # pass
-        self.click_element(self.CONFIGURE_FINGERPRINT_BTN)
-        time.sleep(2)
+        if self.BIOMETRIC_ENABLED:
+            self.click_element(self.CONFIGURE_FINGERPRINT_BTN)
+            time.sleep(2)
 
     def handle_fingerprint_auth(self):
-        time.sleep(2)
-        simulate_fingerprint()
+        if self.BIOMETRIC_ENABLED:
+            time.sleep(2)
+            simulate_fingerprint()
 
     def demo_user_confirm(self):
-        # pass
-        time.sleep(2)
-        self.wait_for_element(self.DEMO_USER_CONFIRM)
-        self.click_element(self.OK_BTN)
+        if self.BIOMETRIC_ENABLED:
+            time.sleep(2)
+            self.wait_for_element(self.DEMO_USER_CONFIRM)
+            self.click_element(self.OK_BTN)
 
     def enter_name(self, name):
         self.type_element(self.NAME_INPUT, name)
