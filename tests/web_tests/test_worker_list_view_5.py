@@ -17,6 +17,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES90")
 def test_worker_list_view_5_verify_count_breakdown_for_total_of_opportunity(web_driver, test_data, config):
     worker_list_view_5_data = test_data.get("WORKER_LIST_VIEW_5")
 

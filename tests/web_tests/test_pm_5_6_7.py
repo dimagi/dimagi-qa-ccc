@@ -18,6 +18,7 @@ from pages.web_pages.connect_programs_web_page import ConnectProgramsPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES98", "TES99", "TES100")
 def test_pm_6_verify_status_of_invited_nms_and_create_or_view_opportunities(web_driver, test_data, config):
     pm_5_data = test_data.get("PM_5")
     pm_6_data = test_data.get("PM_6")

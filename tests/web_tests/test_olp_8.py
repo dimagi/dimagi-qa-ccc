@@ -15,6 +15,7 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES83")
 def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_data, config):
     olp8_data = test_data.get("OLP_8")
 

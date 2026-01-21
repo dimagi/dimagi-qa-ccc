@@ -16,6 +16,7 @@ from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES94")
 def test_worker_visit_verification_page_3_verify_suspend_users_from_an_opportunity(web_driver, test_data, config):
     worker_visit_3_data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_3")
 

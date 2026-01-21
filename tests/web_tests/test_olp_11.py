@@ -14,6 +14,7 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
   """)
 
 @pytest.mark.web
+@pytest.mark.bugasura("TES85")
 def test_olp_11_apply_n_verify_filters_in_opportunities(web_driver, test_data, config):
     olp11_data = test_data.get("OLP_11")
 
