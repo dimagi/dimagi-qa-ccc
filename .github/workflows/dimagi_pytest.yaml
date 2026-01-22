@@ -37,6 +37,7 @@ jobs:
 
     - name: Upload Web Allure Results
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: web-allure-results
         path: reports/allure-results/web
@@ -100,16 +101,21 @@ jobs:
         webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n 
+            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n
+                      
+                      Test Summary
+                      -------------------------------------------------
                       TOTAL: ${{ env.TOTAL }}\n
                       PASSED: ${{ env.PASSED }}\n
                       FAILED: ${{ env.FAILED }}\n
                       SKIPPED: ${{ env.SKIPPED }}\n\n
-                      Job: ${{ job.name }}\n 
-                      Workflow: ${{ github.workflow }}\n 
-                      Repository: ${{ github.repository }}\n 
-                      Branch: ${{ github.ref_name }}\n\n 
-                      Status: *${{ job.status }}*\n\n 
+                      
+                      Execution Details
+                      -------------------------------------------------
+                      Workflow: ${{ github.workflow }}\n
+                      Repository: ${{ github.repository }}\n
+                      Branch: ${{ github.ref_name }}\n\n
+                      Status: *${{ job.status }}*\n\n
                       Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts"
           }
 
@@ -133,7 +139,6 @@ jobs:
           
           Execution Details
           -----------------
-          Job        : ${{ job.name }}
           Workflow   : ${{ github.workflow }}
           Repository : ${{ github.repository }}
           Branch     : ${{ github.ref_name }}
