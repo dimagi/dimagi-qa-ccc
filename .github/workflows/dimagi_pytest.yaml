@@ -45,6 +45,7 @@ jobs:
   generate-report:
     name: Generate Combined Allure Report
     runs-on: windows-latest
+    if: always()
     needs: [web-tests]
 
     steps:
@@ -52,7 +53,9 @@ jobs:
 
     - name: Install Allure
       shell: powershell
-      run: choco install allure -y
+      run: |
+        npm install -g allure-commandline
+        allure --version
 
     - name: Download Web Results
       uses: actions/download-artifact@v4
@@ -83,6 +86,7 @@ jobs:
   send-notifications:
     name: Send Slack & Email Notifications
     runs-on: windows-latest
+    if: always()
     needs: [ generate-report ]
 
     steps:

@@ -371,6 +371,7 @@ class ConnectWorkersPage(BaseWebPage):
 
     def verify_empty_last_paid_date_for_worker(self, worker_name):
         time.sleep(3)
+        self.wait_for_page_to_load()
         worker_name = worker_name.strip()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//a[normalize-space() = 'Last paid']]"
