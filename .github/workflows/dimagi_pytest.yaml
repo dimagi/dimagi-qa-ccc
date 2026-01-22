@@ -123,22 +123,24 @@ jobs:
         content_type: text/html
         body: |
           <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
-          
+
           <h3>Test Summary</h3>
           <hr>
           <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
           <b>PASSED</b>  : ${{ env.PASSED }}<br>
           <b>FAILED</b>  : ${{ env.FAILED }}<br>
           <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
-          
+
           <h3>Execution Details</h3>
           <hr>
           <b>Workflow</b>   : ${{ github.workflow }}<br>
           <b>Repository</b> : ${{ github.repository }}<br>
           <b>Branch</b>     : ${{ github.ref_name }}<br>
           <b>Status</b>     : ${{ job.status }}<br>
-          <b>Artifacts</b>  : https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}<br>
-
+          <b>Artifacts</b>  :
+          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Artifacts
+          </a>
         to: bharath.g@moolya.com
-        from: DIMAGI Web and Mobile Tests Automation Report
+        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
 
