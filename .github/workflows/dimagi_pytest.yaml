@@ -2,8 +2,9 @@ name: Dimagi Pytest Automation Suite
 
 on:
   push:
-    branches: [ B_WEB_JAN_22 ]
-  workflow_dispatch:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
 
@@ -79,24 +80,12 @@ jobs:
       shell: powershell
       run: |
         $summary = Get-Content "reports/allure-report/widgets/summary.json" | ConvertFrom-Json
-        @"
-        TOTAL=$($summary.statistic.total)
-        PASSED=$($summary.statistic.passed)
-        FAILED=$($summary.statistic.failed)
-        SKIPPED=$($summary.statistic.skipped)
-        "@ | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-    
+        echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
+        echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
+        echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
+        echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
-  send-notifications:
-    name: Send Slack & Email Notifications
-    runs-on: windows-latest
-    if: always()
-    needs: [ generate-report ]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Slack Notification
+    - name: Send Slack Notification
       if: always()
       uses: slackapi/slack-github-action@v2.1.1
       with:
@@ -122,7 +111,8 @@ jobs:
                       Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           }
 
-    - name: Email Notification
+    - name: Send Email Notification
+      if: always()
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -135,19 +125,19 @@ jobs:
           <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
           
           <h3>Test Summary</h3>
-          -------------------------------------------------
-          <b>TOTAL</b>   : ${{ env.TOTAL }}
-          <b>PASSED</b>  : ${{ env.PASSED }}
-          <b>FAILED</b>  : ${{ env.FAILED }}
-          <b>SKIPPED</b> : ${{ env.SKIPPED }}
+          <hr>
+          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
+          <b>PASSED</b>  : ${{ env.PASSED }}<br>
+          <b>FAILED</b>  : ${{ env.FAILED }}<br>
+          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
           
           <h3>Execution Details</h3>
-          -------------------------------------------------
-          <b>Workflow</b>   : ${{ github.workflow }}
-          <b>Repository</b> : ${{ github.repository }}
-          <b>Branch</b>     : ${{ github.ref_name }}
-          <b>Status</b>     : ${{ job.status }}
-          <b>Artifacts</b>  : https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          <hr>
+          <b>Workflow</b>   : ${{ github.workflow }}<br>
+          <b>Repository</b> : ${{ github.repository }}<br>
+          <b>Branch</b>     : ${{ github.ref_name }}<br>
+          <b>Status</b>     : ${{ job.status }}<br>
+          <b>Artifacts</b>  : https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}<br>
 
         to: bharath.g@moolya.com
         from: DIMAGI Web and Mobile Tests Automation Report
