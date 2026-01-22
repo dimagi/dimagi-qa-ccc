@@ -188,6 +188,7 @@ class WorkerVisitsPage(BaseWebPage):
         try:
             row = self.find_element_or_fail(table, By.XPATH, row_xpath, f"{entity_name} Row")
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", row)
+            time.sleep(2)
             flags = row.find_elements(
                 By.XPATH,
                 ".//span[contains(@class,'badge') and "
