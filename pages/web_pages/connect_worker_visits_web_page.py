@@ -182,7 +182,20 @@ class WorkerVisitsPage(BaseWebPage):
         time.sleep(1)
         assert self.wait_for_element(self.SUSPEND_BUTTON).is_displayed()
 
+    def click_date_header_in_worker_visits(self):
+        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
+        headers = table.find_elements(By.XPATH, ".//thead//th")
+        for th in headers[1:]:
+            if "Date" in th.text:
+                th.click()
+                self.wait_for_page_to_load()
+                self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
+                break
+
     def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
+        self.click_date_header_in_worker_visits()
+        time.sleep(2)
+        self.click_date_header_in_worker_visits()
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         row_xpath = (".//tbody/tr[.//td[contains(normalize-space(), %r)]]" % entity_name)
         try:
