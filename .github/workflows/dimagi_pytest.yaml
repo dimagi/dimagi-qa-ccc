@@ -164,38 +164,38 @@ jobs:
 #                      Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 #          }
 #
-#    - name: Send Email Notification
-#      if: always()
-#      uses: dawidd6/action-send-mail@v3
-#      with:
-#        server_address: smtp.gmail.com
-#        server_port: 587
-#        username: ${{ secrets.EMAIL_USERNAME }}
-#        password: ${{ secrets.EMAIL_PASSWORD }}
-#        subject: "DIMAGI Web and Mobile Tests Automation Report"
-#        content_type: text/html
-#        content_transfer_encoding: quoted-printable
-#        body: |
-#          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
-#
-#          <h3>Test Summary</h3>
-#          <hr>
-#          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
-#          <b>PASSED</b>  : ${{ env.PASSED }}<br>
-#          <b>FAILED</b>  : ${{ env.FAILED }}<br>
-#          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
-#          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
-#
-#          <h3>Execution Details</h3>
-#          <hr>
-#          <b>Workflow</b>   : ${{ github.workflow }}<br>
-#          <b>Repository</b> : ${{ github.repository }}<br>
-#          <b>Branch</b>     : ${{ github.ref_name }}<br>
-#          <b>Status</b>     : ${{ job.status }}<br>
-#          <b>Artifacts</b>  :
-#          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-#            View Artifacts
-#          </a>
-#        to: bharath.g@moolya.com
-#        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
+    - name: Send Email Notification
+      if: always()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "DIMAGI Web and Mobile Tests Automation Report"
+        content_type: text/html
+        content_transfer_encoding: quoted-printable
+        body: |
+          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+
+          <h3>Test Summary</h3>
+          <hr>
+          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
+          <b>PASSED</b>  : ${{ env.PASSED }}<br>
+          <b>FAILED</b>  : ${{ env.FAILED }}<br>
+          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
+          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
+
+          <h3>Execution Details</h3>
+          <hr>
+          <b>Workflow</b>   : ${{ github.workflow }}<br>
+          <b>Repository</b> : ${{ github.repository }}<br>
+          <b>Branch</b>     : ${{ github.ref_name }}<br>
+          <b>Status</b>     : ${{ job.status }}<br>
+          <b>Artifacts</b>  :
+          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Artifacts
+          </a>
+        to: bharath.g@moolya.com
+        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
 
