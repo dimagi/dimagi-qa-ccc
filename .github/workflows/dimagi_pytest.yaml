@@ -10,41 +10,41 @@ on:
 
 jobs:
 
-#  web-tests:
-#    name: Web Tests
-#    runs-on: windows-latest
-#
-#    steps:
-#    - uses: actions/checkout@v4
-#
-#    - name: Install Python
-#      uses: actions/setup-python@v5
-#      with:
-#        python-version: '3.10'
-#
-#    - name: Install Node JS
-#      uses: actions/setup-node@v4
-#      with:
-#        node-version: '18'
-#
-#    - name: Install Dependencies
-#      run: pip install -r requirements.txt
-#
-#    - name: Install Allure
-#      shell: powershell
-#      run: |
-#        npm install -g allure-commandline
-#        allure --version
-#
-#    - name: Run Web Tests
-#      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web
-#
-#    - name: Upload Web Allure Results
-#      uses: actions/upload-artifact@v4
-#      if: always()
-#      with:
-#        name: web-allure-results
-#        path: reports/allure-results/web
+  web-tests:
+    name: Web Tests
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Node JS
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: pip install -r requirements.txt
+
+    - name: Install Allure
+      shell: powershell
+      run: |
+        npm install -g allure-commandline
+        allure --version
+
+    - name: Run Web Tests
+      run: pytest -v tests/web_tests/test_payment_processing_1_2_3.py --alluredir=reports/allure-results/web
+
+    - name: Upload Web Allure Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-allure-results
+        path: reports/allure-results/web
 
   mobile-tests:
     name: Mobile Tests
@@ -105,11 +105,11 @@ jobs:
         npm install -g allure-commandline
         allure --version
 
-#    - name: Download Web Allure Results
-#      uses: actions/download-artifact@v4
-#      with:
-#        name: web-allure-results
-#        path: reports/allure-results/web
+    - name: Download Web Allure Results
+      uses: actions/download-artifact@v4
+      with:
+        name: web-allure-results
+        path: reports/allure-results/web
 
     - name: Download Mobile Results
       uses: actions/download-artifact@v4
@@ -173,8 +173,6 @@ jobs:
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: "DIMAGI Web and Mobile Tests Automation Report"
-        content_type: text/html
-        content_transfer_encoding: quoted-printable
         html_body: |
           <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
 
