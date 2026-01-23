@@ -239,7 +239,7 @@ jobs:
 
       - name: Install Bugasura
         run: |
-          pip install bugasura
+          pip install bugasura packaging
           bugasura -h
 
       - name: Upload Web XML Results to Bugasura
