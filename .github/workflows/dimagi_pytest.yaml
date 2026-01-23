@@ -231,6 +231,18 @@ jobs:
           pip install "urllib3<2"
           pip install bugasura
 
+      - name: Download Web XML Results
+        uses: actions/download-artifact@v4
+        with:
+          name: web-xml-results
+          path: reports
+
+      - name: Download Mobile XML Results
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-xml-results
+          path: reports
+
       - name: Upload Web results to Bugasura
         run: |
           bugasura UPLOAD_RESULTS reports/web-results.xml `
