@@ -119,7 +119,7 @@ jobs:
 
     - name: Generate Combined Allure Report
       run: |
-        allure generate reports/allure-results/mobile -o reports/allure-report --clean
+        allure generate reports/allure-results/web reports/allure-results/mobile -o reports/allure-report --clean
 
     - name: Upload Combined Allure Report
       uses: actions/upload-artifact@v4
