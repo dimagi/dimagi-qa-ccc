@@ -37,7 +37,7 @@ jobs:
         allure --version
 
     - name: Run Web Tests
-      run: pytest -v tests/web_tests/test_payment_processing_1_2_3.py --alluredir=reports/allure-results/web ----junitxml=reports/web-results.xml
+      run: pytest -v tests/web_tests/test_payment_processing_1_2_3.py --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
 
     - name: Upload Web Allure Results
       uses: actions/upload-artifact@v4
@@ -237,8 +237,15 @@ jobs:
           name: mobile-allure-results
           path: reports/allure-results/mobile
 
-      - name: Upload XML Results to Bugasura
+      - name: Install Bugasura
         run: |
           pip install bugasura
           bugasura -h
-          bugasura UPLOAD_RESULTS /path/to/your/file.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
+
+      - name: Upload Web XML Results to Bugasura
+        run: |
+          bugasura UPLOAD_RESULTS reports/web-results.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
+
+      - name: Upload Mobile XML Results to Bugasura
+        run: |
+          bugasura UPLOAD_RESULTS reports/mobile-results.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
