@@ -244,6 +244,8 @@ jobs:
           path: reports
 
       - name: Upload Web results to Bugasura
+        env:
+          RICH_DISABLE: "1"
         run: |
           bugasura UPLOAD_RESULTS reports/web-results.xml `
             --api_key ${{ secrets.BUGASURA_API_KEY }} `
@@ -253,6 +255,8 @@ jobs:
             --server live
 
       - name: Upload Mobile results to Bugasura
+        env:
+          RICH_DISABLE: "1"
         run: |
           bugasura UPLOAD_RESULTS reports/mobile-results.xml `
             --api_key ${{ secrets.BUGASURA_API_KEY }} `
