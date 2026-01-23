@@ -7,6 +7,8 @@ def create_web_driver():
     options.add_argument("--headless=new")
     options.add_argument("--start-maximized")
     options.add_argument("--disable-notifications")
+    options.add_argument("--headless")
+    options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Chrome(options=options)
     return driver

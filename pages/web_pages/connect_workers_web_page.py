@@ -359,6 +359,7 @@ class ConnectWorkersPage(BaseWebPage):
         row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
         row = table.find_element(By.XPATH, row_xpath)
         cell_span_xpath = f"./td[{column_index}]//span"
+        time.sleep(2)
         span_element = row.find_element(By.XPATH, cell_span_xpath)
         self.click_element(span_element)
         time.sleep(1)
@@ -371,6 +372,7 @@ class ConnectWorkersPage(BaseWebPage):
 
     def verify_empty_last_paid_date_for_worker(self, worker_name):
         time.sleep(3)
+        self.wait_for_page_to_load()
         worker_name = worker_name.strip()
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//a[normalize-space() = 'Last paid']]"
@@ -379,6 +381,7 @@ class ConnectWorkersPage(BaseWebPage):
         row_xpath = ".//tbody//tr[.//p[normalize-space() = '" + worker_name + "']]"
         row = table.find_element(By.XPATH, row_xpath)
         date_cell_xpath = f"./td[{column_index}]"
+        time.sleep(2)
         empty_date_element = row.find_element(By.XPATH, date_cell_xpath)
         assert empty_date_element.text.strip() == "—", f"Rollback payment for worker {worker_name} not completed"
         print(f"Rollback payment for worker {worker_name} completed")
