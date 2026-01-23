@@ -229,6 +229,11 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Install Bugasura
+        run: |
+          pip install bugasura
+          bugasura -h
+
       - name: Upload Web XML Results to Bugasura
         run: |
           bugasura UPLOAD_RESULTS reports/web-results.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
