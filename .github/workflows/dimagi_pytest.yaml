@@ -1,4 +1,4 @@
-name: Dimagi Pytest Automation Suite
+name: CommCare-Connect Pytest Automation Suite
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
         allure --version
 
     - name: Run Web Tests
-      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web
+      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
 
     - name: Upload Web Allure Results
       uses: actions/upload-artifact@v4
@@ -44,12 +44,69 @@ jobs:
         name: web-allure-results
         path: reports/allure-results/web
 
+    - name: Upload Web XML Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-xml-results
+        path: reports/web-results.xml
+
+  mobile-tests:
+    name: Mobile Tests
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Node JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install Allure
+        shell: powershell
+        run: |
+          npm install -g allure-commandline
+          allure --version
+
+      - name: Run Mobile Tests
+        run: |
+          pytest -v tests/mobile_tests --alluredir=reports/allure-results/mobile --run_on=browserstack --junitxml=reports/mobile-results.xml
+
+      - name: Upload Mobile Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-allure-results
+          path: reports/allure-results/mobile
+
+      - name: Upload Mobile XML Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-xml-results
+          path: reports/mobile-results.xml
+
 
   generate-report:
     name: Generate Combined Allure Report
     runs-on: windows-latest
     if: always()
-    needs: [web-tests]
+    needs: [web-tests, mobile-tests]
 
     steps:
     - uses: actions/checkout@v4
@@ -66,9 +123,15 @@ jobs:
         name: web-allure-results
         path: reports/allure-results/web
 
+    - name: Download Mobile Results
+      uses: actions/download-artifact@v4
+      with:
+        name: mobile-allure-results
+        path: reports/allure-results/mobile
+
     - name: Generate Combined Allure Report
       run: |
-        allure generate reports/allure-results/web -o reports/allure-report --clean
+        allure generate reports/allure-results/web reports/allure-results/mobile -o reports/allure-report --clean
 
     - name: Upload Combined Allure Report
       uses: actions/upload-artifact@v4
@@ -83,6 +146,7 @@ jobs:
         echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
         echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
         echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
+        echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
         echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
     - name: Send Slack Notification
@@ -93,15 +157,16 @@ jobs:
         webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
         payload: |
           {
-            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n
-                      
+            "text": "*CommCare Connect Automation Suite – Web & Mobile Tests*\n\n
+
                       Test Summary\n
                       -------------------------------------------------\n
                       TOTAL: ${{ env.TOTAL }}\n
                       PASSED: ${{ env.PASSED }}\n
                       FAILED: ${{ env.FAILED }}\n
+                      BROKEN: ${{ env.BROKEN }}\n
                       SKIPPED: ${{ env.SKIPPED }}\n\n
-                      
+
                       Execution Details\n
                       -------------------------------------------------\n
                       Workflow: ${{ github.workflow }}\n
@@ -119,16 +184,16 @@ jobs:
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
         password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "DIMAGI Web and Mobile Tests Automation Report"
-        content_type: text/html
-        body: |
-          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+        subject: "CommCare-Connect Test Automation Report {date}"
+        html_body: |
+          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests</h2>
 
           <h3>Test Summary</h3>
           <hr>
           <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
           <b>PASSED</b>  : ${{ env.PASSED }}<br>
           <b>FAILED</b>  : ${{ env.FAILED }}<br>
+          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
           <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
 
           <h3>Execution Details</h3>
@@ -142,5 +207,53 @@ jobs:
             View Artifacts
           </a>
         to: bharath.g@moolya.com
-        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
+        from: ${{ secrets.EMAIL_USERNAME }}
 
+  upload-results-to-bugasura:
+    name: Upload XML results to Bugasura
+    runs-on: windows-latest
+    if: always()
+    needs: [web-tests, mobile-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Bugasura CLI
+        run: |
+          pip install packaging
+          pip install "urllib3<2"
+          pip install bugasura
+
+      - name: Download Web XML Results
+        uses: actions/download-artifact@v4
+        with:
+          name: web-xml-results
+          path: reports
+
+      - name: Download Mobile XML Results
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-xml-results
+          path: reports
+
+      - name: Upload Web results to Bugasura
+        run: |
+          bugasura UPLOAD_RESULTS reports/web-results.xml `
+            --api_key ${{ secrets.BUGASURA_API_KEY }} `
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
+            --server live || exit 0
+
+      - name: Upload Mobile results to Bugasura
+        run: |
+          bugasura UPLOAD_RESULTS reports/mobile-results.xml `
+            --api_key ${{ secrets.BUGASURA_API_KEY }} `
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
+            --server live || exit 0

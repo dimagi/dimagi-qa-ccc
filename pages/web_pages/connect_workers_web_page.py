@@ -352,6 +352,9 @@ class ConnectWorkersPage(BaseWebPage):
 
     def click_last_paid_date_n_verify_history(self, worker_name):
         worker_name = worker_name.strip()
+        self.reload_page()
+        self.wait_for_page_to_load()
+        time.sleep(2)
         table = self.wait_for_element(self.TABLE_ELEMENT)
         header_xpath = ".//thead//th[.//a[normalize-space() = 'Last paid']]"
         header = self.find_element_or_fail(table, By.XPATH, header_xpath, f"Last Paid date column Payment table")

@@ -9,8 +9,8 @@ The framework supports:
 - 📱 Mobile automation (BrowserStack)
 - 📊 Allure reporting
 - 🔁 CI/CD pipelines
-- 🔔 Slack notifications
-- 🌍 Allure report publishing via GitHub Pages
+- 🔔 Slack & Email notifications
+- 🌍 Allure report publishing to GitHub Artifacts
 
 ---
 
@@ -164,7 +164,15 @@ CI Pipeline Includes
 - Web tests execution
 - Mobile tests execution (BrowserStack)
 - Allure report generation
-- Slack notifications
+- Slack & email notifications
+
+Steps to Open Allure report from GitHub Artifacts
+- Download the Allure report zip file from workflow artifacts
+- Unzip and extract the files in file explorer
+- Execute the below command in Windows Powershell
+```aiignore
+allure open "path_to_downloaded_report_folder"
+```
 
 ### 🔐 GitHub Secrets Configuration
 Add secrets under:
@@ -176,7 +184,9 @@ Repository → Settings → Secrets and variables → Actions
 |BROWSERSTACK_USERNAME|BrowserStack username|
 |BROWSERSTACK_ACCESS_KEY|BrowserStack access key|
 |SLACK_WEBHOOK_URL|Slack incoming webhook|
+|EMAIL_USERNAME|Username of the email|
+|EMAIL_PASSWORD|Password of the email|
 
-### 🔔 Slack Notifications
+### 🔔 Slack & Email Notifications
 - Sends notification on every CI run
 - Includes job status and workflow link
