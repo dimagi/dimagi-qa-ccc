@@ -216,8 +216,8 @@ jobs:
     name: Upload XML results to Bugasura
     runs-on: ubuntu-latest
     if: always()
-    needs: [web-tests, mobile-tests]
-
+#    needs: [web-tests, mobile-tests]
+    needs: [web-tests]
     steps:
       - uses: actions/checkout@v4
 
