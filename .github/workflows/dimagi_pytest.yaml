@@ -175,7 +175,7 @@ jobs:
         subject: "DIMAGI Web and Mobile Tests Automation Report"
         content_type: text/html
         content_transfer_encoding: quoted-printable
-        body: |
+        html_body: |
           <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
 
           <h3>Test Summary</h3>
@@ -197,5 +197,5 @@ jobs:
             View Artifacts
           </a>
         to: bharath.g@moolya.com
-        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
+        from: ${{ secrets.EMAIL_USERNAME }}
 
