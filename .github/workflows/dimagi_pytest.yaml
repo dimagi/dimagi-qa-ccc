@@ -108,7 +108,8 @@ jobs:
     name: Generate Combined Allure Report
     runs-on: windows-latest
     if: always()
-    needs: [web-tests, mobile-tests]
+#    needs: [web-tests, mobile-tests]
+    needs: [web-tests]
 
     steps:
     - uses: actions/checkout@v4
