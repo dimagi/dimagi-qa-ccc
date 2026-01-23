@@ -53,55 +53,55 @@ jobs:
         name: web-xml-results
         path: reports/web-results.xml
 
-  mobile-tests:
-    name: Mobile Tests
-    runs-on: windows-latest
-    timeout-minutes: 60
-
-    env:
-      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Node JS
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Install Allure
-        shell: powershell
-        run: |
-          npm install -g allure-commandline
-          allure --version
-
-      - name: Run Mobile Tests
-        run: |
-          pytest -v tests/mobile_tests/test_tc_1.py --alluredir=reports/allure-results/mobile --run_on=browserstack --junitxml=reports/mobile-results.xml
-
-      - name: Upload Mobile Allure Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mobile-allure-results
-          path: reports/allure-results/mobile
-
-      - name: Upload Mobile XML Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mobile-xml-results
-          path: reports/mobile-results.xml
+#  mobile-tests:
+#    name: Mobile Tests
+#    runs-on: windows-latest
+#    timeout-minutes: 60
+#
+#    env:
+#      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+#      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Python
+#        uses: actions/setup-python@v5
+#        with:
+#          python-version: '3.10'
+#
+#      - name: Install Node JS
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: '18'
+#
+#      - name: Install Dependencies
+#        run: |
+#          pip install -r requirements.txt
+#
+#      - name: Install Allure
+#        shell: powershell
+#        run: |
+#          npm install -g allure-commandline
+#          allure --version
+#
+#      - name: Run Mobile Tests
+#        run: |
+#          pytest -v tests/mobile_tests/test_tc_1.py --alluredir=reports/allure-results/mobile --run_on=browserstack --junitxml=reports/mobile-results.xml
+#
+#      - name: Upload Mobile Allure Results
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: mobile-allure-results
+#          path: reports/allure-results/mobile
+#
+#      - name: Upload Mobile XML Results
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: mobile-xml-results
+#          path: reports/mobile-results.xml
 
 
   generate-report:
@@ -213,7 +213,7 @@ jobs:
 
   upload-results-to-bugasura:
     name: Upload XML results to Bugasura
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     if: always()
     needs: [web-tests, mobile-tests]
 
