@@ -2,54 +2,99 @@ name: Dimagi Pytest Automation Suite
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ B_WEB_JAN_23 ]
+  workflow_dispatch:
+
+#  pull_request:
+#    branches: [ main ]
 
 jobs:
 
-  web-tests:
-    name: Web Tests
+#  web-tests:
+#    name: Web Tests
+#    runs-on: windows-latest
+#
+#    steps:
+#    - uses: actions/checkout@v4
+#
+#    - name: Install Python
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: '3.10'
+#
+#    - name: Install Node JS
+#      uses: actions/setup-node@v4
+#      with:
+#        node-version: '18'
+#
+#    - name: Install Dependencies
+#      run: pip install -r requirements.txt
+#
+#    - name: Install Allure
+#      shell: powershell
+#      run: |
+#        npm install -g allure-commandline
+#        allure --version
+#
+#    - name: Run Web Tests
+#      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web
+#
+#    - name: Upload Web Allure Results
+#      uses: actions/upload-artifact@v4
+#      if: always()
+#      with:
+#        name: web-allure-results
+#        path: reports/allure-results/web
+
+  mobile-tests:
+    name: Mobile Tests
     runs-on: windows-latest
+    timeout-minutes: 60
+
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Install Node JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - name: Install Node JS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-    - name: Install Dependencies
-      run: pip install -r requirements.txt
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
 
-    - name: Install Allure
-      shell: powershell
-      run: |
-        npm install -g allure-commandline
-        allure --version
+      - name: Install Allure
+        shell: powershell
+        run: |
+          npm install -g allure-commandline
+          allure --version
 
-    - name: Run Web Tests
-      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web
+      - name: Run Mobile Tests
+        run: |
+          pytest -v tests/mobile_tests/test_tc_1.py --alluredir=reports/allure-results/mobile --run_on=browserstack
 
-    - name: Upload Web Allure Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: web-allure-results
-        path: reports/allure-results/web
+      - name: Upload Mobile Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-allure-results
+          path: reports/allure-results/mobile
 
 
   generate-report:
     name: Generate Combined Allure Report
     runs-on: windows-latest
     if: always()
-    needs: [web-tests]
+    needs: [mobile-tests]
 
     steps:
     - uses: actions/checkout@v4
@@ -60,15 +105,21 @@ jobs:
         npm install -g allure-commandline
         allure --version
 
-    - name: Download Web Allure Results
+#    - name: Download Web Allure Results
+#      uses: actions/download-artifact@v4
+#      with:
+#        name: web-allure-results
+#        path: reports/allure-results/web
+
+    - name: Download Mobile Results
       uses: actions/download-artifact@v4
       with:
-        name: web-allure-results
-        path: reports/allure-results/web
+        name: mobile-allure-results
+        path: reports/allure-results/mobile
 
     - name: Generate Combined Allure Report
       run: |
-        allure generate reports/allure-results/web -o reports/allure-report --clean
+        allure generate reports/allure-results/mobile -o reports/allure-report --clean
 
     - name: Upload Combined Allure Report
       uses: actions/upload-artifact@v4
@@ -83,64 +134,68 @@ jobs:
         echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
         echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
         echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
+        echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
         echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
-    - name: Send Slack Notification
-      if: always()
-      uses: slackapi/slack-github-action@v2.1.1
-      with:
-        webhook-type: incoming-webhook
-        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-        payload: |
-          {
-            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n
-                      
-                      Test Summary\n
-                      -------------------------------------------------\n
-                      TOTAL: ${{ env.TOTAL }}\n
-                      PASSED: ${{ env.PASSED }}\n
-                      FAILED: ${{ env.FAILED }}\n
-                      SKIPPED: ${{ env.SKIPPED }}\n\n
-                      
-                      Execution Details\n
-                      -------------------------------------------------\n
-                      Workflow: ${{ github.workflow }}\n
-                      Repository: ${{ github.repository }}\n
-                      Branch: ${{ github.ref_name }}\n\n
-                      Status: *${{ job.status }}*\n\n
-                      Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-
-    - name: Send Email Notification
-      if: always()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "DIMAGI Web and Mobile Tests Automation Report"
-        content_type: text/html
-        body: |
-          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
-
-          <h3>Test Summary</h3>
-          <hr>
-          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
-          <b>PASSED</b>  : ${{ env.PASSED }}<br>
-          <b>FAILED</b>  : ${{ env.FAILED }}<br>
-          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
-
-          <h3>Execution Details</h3>
-          <hr>
-          <b>Workflow</b>   : ${{ github.workflow }}<br>
-          <b>Repository</b> : ${{ github.repository }}<br>
-          <b>Branch</b>     : ${{ github.ref_name }}<br>
-          <b>Status</b>     : ${{ job.status }}<br>
-          <b>Artifacts</b>  :
-          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-            View Artifacts
-          </a>
-        to: bharath.g@moolya.com
-        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
+#    - name: Send Slack Notification
+#      if: always()
+#      uses: slackapi/slack-github-action@v2.1.1
+#      with:
+#        webhook-type: incoming-webhook
+#        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+#        payload: |
+#          {
+#            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n
+#
+#                      Test Summary\n
+#                      -------------------------------------------------\n
+#                      TOTAL: ${{ env.TOTAL }}\n
+#                      PASSED: ${{ env.PASSED }}\n
+#                      FAILED: ${{ env.FAILED }}\n
+#                      BROKEN: ${{ env.BROKEN }}\n
+#                      SKIPPED: ${{ env.SKIPPED }}\n\n
+#
+#                      Execution Details\n
+#                      -------------------------------------------------\n
+#                      Workflow: ${{ github.workflow }}\n
+#                      Repository: ${{ github.repository }}\n
+#                      Branch: ${{ github.ref_name }}\n\n
+#                      Status: *${{ job.status }}*\n\n
+#                      Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#          }
+#
+#    - name: Send Email Notification
+#      if: always()
+#      uses: dawidd6/action-send-mail@v3
+#      with:
+#        server_address: smtp.gmail.com
+#        server_port: 587
+#        username: ${{ secrets.EMAIL_USERNAME }}
+#        password: ${{ secrets.EMAIL_PASSWORD }}
+#        subject: "DIMAGI Web and Mobile Tests Automation Report"
+#        content_type: text/html
+#        content_transfer_encoding: quoted-printable
+#        body: |
+#          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+#
+#          <h3>Test Summary</h3>
+#          <hr>
+#          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
+#          <b>PASSED</b>  : ${{ env.PASSED }}<br>
+#          <b>FAILED</b>  : ${{ env.FAILED }}<br>
+#          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
+#          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
+#
+#          <h3>Execution Details</h3>
+#          <hr>
+#          <b>Workflow</b>   : ${{ github.workflow }}<br>
+#          <b>Repository</b> : ${{ github.repository }}<br>
+#          <b>Branch</b>     : ${{ github.ref_name }}<br>
+#          <b>Status</b>     : ${{ job.status }}<br>
+#          <b>Artifacts</b>  :
+#          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+#            View Artifacts
+#          </a>
+#        to: bharath.g@moolya.com
+#        from: "DIMAGI Automation <${{ secrets.EMAIL_USERNAME }}>"
 
