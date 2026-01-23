@@ -29,6 +29,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 @pytest.mark.mobile
 @pytest.mark.web
+@pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
 def test_opportunity_invite_notifications_and_details(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_3_to_4")
 

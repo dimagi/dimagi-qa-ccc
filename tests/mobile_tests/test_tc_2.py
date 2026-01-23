@@ -11,6 +11,7 @@ from pages.mobile_pages.home_page import HomePage
   - PID_6 : Verify Account Locked Error Popup
   """)
 @pytest.mark.mobile
+@pytest.mark.bugasura("TES13")
 def test_account_locked_popup(mobile_driver, test_data):
     data = test_data.get("TC_2")
     pid = PersonalIDPage(mobile_driver)
