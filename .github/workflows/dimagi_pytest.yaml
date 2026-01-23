@@ -225,19 +225,26 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Bugasura CLI
         run: |
-          pip install -r requirements.txt
-
-      - name: Install Bugasura
-        run: |
+          pip install packaging
+          pip install "urllib3<2"
           pip install bugasura
-          bugasura -h
 
-      - name: Upload Web XML Results to Bugasura
+      - name: Upload Web results to Bugasura
         run: |
-          bugasura UPLOAD_RESULTS reports/web-results.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
+          bugasura UPLOAD_RESULTS reports/web-results.xml `
+            --api_key ${{ secrets.BUGASURA_API_KEY }} `
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
+            --server live
 
-      - name: Upload Mobile XML Results to Bugasura
+      - name: Upload Mobile results to Bugasura
         run: |
-          bugasura UPLOAD_RESULTS reports/mobile-results.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
+          bugasura UPLOAD_RESULTS reports/mobile-results.xml `
+            --api_key ${{ secrets.BUGASURA_API_KEY }} `
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
+            --server live
