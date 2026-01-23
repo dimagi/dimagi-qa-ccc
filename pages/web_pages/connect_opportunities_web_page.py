@@ -186,7 +186,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         assert element.is_displayed(), f"Opportunity '{opp_name}' not found in the table."
         print(f"Opportunity '{opp_name}' present in table.")
 
-    def create_opportunity_in_connect_page(self, data):
+    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app):
         self.click_add_opportunity_btn()
         time.sleep(1)
         self.enter_name_in_opportunity(data["opportunity_name"])
@@ -198,8 +198,8 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.select_api_key_in_opportunity(data["api_key"])
         self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
         self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
-        self.select_learn_app_in_opportunity(data["learn_app"])
-        self.select_deliver_app_in_opportunity(data["deliver_app"])
+        self.select_learn_app_in_opportunity(learn_app)
+        self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
         self.enter_passing_score_in_opportunity(data["passing_score"])
         self.click_submit_btn()
