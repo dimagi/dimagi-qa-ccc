@@ -12,9 +12,9 @@ TC_2:
 
 TC_3_to_4:
   country_code: "+7426"
-  phone_number: "7426020"
-  username: "Automation User 20"
-  backup_code: "742620"
+  phone_number: "7426021"
+  username: "Automation User 21"
+  backup_code: "742621"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
