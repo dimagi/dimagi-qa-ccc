@@ -40,8 +40,11 @@ login_page:
 mobile_notifications:
   invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
   invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
-  expand_btn: "android:id/expand_button"
-  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"
+  expand_btn: "//android.widget.TextView[@text='CommCare']/ancestor::android.widget.RelativeLayout//android.widget.Button"
+#  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"
+  payment_received_title_txt: "//android.widget.TextView[@text='Payment received']"
+
+
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
 
 opportunity_page:
@@ -143,6 +146,7 @@ delivery_app_page:
   sync_with_server: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Sync with Server']"
   primary_visit_count_txt: "org.commcare.dalvik:id/tv_primary_visit_count"
   logged_in_userid_txt: "//android.widget.TextView[contains(@text, 'Logged In')]"
+  payment_tab: "//android.widget.HorizontalScrollView[@resource-id='org.commcare.dalvik:id/connect_delivery_progress_tabs']//android.widget.LinearLayout[2]"
 
 app_notification:
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"

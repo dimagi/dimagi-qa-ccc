@@ -1,3 +1,5 @@
+import time
+
 import allure
 import pytest
 from pygments.lexers import data
@@ -37,9 +39,10 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
     message = Message(mobile_driver)
+
+    temp_id = int(time.time() * 1000) % 1000000
 
     with allure.step("Login to CommCare HQ and verify Welcome title"):
         cchq_login_page.valid_login_cchq(config)
@@ -53,6 +56,19 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
     with allure.step("Verify new message options available in What to Send dropdown in Conditional Alerts"):
         cchq_messaging_page.navigate_to_conditional_alerts_n_verify_what_to_send_options(["Connect Message", "Connect Survey"])
         cchq_home_page.click_option_under_messaging_tab("Conditional Alerts")
+
+    # Messaging_2
+    with allure.step("Create new conditional alert with Connect Message option"):
+        cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
+        cchq_messaging_page.create_new_connect_message_conditional_alert(user_recipients=[data["user_id"]],
+                                                                         entity_id_value=temp_id)
+
+
+    # Messaging_3
+    with allure.step("Create new conditional alert with Connect Survey option"):
+        cchq_messaging_page.delete_existing_alerts("Automation Survey Alert")
+        cchq_messaging_page.create_new_connect_survey_conditional_alert(user_recipients=[data["user_id"]],
+                                                                         entity_id_value=temp_id)
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -68,24 +84,14 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
         home.open_app_from_goto_connect()
         opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
-    with allure.step("Get User Id from the Connect App"):
-        user_id = delivery.get_user_id()
+    with allure.step("Submit the form on the Delivery App"):
+        delivery.submit_form("Registration Form", user_id_input=temp_id)
 
     with allure.step("Navigate to Messaging option"):
         message.open_channel_on_message("connetqa-prod")
 
-    # Messaging_2
-    with allure.step("Create new conditional alert with Connect Message option"):
-        cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
-        cchq_messaging_page.create_new_connect_message_conditional_alert([user_id])
-
     with allure.step("Verify Connect Message shown"):
         message.verify_connect_message()
-
-    # Messaging_3
-    with allure.step("Create new conditional alert with Connect Survey option"):
-        cchq_messaging_page.delete_existing_alerts("Automation Survey Alert")
-        cchq_messaging_page.create_new_connect_survey_conditional_alert([user_id])
 
     with allure.step("Complete Connect Survey"):
         message.fill_survey_form()

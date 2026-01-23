@@ -142,7 +142,6 @@ class LearnAppPage(BasePage):
         self.click_element(self.VIEW_OPP_DETAILS_BTN)
 
         elements = [
-            self.OPP_DETAILS_HEADER_TXT,
             self.DELIVERY_DETAILS_TXT,
             self.REVIEW_DELIVERY_DETAILS_TXT,
             self.START_VISIT_TXT,

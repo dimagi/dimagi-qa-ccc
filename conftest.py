@@ -83,11 +83,15 @@ def pytest_runtest_makereport(item):
         mobile = item.funcargs.get("mobile_driver")
         web = item.funcargs.get("web_driver")
 
-        if mobile:
-            attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
+        try:
+            if mobile:
+                attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
 
-        if web:
-            attach_web_screenshot(web, "Web Failure Screenshot")
+            if web:
+                attach_web_screenshot(web, "Web Failure Screenshot")
+
+        except Exception as e:
+            print(f"take screenshot failed {e}")
 
     # Append Bugasura TC IDs to test name in xml results
     marker = item.get_closest_marker("bugasura")

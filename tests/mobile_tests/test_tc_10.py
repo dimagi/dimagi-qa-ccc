@@ -2,7 +2,6 @@ import allure
 import pytest
 from pygments.lexers import data
 
-from pages.mobile_pages.app_notifications import AppNotifications
 from pages.mobile_pages.delivery_app_page import DeliveryAppPage
 from pages.mobile_pages.home_page import HomePage
 from pages.mobile_pages.messaging_page import Message
@@ -37,7 +36,6 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_dr
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
     message = Message(mobile_driver)
 

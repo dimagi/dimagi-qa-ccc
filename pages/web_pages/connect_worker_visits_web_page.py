@@ -183,6 +183,7 @@ class WorkerVisitsPage(BaseWebPage):
         assert self.wait_for_element(self.SUSPEND_BUTTON).is_displayed()
 
     def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
+        print(f"Verifying overlimit flag present for {entity_name}")
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         row_xpath = (".//tbody/tr[.//td[contains(normalize-space(), %r)]]" % entity_name)
         try:

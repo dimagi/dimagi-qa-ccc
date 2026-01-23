@@ -24,9 +24,19 @@ def simulate_fingerprint(driver=None, run_on="local", finger_id=1, success=True)
             check=False
         )
 
-def open_notification():
-    subprocess.run(["adb", "shell", "cmd", "statusbar", "expand-notifications"])
-
+def open_notification(driver):
+    # subprocess.run(["adb", "shell", "cmd", "statusbar", "expand-notifications"])
+    try:
+        driver.execute_script("mobile: openNotifications")
+    except:
+        size = driver.get_window_size()
+        driver.swipe(
+            size["width"] // 2,
+            int(size["height"] * 0.01),
+            size["width"] // 2,
+            int(size["height"] * 0.6),
+            1000
+        )
 
 def background_app(driver, seconds=3):
     driver.background_app(seconds)

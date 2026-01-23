@@ -54,10 +54,6 @@ class PersonalIDPage(BasePage):
                 self.wait_for_element_to_disappear(self.PROGRESS_BAR)
                 if not self.is_displayed(self.NETWORK_ERROR_TXT):
                     break
-                if self.is_displayed(self.CONFIGURE_FINGERPRINT_BTN):
-                    break
-                if self.is_displayed(self.NAME_INPUT):
-                    break
 
             time.sleep(1)
 
