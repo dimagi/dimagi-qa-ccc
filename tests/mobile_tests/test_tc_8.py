@@ -28,6 +28,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
+@pytest.mark.bugasura("TES29")
 def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_8")
 

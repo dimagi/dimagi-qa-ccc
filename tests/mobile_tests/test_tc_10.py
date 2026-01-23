@@ -25,6 +25,7 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 
 @pytest.mark.web
 @pytest.mark.mobile
+@pytest.mark.bugasura("TES36", "TES37", "TES38")
 def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_driver, web_driver, test_data, config):
     data = test_data.get("TC_10")
 
