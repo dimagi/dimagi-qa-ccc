@@ -37,7 +37,7 @@ jobs:
         allure --version
 
     - name: Run Web Tests
-      run: pytest -v tests/web_tests/test_payment_processing_1_2_3.py --alluredir=reports/allure-results/web
+      run: pytest -v tests/web_tests/test_payment_processing_1_2_3.py --alluredir=reports/allure-results/web ----junitxml=reports/web-results.xml
 
     - name: Upload Web Allure Results
       uses: actions/upload-artifact@v4
@@ -45,6 +45,13 @@ jobs:
       with:
         name: web-allure-results
         path: reports/allure-results/web
+
+    - name: Upload Web XML Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: web-xml-results
+        path: reports/web-results.xml
 
   mobile-tests:
     name: Mobile Tests
@@ -80,7 +87,7 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests/test_tc_1.py --alluredir=reports/allure-results/mobile --run_on=browserstack
+          pytest -v tests/mobile_tests/test_tc_1.py --alluredir=reports/allure-results/mobile --run_on=browserstack --junitxml=reports/mobile-results.xml
 
       - name: Upload Mobile Allure Results
         uses: actions/upload-artifact@v4
@@ -88,6 +95,13 @@ jobs:
         with:
           name: mobile-allure-results
           path: reports/allure-results/mobile
+
+      - name: Upload Mobile XML Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-xml-results
+          path: reports/mobile-results.xml
 
 
   generate-report:
@@ -164,36 +178,67 @@ jobs:
 #                      Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 #          }
 #
-    - name: Send Email Notification
-      if: always()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "DIMAGI Web and Mobile Tests Automation Report"
-        html_body: |
-          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+#    - name: Send Email Notification
+#      if: always()
+#      uses: dawidd6/action-send-mail@v3
+#      with:
+#        server_address: smtp.gmail.com
+#        server_port: 587
+#        username: ${{ secrets.EMAIL_USERNAME }}
+#        password: ${{ secrets.EMAIL_PASSWORD }}
+#        subject: "DIMAGI Web and Mobile Tests Automation Report"
+#        html_body: |
+#          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+#
+#          <h3>Test Summary</h3>
+#          <hr>
+#          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
+#          <b>PASSED</b>  : ${{ env.PASSED }}<br>
+#          <b>FAILED</b>  : ${{ env.FAILED }}<br>
+#          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
+#          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
+#
+#          <h3>Execution Details</h3>
+#          <hr>
+#          <b>Workflow</b>   : ${{ github.workflow }}<br>
+#          <b>Repository</b> : ${{ github.repository }}<br>
+#          <b>Branch</b>     : ${{ github.ref_name }}<br>
+#          <b>Status</b>     : ${{ job.status }}<br>
+#          <b>Artifacts</b>  :
+#          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+#            View Artifacts
+#          </a>
+#        to: bharath.g@moolya.com
+#        from: ${{ secrets.EMAIL_USERNAME }}
 
-          <h3>Test Summary</h3>
-          <hr>
-          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
-          <b>PASSED</b>  : ${{ env.PASSED }}<br>
-          <b>FAILED</b>  : ${{ env.FAILED }}<br>
-          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
-          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
+  upload-results-to-bugasura:
+    name: Upload XML results to Bugasura
+    runs-on: windows-latest
+    if: always()
+    needs: [web-tests, mobile-tests]
 
-          <h3>Execution Details</h3>
-          <hr>
-          <b>Workflow</b>   : ${{ github.workflow }}<br>
-          <b>Repository</b> : ${{ github.repository }}<br>
-          <b>Branch</b>     : ${{ github.ref_name }}<br>
-          <b>Status</b>     : ${{ job.status }}<br>
-          <b>Artifacts</b>  :
-          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-            View Artifacts
-          </a>
-        to: bharath.g@moolya.com
-        from: ${{ secrets.EMAIL_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Download Web Allure Results
+        uses: actions/download-artifact@v4
+        with:
+          name: web-allure-results
+          path: reports/allure-results/web
+
+      - name: Download Mobile Results
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-allure-results
+          path: reports/allure-results/mobile
+
+      - name: Upload XML Results to Bugasura
+        run: |
+          pip install bugasura
+          bugasura -h
+          bugasura UPLOAD_RESULTS /path/to/your/file.xml --api_key f41168f39c603552499c85a41793c9723fb7b048 --team_id 92970 --project_id 123593 --server live --testrun_id 141475
