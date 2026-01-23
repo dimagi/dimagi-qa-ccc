@@ -182,9 +182,9 @@ jobs:
       with:
         server_address: smtp.gmail.com
         server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "CommCare-Connect Test Automation Report {date}"
+        username: ${{ secrets.FROM_EMAIL_USERNAME }}
+        password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+        subject: "CommCare-Connect Test Automation Report"
         html_body: |
           <h2>CommCare-Connect Automation Suite – Web & Mobile Tests</h2>
 
@@ -206,12 +206,12 @@ jobs:
           <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Artifacts
           </a>
-        to: bharath.g@moolya.com
-        from: ${{ secrets.EMAIL_USERNAME }}
+        to: ${{ secrets.TO_EMAIL_USERNAME }},qa@dimagi.com
+        from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
   upload-results-to-bugasura:
     name: Upload XML results to Bugasura
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     if: always()
     needs: [web-tests, mobile-tests]
     steps:
@@ -242,18 +242,18 @@ jobs:
 
       - name: Upload Web results to Bugasura
         run: |
-          bugasura UPLOAD_RESULTS reports/web-results.xml `
-            --api_key ${{ secrets.BUGASURA_API_KEY }} `
-            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
-            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
-            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
-            --server live || exit 0
+          bugasura UPLOAD_RESULTS reports/web-results.xml \
+            --api_key ${{ secrets.BUGASURA_API_KEY }} \
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
+            --server live 
 
       - name: Upload Mobile results to Bugasura
         run: |
-          bugasura UPLOAD_RESULTS reports/mobile-results.xml `
-            --api_key ${{ secrets.BUGASURA_API_KEY }} `
-            --team_id ${{ secrets.BUGASURA_TEAM_ID }} `
-            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} `
-            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} `
-            --server live || exit 0
+          bugasura UPLOAD_RESULTS reports/mobile-results.xml \
+            --api_key ${{ secrets.BUGASURA_API_KEY }} \
+            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
+            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
+            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
+            --server live
