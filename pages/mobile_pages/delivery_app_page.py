@@ -1,4 +1,5 @@
 import time
+from xxlimited_35 import Null
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
@@ -46,8 +47,9 @@ class DeliveryAppPage(BasePage):
     SYNC_WITH_SERVER = locators.get("learn_app_page", "sync_with_server")
     PRIMARY_VISIT_COUNT = locators.get("delivery_app_page", "primary_visit_count_txt")
     USER_ID = locators.get("delivery_app_page", "logged_in_userid_txt")
+    PAYMENT_TAB = locators.get("delivery_app_page", "payment_tab")
 
-    def submit_form(self, form_name, record_loc=True):
+    def submit_form(self, form_name, record_loc=True, user_id_input=Null):
         if not self.is_displayed(self.DELIVERY_START_BTN):
             self.navigate_back()
         self.click_element(self.DELIVERY_START_BTN)
@@ -60,21 +62,24 @@ class DeliveryAppPage(BasePage):
 
         ts = int(time.time() * 1000)  # milliseconds
         name = f"Automation User {ts}"
-        user_id = ts % 1000000
+        if user_id_input == Null:
+            user_id_input = ts % 1000000
 
         self.type_element(self.NAME_INPUT, name)
         self.click_element(self.NEXT_BTN)
-        self.type_element(self.ID_INPUT, user_id)
+        self.type_element(self.ID_INPUT, user_id_input)
         self.click_element(self.NEXT_BTN)
         if record_loc:
             self.click_element(self.RECORD_LOCATION_BTN)
-        time.sleep(2)
+            time.sleep(3)
+            if self.is_displayed(self.RECORD_LOCATION_BTN):
+                self.click_element(self.RECORD_LOCATION_BTN)
         self.wait_for_element(self.FINISH_BTN)
         self.click_element(self.FINISH_BTN)
 
         return {
             "name": name,
-            "id": user_id
+            "id": user_id_input
         }
 
     def verify_payment_info(self):
@@ -104,6 +109,9 @@ class DeliveryAppPage(BasePage):
 
     def nav_to_view_job(self):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
+        # time.sleep(1)
+        # self.click_element(self.PAYMENT_TAB)
+
 
     def nav_to_app_notification(self):
         self.click_element(self.NOTIFICATION_BTN)

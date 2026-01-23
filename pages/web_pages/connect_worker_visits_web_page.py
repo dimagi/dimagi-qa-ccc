@@ -193,6 +193,7 @@ class WorkerVisitsPage(BaseWebPage):
                 break
 
     def verify_overlimit_flag_present_for_the_entity_in_visits(self, entity_name):
+        print(f"Verifying overlimit flag present for {entity_name}")
         self.click_date_header_in_worker_visits()
         time.sleep(2)
         self.click_date_header_in_worker_visits()

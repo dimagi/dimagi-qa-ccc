@@ -58,6 +58,7 @@ def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, t
     with allure.step("Download the Learn App"):
         opportunity.download_learn_app()
 
+
     with allure.step("Complete Learning module"):
         learn.complete_learn_survey("Learn 1")
 

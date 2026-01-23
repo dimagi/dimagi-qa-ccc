@@ -12,9 +12,9 @@ TC_2:
 
 TC_3_to_4:
   country_code: "+7426"
-  phone_number: "7426018"
-  username: "Automation User 18"
-  backup_code: "742618"
+  phone_number: "7426020"
+  username: "Automation User 20"
+  backup_code: "742620"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
@@ -28,9 +28,9 @@ TC_5:
 
 TC_6:
   country_code: "+7426"
-  phone_number: "7426016"
-  username: "Automation User 16"
-  backup_code: "742616"
+  phone_number: "7426019"
+  username: "Automation User 19"
+  backup_code: "742619"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
@@ -51,25 +51,19 @@ TC_8:
   org_name: "Automation_Test_01"
 
 TC_9:
-  country_code_1: "+1"
-  real_phone_number: "7653398585"
-  country_code_2: "+7426"
-  phone_number: "7426000"
-  username: "Deb Test 8/12"
-  backup_code: "742600"
-
-TC_10:
   country_code: "+7426"
   phone_number: "7426011"
   username: "Automation User 11"
   backup_code: "742611"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
+  user_id: "7f065c23251bf386d439"
 
-TC_11:
+TC_10:
   country_code: "+7426"
   phone_number: "7426006"
   username: "Automation User 06"
   backup_code: "742606"
   opportunity_name: "test_opp_120126_01"
   org_name: "Automation_Test_01"
+  user_id: "5bbf8b4664d2cd1b6537"
