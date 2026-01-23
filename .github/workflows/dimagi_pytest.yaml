@@ -1,4 +1,4 @@
-name: Dimagi Pytest Automation Suite
+name: CommCare-Connect Pytest Automation Suite
 
 on:
   push:
@@ -159,7 +159,7 @@ jobs:
 #        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
 #        payload: |
 #          {
-#            "text": "*DIMAGI Automation Suite – Web & Mobile Tests*\n\n
+#            "text": "*CommCare Connect Automation Suite – Web & Mobile Tests*\n\n
 #
 #                      Test Summary\n
 #                      -------------------------------------------------\n
@@ -186,9 +186,9 @@ jobs:
 #        server_port: 587
 #        username: ${{ secrets.EMAIL_USERNAME }}
 #        password: ${{ secrets.EMAIL_PASSWORD }}
-#        subject: "DIMAGI Web and Mobile Tests Automation Report"
+#        subject: "CommCare-Connect Test Automation Report {date}"
 #        html_body: |
-#          <h2>DIMAGI Automation Suite – Web & Mobile Tests</h2>
+#          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests</h2>
 #
 #          <h3>Test Summary</h3>
 #          <hr>
@@ -225,22 +225,9 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Download Web Results
-        uses: actions/download-artifact@v4
-        with:
-          name: web-allure-results
-          path: reports/web-results
-
-      - name: Download Mobile Results
-        uses: actions/download-artifact@v4
-        with:
-          name: mobile-allure-results
-          path: reports/mobile results
-
-      - name: Install Bugasura
+      - name: Install Dependencies
         run: |
-          pip install bugasura packaging
-          bugasura -h
+          pip install -r requirements.txt
 
       - name: Upload Web XML Results to Bugasura
         run: |
