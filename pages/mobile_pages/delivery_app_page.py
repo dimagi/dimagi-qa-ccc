@@ -1,5 +1,4 @@
 import time
-from xxlimited_35 import Null
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
@@ -49,7 +48,7 @@ class DeliveryAppPage(BasePage):
     USER_ID = locators.get("delivery_app_page", "logged_in_userid_txt")
     PAYMENT_TAB = locators.get("delivery_app_page", "payment_tab")
 
-    def submit_form(self, form_name, record_loc=True, user_id_input=Null):
+    def submit_form(self, form_name, record_loc=True, user_id_input=None):
         if not self.is_displayed(self.DELIVERY_START_BTN):
             self.navigate_back()
         self.click_element(self.DELIVERY_START_BTN)
@@ -62,7 +61,7 @@ class DeliveryAppPage(BasePage):
 
         ts = int(time.time() * 1000)  # milliseconds
         name = f"Automation User {ts}"
-        if user_id_input == Null:
+        if user_id_input is None:
             user_id_input = ts % 1000000
 
         self.type_element(self.NAME_INPUT, name)
