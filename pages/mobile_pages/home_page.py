@@ -1,5 +1,9 @@
 import time
 
+from appium.webdriver.common.appiumby import AppiumBy
+from selenium.webdriver.common.actions.action_builder import ActionBuilder
+from selenium.webdriver.common.actions.pointer_input import PointerInput
+
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 from utils.utility import simulate_fingerprint
@@ -41,8 +45,11 @@ class HomePage(BasePage):
         return self.get_text(self.HEADER_USERNAME) == name
 
     def sign_out(self):
-        self.wait_for_element(self.NAVIGATION_DRAWER)
-        self.click_element(self.NAVIGATION_DRAWER)
+        # self.wait_for_element(self.NAVIGATION_DRAWER)
+        # self.click_element(self.NAVIGATION_DRAWER)
+        print("nav drawer before click")
+        self.click_element(self.MORE_OPTION)
+        time.sleep(1)
         self.click_element(self.MORE_OPTION)
         self.wait_for_element(self.FORGET_PERSONAL_ID)
         self.click_element(self.FORGET_PERSONAL_ID)

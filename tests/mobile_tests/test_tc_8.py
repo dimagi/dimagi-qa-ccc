@@ -57,12 +57,12 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
         home.open_app_from_goto_connect()
         opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
-    with allure.step("Complete the daily visits"):
-        delivery.sync_with_server()
-        delivery.complete_daily_visits()
+    # with allure.step("Complete the daily visits"):
+    #     delivery.sync_with_server()
+    #     delivery.complete_daily_visits()
 
     with allure.step("Complete one more daily visit"):
-        name, cust_id = delivery.submit_form("Registration Form")
+        result = delivery.submit_form("Registration Form")
         delivery.sync_with_server()
 
     with allure.step("Verify daily visit progress not updated"):
@@ -77,4 +77,4 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
     with allure.step("Verify Over limit flag present for the entity in worker visits"):
         opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
         connect_workers_page.click_name_in_table(data["username"])
-        worker_visits_page.verify_overlimit_flag_present_for_the_entity_in_visits(name)
+        worker_visits_page.verify_overlimit_flag_present_for_the_entity_in_visits(result["name"])

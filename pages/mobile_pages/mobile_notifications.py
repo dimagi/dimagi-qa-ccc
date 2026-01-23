@@ -15,6 +15,8 @@ class MobileNotifications(BasePage):
     PAYMENT_TXT = locators.get("mobile_notifications", "payment_txt")
 
     def verify_opportunity_invite(self):
+        if self.is_displayed(self.EXPAND_BTN):
+            self.click_element(self.EXPAND_BTN)
         self.wait_for_element(self.INVITE_OPP_TITLE_TXT)
         assert(self.is_displayed(self.INVITE_OPP_TITLE_TXT)
                & self.is_displayed(self.INVITE_OPP_TXT))
@@ -25,7 +27,7 @@ class MobileNotifications(BasePage):
 
     def open_notifications(self):
         time.sleep(2)
-        open_notification()
+        open_notification(driver=self.driver)
         time.sleep(2)
 
 
