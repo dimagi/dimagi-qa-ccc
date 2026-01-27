@@ -188,3 +188,6 @@ class DeliveryAppPage(BasePage):
         visit_text = self.get_text(self.PRIMARY_VISIT_COUNT).strip()  # e.g. "5/5"
         current, total = map(int, visit_text.split("/"))
         assert current == total, "Daily visits did not complete correctly"
+
+    def verify_over_limit_message(self):
+        return self.get_text(self.CONNECT_MESSAGE_TXT) == "You have reached the maximum number of visits for today. You may not earn any progress for additional work."
