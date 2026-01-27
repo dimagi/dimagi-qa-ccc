@@ -144,6 +144,6 @@ worker_visits_page:
 connect_programs_page:
   view_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'View Status')]"
   hide_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'Hide Status')]"
-  nms_invite_card: "//*[@id='content']/div/div[3]/div/div[1]/div/div[5]/div"
-  nms_invite_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div/div[5]/div[.//p[contains(text(), '{network_manager}')]]"
+  nms_invite_card: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div"
+  nms_invite_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div[.//p[contains(text(), '{network_manager}')]]"
   program_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]"
