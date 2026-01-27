@@ -93,6 +93,7 @@ class OpportunityPage(BasePage):
         self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
         self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
         self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
+        time.sleep(10)
         assert self.is_displayed(self.LEARN_APP_START_BTN), "Learn app start button is not visible"
 
     def open_opportunity_from_list(self, opp_name, opp_status):
@@ -106,7 +107,7 @@ class OpportunityPage(BasePage):
             if name == opp_name.lower() and status == opp_status:
                 print(f"Opportunity found: {name}, [{status}]")
                 row.click()
-                time.sleep(3)
+                time.sleep(15)
                 # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
                 break
 
