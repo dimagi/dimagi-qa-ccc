@@ -90,9 +90,9 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests \
-             --alluredir=reports/allure-results/mobile \
-             --run_on=browserstack --junitxml=reports/mobile-results.xml \
+          pytest -v tests/mobile_tests `
+             --alluredir=reports/allure-results/mobile `
+             --run_on=browserstack --junitxml=reports/mobile-results.xml `
              --ignore=tests/mobile_tests/test_tc_3.py
 
       - name: Upload Mobile Allure Results
