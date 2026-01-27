@@ -1,9 +1,11 @@
 import os
 
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from appium.webdriver.common.touch_action import TouchAction
 
 class BasePage:
     BIOMETRIC_ENABLED = os.getenv("BIOMETRIC_ENABLED", "false").lower() == "true"
@@ -65,4 +67,20 @@ class BasePage:
         actions.pointer_action.pointer_down()
         actions.pointer_action.pointer_up()
 
+        actions.perform()
+
+    def scroll_to_end(self):
+        actions = ActionChains(self.driver)
+        finger = PointerInput("touch", "finger")
+        actions.w3c_actions = ActionBuilder(self.driver, mouse=finger)
+
+        size = self.driver.get_window_size()
+        start_x = size["width"] * 0.5
+        start_y = size["height"] * 0.8
+        end_y   = size["height"] * 0.2
+
+        actions.w3c_actions.pointer_action.move_to_location(start_x, start_y)
+        actions.w3c_actions.pointer_action.pointer_down()
+        actions.w3c_actions.pointer_action.move_to_location(start_x, end_y)
+        actions.w3c_actions.pointer_action.release()
         actions.perform()
