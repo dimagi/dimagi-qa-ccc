@@ -296,3 +296,68 @@ The framework can send test execution notifications via email. Follow these step
    - `TO_EMAIL_USERNAME` → `qa1@example.com, qa2@example.com`  
 
 > The workflow or script will use these secrets to send notifications to the specified recipients.
+## ⚠️ Mobile Test Execution – Important Considerations
+
+### 1. Test Cases Requiring New Users (TC_3 & TC_4)
+
+The following mobile test cases require a **fresh user on every execution**:
+
+- **TC_3** – Opportunity Invite & Notifications  
+- **TC_4** – Learn App Assessments (Delivery App)
+
+#### Prerequisites
+Before running these tests:
+
+1. Manually create a **new mobile user** in the system.
+2. Invite this user to **any existing opportunity**  
+   (Do NOT use opportunity: `test_opp_221225_01`)
+
+#### Update Test Data
+After creating the user, update the following file:
+test_data/mobile_workers.yaml
+
+Under section: TC_3_to_4
+
+
+Provide:
+- `phone_number`
+- `username`
+- `backup_code`
+
+These values must match the newly created user.
+
+---
+
+### 2. Payment Flow Limitation (TC_6)
+
+- **TC_6 (Payment Flow)** can be executed **only once per user per day as per functionality**.
+- If this test needs to be re-run multiple times:
+  - Update the user details in:
+    ```
+    test_data/mobile_workers.yaml
+    ```
+  - Use a **different user** for each execution.
+
+This limitation is due to business rules on the backend.
+
+### 4. Local vs BrowserStack Execution
+
+By default:
+- Web tests run locally
+- Mobile tests run on BrowserStack
+
+For local execution, explicitly pass:
+
+```bash
+pytest -v tests/mobile_tests --run_on=local
+```
+### 5. Viewing Test Reports After Execution
+
+In CI (GitHub Actions):
+- Download the **Allure report artifact**
+- Extract the folder locally
+- Run:
+
+```bash
+allure open <path_to_extracted_report_folder>
+

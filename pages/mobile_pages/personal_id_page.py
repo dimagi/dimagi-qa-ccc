@@ -41,12 +41,13 @@ class PersonalIDPage(BasePage):
             self.click_element(self.TERMS_CHECKBOX)
             time.sleep(1)
             self.click_element(self.TERMS_CHECKBOX)
-            time.sleep(1)
-            self.click_when_enabled(self.CONTINUE_BTN)
+            time.sleep(2)
+            self.click_element(self.CONTINUE_BTN)
 
     def start_signup(self, country_code, phone_number, retries=3):
         self.enter_country_code(country_code)
         self.enter_phone_number(phone_number)
+        time.sleep(2)
         self.accept_terms()
         time.sleep(2)
         self.continue_next()
