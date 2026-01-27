@@ -1,8 +1,8 @@
 name: CommCare-Connect Pytest Automation Suite
 
 env:
-  SEND_SLACK: "false"
-  SEND_EMAIL: "false"
+  SEND_SLACK: "true"
+  SEND_EMAIL: "true"
 
 on:
   push:
@@ -92,7 +92,6 @@ jobs:
       - name: Run Mobile Tests
         run: |
           pytest -v tests/mobile_tests `
-             -k "tc_5 or tc_7 or tc_8" `
              --alluredir=reports/allure-results/mobile `
              --run_on=browserstack `
              --junitxml=reports/mobile-results.xml
