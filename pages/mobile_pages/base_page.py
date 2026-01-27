@@ -5,7 +5,6 @@ from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from appium.webdriver.common.touch_action import TouchAction
 
 class BasePage:
     BIOMETRIC_ENABLED = os.getenv("BIOMETRIC_ENABLED", "false").lower() == "true"
