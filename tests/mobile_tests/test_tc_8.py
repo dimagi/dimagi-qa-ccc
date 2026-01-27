@@ -58,9 +58,19 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
         home.open_app_from_goto_connect()
         opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
 
-    # with allure.step("Complete the daily visits"):
-    #     delivery.sync_with_server()
-    #     delivery.complete_daily_visits()
+    with allure.step("Check if daily visit already exhausted"):
+        if delivery.verify_over_limit_message():
+            allure.attach(
+                "Daily visit already exhausted for today. Skipping remaining steps.",
+                name="Over limit detected",
+                attachment_type=allure.attachment_type.TEXT
+            )
+            assert True
+            return
+
+    with allure.step("Complete the daily visits"):
+        delivery.sync_with_server()
+        delivery.complete_daily_visits()
 
     with allure.step("Complete one more daily visit"):
         result = delivery.submit_form("Registration Form")

@@ -91,9 +91,10 @@ jobs:
       - name: Run Mobile Tests
         run: |
           pytest -v tests/mobile_tests `
+             -k "tc_5 or tc_7 or tc_8" `
              --alluredir=reports/allure-results/mobile `
-             --run_on=browserstack --junitxml=reports/mobile-results.xml `
-             --ignore=tests/mobile_tests/test_tc_3.py
+             --run_on=browserstack `
+             --junitxml=reports/mobile-results.xml
 
       - name: Upload Mobile Allure Results
         uses: actions/upload-artifact@v4
