@@ -248,7 +248,7 @@ Repository → Settings → Secrets and variables → Actions
 To enable the CI pipeline to send notifications to a specific Slack channel, follow these steps:
 
 1. **Open Slack and navigate to workspace settings**  
-   - Click on your ***workspace name*** in the top right corner of Slack.  
+   - Click on your ***workspace name*** in the top left corner of Slack.  
    - Select ***Tools & Settings → Manage Apps***.  
      This will open the ***Installed Apps*** section of the Slack Marketplace.
 
