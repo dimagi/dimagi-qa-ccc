@@ -97,7 +97,7 @@ class HomePage(BasePage):
 
         self.click_element(self.GOTO_CONNECT)
         time.sleep(2)
-        simulate_fingerprint()
+        simulate_fingerprint(driver=self.driver, run_on=self.driver.run_on)
         assert not self.is_displayed(self.GOTO_CONNECT)
 
     def nav_to_notifications(self):
@@ -109,7 +109,7 @@ class HomePage(BasePage):
         self.click_element(self.NAVIGATION_DRAWER)
         self.click_element(self.MESSAGING_BTN)
         time.sleep(2)
-        simulate_fingerprint()
+        simulate_fingerprint(driver=self.driver, run_on=self.driver.run_on)
 
 
 

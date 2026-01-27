@@ -1,8 +1,14 @@
 import subprocess
 import time
 
-def simulate_fingerprint(driver=None, run_on="local", finger_id=1, success=True):
-    # pass
+from pages.mobile_pages.base_page import BasePage
+
+
+def simulate_fingerprint(driver, run_on, finger_id=1, success=True):
+    if not BasePage.BIOMETRIC_ENABLED:
+        print("Biometric disabled, skipping fingerprint simulation")
+        return
+
     if run_on == "browserstack":
         if not driver:
             raise ValueError("Driver is required for BrowserStack fingerprint simulation")
