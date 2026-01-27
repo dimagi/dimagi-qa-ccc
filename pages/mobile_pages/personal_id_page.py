@@ -35,7 +35,14 @@ class PersonalIDPage(BasePage):
         self.click_element(self.TERMS_CHECKBOX)
 
     def continue_next(self):
-        self.click_when_enabled(self.CONTINUE_BTN)
+        try:
+            self.click_when_enabled(self.CONTINUE_BTN)
+        except Exception as e:
+            self.click_element(self.TERMS_CHECKBOX)
+            time.sleep(1)
+            self.click_element(self.TERMS_CHECKBOX)
+            time.sleep(1)
+            self.click_when_enabled(self.CONTINUE_BTN)
 
     def start_signup(self, country_code, phone_number, retries=3):
         self.enter_country_code(country_code)
