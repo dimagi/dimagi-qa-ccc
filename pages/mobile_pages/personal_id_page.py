@@ -65,7 +65,7 @@ class PersonalIDPage(BasePage):
     def handle_fingerprint_auth(self):
         if self.BIOMETRIC_ENABLED:
             time.sleep(2)
-            simulate_fingerprint()
+            simulate_fingerprint(driver=self.driver, run_on=self.driver.run_on)
 
     def demo_user_confirm(self):
         if self.BIOMETRIC_ENABLED:

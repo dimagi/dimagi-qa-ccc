@@ -59,6 +59,7 @@ jobs:
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      BIOMETRIC_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4

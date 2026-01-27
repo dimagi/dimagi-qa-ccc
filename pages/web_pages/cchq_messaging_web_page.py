@@ -167,7 +167,7 @@ class MessagingPage(BaseWebPage):
     def is_created_alert_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
-        self.click_last_page_in_pagination()
+        # self.click_last_page_in_pagination()
         time.sleep(5)
         self.wait_for_element(self.NEW_CONDITIONAL_ALERT)
         self.scroll_into_view(self.NEW_CONDITIONAL_ALERT)

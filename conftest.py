@@ -44,6 +44,7 @@ def mobile_driver(request, config, run_on):
         return None
 
     driver = create_mobile_driver(config, run_on)
+    driver.run_on = run_on
     yield driver
     try:
         driver.terminate_app("org.commcare.dalvik")

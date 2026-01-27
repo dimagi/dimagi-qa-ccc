@@ -23,7 +23,7 @@ class AppNotifications(BasePage):
         assert self.is_displayed(self.PAYMENT_RECEIVED_TXT)
         self.click_element(self.PAYMENT_RECEIVED_TXT)
         time.sleep(2)
-        simulate_fingerprint()
+        simulate_fingerprint(driver=self.driver, run_on=self.driver.run_on)
 
     def verify_all_notifications(self):
         self.click_element(self.SYNC_BTN)
