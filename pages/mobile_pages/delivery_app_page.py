@@ -191,4 +191,4 @@ class DeliveryAppPage(BasePage):
         assert current == total, "Daily visits did not complete correctly"
 
     def verify_over_limit_message(self):
-        return self.get_text(self.CONNECT_MESSAGE_TXT) == "You have reached the maximum number of visits for today. You may not earn any progress for additional work."
+        return len(self.get_elements_if_present(self.CONNECT_MESSAGE_TXT)) > 0

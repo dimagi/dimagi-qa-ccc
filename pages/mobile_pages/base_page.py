@@ -83,3 +83,6 @@ class BasePage:
         actions.w3c_actions.pointer_action.move_to_location(start_x, end_y)
         actions.w3c_actions.pointer_action.release()
         actions.perform()
+
+    def get_elements_if_present(self, locator):
+        return self.driver.find_elements(*locator)
