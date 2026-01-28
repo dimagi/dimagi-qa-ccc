@@ -161,7 +161,7 @@ jobs:
     - name: Set Date
       shell: powershell
       run: |
-        $date = Get-Date -Format "yyyy-MM-dd"
+        $date = Get-Date -Format "dd-MM-yyyy"
         "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Send Slack Notification
@@ -201,7 +201,7 @@ jobs:
         password: ${{ secrets.FROM_EMAIL_PASSWORD }}
         subject: "CommCare-Connect Test Automation Report"
         html_body: |
-          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests</h2>
+          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests - Run #${{ github.run_number }} - ${{ env.DATE }}</h2>
 
           <h3>Test Summary</h3>
           <hr>

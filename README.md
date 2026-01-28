@@ -143,13 +143,17 @@ The `app/` directory contains the Android application `.apk` file.
 
 ---
 
+### Local vs BrowserStack Execution
+
+By default:
+- Web tests run locally
+- Mobile tests run on BrowserStack
+
 ### ⚙️ Prerequisites
 
 - Python **3.10+**
 - Google Chrome (for web tests)
 - BrowserStack account (for mobile tests)
-
----
 
 ### 📦 Install Dependencies
 
@@ -161,13 +165,17 @@ pip install -r requirements.txt
 BrowserStack (Required for Mobile Tests)
 
 ```bash
+Run the below commands in terminal/PowerShell
+```
+
+```bash
 macOS / Linux
 export BROWSERSTACK_USERNAME=your_username
 export BROWSERSTACK_ACCESS_KEY=your_access_key
 ```
 
 ```bash
-Windows (PowerShell)
+Windows
 $env:BROWSERSTACK_USERNAME="your_username"
 $env:BROWSERSTACK_ACCESS_KEY="your_access_key"
 ```
@@ -180,12 +188,13 @@ pytest -v tests/web_tests
 
 Run Mobile Tests
 ```
-pytest -v tests/mobile_tests
+pytest -v tests/mobile_tests --run_on=local
 ```
 
 Run a specific test file
 ```
 pytest -v tests/web_tests/test_olp_1_2_3.py
+pytest -v tests/mobile_tests/test_tc_1.py --run_on=local
 ```
 
 ### 📊 Allure Reports (Local Execution)
@@ -296,6 +305,8 @@ The framework can send test execution notifications via email. Follow these step
    - `TO_EMAIL_USERNAME` → `qa1@example.com, qa2@example.com`  
 
 > The workflow or script will use these secrets to send notifications to the specified recipients.
+
+---
 ## ⚠️ Mobile Test Execution – Important Considerations
 
 ### 1. Test Cases Requiring New Users (TC_3 & TC_4)
@@ -326,7 +337,6 @@ Provide:
 
 These values must match the newly created user.
 
----
 
 ### 2. Payment Flow Limitation (TC_6)
 
@@ -340,24 +350,5 @@ These values must match the newly created user.
 
 This limitation is due to business rules on the backend.
 
-### 4. Local vs BrowserStack Execution
 
-By default:
-- Web tests run locally
-- Mobile tests run on BrowserStack
-
-For local execution, explicitly pass:
-
-```bash
-pytest -v tests/mobile_tests --run_on=local
-```
-### 5. Viewing Test Reports After Execution
-
-In CI (GitHub Actions):
-- Download the **Allure report artifact**
-- Extract the folder locally
-- Run:
-
-```bash
-allure open <path_to_extracted_report_folder>
 
