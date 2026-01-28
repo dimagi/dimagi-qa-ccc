@@ -28,9 +28,9 @@ TC_5:
 
 TC_6:
   country_code: "+7426"
-  phone_number: "7426027"
-  username: "Automation User 27"
-  backup_code: "742627"
+  phone_number: "7426026"
+  username: "Automation User 26"
+  backup_code: "742626"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
 
