@@ -10,6 +10,7 @@ __pycache__/
 allure-results/
 allure-report/
 
+settings.cfg
 # Logs
 *.log
 
