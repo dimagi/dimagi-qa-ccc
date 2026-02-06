@@ -60,7 +60,7 @@ class ConnectHomePage(BaseWebPage):
             return
         self.click_organization_dropdown()
         container = self.wait_for_element(self.ORGANIZATION_CONTAINER)
-        item_xpath = ".//li[.//p[normalize-space() = '" + organization_name + "']]"
+        item_xpath = f".//li[.//p[normalize-space() = '{organization_name}']]"
         try:
             item = container.find_element(By.XPATH, item_xpath)
             self.click_element(item)

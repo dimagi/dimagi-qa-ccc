@@ -28,8 +28,8 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 
 @pytest.mark.web
 @pytest.mark.mobile
-@pytest.mark.bugasura("TES33", "TES34", "TES35")
-def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver, web_driver, test_data, config):
+# @pytest.mark.bugasura("TES33", "TES34", "TES35")
+def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver, web_driver, test_data, config, settings):
     data = test_data.get("TC_9")
 
     cchq_login_page = LoginPage(web_driver)
@@ -46,7 +46,7 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
     temp_id = int(time.time() * 1000) % 1000000
 
     with allure.step("Login to CommCare HQ and verify Welcome title"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
 
     with allure.step("Navigate to Conditional Alerts under Messaging"):

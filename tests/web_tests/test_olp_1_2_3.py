@@ -19,8 +19,8 @@ from pages.web_pages.cchq_application_web_page import CCHQApplicationPage
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES76", "TES77", "TES78")
-def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES76", "TES77", "TES78")
+def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config, settings):
     olp1_data = test_data.get("OLP_1")
     olp2_data = test_data.get("OLP_2")
     olp3_data = test_data.get("OLP_3")
@@ -32,7 +32,7 @@ def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
     connect_opp_page = ConnectOpportunitiesPage(web_driver)
 
     with allure.step("Login to CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
 
     with allure.step("Create a copy of Learn App in CommCare HQ"):
@@ -48,7 +48,10 @@ def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config):
     with allure.step("Navigate and SignIn to Connect with CommCare HQ"):
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        connect_home_page.select_organization_from_list("Automation_Test_02")
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list("Nitin's Program")
+        else:
+            connect_home_page.select_organization_from_list("PM_Automation_01")
 
     with allure.step("Add Opportunity in Connect Page with required fields"):
         connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name)

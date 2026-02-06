@@ -21,8 +21,8 @@ from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES102", "TES103", "TES104", "TES105")
-def test_worker_visit_verification_page_4_5_6_7_verify_tabs_in_worker_visits_of_opportunity(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES102", "TES103", "TES104", "TES105")
+def test_worker_visit_verification_page_4_5_6_7_verify_tabs_in_worker_visits_of_opportunity(web_driver, test_data, config, settings):
     worker_visit_4_5_6_7_data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7")
 
     cchq_login_page = LoginPage(web_driver)
@@ -33,7 +33,7 @@ def test_worker_visit_verification_page_4_5_6_7_verify_tabs_in_worker_visits_of_
     worker_visits_page = WorkerVisitsPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()

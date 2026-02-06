@@ -15,8 +15,8 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES80")
-def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES80")
+def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_data, config, settings):
     olp5_data = test_data.get("OLP_5")
 
     cchq_login_page = LoginPage(web_driver)
@@ -26,7 +26,7 @@ def test_olp_5_services_delivered_of_opportunity_in_connect(web_driver, test_dat
     connect_workers_page = ConnectWorkersPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()

@@ -17,7 +17,7 @@ from pages.mobile_pages.home_page import HomePage
   - CONNECT_2 : Verify Go To Connect button shown
   """)
 @pytest.mark.mobile
-@pytest.mark.bugasura("TES11", "TES12", "TES13", "TES15", "TES16")
+# @pytest.mark.bugasura("TES11", "TES12", "TES13", "TES15", "TES16")
 def test_login_and_home_page(mobile_driver, test_data):
     data = test_data.get("TC_1")
 
