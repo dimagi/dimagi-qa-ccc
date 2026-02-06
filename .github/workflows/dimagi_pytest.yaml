@@ -125,9 +125,7 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --env=${{ inputs.environment }}`
-             --alluredir=reports/allure-results/mobile `
-             --junitxml=reports/mobile-results.xml
+          pytest -v tests/mobile_tests --env=${{ inputs.environment }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-results.xml
 
       - name: Upload Mobile Allure Results
         uses: actions/upload-artifact@v4
