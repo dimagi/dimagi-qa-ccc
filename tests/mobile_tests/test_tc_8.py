@@ -29,7 +29,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 # @pytest.mark.bugasura("TES29")
-def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
+def test_max_visit_allowed(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_8")
 
     cchq_login_page = LoginPage(web_driver)

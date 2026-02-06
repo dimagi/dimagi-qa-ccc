@@ -33,7 +33,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 # @pytest.mark.bugasura("TES25", "TES26", "TES27", "TES109", "TES110")
-def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data):
+def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_6")
 
     cchq_login_page = LoginPage(web_driver)

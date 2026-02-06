@@ -29,7 +29,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 # @pytest.mark.bugasura("TES23", "TES24")
-def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, config, test_data):
+def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_5")
 
     cchq_login_page = LoginPage(web_driver)

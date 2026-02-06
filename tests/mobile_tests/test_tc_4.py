@@ -26,8 +26,9 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 @pytest.mark.mobile
 @pytest.mark.web
+# @pytest.mark.xfail
 # @pytest.mark.bugasura("TES20", "TES21", "TES22")
-def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, test_data):
+def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_3_to_4")
 
     # web driver and page initiation

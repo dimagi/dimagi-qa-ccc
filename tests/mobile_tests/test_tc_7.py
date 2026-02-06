@@ -34,7 +34,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 # @pytest.mark.bugasura("TES30", "TES32", "TES106")
-def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data):
+def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_7")
 
     cchq_login_page = LoginPage(web_driver)
