@@ -98,6 +98,7 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BIOMETRIC_ENABLED: "false"
       TEST_ENV: ${{ inputs.environment }}
+      RUN_ON: "browserstack"
 
     steps:
       - uses: actions/checkout@v4
@@ -126,7 +127,6 @@ jobs:
         run: |
           pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }}`
              --alluredir=reports/allure-results/mobile `
-             --run_on=browserstack `
              --junitxml=reports/mobile-results.xml
 
       - name: Upload Mobile Allure Results

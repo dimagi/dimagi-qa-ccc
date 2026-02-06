@@ -28,33 +28,40 @@ class ConfigLoader:
 
 # utils/helpers.py (or utils/settings_loader.py)
 
+
 class SettingsLoader:
     def __init__(self):
         self.config = configparser.ConfigParser()
 
         cfg_path = PROJECT_ROOT / "settings.cfg"
-        if cfg_path.exists():
-            self.config.read(cfg_path)
 
-    def get(self, section, key, env_var=None, required=True, default=None):
+        # settings.cfg is LOCAL ONLY
+        if cfg_path.exists():
+            try:
+                self.config.read(cfg_path)
+            except configparser.Error:
+                # Never fail test startup due to local config
+                pass
+
+    def get(self, section, key, env_var=None, required=False, default=None):
         """
         Resolution order:
-        1. CI / environment variables
-        2. Local settings.cfg
-        3. Default value (optional)
+        1. Environment variable (CI)
+        2. settings.cfg (local)
+        3. default
         """
 
-        # 1️⃣ CI → env vars
+        # 1️⃣ CI / env vars
         if env_var:
             env_value = os.getenv(env_var)
             if env_value:
                 return env_value
 
-        # 2️⃣ Local → settings.cfg
+        # 2️⃣ Local settings.cfg
         if self.config.has_option(section, key):
             return self.config.get(section, key)
 
-        # 3️⃣ Default (for non-secret configs like run_on)
+        # 3️⃣ Default (for non-secret configs)
         if default is not None:
             return default
 
@@ -64,6 +71,7 @@ class SettingsLoader:
             )
 
         return None
+
 
 class LocatorLoader:
     def __init__(self, file_path, platform):
