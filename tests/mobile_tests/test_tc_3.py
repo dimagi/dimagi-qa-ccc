@@ -29,7 +29,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
+# @pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
 def test_opportunity_invite_notifications_and_details(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_3_to_4")
 
@@ -63,7 +63,7 @@ def test_opportunity_invite_notifications_and_details(web_driver, mobile_driver,
         opportunity.verify_opportunity_list()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 

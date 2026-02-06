@@ -25,8 +25,8 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 
 @pytest.mark.web
 @pytest.mark.mobile
-@pytest.mark.bugasura("TES36", "TES37", "TES38")
-def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_driver, web_driver, test_data, config):
+# @pytest.mark.bugasura("TES36", "TES37", "TES38")
+def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_driver, web_driver, test_data, config, settings):
     data = test_data.get("TC_10")
 
     cchq_login_page = LoginPage(web_driver)
@@ -41,7 +41,7 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_dr
     message = Message(mobile_driver)
 
     with allure.step("Login to CommCare HQ and verify Welcome title"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
 
     with allure.step("Navigate to Broadcasts under Messaging"):

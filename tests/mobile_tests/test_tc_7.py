@@ -33,7 +33,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.bugasura("TES30", "TES32", "TES106")
+# @pytest.mark.bugasura("TES30", "TES32", "TES106")
 def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_7")
 
@@ -71,7 +71,7 @@ def test_notification_messaging_options_and_worker_suspension(web_driver, mobile
         message.verify_channel_list()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
         connect_home_page.select_organization_from_list(data["org_name"])

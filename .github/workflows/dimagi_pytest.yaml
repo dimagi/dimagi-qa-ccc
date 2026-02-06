@@ -10,12 +10,38 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run tests against"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - prod
+          - stage
+
+      test_scope:
+        description: "Which tests to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - web
+          - mobile
+          - both
 
 jobs:
 
   web-tests:
     name: Web Tests
     runs-on: windows-latest
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      inputs.test_scope == 'web' ||
+      inputs.test_scope == 'both'
+
+    env:
+      TEST_ENV: ${{ inputs.environment }}
 
     steps:
     - uses: actions/checkout@v4
@@ -40,7 +66,7 @@ jobs:
         allure --version
 
     - name: Run Web Tests
-      run: pytest -v tests/web_tests --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
+      run: pytest -v tests/web_tests --env ${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
 
     - name: Upload Web Allure Results
       uses: actions/upload-artifact@v4
@@ -60,11 +86,16 @@ jobs:
     name: Mobile Tests
     runs-on: windows-latest
     timeout-minutes: 60
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      inputs.test_scope == 'web' ||
+      inputs.test_scope == 'both'
 
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BIOMETRIC_ENABLED: "false"
+      TEST_ENV: ${{ inputs.environment }}
 
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +122,7 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests `
+          pytest -v --env ${{ env.TEST_ENV }} tests/mobile_tests `
              --alluredir=reports/allure-results/mobile `
              --run_on=browserstack `
              --junitxml=reports/mobile-results.xml
@@ -115,7 +146,9 @@ jobs:
     name: Generate Combined Allure Report
     runs-on: windows-latest
     if: always()
-    needs: [web-tests, mobile-tests]
+    needs:
+      - web-tests
+      - mobile-tests
 
     steps:
     - uses: actions/checkout@v4
@@ -224,51 +257,51 @@ jobs:
         to: ${{ secrets.TO_EMAIL_USERNAME }},qa@dimagi.com
         from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
-  upload-results-to-bugasura:
-    name: Upload XML results to Bugasura
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [web-tests, mobile-tests]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Bugasura CLI
-        run: |
-          pip install packaging
-          pip install "urllib3<2"
-          pip install bugasura
-
-      - name: Download Web XML Results
-        uses: actions/download-artifact@v4
-        with:
-          name: web-xml-results
-          path: reports
-
-      - name: Download Mobile XML Results
-        uses: actions/download-artifact@v4
-        with:
-          name: mobile-xml-results
-          path: reports
-
-      - name: Upload Web results to Bugasura
-        run: |
-          bugasura UPLOAD_RESULTS reports/web-results.xml \
-            --api_key ${{ secrets.BUGASURA_API_KEY }} \
-            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
-            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
-            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
-            --server live 
-
-      - name: Upload Mobile results to Bugasura
-        run: |
-          bugasura UPLOAD_RESULTS reports/mobile-results.xml \
-            --api_key ${{ secrets.BUGASURA_API_KEY }} \
-            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
-            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
-            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
-            --server live
+#  upload-results-to-bugasura:
+#    name: Upload XML results to Bugasura
+#    runs-on: ubuntu-latest
+#    if: always()
+#    needs: [web-tests, mobile-tests]
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Python
+#        uses: actions/setup-python@v5
+#        with:
+#          python-version: '3.10'
+#
+#      - name: Install Bugasura CLI
+#        run: |
+#          pip install packaging
+#          pip install "urllib3<2"
+#          pip install bugasura
+#
+#      - name: Download Web XML Results
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: web-xml-results
+#          path: reports
+#
+#      - name: Download Mobile XML Results
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: mobile-xml-results
+#          path: reports
+#
+#      - name: Upload Web results to Bugasura
+#        run: |
+#          bugasura UPLOAD_RESULTS reports/web-results.xml \
+#            --api_key ${{ secrets.BUGASURA_API_KEY }} \
+#            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
+#            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
+#            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
+#            --server live
+#
+#      - name: Upload Mobile results to Bugasura
+#        run: |
+#          bugasura UPLOAD_RESULTS reports/mobile-results.xml \
+#            --api_key ${{ secrets.BUGASURA_API_KEY }} \
+#            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
+#            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
+#            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
+#            --server live

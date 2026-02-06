@@ -26,7 +26,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.bugasura("TES20", "TES21", "TES22")
+# @pytest.mark.bugasura("TES20", "TES21", "TES22")
 def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_3_to_4")
 
@@ -78,7 +78,7 @@ def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, t
         learn.complete_assessment("10")
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
 

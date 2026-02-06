@@ -28,7 +28,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.bugasura("TES29")
+# @pytest.mark.bugasura("TES29")
 def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
     data = test_data.get("TC_8")
 
@@ -80,7 +80,7 @@ def test_max_visit_allowed(web_driver, mobile_driver, config, test_data):
         delivery.verify_daily_visits_progress()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
         connect_home_page.select_organization_from_list(data["org_name"])

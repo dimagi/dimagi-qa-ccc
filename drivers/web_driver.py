@@ -1,10 +1,13 @@
+import os
+
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 
 def create_web_driver():
     options = Options()
-    options.add_argument("--headless=new")
+    if os.getenv("CI", "").lower() == "true":
+        options.add_argument("--headless=new")
     options.add_argument("--start-maximized")
     options.add_argument("--disable-notifications")
     options.add_argument("--window-size=1920,1080")

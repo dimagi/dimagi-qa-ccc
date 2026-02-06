@@ -18,8 +18,8 @@ from pages.web_pages.connect_programs_web_page import ConnectProgramsPage
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES98", "TES99", "TES100")
-def test_pm_5_6_7_verify_status_of_invited_nms_and_create_or_view_opportunities(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES98", "TES99", "TES100")
+def test_pm_5_6_7_verify_status_of_invited_nms_and_create_or_view_opportunities(web_driver, test_data, config, settings):
     pm_5_data = test_data.get("PM_5")
     pm_6_data = test_data.get("PM_6")
     pm_7_data = test_data.get("PM_7")
@@ -30,7 +30,7 @@ def test_pm_5_6_7_verify_status_of_invited_nms_and_create_or_view_opportunities(
     connect_programs_page = ConnectProgramsPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()

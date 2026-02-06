@@ -15,8 +15,8 @@ from pages.web_pages.connect_opportunity_dashboard_web_page import OpportunityDa
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES83")
-def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES83")
+def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_data, config, settings):
     olp8_data = test_data.get("OLP_8")
 
     cchq_login_page = LoginPage(web_driver)
@@ -26,7 +26,7 @@ def test_olp_8_verification_flags_of_opportunity_in_connect(web_driver, test_dat
     opp_dashboard_page = OpportunityDashboardPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()

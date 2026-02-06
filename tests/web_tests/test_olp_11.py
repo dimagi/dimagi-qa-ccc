@@ -14,8 +14,8 @@ from pages.web_pages.connect_opportunities_web_page import ConnectOpportunitiesP
   """)
 
 @pytest.mark.web
-@pytest.mark.bugasura("TES85")
-def test_olp_11_apply_n_verify_filters_in_opportunities(web_driver, test_data, config):
+# @pytest.mark.bugasura("TES85")
+def test_olp_11_apply_n_verify_filters_in_opportunities(web_driver, test_data, config, settings):
     olp11_data = test_data.get("OLP_11")
 
     cchq_login_page = LoginPage(web_driver)
@@ -24,7 +24,7 @@ def test_olp_11_apply_n_verify_filters_in_opportunities(web_driver, test_data, c
     connect_opp_page = ConnectOpportunitiesPage(web_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config)
+        cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
