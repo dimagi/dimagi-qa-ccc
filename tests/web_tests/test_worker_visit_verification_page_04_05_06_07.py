@@ -22,7 +22,7 @@ from pages.web_pages.connect_worker_visits_web_page import WorkerVisitsPage
 
 @pytest.mark.web
 # @pytest.mark.bugasura("TES102", "TES103", "TES104", "TES105")
-def test_worker_visit_verification_page_4_5_6_7_verify_tabs_in_worker_visits_of_opportunity(web_driver, test_data, config, settings):
+def test_worker_visit_verification_page_04_05_06_07_verify_tabs_in_worker_visits_of_opportunity(web_driver, test_data, config, settings):
     worker_visit_4_5_6_7_data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7")
 
     cchq_login_page = LoginPage(web_driver)

@@ -66,6 +66,9 @@ class BaseWebPage:
         self.wait.until(EC.url_contains(url))
         assert url in self.driver.current_url, f"Expected URL '{url}' not opened. Found '{self.driver.current_url}'"
 
+    def get_current_url(self):
+        return self.driver.current_url
+
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
         self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))

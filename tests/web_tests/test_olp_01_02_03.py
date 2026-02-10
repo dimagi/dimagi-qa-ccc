@@ -20,7 +20,7 @@ from pages.web_pages.cchq_application_web_page import CCHQApplicationPage
 
 @pytest.mark.web
 # @pytest.mark.bugasura("TES76", "TES77", "TES78")
-def test_olp_1_2_3_setup_budget_in_connect(web_driver, test_data, config, settings):
+def test_olp_01_02_03_setup_budget_in_connect(web_driver, test_data, config, settings):
     olp1_data = test_data.get("OLP_1")
     olp2_data = test_data.get("OLP_2")
     olp3_data = test_data.get("OLP_3")

@@ -17,7 +17,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.web
 # @pytest.mark.bugasura("TES91")
-def test_worker_list_view_8_verify_last_active_filter_as_1_day_ago(web_driver, test_data, config, settings):
+def test_worker_list_view_08_verify_last_active_filter_as_1_day_ago(web_driver, test_data, config, settings):
     worker_list_view_8_data = test_data.get("WORKER_LIST_VIEW_8")
 
     cchq_login_page = LoginPage(web_driver)

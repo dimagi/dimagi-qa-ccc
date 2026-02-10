@@ -18,7 +18,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 
 @pytest.mark.web
 # @pytest.mark.bugasura("TES89")
-def test_worker_list_view_4_verify_count_breakdown_of_opportunity_in_connect(web_driver, test_data, config, settings):
+def test_worker_list_view_04_verify_count_breakdown_of_opportunity_in_connect(web_driver, test_data, config, settings):
     worker_list_view_4_data = test_data.get("WORKER_LIST_VIEW_4")
 
     cchq_login_page = LoginPage(web_driver)

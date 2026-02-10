@@ -89,7 +89,10 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(mobile_driver
         delivery.submit_form("Registration Form", user_id_input=temp_id)
 
     with allure.step("Navigate to Messaging option"):
-        message.open_channel_on_message("connetqa-prod")
+        if 'staging' in config.get("cchq_url"):
+            message.open_channel_on_message("connectqa")
+        else:
+            message.open_channel_on_message("connetqa-prod")
 
     with allure.step("Verify Connect Message shown"):
         message.verify_connect_message()

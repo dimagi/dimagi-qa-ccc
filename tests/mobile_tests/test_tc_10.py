@@ -72,7 +72,10 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(mobile_dr
         user_id = delivery.get_user_id()
 
     with allure.step("Navigate to Messaging option"):
-        message.open_channel_on_message("connetqa-prod")
+        if 'staging' in config.get("cchq_url"):
+            message.open_channel_on_message("connectqa")
+        else:
+            message.open_channel_on_message("connetqa-prod")
 
     # Messaging_5
     with allure.step("Create new Broadcast with Connect Message Option"):
