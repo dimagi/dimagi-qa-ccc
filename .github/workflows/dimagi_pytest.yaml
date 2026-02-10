@@ -168,6 +168,19 @@ jobs:
           echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
           echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
+      - name: Compute Overall Test Status
+        id: overall_status
+        shell: bash
+        run: |
+          if [[
+            "${{ needs.web-tests.result }}" == "failure" ||
+            "${{ needs.mobile-tests.result }}" == "failure"
+          ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
       - name: Send Slack Notification
         if: always() && env.SEND_SLACK == 'true'
         uses: slackapi/slack-github-action@v2.1.1
@@ -178,8 +191,8 @@ jobs:
             {
               "attachments": [
                 {
-                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
-                  "text": "*CommCare-Connect Test Automation Report*\n\n*Run:* #${{ github.run_number }}\n*Branch:* ${{ github.ref_name }}\n*Status:* *${{ job.status }}*\n\nTOTAL: ${{ env.TOTAL }} | PASSED: ${{ env.PASSED }} | FAILED: ${{ env.FAILED }} | BROKEN: ${{ env.BROKEN }} | SKIPPED: ${{ env.SKIPPED }}\n\nArtifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  "color": "${{ steps.overall_status.outputs.status == 'success' && 'good' || 'danger' }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n*Run:* #${{ github.run_number }}\n*Branch:* ${{ github.ref_name }}\n*Status:* *${{ steps.overall_status.outputs.status }}*\n\nTOTAL: ${{ env.TOTAL }} | PASSED: ${{ env.PASSED }} | FAILED: ${{ env.FAILED }} | BROKEN: ${{ env.BROKEN }} | SKIPPED: ${{ env.SKIPPED }}\n\nArtifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                 }
               ]
             }
@@ -195,7 +208,7 @@ jobs:
 
           subject: >
             [${{ github.ref_name }}] CommCare-Connect Tests –
-            ${{ job.status == 'success' && 'SUCCESS' || 'FAILURE' }} –
+            ${{ steps.overall_status.outputs.status == 'success' && 'SUCCESS' || 'FAILURE' }} –
             Run #${{ github.run_number }}
 
           to: qa@dimagi.com
@@ -206,8 +219,8 @@ jobs:
 
             <p>
               All the <b>"CommCare-Connect Tests"</b>
-              <b style="color:${{ job.status == 'success' && 'green' || 'red' }}">
-                ${{ job.status == 'success' && 'PASSED' || 'FAILED' }}
+              <b style="color:${{ steps.overall_status.outputs.status == 'success' && 'green' || 'red' }}">
+                ${{ steps.overall_status.outputs.status == 'success' && 'PASSED' || 'FAILED' }}
               </b>
               successfully on <b>${{ github.ref_name }}</b>.
             </p>
