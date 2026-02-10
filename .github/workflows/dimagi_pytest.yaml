@@ -9,6 +9,10 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+  schedule:
+    - cron: '30 4 * * 1-5'
+
   workflow_dispatch:
     inputs:
       environment:
@@ -19,6 +23,7 @@ on:
         options:
           - prod
           - stage
+          - both
 
       test_scope:
         description: "Which tests to run"
@@ -32,6 +37,24 @@ on:
 
 jobs:
 
+  set-matrix:
+    name: Resolve Environment Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      env_matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.environment }}" = "both" ]; then
+              echo "::set-output name=matrix::{\"environment\": [\"stage\", \"prod\"]}"
+            else
+              echo "::set-output name=matrix::{\"environment\": [\"${{ inputs.environment }}\"]}"
+            fi
+          else
+            echo "::set-output name=matrix::{\"environment\": [\"stage\", \"prod\"]}"
+          fi
+
   web-tests:
     name: Web Tests
     runs-on: windows-latest
@@ -41,7 +64,7 @@ jobs:
       inputs.test_scope == 'both'
 
     env:
-      TEST_ENV: ${{ inputs.environment }}
+      TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
 
@@ -97,7 +120,7 @@ jobs:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BIOMETRIC_ENABLED: "false"
-      TEST_ENV: ${{ inputs.environment }}
+      TEST_ENV: ${{ matrix.environment }}
       RUN_ON: "browserstack"
 
     steps:
@@ -142,120 +165,105 @@ jobs:
           path: reports/mobile-results.xml
 
 
-  generate-report:
+generate-report:
     name: Generate Combined Allure Report
     runs-on: windows-latest
+    needs: [ web-tests, mobile-tests ]
     if: always()
-    needs:
-      - web-tests
-      - mobile-tests
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Allure
-      shell: powershell
-      run: |
-        npm install -g allure-commandline
-        allure --version
+      - shell: powershell
+        run: |
+          npm install -g allure-commandline
+          allure --version
 
-    - name: Download Web Allure Results
-      uses: actions/download-artifact@v4
-      with:
-        name: web-allure-results
-        path: reports/allure-results/web
+      - uses: actions/download-artifact@v4
+        with:
+          path: reports/allure-results
 
-    - name: Download Mobile Results
-      uses: actions/download-artifact@v4
-      with:
-        name: mobile-allure-results
-        path: reports/allure-results/mobile
+      - run: |
+          allure generate reports/allure-results -o reports/allure-report --clean
 
-    - name: Generate Combined Allure Report
-      run: |
-        allure generate reports/allure-results/web reports/allure-results/mobile -o reports/allure-report --clean
+      - uses: actions/upload-artifact@v4
+        with:
+          name: combined-allure-report
+          path: reports/allure-report
 
-    - name: Upload Combined Allure Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: combined-allure-report
-        path: reports/allure-report
+      - name: Extract Allure Summary
+        shell: powershell
+        run: |
+          $summary = Get-Content "reports/allure-report/widgets/summary.json" | ConvertFrom-Json
+          echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
+          echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
+          echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
+          echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
+          echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
-    - name: Extract Allure Summary
-      shell: powershell
-      run: |
-        $summary = Get-Content "reports/allure-report/widgets/summary.json" | ConvertFrom-Json
-        echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
-        echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
-        echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
-        echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
-        echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
+      - name: Set Date
+        shell: powershell
+        run: |
+          "DATE=$(Get-Date -Format 'dd-MM-yyyy')" | Out-File $env:GITHUB_ENV -Append
 
-    - name: Set Date
-      shell: powershell
-      run: |
-        $date = Get-Date -Format "dd-MM-yyyy"
-        "DATE=$date" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Send Slack Notification
+        if: always() && env.SEND_SLACK == 'true'
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n
+                  *Run:* #${{ github.run_number }}\n
+                  *Branch:* ${{ github.ref_name }}\n
+                  *Status:* *${{ job.status }}*\n\n
+                  *Test Summary*\n
+                  TOTAL: ${{ env.TOTAL }}\n
+                  PASSED: ${{ env.PASSED }}\n
+                  FAILED: ${{ env.FAILED }}\n
+                  BROKEN: ${{ env.BROKEN }}\n
+                  SKIPPED: ${{ env.SKIPPED }}\n\n
+                  *Artifacts:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
+            }
 
-    - name: Send Slack Notification
-      if: always() && env.SEND_SLACK == 'true'
-      uses: slackapi/slack-github-action@v2.1.1
-      with:
-        webhook-type: incoming-webhook
-        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-        payload: |
-          {
-            "text": "*CommCare-Connect Test Automation Report - Run #${{ github.run_number }} - ${{ env.DATE }}*\n\n
-
-                      Test Summary\n
-                      -------------------------------------------------\n
-                      TOTAL: ${{ env.TOTAL }}\n
-                      PASSED: ${{ env.PASSED }}\n
-                      FAILED: ${{ env.FAILED }}\n
-                      BROKEN: ${{ env.BROKEN }}\n
-                      SKIPPED: ${{ env.SKIPPED }}\n\n
-
-                      Execution Details\n
-                      -------------------------------------------------\n
-                      Workflow: ${{ github.workflow }}\n
-                      Repository: ${{ github.repository }}\n
-                      Branch: ${{ github.ref_name }}\n\n
-                      Status: *${{ job.status }}*\n\n
-                      Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-
-    - name: Send Email Notification
-      if: always() && env.SEND_EMAIL == 'true'
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.FROM_EMAIL_USERNAME }}
-        password: ${{ secrets.FROM_EMAIL_PASSWORD }}
-        subject: "CommCare-Connect Test Automation Report"
-        html_body: |
-          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests - Run #${{ github.run_number }} - ${{ env.DATE }}</h2>
-
-          <h3>Test Summary</h3>
-          <hr>
-          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
-          <b>PASSED</b>  : ${{ env.PASSED }}<br>
-          <b>FAILED</b>  : ${{ env.FAILED }}<br>
-          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
-          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
-
-          <h3>Execution Details</h3>
-          <hr>
-          <b>Workflow</b>   : ${{ github.workflow }}<br>
-          <b>Repository</b> : ${{ github.repository }}<br>
-          <b>Branch</b>     : ${{ github.ref_name }}<br>
-          <b>Status</b>     : ${{ job.status }}<br>
-          <b>Artifacts</b>  :
-          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-            View Artifacts
-          </a>
-        to: ${{ secrets.TO_EMAIL_USERNAME }},qa@dimagi.com
-        from: ${{ secrets.FROM_EMAIL_USERNAME }}
+      - name: Send Email Notification
+        if: always() && env.SEND_EMAIL == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: "CommCare-Connect Test Automation Report"
+          html_body: |
+            <h2>CommCare-Connect Automation Suite – Web & Mobile Tests - Run #${{ github.run_number }} - ${{ env.DATE }}</h2>
+  
+            <h3>Test Summary</h3>
+            <hr>
+            <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
+            <b>PASSED</b>  : ${{ env.PASSED }}<br>
+            <b>FAILED</b>  : ${{ env.FAILED }}<br>
+            <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
+            <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
+  
+            <h3>Execution Details</h3>
+            <hr>
+            <b>Workflow</b>   : ${{ github.workflow }}<br>
+            <b>Repository</b> : ${{ github.repository }}<br>
+            <b>Branch</b>     : ${{ github.ref_name }}<br>
+            <b>Status</b>     : ${{ job.status }}<br>
+            <b>Artifacts</b>  :
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+              View Artifacts
+            </a>
+          to: ${{ secrets.TO_EMAIL_USERNAME }},qa@dimagi.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
 #  upload-results-to-bugasura:
 #    name: Upload XML results to Bugasura
