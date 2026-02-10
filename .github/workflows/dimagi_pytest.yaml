@@ -9,9 +9,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
   schedule:
-    - cron: '30 4 * * 1-5'
+    - cron: '30 4 * * 1-5'   # 10:00 AM IST (Mon–Fri)
 
   workflow_dispatch:
     inputs:
@@ -21,8 +20,8 @@ on:
         default: "stage"
         type: choice
         options:
-          - prod
           - stage
+          - prod
           - both
 
       test_scope:
@@ -44,6 +43,7 @@ jobs:
       env_matrix: ${{ steps.set.outputs.matrix }}
     steps:
       - id: set
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ inputs.environment }}" = "both" ]; then
@@ -57,7 +57,12 @@ jobs:
 
   web-tests:
     name: Web Tests
+    needs: set-matrix
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.set-matrix.outputs.env_matrix) }}
+
     if: >
       github.event_name != 'workflow_dispatch' ||
       inputs.test_scope == 'web' ||
@@ -69,248 +74,162 @@ jobs:
       hq_password: ${{ secrets.hq_password }}
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install Node JS
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
-    - name: Install Dependencies
-      run: pip install -r requirements.txt
-
-    - name: Install Allure
-      shell: powershell
-      run: |
-        npm install -g allure-commandline
-        allure --version
-
-    - name: Run Web Tests
-      run: pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
-
-    - name: Upload Web Allure Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: web-allure-results
-        path: reports/allure-results/web
-
-    - name: Upload Web XML Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: web-xml-results
-        path: reports/web-results.xml
-
-  mobile-tests:
-    name: Mobile Tests
-    runs-on: windows-latest
-    timeout-minutes: 60
-    if: >
-      github.event_name != 'workflow_dispatch' ||
-      inputs.test_scope == 'web' ||
-      inputs.test_scope == 'both'
-
-    env:
-      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
-      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      BIOMETRIC_ENABLED: "false"
-      TEST_ENV: ${{ matrix.environment }}
-      RUN_ON: "browserstack"
-
-    steps:
       - uses: actions/checkout@v4
-
-      - name: Install Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install Node JS
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Install Allure
-        shell: powershell
+      - run: pip install -r requirements.txt
+      - shell: powershell
         run: |
           npm install -g allure-commandline
           allure --version
-
-      - name: Run Mobile Tests
-        run: |
-          pytest -v tests/mobile_tests --env=${{ inputs.environment }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-results.xml
-
-      - name: Upload Mobile Allure Results
-        uses: actions/upload-artifact@v4
+      - run: |
+          pytest -v tests/web_tests \
+            --env=${{ env.TEST_ENV }} \
+            --alluredir=reports/allure-results/web \
+            --junitxml=reports/web-results.xml
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mobile-allure-results
+          name: web-allure-results-${{ matrix.environment }}
+          path: reports/allure-results/web
+
+  mobile-tests:
+    name: Mobile Tests
+    needs: set-matrix
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.set-matrix.outputs.env_matrix) }}
+
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      inputs.test_scope == 'mobile' ||
+      inputs.test_scope == 'both'
+
+    env:
+      TEST_ENV: ${{ matrix.environment }}
+      RUN_ON: "browserstack"
+      BIOMETRIC_ENABLED: "false"
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: pip install -r requirements.txt
+      - shell: powershell
+        run: |
+          npm install -g allure-commandline
+          allure --version
+      - run: |
+          pytest -v tests/mobile_tests \
+            --env=${{ env.TEST_ENV }} \
+            --alluredir=reports/allure-results/mobile \
+            --junitxml=reports/mobile-results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-allure-results-${{ matrix.environment }}
           path: reports/allure-results/mobile
 
-      - name: Upload Mobile XML Results
-        uses: actions/upload-artifact@v4
-        if: always()
+  generate-report:
+    name: Generate Combined Allure Report
+    runs-on: windows-latest
+    needs: [ web-tests, mobile-tests ]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+      - shell: powershell
+        run: |
+          npm install -g allure-commandline
+          allure --version
+      - uses: actions/download-artifact@v4
         with:
-          name: mobile-xml-results
-          path: reports/mobile-results.xml
+          path: reports/allure-results
+      - run: |
+          allure generate reports/allure-results -o reports/allure-report --clean
+      - uses: actions/upload-artifact@v4
+        with:
+          name: combined-allure-report
+          path: reports/allure-report
 
+      - name: Extract Allure Summary
+        shell: powershell
+        run: |
+          $summary = Get-Content "reports/allure-report/widgets/summary.json" | ConvertFrom-Json
+          echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
+          echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
+          echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
+          echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
+          echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
 
-generate-report:
-  name: Generate Combined Allure Report
-  runs-on: windows-latest
-  needs: [ web-tests, mobile-tests ]
-  if: always()
+      - name: Send Slack Notification
+        if: always() && env.SEND_SLACK == 'true'
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n*Run:* #${{ github.run_number }}\n*Branch:* ${{ github.ref_name }}\n*Status:* *${{ job.status }}*\n\nTOTAL: ${{ env.TOTAL }} | PASSED: ${{ env.PASSED }} | FAILED: ${{ env.FAILED }} | BROKEN: ${{ env.BROKEN }} | SKIPPED: ${{ env.SKIPPED }}\n\nArtifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
+            }
 
-  steps:
-    - uses: actions/checkout@v4
+      - name: Send Email Notification
+        if: always() && env.SEND_EMAIL == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
 
-    - shell: powershell
-      run: |
-        npm install -g allure-commandline
-        allure --version
+          subject: >
+            [${{ github.ref_name }}] CommCare-Connect Tests –
+            ${{ job.status == 'success' && 'SUCCESS' || 'FAILURE' }} –
+            Run #${{ github.run_number }}
 
-    - uses: actions/download-artifact@v4
-      with:
-        path: reports/allure-results
+          to: qa@dimagi.com
+          from: Dimagi QA <${{ secrets.FROM_EMAIL_USERNAME }}>
 
-    - run: |
-        allure generate reports/allure-results -o reports/allure-report --clean
+          html_body: |
+            <p>Hello!</p>
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: combined-allure-report
-        path: reports/allure-report
+            <p>
+              All the <b>"CommCare-Connect Tests"</b>
+              <b style="color:${{ job.status == 'success' && 'green' || 'red' }}">
+                ${{ job.status == 'success' && 'PASSED' || 'FAILED' }}
+              </b>
+              successfully on <b>${{ github.ref_name }}</b>.
+            </p>
 
-    - name: Extract Allure Summary
-      shell: powershell
-      run: |
-        $summary = Get-Content "reports/allure-report/widgets/summary.json" | ConvertFrom-Json
-        echo "TOTAL=$($summary.statistic.total)" >> $env:GITHUB_ENV
-        echo "PASSED=$($summary.statistic.passed)" >> $env:GITHUB_ENV
-        echo "FAILED=$($summary.statistic.failed)" >> $env:GITHUB_ENV
-        echo "BROKEN=$($summary.statistic.broken)" >> $env:GITHUB_ENV
-        echo "SKIPPED=$($summary.statistic.skipped)" >> $env:GITHUB_ENV
+            <p>
+              <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+                View test run #${{ github.run_number }}
+              </a>
+            </p>
 
-    - name: Set Date
-      shell: powershell
-      run: |
-        "DATE=$(Get-Date -Format 'dd-MM-yyyy')" | Out-File $env:GITHUB_ENV -Append
+            <br>
 
-    - name: Send Slack Notification
-      if: always() && env.SEND_SLACK == 'true'
-      uses: slackapi/slack-github-action@v2.1.1
-      with:
-        webhook-type: incoming-webhook
-        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-        payload: |
-          {
-            "attachments": [
-              {
-                "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
-                "text": "*CommCare-Connect Test Automation Report*\n\n
-                *Run:* #${{ github.run_number }}\n
-                *Branch:* ${{ github.ref_name }}\n
-                *Status:* *${{ job.status }}*\n\n
-                *Test Summary*\n
-                TOTAL: ${{ env.TOTAL }}\n
-                PASSED: ${{ env.PASSED }}\n
-                FAILED: ${{ env.FAILED }}\n
-                BROKEN: ${{ env.BROKEN }}\n
-                SKIPPED: ${{ env.SKIPPED }}\n\n
-                *Artifacts:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-              }
-            ]
-          }
+            <p>
+              Regards,<br>
+              <b>Dimagi QA Team</b>
+            </p>
 
-    - name: Send Email Notification
-      if: always() && env.SEND_EMAIL == 'true'
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.FROM_EMAIL_USERNAME }}
-        password: ${{ secrets.FROM_EMAIL_PASSWORD }}
-        subject: "CommCare-Connect Test Automation Report"
-        html_body: |
-          <h2>CommCare-Connect Automation Suite – Web & Mobile Tests - Run #${{ github.run_number }} - ${{ env.DATE }}</h2>
-
-          <h3>Test Summary</h3>
-          <hr>
-          <b>TOTAL</b>   : ${{ env.TOTAL }}<br>
-          <b>PASSED</b>  : ${{ env.PASSED }}<br>
-          <b>FAILED</b>  : ${{ env.FAILED }}<br>
-          <b>BROKEN</b>  : ${{ env.BROKEN }}<br>
-          <b>SKIPPED</b> : ${{ env.SKIPPED }}<br>
-
-          <h3>Execution Details</h3>
-          <hr>
-          <b>Workflow</b>   : ${{ github.workflow }}<br>
-          <b>Repository</b> : ${{ github.repository }}<br>
-          <b>Branch</b>     : ${{ github.ref_name }}<br>
-          <b>Status</b>     : ${{ job.status }}<br>
-          <b>Artifacts</b>  :
-          <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-            View Artifacts
-          </a>
-        to: ${{ secrets.TO_EMAIL_USERNAME }},qa@dimagi.com
-        from: ${{ secrets.FROM_EMAIL_USERNAME }}
-
-
-#  upload-results-to-bugasura:
-#    name: Upload XML results to Bugasura
-#    runs-on: ubuntu-latest
-#    if: always()
-#    needs: [web-tests, mobile-tests]
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Install Python
-#        uses: actions/setup-python@v5
-#        with:
-#          python-version: '3.10'
-#
-#      - name: Install Bugasura CLI
-#        run: |
-#          pip install packaging
-#          pip install "urllib3<2"
-#          pip install bugasura
-#
-#      - name: Download Web XML Results
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: web-xml-results
-#          path: reports
-#
-#      - name: Download Mobile XML Results
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: mobile-xml-results
-#          path: reports
-#
-#      - name: Upload Web results to Bugasura
-#        run: |
-#          bugasura UPLOAD_RESULTS reports/web-results.xml \
-#            --api_key ${{ secrets.BUGASURA_API_KEY }} \
-#            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
-#            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
-#            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
-#            --server live
-#
-#      - name: Upload Mobile results to Bugasura
-#        run: |
-#          bugasura UPLOAD_RESULTS reports/mobile-results.xml \
-#            --api_key ${{ secrets.BUGASURA_API_KEY }} \
-#            --team_id ${{ secrets.BUGASURA_TEAM_ID }} \
-#            --project_id ${{ secrets.BUGASURA_PROJECT_ID }} \
-#            --testrun_id ${{ secrets.BUGASURA_TESTRUN_ID }} \
-#            --server live
+          attachments: |
+            combined-allure-report
