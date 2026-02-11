@@ -34,11 +34,11 @@ on:
           - mobile
           - both
 
-jobs:
+# --------------------------------------------------------
+# Resolve Matrix
+# --------------------------------------------------------
 
-# --------------------------------------------------------
-# Resolve Environment Matrix
-# --------------------------------------------------------
+jobs:
 
   resolve-matrix:
     name: Resolve Environment Matrix
@@ -79,30 +79,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - run: pip install -r requirements.txt
 
       - name: Run Web Tests
         run: |
-          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
+          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
 
-      - name: Save Web Status
+      - name: Upload Web JUnit
         if: always()
-        run: |
-          echo "${{ matrix.environment }}: ${{ job.status }}" > web_status.txt
-
-      - uses: actions/upload-artifact@v4
-        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: web-status-${{ matrix.environment }}
-          path: web_status.txt
+          name: junit-web-${{ matrix.environment }}
+          path: reports/web-${{ env.TEST_ENV }}.xml
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Web HTML
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
@@ -125,80 +120,93 @@ jobs:
       hq_password: ${{ secrets.hq_password }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      BIOMETRIC_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - run: pip install -r requirements.txt
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-results.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html
+          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html
 
-      - name: Save Mobile Status
+      - name: Upload Mobile JUnit
         if: always()
-        run: |
-          echo "${{ matrix.environment }}: ${{ job.status }}" > mobile_status.txt
-
-      - uses: actions/upload-artifact@v4
-        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: mobile-status-${{ matrix.environment }}
-          path: mobile_status.txt
+          name: junit-mobile-${{ matrix.environment }}
+          path: reports/mobile-${{ env.TEST_ENV }}.xml
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Mobile HTML
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: html-mobile-${{ matrix.environment }}
           path: reports/report-mobile-${{ env.TEST_ENV }}.html
 
 # --------------------------------------------------------
-# Generate Combined Report + Notifications
+# Aggregate + Notifications
 # --------------------------------------------------------
 
   generate-report:
     name: Generate Combined Allure Report
     runs-on: ubuntu-latest
-    needs: [web-tests, mobile-tests]
+    needs: [ web-tests, mobile-tests ]
     if: always()
 
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: statuses
+          path: artifacts
 
-      - name: Aggregate Results
+      - name: Parse Environment Results
         id: aggregate
         run: |
           overall="success"
           summary=""
 
-          for file in statuses/**/web_status.txt; do
-            line=$(cat "$file")
-            summary="$summary\nWeb - $line"
-            [[ "$line" == *failure* ]] && overall="failure"
+          # detect environments dynamically
+          envs=$(ls artifacts | grep junit | sed 's/.*-//' | sort -u)
+
+          for env in $envs; do
+            total=0; failed=0; skipped=0;
+
+            for file in $(find artifacts -name "*-${env}.xml"); do
+              t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+
+              total=$((total + ${t:-0}))
+              failed=$((failed + ${f:-0}))
+              skipped=$((skipped + ${s:-0}))
+            done
+
+            passed=$((total - failed - skipped))
+
+            if [ "$failed" -gt 0 ]; then
+              status="failure"
+              overall="failure"
+            else
+              status="success"
+            fi
+
+            summary="${summary}\n${env} → ${status} (Passed: ${passed} | Failed: ${failed} | Skipped: ${skipped})"
           done
 
-          for file in statuses/**/mobile_status.txt; do
-            line=$(cat "$file")
-            summary="$summary\nMobile - $line"
-            [[ "$line" == *failure* ]] && overall="failure"
-          done
-
-          echo "overall=$overall" >> $GITHUB_OUTPUT
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo -e "$summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-# --------------------------------------------------------
-# Slack Notification
+          echo "overall=$overall" >> $GITHUB_OUTPUT
+
+      # --------------------------------------------------------
+# Slack
 # --------------------------------------------------------
 
-      - name: Send Slack Notification
+      - name: Slack Notification
         if: always() && env.SEND_SLACK == 'true'
         uses: slackapi/slack-github-action@v2.1.1
         with:
@@ -210,16 +218,16 @@ jobs:
                 {
                   "color": "${{ steps.aggregate.outputs.overall == 'success' && 'good' || 'danger' }}",
                   "text": "*CommCare-Connect Test Automation Report*\n\n\
-                  *Run:* #${{ github.run_number }}\n\
-                  *Overall Status:* *${{ steps.aggregate.outputs.overall }}*\n\n\
-                  ${{ steps.aggregate.outputs.summary }}\n\n\
-                  Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                                  }
-                                ]
-                              }
+                    Run: #${{ github.run_number }}\n\
+                    ${{ steps.aggregate.outputs.summary }}\n\n\
+                    https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                  ]
+                  }
+                  
 
-# --------------------------------------------------------
-# Email Notification
+      # --------------------------------------------------------
+# Email
 # --------------------------------------------------------
 
       - name: Send Email Notification
@@ -228,35 +236,32 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            [${{ github.repository }}] CommCare-Connect Tests -
+            CommCare-Connect Tests -
             ${{ steps.aggregate.outputs.overall == 'success' && 'SUCCESS' || 'FAILURE' }}
             - Run #${{ github.run_number }}
-
-          to: qa@example.com
-          from: QA Bot <qa@example.com>
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
           html_body: |
-            <div style="font-family: Arial; line-height:1.6;">
-              <h2>CommCare-Connect Test Automation Report</h2>
-              <p><b>Run:</b> #${{ github.run_number }}</p>
-              <p><b>Branch:</b> ${{ github.ref_name }}</p>
-              <p><b>Status:</b>
-                <span style="color:${{ steps.aggregate.outputs.overall == 'success' && 'green' || 'red' }};">
-                  ${{ steps.aggregate.outputs.overall }}
-                </span>
-              </p>
+            <h2>CommCare-Connect Test Automation Report</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
-              <pre>${{ steps.aggregate.outputs.summary }}</pre>
+            <pre>
+            ${{ steps.aggregate.outputs.summary }}
+            </pre>
+            
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+            
 
-              <p>
-                <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-                  View Run Details
-                </a>
-              </p>
-            </div>
+          attachments: |
+            artifacts/**/report-*.html
 
 # --------------------------------------------------------
 # Fail Workflow If Needed

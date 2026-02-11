@@ -4,11 +4,11 @@ import allure
 import pytest
 from pytest_html import extras
 from allure_commons.types import AttachmentType
-
+import base64
 from utils.helpers import ConfigLoader, SettingsLoader
 from drivers.appium_driver import create_mobile_driver
 from drivers.web_driver import create_web_driver
-from utils.reporting import attach_mobile_screenshot, attach_web_screenshot
+# from utils.reporting import attach_mobile_screenshot, attach_web_screenshot
 from utils.helpers import TestDataLoader
 
 
@@ -121,42 +121,53 @@ def web_driver(request, config):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item):
+    pytest_html = item.config.pluginmanager.getplugin("html")
+
     outcome = yield
     report = outcome.get_result()
 
-    if report.when == "call" and report.failed:
+    if report.when != "call":
+        return
 
+    if report.failed:
         mobile = item.funcargs.get("mobile_driver")
         web = item.funcargs.get("web_driver")
 
-        os.makedirs("screenshots", exist_ok=True)
+        extra = getattr(report, "extra", [])
 
-        screenshot_paths = []
+        def capture(driver):
+            if not driver:
+                return None
+            try:
+                driver.execute_script("return 1")
+                png = driver.get_screenshot_as_png()
+                return png
+            except Exception as e:
+                print(f"[WARN] Screenshot failed: {e}")
+                return None
 
-        try:
-            if mobile:
-                path = f"screenshots/mobile_{item.name}.png"
-                mobile.save_screenshot(path)
-                screenshot_paths.append(path)
+        for driver in [mobile, web]:
+            png = capture(driver)
+            if png:
+                # ✅ Allure
+                allure.attach(
+                    png,
+                    name="Failure Screenshot",
+                    attachment_type=AttachmentType.PNG
+                )
 
-            if web:
-                path = f"screenshots/web_{item.name}.png"
-                web.save_screenshot(path)
-                screenshot_paths.append(path)
+                # ✅ pytest-html (base64 embed)
+                if pytest_html:
+                    b64 = base64.b64encode(png).decode("utf-8")
+                    html_img = (
+                        '<div><img src="data:image/png;base64,%s" '
+                        'style="width:600px;height:300px;" '
+                        'onclick="window.open(this.src)" /></div>'
+                        % b64
+                    )
+                    extra.append(pytest_html.extras.html(html_img))
 
-        except Exception as e:
-            print(f"Screenshot failed: {e}")
-
-        # Attach to Allure
-        for path in screenshot_paths:
-            allure.attach.file(path, name="Screenshot", attachment_type=allure.attachment_type.PNG)
-
-        # Attach to pytest-html
-        if screenshot_paths:
-            extra = getattr(report, "extra", [])
-            for path in screenshot_paths:
-                extra.append(extras.image(path))
-            report.extra = extra
+        report.extra = extra
 
 @pytest.fixture(scope="session")
 def test_data():
