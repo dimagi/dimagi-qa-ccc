@@ -82,6 +82,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def select_api_key_in_opportunity(self , value):
         time.sleep(2)
         self.wait_for_element(self.OPP_API_KEY_DROPDOWN)
+        print(f"Selecting {value}")
         self.select_by_visible_text(self.OPP_API_KEY_DROPDOWN, value)
 
     def select_learn_app_domain_in_opportunity(self , value):
@@ -187,31 +188,32 @@ class ConnectOpportunitiesPage(BaseWebPage):
         assert element.is_displayed(), f"Opportunity '{opp_name}' not found in the table."
         print(f"Opportunity '{opp_name}' present in table.")
 
-    def fill_opportunity_form(self, data, learn_app, delivery_app):
+    def fill_opportunity_form(self, data, learn_app, delivery_app, env):
+        env = f"_{env}" if env == "staging" else ""
         self.enter_name_in_opportunity(data["opportunity_name"])
         self.select_currency_in_opportunity(data["currency"])
         self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
-        if 'staging' in self.get_current_url():
-            self.select_hq_server_in_opportunity(data["hq_server_staging"])
-        else:
-            self.select_hq_server_in_opportunity(data["hq_server"])
+        # if 'staging' in self.get_current_url():
+        self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
+        # else:
+        #     self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
         time.sleep(2)
-        if 'staging' in self.get_current_url():
-            self.select_api_key_in_opportunity(data["api_key_staging"])
-            time.sleep(2)
-            self.select_learn_app_domain_in_opportunity(data["learn_app_domain_staging"])
-            time.sleep(2)
-            self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain_staging"])
-            time.sleep(5)
-        else:
-            self.select_api_key_in_opportunity(data["api_key"])
-            time.sleep(2)
-            self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
-            time.sleep(2)
-            self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
-            time.sleep(5)
+        # if 'staging' in self.get_current_url():
+        self.select_api_key_in_opportunity(data[f"api_key{env}"])
+        time.sleep(2)
+        self.select_learn_app_domain_in_opportunity(data[f"learn_app_domain{env}"])
+        time.sleep(2)
+        self.select_deliver_app_domain_in_opportunity(data[f"deliver_app_domain{env}"])
+        time.sleep(5)
+        # else:
+        #     self.select_api_key_in_opportunity(data["api_key"])
+        #     time.sleep(2)
+        #     self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
+        #     time.sleep(2)
+        #     self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+        #     time.sleep(5)
 
         self.select_learn_app_in_opportunity(learn_app)
         self.select_deliver_app_in_opportunity(delivery_app)
@@ -219,15 +221,15 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_passing_score_in_opportunity(data["passing_score"])
         self.click_submit_btn()
         
-    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app):
+    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
         self.click_add_opportunity_btn()
         time.sleep(1)
         try:
-            self.fill_opportunity_form(data, learn_app, delivery_app)
+            self.fill_opportunity_form(data, learn_app, delivery_app, env)
         except:
             self.refresh_current_page()
             time.sleep(3)
-            self.fill_opportunity_form(data, learn_app, delivery_app)
+            self.fill_opportunity_form(data, learn_app, delivery_app, env)
         time.sleep(3)
 
     def create_payment_unit_in_connect_page(self, data):

@@ -54,7 +54,10 @@ def test_olp_01_02_03_setup_budget_in_connect(web_driver, test_data, config, set
             connect_home_page.select_organization_from_list("PM_Automation_01")
 
     with allure.step("Add Opportunity in Connect Page with required fields"):
-        connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name)
+        if 'staging' in config.get("cchq_url"):
+            connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name, "staging")
+        else:
+            connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name, "prod")
 
     with allure.step("Add Payment Unit in Connect Page"):
         connect_opp_page.create_payment_unit_in_connect_page(olp2_data)
