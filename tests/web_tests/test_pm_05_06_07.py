@@ -36,7 +36,10 @@ def test_pm_05_06_07_verify_status_of_invited_nms_and_create_or_view_opportuniti
         connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Change Organization and navigate to Programs"):
-        connect_home_page.select_organization_from_list(pm_5_data["org_name"])
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list(pm_5_data["org_name_staging"])
+        else:
+            connect_home_page.select_organization_from_list(pm_5_data["org_name"])
         connect_home_page.click_programs_in_sidebar()
 
     # PM_5

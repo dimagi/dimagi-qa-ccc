@@ -25,7 +25,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def click_dashboard_card_in_opportunity(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
-        self.scroll_into_view((by, actual_xpath))
+        self.scroll_to_element((by, actual_xpath))
         self.click_element((by, actual_xpath))
 
     def verify_start_date_card_value_present(self):
@@ -43,14 +43,14 @@ class OpportunityDashboardPage(BaseWebPage):
     def verify_dashboard_card_details_present(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
-        self.scroll_into_view((by, actual_xpath))
+        self.scroll_to_element((by, actual_xpath))
         card = self.wait_for_element((by, actual_xpath))
         count = card.find_element(By.XPATH, ".//h3[contains(@class,'text-2xl')]").text.strip()
         assert count != "", f"{title} {subtitle} count is empty"
         print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
 
     def verify_progress_funnel_present(self):
-        self.scroll_into_view(self.PROGRESS_FUNNEL)
+        self.scroll_to_element(self.PROGRESS_FUNNEL)
         self.wait_for_element(self.PROGRESS_FUNNEL).is_displayed()
 
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
@@ -77,6 +77,7 @@ class OpportunityDashboardPage(BaseWebPage):
 
     def navigate_to_payments_earned(self, opp):
         self.click_link_by_text(opp)
+        time.sleep(2)
         self.click_dashboard_card_in_opportunity("Payments", "Earned")
         self.verify_text_in_url("workers/payments")
         time.sleep(1)

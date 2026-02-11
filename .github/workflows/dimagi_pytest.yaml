@@ -75,6 +75,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -83,17 +84,24 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml
-        continue-on-error: true
+          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-results.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
 
       - name: Save Web Status
+        if: always()
         run: |
           echo "${{ matrix.environment }}: ${{ job.status }}" > web_status.txt
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: web-status-${{ matrix.environment }}
           path: web_status.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: html-web-${{ matrix.environment }}
+          path: reports/report-web-${{ env.TEST_ENV }}.html
 
 # --------------------------------------------------------
 # Mobile Tests
@@ -112,6 +120,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -120,17 +129,24 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-results.xml
-        continue-on-error: true
+          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-results.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html
 
       - name: Save Mobile Status
+        if: always()
         run: |
           echo "${{ matrix.environment }}: ${{ job.status }}" > mobile_status.txt
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: mobile-status-${{ matrix.environment }}
           path: mobile_status.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: html-mobile-${{ matrix.environment }}
+          path: reports/report-mobile-${{ env.TEST_ENV }}.html
 
 # --------------------------------------------------------
 # Generate Combined Report + Notifications
@@ -187,7 +203,6 @@ jobs:
                   "color": "${{ steps.aggregate.outputs.overall == 'success' && 'good' || 'danger' }}",
                   "text": "*CommCare-Connect Test Automation Report*\n\n\
                   *Run:* #${{ github.run_number }}\n\
-                  *Branch:* ${{ github.ref_name }}\n\
                   *Overall Status:* *${{ steps.aggregate.outputs.overall }}*\n\n\
                   ${{ steps.aggregate.outputs.summary }}\n\n\
                   Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -214,6 +229,7 @@ jobs:
 
           to: qa@example.com
           from: QA Bot <qa@example.com>
+
           html_body: |
             <div style="font-family: Arial; line-height:1.6;">
               <h2>CommCare-Connect Test Automation Report</h2>

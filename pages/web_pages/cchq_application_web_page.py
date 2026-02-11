@@ -57,12 +57,13 @@ class CCHQApplicationPage(BaseWebPage):
         timestamp = datetime.now().strftime("[%d/%m/%Y : %H:%M]")
         self.delivery_app_full_name = f"Delivery App {timestamp}"
         self.wait_for_element(self.NAME_INPUT)
-        self.type(self.NAME_INPUT, self.delivery_app_full_name)
+        self.type(self.NAME_INPUT, self.delivery_app_full_name+Keys.TAB)
+        time.sleep(5)
 
     def click_copy_button(self):
         self.wait_for_element(self.COPY_BUTTON)
-        self.scroll_into_view(self.COPY_BUTTON)
-        self.click_element(self.COPY_BUTTON)
+        self.scroll_to_element(self.COPY_BUTTON)
+        self.js_click(self.COPY_BUTTON)
         time.sleep(2)
         self.wait_for_page_to_load()
         self.verify_text_in_url("/apps/view")

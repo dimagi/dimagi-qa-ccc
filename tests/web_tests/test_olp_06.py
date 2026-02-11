@@ -31,8 +31,17 @@ def test_olp_06_payments_earned_of_opportunity_in_connect(web_driver, test_data,
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list("Nitin's Program")
+        else:
+            connect_home_page.select_organization_from_list("PM_Automation_01")
+
 
     with allure.step("Navigate to Payments Earned section and verify table in Opportunity"):
+        if 'staging' in config.get("cchq_url"):
+            opp_dashboard_page.navigate_to_payments_earned(olp6_data["opportunity_name_staging"])
+        else:
+            opp_dashboard_page.navigate_to_payments_earned(olp6_data["opportunity_name"])
         opp_dashboard_page.navigate_to_payments_earned(olp6_data["opportunity_name"])
         connect_workers_page.verify_tab_is_active("Payments")
         connect_workers_page.verify_payments_table_headers_present()

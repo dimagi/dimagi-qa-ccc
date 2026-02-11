@@ -32,6 +32,11 @@ def test_worker_visit_verification_page_03_verify_suspend_users_from_an_opportun
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list("Nitin's Program")
+        else:
+            connect_home_page.select_organization_from_list("PM_Automation_01")
+
 
     with allure.step("Navigate and verify Connect Workers details in Opportunity"):
         opp_dashboard_page.navigate_to_connect_workers(worker_visit_3_data["opportunity_name"])

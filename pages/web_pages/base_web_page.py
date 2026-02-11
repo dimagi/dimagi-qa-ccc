@@ -1,4 +1,5 @@
 import os
+import time
 
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -80,6 +81,18 @@ class BaseWebPage:
     def scroll_to_bottom(self):
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
+    def scroll_to_element(self, locator):
+        element = self.driver.find_element(*locator)
+        self.driver.execute_script("arguments[0].scrollIntoView();", element)
+
+    def js_click(self, locator, timeout=10):
+        element = WebDriverWait(self.driver, timeout, poll_frequency=0.25).until(
+            EC.presence_of_element_located(locator),
+            message=f"Couldn't find locator: {locator}"
+            )
+        self.driver.execute_script("arguments[0].click();", element)
+        time.sleep(1)
+
     def scroll_into_view(self, locator, center=True):
         element = self.wait.until(EC.presence_of_element_located(locator))
         if center:
@@ -99,7 +112,7 @@ class BaseWebPage:
         raise TimeoutError("Element not visible after scrolling")
 
     def click_link_by_text(self, link_text: str):
-        xpath = f"//a[normalize-space()='{link_text}']"
+        xpath = f"(//a[contains(.,'{link_text}')])[1]"
         element = self.wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
         self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", element)
         self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
