@@ -196,6 +196,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_short_description_in_opportunity(data["short_description"])
         # if 'staging' in self.get_current_url():
         self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
+        time.sleep(3)
         # else:
         #     self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
