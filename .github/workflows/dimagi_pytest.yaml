@@ -72,6 +72,10 @@ jobs:
 
     env:
       TEST_ENV: ${{ matrix.environment }}
+      hq_username: ${{ secrets.hq_username }}
+      hq_password: ${{ secrets.hq_password }}
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -117,6 +121,10 @@ jobs:
 
     env:
       TEST_ENV: ${{ matrix.environment }}
+      hq_username: ${{ secrets.hq_username }}
+      hq_password: ${{ secrets.hq_password }}
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
     steps:
       - uses: actions/checkout@v4
