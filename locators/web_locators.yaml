@@ -41,8 +41,8 @@ cchq_application_page:
     copy_app_to_project_dropdown: "id_domain"
     name_input: "id_name"
     copy_button: "//*[@id='copy-app-form']/form/div/button"
-    make_new_version_button: "//*[@id='releases-table']/p[2]/button"
-    released_button: "//*[@id='releases-table']/div[8]/div/div[1]/div/div/button[1]"
+    make_new_version_button: "//button[contains(@data-bind,'Make New Version')]"
+    released_button: "(//button[contains(text(),'Released')])[1]"
 
 connect_home_page:
   signin_link: "log-in-link"
@@ -58,7 +58,7 @@ connect_home_page:
 connect_opportunities_page:
   add_opportunity_btn: "//*[@id='content']/div/div/div[1]/div/a"
   name_input: "id_name"
-  currency_input: "id_currency_fk"
+  currency_input: "id_currency"
   country_input: "id_country"
   short_description_input: "id_short_description"
   hq_server_dropdown: "id_hq_server"

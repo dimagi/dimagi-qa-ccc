@@ -193,11 +193,21 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.select_currency_in_opportunity(data["currency"])
         self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
-        self.select_hq_server_in_opportunity(data["hq_server"])
+        if 'staging' in self.get_current_url():
+            self.select_hq_server_in_opportunity(data["hq_server_staging"])
+        else:
+            self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
-        self.select_api_key_in_opportunity(data["api_key"])
-        self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
-        self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+
+        if 'staging' in self.get_current_url():
+            self.select_api_key_in_opportunity(data["api_key_staging"])
+            self.select_learn_app_domain_in_opportunity(data["learn_app_domain_staging"])
+            self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain_staging"])
+        else:
+            self.select_api_key_in_opportunity(data["api_key"])
+            self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
+            self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+
         self.select_learn_app_in_opportunity(learn_app)
         self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])

@@ -2,6 +2,7 @@ import os
 
 import allure
 import pytest
+from pytest_html import extras
 from allure_commons.types import AttachmentType
 
 from utils.helpers import ConfigLoader, SettingsLoader
@@ -82,40 +83,80 @@ def web_driver(request, config):
 
 
 # Attach screenshots on failure (mobile & web)
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_runtest_makereport(item):
+#     outcome = yield
+#     result = outcome.get_result()
+#
+#     if result.when == "call" and result.failed:
+#         # Attach failure reason
+#         allure.attach(
+#             str(result.longrepr),
+#             name="Failure Reason",
+#             attachment_type=AttachmentType.TEXT
+#         )
+#
+#         # Attach screenshots
+#         mobile = item.funcargs.get("mobile_driver")
+#         web = item.funcargs.get("web_driver")
+#
+#         try:
+#             if mobile:
+#                 attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
+#
+#             if web:
+#                 attach_web_screenshot(web, "Web Failure Screenshot")
+#
+#         except Exception as e:
+#             print(f"take screenshot failed {e}")
+#
+#     # Append Bugasura TC IDs to test name in xml results
+#     marker = item.get_closest_marker("bugasura")
+#     if marker:
+#         tc_ids = ",".join(marker.args)
+#         result.user_properties.append(("bugasura_tc_ids", tc_ids))
+#         result.nodeid = f"[{tc_ids}]{item.name}"
+
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item):
     outcome = yield
-    result = outcome.get_result()
+    report = outcome.get_result()
 
-    if result.when == "call" and result.failed:
-        # Attach failure reason
-        allure.attach(
-            str(result.longrepr),
-            name="Failure Reason",
-            attachment_type=AttachmentType.TEXT
-        )
+    if report.when == "call" and report.failed:
 
-        # Attach screenshots
         mobile = item.funcargs.get("mobile_driver")
         web = item.funcargs.get("web_driver")
 
+        os.makedirs("screenshots", exist_ok=True)
+
+        screenshot_paths = []
+
         try:
             if mobile:
-                attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
+                path = f"screenshots/mobile_{item.name}.png"
+                mobile.save_screenshot(path)
+                screenshot_paths.append(path)
 
             if web:
-                attach_web_screenshot(web, "Web Failure Screenshot")
+                path = f"screenshots/web_{item.name}.png"
+                web.save_screenshot(path)
+                screenshot_paths.append(path)
 
         except Exception as e:
-            print(f"take screenshot failed {e}")
+            print(f"Screenshot failed: {e}")
 
-    # Append Bugasura TC IDs to test name in xml results
-    marker = item.get_closest_marker("bugasura")
-    if marker:
-        tc_ids = ",".join(marker.args)
-        result.user_properties.append(("bugasura_tc_ids", tc_ids))
-        result.nodeid = f"[{tc_ids}]{item.name}"
+        # Attach to Allure
+        for path in screenshot_paths:
+            allure.attach.file(path, name="Screenshot", attachment_type=allure.attachment_type.PNG)
 
+        # Attach to pytest-html
+        if screenshot_paths:
+            extra = getattr(report, "extra", [])
+            for path in screenshot_paths:
+                extra.append(extras.image(path))
+            report.extra = extra
 
 @pytest.fixture(scope="session")
 def test_data():

@@ -180,3 +180,12 @@ class BaseWebPage:
 
     def wait_for_js_alert_present(self):
         return self.wait.until(EC.alert_is_present())
+
+    def xpath_literal(self, text):
+        if "'" not in text:
+            return f"'{text}'"
+        if '"' not in text:
+            return f'"{text}"'
+        # If both quotes exist, use concat
+        parts = text.split("'")
+        return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"

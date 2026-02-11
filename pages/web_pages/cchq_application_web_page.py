@@ -66,8 +66,10 @@ class CCHQApplicationPage(BaseWebPage):
         time.sleep(2)
         self.wait_for_page_to_load()
         self.verify_text_in_url("/apps/view")
+        time.sleep(5)
 
     def click_make_new_version_button(self):
+        self.wait_for_element(self.MAKE_NEW_VERSION_BUTTON)
         self.click_element(self.MAKE_NEW_VERSION_BUTTON)
         time.sleep(2)
         self.wait_for_element(self.RELEASED_BUTTON)
