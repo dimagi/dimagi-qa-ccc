@@ -31,6 +31,11 @@ def test_worker_list_view_08_verify_last_active_filter_as_1_day_ago(web_driver, 
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list("PM_Automation_01")
+        else:
+            connect_home_page.select_organization_from_list("dg_connect")
+
 
     with allure.step("Navigate and verify Connect Workers Deliver details in Opportunity"):
         opp_dashboard_page.navigate_to_services_delivered(worker_list_view_8_data["opportunity_name"])

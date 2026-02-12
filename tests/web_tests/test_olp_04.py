@@ -31,10 +31,7 @@ def test_olp_04_verify_opportunity_details_in_dashboard(web_driver, test_data, c
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("Nitin's Program")
-        else:
-            connect_home_page.select_organization_from_list("PM_Automation_01")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
     with allure.step("Navigate to Opportunity Dashboard and verify all fields present"):
         connect_opp_page.click_opportunity_in_opportunity(olp4_data["opportunity_name"])

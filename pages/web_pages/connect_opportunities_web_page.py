@@ -76,11 +76,13 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.type(self.OPP_DESCRIPTION_INPUT, value)
 
     def select_hq_server_in_opportunity(self , value):
-        self.wait_for_element(self.OPP_SHORT_DESCRIPTION_INPUT)
+        self.wait_for_element(self.OPP_HQ_SERVER_DROPDOWN)
+        time.sleep(1)
         self.select_by_visible_text(self.OPP_HQ_SERVER_DROPDOWN, value)
+        time.sleep(3)
 
     def select_api_key_in_opportunity(self , value):
-        time.sleep(2)
+        time.sleep(8)
         self.wait_for_element(self.OPP_API_KEY_DROPDOWN)
         print(f"Selecting {value}")
         self.select_by_visible_text(self.OPP_API_KEY_DROPDOWN, value)
@@ -191,12 +193,17 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def fill_opportunity_form(self, data, learn_app, delivery_app, env):
         env = f"_{env}" if env == "staging" else ""
         self.enter_name_in_opportunity(data["opportunity_name"])
-        self.select_currency_in_opportunity(data["currency"])
-        self.select_country_in_opportunity(data["country"])
-        self.enter_short_description_in_opportunity(data["short_description"])
-        # if 'staging' in self.get_current_url():
+        time.sleep(1)
         self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
         time.sleep(3)
+        self.select_currency_in_opportunity(data["currency"])
+        time.sleep(1)
+        self.select_country_in_opportunity(data["country"])
+        time.sleep(1)
+        self.enter_short_description_in_opportunity(data["short_description"])
+        time.sleep(1)
+        # if 'staging' in self.get_current_url():
+
         # else:
         #     self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
@@ -215,7 +222,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
         #     time.sleep(2)
         #     self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
         #     time.sleep(5)
-
         self.select_learn_app_in_opportunity(learn_app)
         self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
@@ -224,7 +230,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         
     def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
         self.click_add_opportunity_btn()
-        time.sleep(1)
+        time.sleep(5)
         try:
             self.fill_opportunity_form(data, learn_app, delivery_app, env)
         except:

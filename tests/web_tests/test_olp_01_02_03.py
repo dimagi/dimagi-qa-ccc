@@ -48,10 +48,7 @@ def test_olp_01_02_03_setup_budget_in_connect(web_driver, test_data, config, set
     with allure.step("Navigate and SignIn to Connect with CommCare HQ"):
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("Nitin's Program")
-        else:
-            connect_home_page.select_organization_from_list("PM_Automation_01")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
     with allure.step("Add Opportunity in Connect Page with required fields"):
         if 'staging' in config.get("cchq_url"):

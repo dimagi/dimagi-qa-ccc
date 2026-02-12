@@ -36,9 +36,9 @@ def test_worker_visit_verification_page_01_02_for_deliver_of_opportunity_in_conn
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
         if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("Nitin's Program")
-        else:
             connect_home_page.select_organization_from_list("PM_Automation_01")
+        else:
+            connect_home_page.select_organization_from_list("dg_connect")
 
 
     with allure.step("Navigate and verify Connect Workers Deliver tab details in Opportunity"):

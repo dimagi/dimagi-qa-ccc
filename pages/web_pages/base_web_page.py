@@ -71,9 +71,21 @@ class BaseWebPage:
         return self.driver.current_url
 
     def select_by_visible_text(self, dropdown_locator, text):
-        element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
-        self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
-        Select(element).select_by_visible_text(text)
+        element = self.wait.until(
+            EC.element_to_be_clickable(dropdown_locator)
+            )
+        select = Select(element)
+        self.wait.until(
+            lambda d: any(option.text.strip() == text for option in select.options)
+            )
+        select.select_by_visible_text(text)
+
+        # 🔥 FORCE change event
+        self.driver.execute_script(
+            "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+            element
+            )
+
 
     def scroll_to_top(self):
         self.driver.execute_script("window.scrollTo(0, 0);")

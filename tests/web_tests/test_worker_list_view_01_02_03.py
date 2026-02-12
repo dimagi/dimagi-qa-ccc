@@ -34,10 +34,7 @@ def test_worker_list_view_01_02_03_verify_connect_workers_details_of_opportunity
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("Nitin's Program")
-        else:
-            connect_home_page.select_organization_from_list("PM_Automation_01")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
 
     # Worker List View_1
