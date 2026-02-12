@@ -126,6 +126,7 @@ def pytest_runtest_makereport(item):
     outcome = yield
     report = outcome.get_result()
 
+    # Only act after test call phase
     if report.when != "call":
         return
 
@@ -139,9 +140,8 @@ def pytest_runtest_makereport(item):
             if not driver:
                 return None
             try:
-                driver.execute_script("return 1")
-                png = driver.get_screenshot_as_png()
-                return png
+                driver.execute_script("return 1")  # quick health check
+                return driver.get_screenshot_as_png()
             except Exception as e:
                 print(f"[WARN] Screenshot failed: {e}")
                 return None
@@ -149,25 +149,19 @@ def pytest_runtest_makereport(item):
         for driver in [mobile, web]:
             png = capture(driver)
             if png:
-                # ✅ Allure
+                # ✅ Attach to Allure
                 allure.attach(
                     png,
                     name="Failure Screenshot",
                     attachment_type=AttachmentType.PNG
                 )
 
-                # ✅ pytest-html (base64 embed)
+                # ✅ Attach to pytest-html (right side attachment column)
                 if pytest_html:
-                    b64 = base64.b64encode(png).decode("utf-8")
-                    html_img = (
-                        '<div><img src="data:image/png;base64,%s" '
-                        'style="width:600px;height:300px;" '
-                        'onclick="window.open(this.src)" /></div>'
-                        % b64
-                    )
-                    extra.append(pytest_html.extras.html(html_img))
+                    extra.append(pytest_html.extras.image(png))
 
         report.extra = extra
+
 
 @pytest.fixture(scope="session")
 def test_data():
