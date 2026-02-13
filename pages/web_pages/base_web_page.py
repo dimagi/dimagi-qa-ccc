@@ -1,7 +1,9 @@
+import json
 import os
 import time
 
 from selenium.common import TimeoutException, NoSuchElementException
+from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -75,6 +77,43 @@ class BaseWebPage:
         self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
         Select(element).select_by_visible_text(text)
 
+    def select_by_visible_text_manually(self, dropdown_locator, text):
+        dropdown = self.wait.until(EC.element_to_be_clickable(dropdown_locator))
+
+        # Click to focus
+        dropdown.click()
+
+        # Type partial text
+        dropdown.send_keys(text)
+
+        # Press Enter
+        dropdown.send_keys(Keys.ENTER)
+
+    def js_select_by_text(self, dropdown_locator, text):
+        # Find element normally (supports any locator tuple)
+        element = self.driver.find_element(*dropdown_locator)
+
+        # Use JS to change value based on visible text
+        self.driver.execute_script("""
+            var select = arguments[0];
+            var text = arguments[1];
+
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].text.trim() === text.trim()) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+
+            // Trigger native change event
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // If HTMX exists, trigger via HTMX too
+            if (window.htmx) {
+                htmx.trigger(select, 'change');
+            }
+        """, element, text
+                                   )
 
     def scroll_to_top(self):
         self.driver.execute_script("window.scrollTo(0, 0);")

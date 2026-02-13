@@ -63,6 +63,10 @@ jobs:
 # --------------------------------------------------------
 
   web-tests:
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.test_scope == 'web' || inputs.test_scope == 'both'))
     name: Web Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest
@@ -108,6 +112,10 @@ jobs:
 # --------------------------------------------------------
 
   mobile-tests:
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.test_scope == 'mobile' || inputs.test_scope == 'both'))
     name: Mobile Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest

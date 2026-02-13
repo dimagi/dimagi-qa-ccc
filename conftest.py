@@ -10,6 +10,7 @@ from drivers.appium_driver import create_mobile_driver
 from drivers.web_driver import create_web_driver
 # from utils.reporting import attach_mobile_screenshot, attach_web_screenshot
 from utils.helpers import TestDataLoader
+from selenium.common import TimeoutException, WebDriverException
 
 
 # Load environment (prod/stage)
@@ -118,7 +119,6 @@ def web_driver(request, config):
 #         result.nodeid = f"[{tc_ids}]{item.name}"
 
 
-
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item):
     pytest_html = item.config.pluginmanager.getplugin("html")
@@ -126,7 +126,6 @@ def pytest_runtest_makereport(item):
     outcome = yield
     report = outcome.get_result()
 
-    # Only act after test call phase
     if report.when != "call":
         return
 
@@ -140,8 +139,9 @@ def pytest_runtest_makereport(item):
             if not driver:
                 return None
             try:
-                driver.execute_script("return 1")  # quick health check
-                return driver.get_screenshot_as_png()
+                driver.execute_script("return 1")
+                png = driver.get_screenshot_as_png()
+                return png
             except Exception as e:
                 print(f"[WARN] Screenshot failed: {e}")
                 return None
@@ -149,19 +149,37 @@ def pytest_runtest_makereport(item):
         for driver in [mobile, web]:
             png = capture(driver)
             if png:
-                # ✅ Attach to Allure
+                # ✅ Allure
                 allure.attach(
                     png,
                     name="Failure Screenshot",
                     attachment_type=AttachmentType.PNG
                 )
 
-                # ✅ Attach to pytest-html (right side attachment column)
+                # ✅ pytest-html (base64 embed)
                 if pytest_html:
-                    extra.append(pytest_html.extras.image(png))
+                    screen_img = _capture_screenshot(driver)
+                    html_img = (
+                            '<div><img src="data:image/png;base64,%s" alt="screenshot" '
+                            'style="width:600px;height:300px;" '
+                            'onclick="window.open(this.src)" align="right"/></div>'
+                            % screen_img
+                    )
+                    extra.append(pytest_html.extras.html(html_img))
 
         report.extra = extra
 
+def _capture_screenshot(driver):
+    if not driver:
+        return None
+    try:
+        # quick health check; fails fast if renderer is dead
+        driver.execute_script("return 1")
+        png = driver.get_screenshot_as_png()
+        return base64.b64encode(png).decode("utf-8")
+    except (TimeoutException, WebDriverException, Exception) as e:
+        print(f"[WARN] Screenshot capture failed (ignored): {type(e).__name__}: {e}")
+        return None
 
 @pytest.fixture(scope="session")
 def test_data():
