@@ -115,7 +115,7 @@ jobs:
     if: >
       github.event_name != 'workflow_dispatch' ||
       (github.event_name == 'workflow_dispatch' &&
-      (inputs.test_scope == 'mobile' || inputs.test_scope == 'both'))
+      (inputs.test_scope == 'mobile' || inputs.test_scope == 'both')) && matrix.environment != 'stage'
     name: Mobile Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest

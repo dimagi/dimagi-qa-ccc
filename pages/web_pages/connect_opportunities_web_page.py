@@ -52,7 +52,6 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def click_add_opportunity_btn(self):
         self.click_element(self.ADD_OPPORTUNITY_BUTTON)
-        self.wait_for_htmx_complete()
 
     def enter_name_in_opportunity(self , value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
@@ -79,11 +78,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def select_hq_server_in_opportunity(self , value):
         self.wait_for_element(self.OPP_HQ_SERVER_DROPDOWN)
         time.sleep(1)
-        # self.select_by_visible_text_manually(self.OPP_HQ_SERVER_DROPDOWN, value)
-        self.select_and_wait_for_dependent_dropdown(self.OPP_HQ_SERVER_DROPDOWN, self.OPP_API_KEY_DROPDOWN, value)
-        # self.js_select_by_text(self.OPP_HQ_SERVER_DROPDOWN, value)
-        time.sleep(1)  # short pause to allow network call
-        self.did_api_key_request_fire()
+        self.select_by_visible_text(self.OPP_HQ_SERVER_DROPDOWN, value)
         time.sleep(3)
 
     def select_api_key_in_opportunity(self , value):
@@ -197,52 +192,34 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def fill_opportunity_form(self, data, learn_app, delivery_app, env):
         env = f"_{env}" if env == "staging" else ""
-        api_dropdown = self.driver.find_element(*self.OPP_API_KEY_DROPDOWN)
-        print("API dropdown HTML:", api_dropdown.get_attribute("innerHTML"))
         self.enter_name_in_opportunity(data["opportunity_name"])
-        time.sleep(1)
         self.select_currency_in_opportunity(data["currency"])
-        time.sleep(1)
         self.select_country_in_opportunity(data["country"])
-        time.sleep(1)
         self.enter_short_description_in_opportunity(data["short_description"])
-        time.sleep(1)
         self.enter_description_in_opportunity(data["description"])
-        time.sleep(1)
-        # if 'staging' in self.get_current_url():
         self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
         time.sleep(3)
-        # else:
-        #     self.select_hq_server_in_opportunity(data["hq_server"])
-        # if 'staging' in self.get_current_url():
         self.select_api_key_in_opportunity(data[f"api_key{env}"])
-        time.sleep(2)
+        time.sleep(3)
         self.select_learn_app_domain_in_opportunity(data[f"learn_app_domain{env}"])
         time.sleep(2)
         self.select_deliver_app_domain_in_opportunity(data[f"deliver_app_domain{env}"])
         time.sleep(5)
-        # else:
-        #     self.select_api_key_in_opportunity(data["api_key"])
-        #     time.sleep(2)
-        #     self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
-        #     time.sleep(2)
-        #     self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
-        #     time.sleep(5)
-        # self.select_learn_app_in_opportunity(learn_app)
-        # self.select_deliver_app_in_opportunity(delivery_app)
-        # self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
-        # self.enter_passing_score_in_opportunity(data["passing_score"])
-        # self.click_submit_btn()
+        self.select_learn_app_in_opportunity(learn_app)
+        self.select_deliver_app_in_opportunity(delivery_app)
+        self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
+        self.enter_passing_score_in_opportunity(data["passing_score"])
+        self.click_submit_btn()
         
     def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
         self.click_add_opportunity_btn()
         time.sleep(5)
-        # try:
-        self.fill_opportunity_form(data, learn_app, delivery_app, env)
-        # except:
-        #     self.refresh_current_page()
-        #     time.sleep(3)
-        #     self.fill_opportunity_form(data, learn_app, delivery_app, env)
+        try:
+            self.fill_opportunity_form(data, learn_app, delivery_app, env)
+        except:
+            self.refresh_current_page()
+            time.sleep(3)
+            self.fill_opportunity_form(data, learn_app, delivery_app, env)
         time.sleep(3)
 
     def create_payment_unit_in_connect_page(self, data):
