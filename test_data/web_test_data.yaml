@@ -4,10 +4,14 @@ OLP_1:
   country: "India"
   short_description: "This is a demo opportunity"
   hq_server: "CommCareHQ (https://www.commcarehq.org)"
+  hq_server_staging: "CommCareHQ (https://staging.commcarehq.org)"
   description: "Demo Opportunity"
   api_key: "fccc...0784"
+  api_key_staging: "7d12...5959"
   learn_app_domain: "connetqa-prod"
+  learn_app_domain_staging: "connectqa"
   deliver_app_domain: "connetqa-prod"
+  deliver_app_domain_staging: "connectqa"
   learn_app: "Unreleased - Learn App [Job 1]"
   deliver_app: "Unreleased - Delivey App [Job 2]"
   learn_app_description: "This is Learn App"
@@ -37,6 +41,7 @@ OLP_5:
 
 OLP_6:
   opportunity_name: "covid_opp"
+  opportunity_name_staging: "November Opportunity"
 
 OLP_7:
   opportunity_name: "Demo Opportunity"
@@ -49,6 +54,7 @@ OLP_9:
 
 OLP_11:
   org_name: "dg_connect"
+  org_name_staging: "PM_Automation_01"
 
 WORKER_LIST_VIEW_1_2_3:
   opportunity_name: "Demo Opportunity"
@@ -100,11 +106,13 @@ PM_7:
 Invite_Workers:
   opportunity_name: "Demo Opportunity"
   org_name: "dg_connect"
+  org_name_staging: "Nitin Test Org"
   numbers_list: ["+919999999999", "+918888888888", "+917777777777"]
 
 Make_Payment:
   opportunity_name: "Test Opp 151201"
   org_name: "dg_connect"
+  org_name_staging: "Nitin Test Org"
   worker_name: "Automation User 10"
   country_code: "+7426"
   phone_number: "7426006"

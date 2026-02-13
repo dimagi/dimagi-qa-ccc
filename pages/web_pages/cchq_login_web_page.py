@@ -30,13 +30,23 @@ class LoginPage(BaseWebPage):
         #self.click_element(self.SIGNIN_BUTTON)
 
 
-    def valid_login_cchq(self, config):
+    def valid_login_cchq(self, config, settings):
         cchq_url = config.get("cchq_url")
         self.driver.get(cchq_url)
         self.verify_login_page_title("Welcome")
         self.enter_username_and_password(
-            config.get("hq_username"),
-            config.get("hq_password")
+            settings.get(
+                section="creds",
+                key="hq_username",
+                env_var="hq_username"
+                ),
+            settings.get(
+                section="creds",
+                key="hq_password",
+                env_var="hq_password"
+                )
+            # config.get("hq_username"),
+            # config.get("hq_password")
         )
         time.sleep(3)
 
