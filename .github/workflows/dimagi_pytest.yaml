@@ -259,7 +259,7 @@ jobs:
             CommCare-Connect Tests -
             ${{ steps.aggregate.outputs.overall == 'success' && 'SUCCESS' || 'FAILURE' }}
             - Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
           html_body: |
