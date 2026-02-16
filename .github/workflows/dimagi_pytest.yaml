@@ -112,20 +112,23 @@ jobs:
 # --------------------------------------------------------
 
   mobile-tests:
-    if: >
-      github.event_name != 'workflow_dispatch' ||
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.test_scope == 'mobile' || inputs.test_scope == 'both'))
     name: Mobile Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest
+
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (inputs.test_scope == 'mobile' || inputs.test_scope == 'both')
+      )
 
     strategy:
       fail-fast: false
       matrix:
         environment: ${{ fromJSON(needs.resolve-matrix.outputs.matrix).environment }}
-      exclude:
-        - environment: stage
+        exclude:
+          - environment: stage
 
     env:
       TEST_ENV: ${{ matrix.environment }}
