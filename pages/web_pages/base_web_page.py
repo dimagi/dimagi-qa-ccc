@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, PROJECT_ROOT
 from openpyxl import load_workbook
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
@@ -156,6 +156,8 @@ class BaseWebPage:
         element = self.wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
         self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", element)
         self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        self.wait_for_page_load()
+        time.sleep(3)
 
     def is_breadcrumb_item_present(self, text: str) -> bool:
         xpath = f"//ul[contains(@class,'breadcrumb')]//a[contains(normalize-space(), '{text}')]"
@@ -215,7 +217,8 @@ class BaseWebPage:
             raise AssertionError(f"Element not found: {ele_name}")
 
     def write_payment_details_to_excel(self, params):
-        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        project_root = PROJECT_ROOT
+        file_path = os.path.join(project_root, "test_data", "make_payment.xlsx")
         wb = load_workbook(file_path)
         sheet = wb["Sheet1"]
         for col in range(1, sheet.max_column + 1):

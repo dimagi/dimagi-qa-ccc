@@ -25,8 +25,11 @@ class OpportunityDashboardPage(BaseWebPage):
     def click_dashboard_card_in_opportunity(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
+        print(by, actual_xpath)
         self.scroll_to_element((by, actual_xpath))
-        self.click_element((by, actual_xpath))
+        time.sleep(1)
+        self.js_click((by, actual_xpath))
+        time.sleep(3)
 
     def verify_start_date_card_value_present(self):
         element = self.wait_for_element(self.START_DATE_TEXT)
@@ -43,6 +46,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def verify_dashboard_card_details_present(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
+        print(by, actual_xpath)
         self.scroll_to_element((by, actual_xpath))
         card = self.wait_for_element((by, actual_xpath))
         count = card.find_element(By.XPATH, ".//h3[contains(@class,'text-2xl')]").text.strip()

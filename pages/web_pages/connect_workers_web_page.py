@@ -3,7 +3,7 @@ import time
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, PROJECT_ROOT
 from selenium.webdriver.common.keys import Keys
 from datetime import datetime, timedelta
 
@@ -402,7 +402,8 @@ class ConnectWorkersPage(BaseWebPage):
         return username_ele.text.strip()
 
     def import_make_payment_file(self):
-        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        project_root = PROJECT_ROOT
+        file_path = os.path.join(project_root, "test_data", "make_payment.xlsx")
         assert os.path.exists(file_path), f"File not found: {file_path}"
         print(file_path)
         file_input = self.wait_for_element(self.FILE_UPLOAD_IMPORT_PAYMENT)

@@ -35,7 +35,10 @@ def test_payment_processing_01_02_03_verify_payments_tab_rollback_payment_of_opp
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        connect_home_page.select_organization_from_list("PM_Automation_01")
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list("PM_Automation_01")
+        else:
+            connect_home_page.select_organization_from_list("dg_connect")
 
     # Payment Processing_1
     with allure.step("Navigate and verify Payments Tab details in Opportunity"):

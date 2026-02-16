@@ -124,6 +124,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def click_opportunity_in_opportunity(self , value):
         time.sleep(5)
         self.click_link_by_text(value)
+        time.sleep(3)
 
     def click_submit_btn(self):
         self.scroll_to_element(self.SUBMIT_BUTTON)

@@ -6,8 +6,8 @@ OLP_1:
   hq_server: "CommCareHQ (https://www.commcarehq.org)"
   hq_server_staging: "CommCareHQ (https://staging.commcarehq.org)"
   description: "Demo Opportunity"
-  api_key: "fccc...0784"
-  api_key_staging: "7d12...5959"
+  api_key: "72b0...ec3b"
+  api_key_staging: "89c5...1750"
   learn_app_domain: "connetqa-prod"
   learn_app_domain_staging: "connectqa"
   deliver_app_domain: "connetqa-prod"
@@ -41,7 +41,6 @@ OLP_5:
 
 OLP_6:
   opportunity_name: "covid_opp"
-  opportunity_name_staging: "November Opportunity"
 
 OLP_7:
   opportunity_name: "Demo Opportunity"
