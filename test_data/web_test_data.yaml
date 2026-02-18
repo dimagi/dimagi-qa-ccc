@@ -40,7 +40,7 @@ OLP_5:
   opportunity_name: "Demo Opportunity"
 
 OLP_6:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
 
 OLP_7:
   opportunity_name: "Demo Opportunity"
@@ -59,26 +59,26 @@ WORKER_LIST_VIEW_1_2_3:
   opportunity_name: "Demo Opportunity"
 
 WORKER_LIST_VIEW_4:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
 WORKER_LIST_VIEW_5:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
 
 WORKER_LIST_VIEW_8:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
 
 WORKER_VISIT_VERIFICATION_PAGE_1_2:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
 WORKER_VISIT_VERIFICATION_PAGE_3:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
   reason: "Suspend user reason"
 
 WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
-  opportunity_name: "covid_opp"
+  opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
 PAYMENT_PROCESSING_1_2_3:
@@ -100,7 +100,7 @@ PM_6:
 
 PM_7:
   program_name: "Program 7 Jan 2025 10:13"
-  network_manager: "Automation_Test_02"
+  network_manager: "Network Manager" #"Automation_Test_02"
 
 Invite_Workers:
   opportunity_name: "Demo Opportunity"

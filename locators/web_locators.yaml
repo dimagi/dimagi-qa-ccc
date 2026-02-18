@@ -125,7 +125,8 @@ connect_workers_page:
 worker_visits_page:
   worker_visits_table_element: "(//table[contains(@class,'base-table')])[2]"
   worker_visits_select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
-  worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
+  worker_visits_row_item: "//tr[td[normalize-space()='test']and td[normalize-space()='delivery'] ]//input[@type='checkbox']"
+#  worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
   approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
   approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
   reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
@@ -144,6 +145,6 @@ worker_visits_page:
 connect_programs_page:
   view_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'View Status')]"
   hide_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'Hide Status')]"
-  nms_invite_card: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div"
-  nms_invite_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div[.//p[contains(text(), '{network_manager}')]]"
-  program_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]"
+  nms_invite_card: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')]"
+  nms_invite_card_by_name: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')][.//p[contains(text(), '{network_manager}')]]"
+  program_card_by_name: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]"

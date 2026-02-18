@@ -31,10 +31,7 @@ def test_olp_06_payments_earned_of_opportunity_in_connect(web_driver, test_data,
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("PM_Automation_01")
-        else:
-            connect_home_page.select_organization_from_list("dg_connect")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
 
     with allure.step("Navigate to Payments Earned section and verify table in Opportunity"):

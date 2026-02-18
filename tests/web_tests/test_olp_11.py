@@ -28,10 +28,7 @@ def test_olp_11_apply_n_verify_filters_in_opportunities(web_driver, test_data, c
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("PM_Automation_01")
-        else:
-            connect_home_page.select_organization_from_list("dg_connect")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
         if 'staging' in config.get("cchq_url"):
             connect_home_page.select_organization_from_list(olp11_data["org_name_staging"])

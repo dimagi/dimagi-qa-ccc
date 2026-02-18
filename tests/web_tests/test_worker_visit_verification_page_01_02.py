@@ -35,10 +35,7 @@ def test_worker_visit_verification_page_01_02_for_deliver_of_opportunity_in_conn
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list("PM_Automation_01")
-        else:
-            connect_home_page.select_organization_from_list("dg_connect")
+        connect_home_page.select_organization_from_list("PM_Automation_01")
 
 
     with allure.step("Navigate and verify Connect Workers Deliver tab details in Opportunity"):
@@ -52,7 +49,8 @@ def test_worker_visit_verification_page_01_02_for_deliver_of_opportunity_in_conn
     # Worker Visit Verification Page_1
     with allure.step("Verify tabs, apply filter for individual and Approve in Worker Visits page"):
         worker_visits_page.verify_worker_visits_tabs_present()
-        worker_visits_page.set_row_checkbox_from_list(["09 Dec, 2025 08:41", "test name", True])
+        worker_visits_page.set_row_checkbox_from_list("True")
+        # worker_visits_page.set_row_checkbox_from_list(["09 Dec, 2025 08:41", "test name", True])
         worker_visits_page.click_approve_all_btn()
 
     # Worker Visit Verification Page_2
