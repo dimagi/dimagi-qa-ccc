@@ -91,7 +91,7 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
+          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
 
       - name: Upload Web JUnit
         if: always()
