@@ -21,7 +21,7 @@
     "os_version": "13.0",
     "app": "bs://811768034311d7c49548afaefc107bc606331fdd",
 
-    "newCommandTimeout": 600,
+    "newCommandTimeout": 1000,
     "adbExecTimeout": 60000,
     "uiautomator2ServerInstallTimeout": 60000,
     "uiautomator2ServerLaunchTimeout": 60000,
@@ -38,7 +38,9 @@
       "debug": true,
       "networkLogs": true,
       "enableBiometric": true,
-      "appiumVersion": "2.0.1"
+      "appiumVersion": "2.0.1",
+
+      "idleTimeout": 1000
     }
   }
 }

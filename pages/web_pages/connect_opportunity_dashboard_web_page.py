@@ -20,7 +20,7 @@ class OpportunityDashboardPage(BaseWebPage):
     PROGRESS_FUNNEL = locators.get("opportunity_dashboard_page", "progress_funnel")
     HAMBURGER_ICON = locators.get("opportunity_dashboard_page", "hamburger_icon")
     HAMBURGER_CONTEXT_MENU = locators.get("opportunity_dashboard_page", "hamburger_menu")
-
+    PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
 
     def click_dashboard_card_in_opportunity(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
@@ -67,7 +67,10 @@ class OpportunityDashboardPage(BaseWebPage):
         self.verify_dashboard_card_details_present("Payments", "Earned")
         self.verify_dashboard_card_details_present("Payments", "Due")
 
+
     def navigate_to_connect_workers(self, opp):
+        print(opp)
+        self.select_by_visible_text(self.PAGE_SIZE, "100")
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.verify_text_in_url("workers")

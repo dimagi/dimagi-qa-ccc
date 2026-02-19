@@ -21,6 +21,9 @@ from pages.web_pages.cchq_application_web_page import CCHQApplicationPage
 @pytest.mark.web
 # @pytest.mark.bugasura("TES76", "TES77", "TES78")
 def test_olp_01_02_03_setup_budget_in_connect(web_driver, test_data, config, settings):
+    add_opportunity(web_driver, test_data, config, settings)
+
+def add_opportunity(web_driver, test_data, config, settings):
     olp1_data = test_data.get("OLP_1")
     olp2_data = test_data.get("OLP_2")
     olp3_data = test_data.get("OLP_3")
@@ -52,12 +55,18 @@ def test_olp_01_02_03_setup_budget_in_connect(web_driver, test_data, config, set
 
     with allure.step("Add Opportunity in Connect Page with required fields"):
         if 'staging' in config.get("cchq_url"):
-            connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name, "staging")
+            opp_name = connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name,
+                                                                           "staging"
+                                                                           )
         else:
-            connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name, "prod")
+            opp_name = connect_opp_page.create_opportunity_in_connect_page(olp1_data, learn_app_name, delivery_app_name,
+                                                                           "prod"
+                                                                           )
 
     with allure.step("Add Payment Unit in Connect Page"):
         connect_opp_page.create_payment_unit_in_connect_page(olp2_data)
 
     with allure.step("Setup Budget for opportunity in Connect Page"):
         connect_opp_page.setup_budget_in_connect_page(olp3_data)
+
+    return opp_name

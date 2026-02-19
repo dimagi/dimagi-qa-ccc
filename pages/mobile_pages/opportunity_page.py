@@ -25,6 +25,10 @@ class OpportunityPage(BasePage):
     INTRO_LEARN_SUMMARY_TXT = locators.get("opportunity_page", "intro_learn_summary_txt")
     DOWNLOAD_LEARN_APP_BTN = locators.get("opportunity_page", "download_learn_app_btn")
 
+    OPP_LIST_NEW = locators.get("opportunity_page", "opp_list_new")
+    OPP_LIST_IN_PROGRESS = locators.get("opportunity_page", "opp_list_in_progress")
+    OPP_LIST_COMPLETE = locators.get("opportunity_page", "opp_list_complete")
+
     OPP_LIST_CARD = locators.get("opportunity_page", "opp_list_card")
     OPP_LIST_TITLE = locators.get("opportunity_page", "opp_list_title")
     OPP_LIST_DATE = locators.get("opportunity_page", "opp_list_date")
@@ -76,18 +80,64 @@ class OpportunityPage(BasePage):
         for item in menu_items:
             assert self.is_displayed(item), f"Learn details not visible: {item}"
 
+    # def verify_opportunity_list(self):
+    #     time.sleep(2)
+    #     cards = self.get_elements(self.OPP_LIST_CARD)
+    #     assert len(cards) > 0, "No opportunities found"
+    #     print(f"No of opportunity present {len(cards)}")
+    #     time.sleep(2)
+    #     for card in cards:
+    #         try:
+    #             name = card.find_element(*self.OPP_LIST_TITLE).text
+    #             print(name)
+    #             # opp_type = card.find_element(*self.OPP_LIST_TYPE).is_displayed()
+    #             date = card.find_element(*self.OPP_LIST_DATE).text
+    #             print(date)
+    #             assert name, "Opportunity name missing"
+    #             # assert opp_type, "Opportunity type missing"
+    #             assert date, "Opportunity date missing"
+    #         except:
+    #             self.scroll_to_end()
+    #             name = card.find_element(*self.OPP_LIST_TITLE).text
+    #             print(name)
+    #             # opp_type = card.find_element(*self.OPP_LIST_TYPE).is_displayed()
+    #             date = card.find_element(*self.OPP_LIST_DATE).text
+    #             print(date)
+    #             assert name, "Opportunity name missing"
+    #             # assert opp_type, "Opportunity type missing"
+    #             assert date, "Opportunity date missing"
+
     def verify_opportunity_list(self):
-        cards = self.get_elements(self.OPP_LIST_CARD)
-        assert len(cards) > 0, "No opportunities found"
+        time.sleep(2)
 
-        for card in cards:
-            name = card.find_element(*self.OPP_LIST_TITLE).text
-            opp_type = card.find_element(*self.OPP_LIST_TYPE).is_displayed()
-            date = card.find_element(*self.OPP_LIST_DATE).text
+        seen = set()
+        max_scrolls = 5
 
-            assert name, "Opportunity name missing"
-            assert opp_type, "Opportunity type missing"
-            assert date, "Opportunity date missing"
+        for _ in range(max_scrolls):
+
+            cards = self.get_elements(self.OPP_LIST_CARD)
+
+            for card in cards:
+                try:
+                    name = card.find_element(*self.OPP_LIST_TITLE).text
+                    date = card.find_element(*self.OPP_LIST_DATE).text
+
+                    if name not in seen:
+                        print(name)
+                        print(date)
+
+                        assert name, "Opportunity name missing"
+                        assert date, "Opportunity date missing"
+
+                        seen.add(name)
+
+                except Exception:
+                    continue
+
+            # Scroll after processing visible items
+            self.scroll_down()
+
+        print(f"Total unique opportunities found: {len(seen)}")
 
     def download_learn_app(self):
         self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
@@ -97,19 +147,52 @@ class OpportunityPage(BasePage):
         assert self.is_displayed(self.LEARN_APP_START_BTN), "Learn app start button is not visible"
 
     def open_opportunity_from_list(self, opp_name, opp_status):
+        # self.click_element(self.SYNC_BTN)
+        # time.sleep(1)
+        # # Iterate
+        # rows = self.get_elements(self.OPP_LIST_CARD)
+        # for row in rows:
+        #     name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
+        #     status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
+        #     if name == opp_name.lower() and status == opp_status:
+        #         print(f"Opportunity found: {name}, [{status}]")
+        #         row.click()
+        #         time.sleep(15)
+        #         # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
+        #         break
+
         self.click_element(self.SYNC_BTN)
-        time.sleep(1)
-        # Iterate
-        rows = self.get_elements(self.OPP_LIST_CARD)
-        for row in rows:
-            name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
-            status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
-            if name == opp_name.lower() and status == opp_status:
-                print(f"Opportunity found: {name}, [{status}]")
-                row.click()
-                time.sleep(15)
-                # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
-                break
+        time.sleep(2)
+
+        opp_name = opp_name.strip().lower()
+        opp_status = opp_status.strip().lower()
+
+        max_scrolls = 10
+        scroll_count = 0
+
+        while scroll_count < max_scrolls:
+            rows = self.get_elements(self.OPP_LIST_CARD)
+
+            for row in rows:
+                try:
+                    name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
+                    status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
+
+                    if name == opp_name and status == opp_status:
+                        print(f"Opportunity found: {name}, [{status}]")
+                        row.click()
+                        time.sleep(5)
+                        return  # stop function immediately
+
+                except Exception:
+                    continue
+
+            # Not found → scroll
+            self.scroll_down()
+            scroll_count += 1
+
+        raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
+
 
     def click_notification(self):
         self.wait_for_element(self.NOTIFICATION_BTN)

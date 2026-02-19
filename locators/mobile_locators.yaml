@@ -48,6 +48,9 @@ mobile_notifications:
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
 
 opportunity_page:
+  opp_list_new: "//android.widget.TextView[@text='New Opportunities']"
+  opp_list_in_progress: "//android.widget.TextView[@text='In Progress']"
+  opp_list_complete: "//android.widget.TextView[@text='Completed']"
   opp_list_job_type: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvJobType']"
   opp_list_card: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/rootCardView']"
   opp_list_title: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"

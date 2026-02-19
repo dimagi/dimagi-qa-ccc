@@ -117,7 +117,7 @@ class ConnectWorkersPage(BaseWebPage):
         by, xpath_template = self.TAB_ITEM_BY_NAME
         xpath = xpath_template.format(tab_name=tab_name)
         self.click_element((by, xpath))
-        time.sleep(2)
+        time.sleep(10)
         self.verify_tab_is_active(tab_name)
 
     def verify_tab_is_active(self, tab_name):

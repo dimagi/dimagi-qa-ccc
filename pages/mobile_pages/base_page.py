@@ -1,5 +1,8 @@
 import os
+import time
 
+from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common import NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions.pointer_input import PointerInput
@@ -86,3 +89,30 @@ class BasePage:
 
     def get_elements_if_present(self, locator):
         return self.driver.find_elements(*locator)
+
+    def scroll_down(self):
+        size = self.driver.get_window_size()
+        start_y = int(size['height'] * 0.8)
+        end_y = int(size['height'] * 0.3)
+        x = int(size['width'] / 2)
+
+        self.driver.swipe(x, start_y, x, end_y, 800)
+
+    def scroll_to_element(self, locator, max_swipes=5):
+        for _ in range(max_swipes):
+            try:
+                element = self.driver.find_element(*locator)
+                return element
+            except NoSuchElementException:
+                self.driver.find_element(
+                    AppiumBy.ANDROID_UIAUTOMATOR,
+                    'new UiScrollable(new UiSelector().scrollable(true)).scrollForward()'
+                    )
+        raise NoSuchElementException(f"Element {locator} not found after scrolling")
+
+    def scroll_to_text(self, text):
+        return self.driver.find_element(
+            AppiumBy.ANDROID_UIAUTOMATOR,
+            f'new UiScrollable(new UiSelector().scrollable(true))'
+            f'.scrollIntoView(new UiSelector().text("{text}"));'
+            )

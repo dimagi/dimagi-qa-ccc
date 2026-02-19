@@ -48,6 +48,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     MAX_CONNECT_WORKERS_INPUT = locators.get("connect_opportunities_page", "max_connect_workers")
     SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
     TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
+    PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
 
 
     def click_add_opportunity_btn(self):
@@ -55,9 +56,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def enter_name_in_opportunity(self , value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
-        self.opp_full_name = value + "_" + timestamp
+        opp_full_name =  value+ "_" +timestamp
         self.wait_for_element(self.OPP_NAME_INPUT)
-        self.type(self.OPP_NAME_INPUT, self.opp_full_name)
+        self.type(self.OPP_NAME_INPUT, opp_full_name)
+        return opp_full_name
 
     def select_currency_in_opportunity(self , value):
         self.wait_for_element(self.OPP_CURRENCY_INPUT)
@@ -123,6 +125,8 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def click_opportunity_in_opportunity(self , value):
         time.sleep(5)
+        self.select_by_visible_text(self.PAGE_SIZE, "100")
+        time.sleep(7)
         self.click_link_by_text(value)
         time.sleep(3)
 
@@ -193,7 +197,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def fill_opportunity_form(self, data, learn_app, delivery_app, env):
         env = f"_{env}" if env == "staging" else ""
-        self.enter_name_in_opportunity(data["opportunity_name"])
+        opp_name=self.enter_name_in_opportunity(data["opportunity_name"])
         self.select_currency_in_opportunity(data["currency"])
         self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
@@ -211,27 +215,31 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
         self.enter_passing_score_in_opportunity(data["passing_score"])
         self.click_submit_btn()
-        
+        return opp_name
+
     def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
         self.click_add_opportunity_btn()
         time.sleep(5)
         try:
-            self.fill_opportunity_form(data, learn_app, delivery_app, env)
+            opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
         except:
             self.refresh_current_page()
             time.sleep(3)
-            self.fill_opportunity_form(data, learn_app, delivery_app, env)
+            opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
         time.sleep(3)
+        return opp_name
 
     def create_payment_unit_in_connect_page(self, data):
         self.click_add_payment_unit_button()
         self.enter_name_in_opportunity(data["payment_unit_name"])
         self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
         self.enter_description_in_opportunity(data["description"])
+        start, end = self.generate_date_range(2)
+        print(start, end)
         self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
-        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
-        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        self.enter_start_date_in_payment_unit_of_opportunity(start)
+        self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
@@ -239,8 +247,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def setup_budget_in_connect_page(self, data):
         self.click_setup_budget_button()
-        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
-        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        start, end = self.generate_date_range(2)
+        print(start, end)
+        self.enter_start_date_in_payment_unit_of_opportunity(start)
+        self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
