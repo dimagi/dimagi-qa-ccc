@@ -81,12 +81,24 @@ class OpportunityDashboardPage(BaseWebPage):
         time.sleep(1)
 
     def navigate_to_services_delivered(self, opp):
+        time.sleep(5)
+        try:
+            self.select_by_visible_text(self.PAGE_SIZE, "100")
+            time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)
 
     def navigate_to_payments_earned(self, opp):
+        time.sleep(5)
+        try:
+            self.select_by_visible_text(self.PAGE_SIZE, "100")
+            time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(opp)
         time.sleep(2)
         self.click_dashboard_card_in_opportunity("Payments", "Earned")
@@ -125,6 +137,12 @@ class OpportunityDashboardPage(BaseWebPage):
 
 
     def navigate_to_services_delivered(self, opp):
+        time.sleep(5)
+        try:
+            self.select_by_visible_text(self.PAGE_SIZE, "100")
+            time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
