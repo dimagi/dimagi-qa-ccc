@@ -186,7 +186,7 @@ class BaseWebPage:
     def enter_date(self, locator, date_value: str):
         element = self.wait.until(EC.visibility_of_element_located(locator))
         try:
-            # element.clear()
+            element.clear()
             element.send_keys(date_value)
         except Exception:
             self.driver.execute_script(
@@ -255,11 +255,14 @@ class BaseWebPage:
         parts = text.split("'")
         return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
-    def generate_date_range(self, days_to_add: int):
+    def generate_date_range(self, days_to_add: int, opt=1):
         start = datetime.today()
         end = start + timedelta(days=days_to_add)
 
-        start_date = start.strftime("%d-%m-%Y")
-        end_date = end.strftime("%d-%m-%Y")
-
+        if opt==1:
+            start_date = start.strftime("%m-%d-%Y")
+            end_date = end.strftime("%m-%d-%Y")
+        else:
+            start_date = start.strftime("%d-%m-%Y")
+            end_date = end.strftime("%d-%m-%Y")
         return start_date, end_date

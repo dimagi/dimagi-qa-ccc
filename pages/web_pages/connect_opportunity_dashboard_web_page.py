@@ -70,7 +70,11 @@ class OpportunityDashboardPage(BaseWebPage):
 
     def navigate_to_connect_workers(self, opp):
         print(opp)
-        self.select_by_visible_text(self.PAGE_SIZE, "100")
+        try:
+         self.select_by_visible_text(self.PAGE_SIZE, "100")
+         time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.verify_text_in_url("workers")

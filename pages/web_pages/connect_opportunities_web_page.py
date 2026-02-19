@@ -56,10 +56,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def enter_name_in_opportunity(self , value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
-        opp_full_name =  value+ "_" +timestamp
+        self.opp_full_name =  value+ "_" +timestamp
         self.wait_for_element(self.OPP_NAME_INPUT)
-        self.type(self.OPP_NAME_INPUT, opp_full_name)
-        return opp_full_name
+        self.type(self.OPP_NAME_INPUT, self.opp_full_name)
+        return self.opp_full_name
 
     def select_currency_in_opportunity(self , value):
         self.wait_for_element(self.OPP_CURRENCY_INPUT)
@@ -125,8 +125,11 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def click_opportunity_in_opportunity(self , value):
         time.sleep(5)
-        self.select_by_visible_text(self.PAGE_SIZE, "100")
-        time.sleep(7)
+        try:
+            self.select_by_visible_text(self.PAGE_SIZE, "100")
+            time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(value)
         time.sleep(3)
 
@@ -234,12 +237,19 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.enter_name_in_opportunity(data["payment_unit_name"])
         self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
         self.enter_description_in_opportunity(data["description"])
-        start, end = self.generate_date_range(2)
-        print(start, end)
+
         self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
-        self.enter_start_date_in_payment_unit_of_opportunity(start)
-        self.enter_end_date_in_payment_unit_of_opportunity(end)
+        try:
+            start, end = self.generate_date_range(2, opt=1)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        except:
+            start, end = self.generate_date_range(2, opt=2)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
@@ -247,10 +257,20 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def setup_budget_in_connect_page(self, data):
         self.click_setup_budget_button()
-        start, end = self.generate_date_range(2)
-        print(start, end)
-        self.enter_start_date_in_payment_unit_of_opportunity(start)
-        self.enter_end_date_in_payment_unit_of_opportunity(end)
+        try:
+            start, end = self.generate_date_range(2, opt=1)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        except:
+            start, end = self.generate_date_range(2, opt=2)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        # start, end = self.generate_date_range(2)
+        # print(start, end)
+        # self.enter_start_date_in_payment_unit_of_opportunity(start)
+        # self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
