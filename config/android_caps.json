@@ -19,7 +19,6 @@
     "automationName": "UiAutomator2",
     "deviceName": "Google Pixel 7",
     "os_version": "13.0",
-    "app": "bs://811768034311d7c49548afaefc107bc606331fdd",
 
     "newCommandTimeout": 1000,
     "adbExecTimeout": 60000,
