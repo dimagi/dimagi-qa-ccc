@@ -42,7 +42,7 @@ class OpportunityPage(BasePage):
 
     def verify_job_card(self):
         self.click_element(self.SYNC_BTN)
-        time.sleep(1)
+        time.sleep(5)
         menu_items = [
             self.JOB_TITLE_TXT,
             self.JOB_DESCRIPTION_TXT,
@@ -162,7 +162,7 @@ class OpportunityPage(BasePage):
         #         break
 
         self.click_element(self.SYNC_BTN)
-        time.sleep(2)
+        time.sleep(10)
 
         opp_name = opp_name.strip().lower()
         opp_status = opp_status.strip().lower()

@@ -60,7 +60,7 @@ def mobile_driver(request, config, settings, run_on):
         yield None
         return None
 
-    driver = create_mobile_driver(config, settings, run_on)
+    driver = create_mobile_driver(config, settings, run_on, request)
     driver.run_on = run_on
     yield driver
     try:
@@ -126,12 +126,12 @@ def pytest_runtest_makereport(item):
     outcome = yield
     report = outcome.get_result()
 
-    if report.when != "call":
+    if report.when not in ("call", "setup"):
         return
 
     if report.failed:
-        mobile = item.funcargs.get("mobile_driver")
-        web = item.funcargs.get("web_driver")
+        mobile = getattr(item, "mobile_driver", None)
+        web = getattr(item, "web_driver", None)
 
         extra = getattr(report, "extra", [])
 

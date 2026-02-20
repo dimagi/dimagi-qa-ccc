@@ -32,7 +32,6 @@
     "bstack:options": {
       "projectName": "Dimagi Mobile Automation",
       "buildName": "PID Regression",
-      "sessionName": "PID Tests",
 
       "debug": true,
       "networkLogs": true,

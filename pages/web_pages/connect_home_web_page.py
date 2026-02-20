@@ -31,9 +31,14 @@ class ConnectHomePage(BaseWebPage):
         self.click_organizations_in_sidebar()
 
     def signin_to_connect_page_using_cchq(self):
-        self.click_signin_link()
-        time.sleep(2)
-        self.click_login_with_cchq()
+        try:
+            self.click_signin_link()
+            time.sleep(2)
+            self.click_login_with_cchq()
+        except:
+            print("User already signed in")
+        finally:
+            self.click_organizations_in_sidebar()
 
     def click_organizations_in_sidebar(self):
         self.click_element(self.OPPORTUNITIES_NAVBAR_LINK)

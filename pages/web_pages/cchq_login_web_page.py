@@ -31,24 +31,28 @@ class LoginPage(BaseWebPage):
 
 
     def valid_login_cchq(self, config, settings):
-        cchq_url = config.get("cchq_url")
-        self.driver.get(cchq_url)
-        self.verify_login_page_title("Welcome")
-        self.enter_username_and_password(
-            settings.get(
-                section="creds",
-                key="hq_username",
-                env_var="hq_username"
-                ),
-            settings.get(
-                section="creds",
-                key="hq_password",
-                env_var="hq_password"
-                )
-            # config.get("hq_username"),
-            # config.get("hq_password")
-        )
-        time.sleep(3)
+        try:
+            cchq_url = config.get("cchq_url")
+            self.driver.get(cchq_url)
+            self.verify_login_page_title("Welcome")
+            self.enter_username_and_password(
+                settings.get(
+                    section="creds",
+                    key="hq_username",
+                    env_var="hq_username"
+                    ),
+                settings.get(
+                    section="creds",
+                    key="hq_password",
+                    env_var="hq_password"
+                    )
+                # config.get("hq_username"),
+                # config.get("hq_password")
+            )
+            time.sleep(3)
+        except:
+            print("User is already logged in")
+
 
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")

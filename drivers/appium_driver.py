@@ -9,34 +9,10 @@ from requests.auth import HTTPBasicAuth
 from utils.helpers import PROJECT_ROOT
 
 
-def create_mobile_driver(config, settings, run_on):
+def create_mobile_driver(config, settings, run_on, request):
     caps = config.caps(run_on)
 
     options = UiAutomator2Options()
-
-    # Inject BrowserStack credentials
-    # if run_on == "browserstack":
-    #     bs_user = settings.get(
-    #         section="browserstack",
-    #         key="BROWSERSTACK_USERNAME",
-    #         env_var="BROWSERSTACK_USERNAME"
-    #         )
-    #     bs_key = settings.get(
-    #         section="browserstack",
-    #         key="BROWSERSTACK_ACCESS_KEY",
-    #         env_var="BROWSERSTACK_ACCESS_KEY"
-    #         )
-    #     # bs_user = settings.get("BROWSERSTACK_USERNAME")
-    #     # bs_key = settings.get("BROWSERSTACK_ACCESS_KEY")
-    #
-    #     if not bs_user or not bs_key:
-    #         raise Exception("BrowserStack credentials not set in environment")
-    #
-    #     bstack_opts = caps.get("bstack:options", {}).copy()
-    #     bstack_opts["userName"] = bs_user
-    #     bstack_opts["accessKey"] = bs_key
-    #
-    #     options.set_capability("bstack:options", bstack_opts)
     if run_on == "browserstack":
 
         # Credentials
@@ -57,8 +33,6 @@ def create_mobile_driver(config, settings, run_on):
         # 🔥 Determine APK based on env
         env = config.env.lower()
         project_root = PROJECT_ROOT
-        # base_path = os.path.join(project_root, "app", "make_payment.xlsx")
-        # base_path = Path(r"C:\Users\dsi-user\PycharmProjects\dimagi-qa-ccc\app")
 
         if env == "prod":
             apk_path = os.path.join(project_root, "app", "app-commcare-release.apk")
@@ -78,9 +52,14 @@ def create_mobile_driver(config, settings, run_on):
 
         options.set_capability("app", bs_app_url)
 
+        test_name = request.node.name
+        dynamic_session_name = f"PID Tests - {env.upper()} - {test_name}"
+        # dynamic_build_name = f"PID Regression - {env.upper()}"
+
         bstack_opts = caps.get("bstack:options", {}).copy()
         bstack_opts["userName"] = bs_user
         bstack_opts["accessKey"] = bs_key
+        bstack_opts["sessionName"] = dynamic_session_name
         options.set_capability("bstack:options", bstack_opts)
 
     # Set remaining capabilities (avoid overriding bstack:options)
