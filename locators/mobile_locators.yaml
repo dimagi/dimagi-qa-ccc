@@ -58,6 +58,7 @@ opportunity_page:
   opp_list_type: "//android.widget.TextView[contains(@text,'Opportunity')]"
   opp_list_view_info: "//android.widget.Button[contains(@text, 'View Info')]"
   opp_list_resume: "//android.widget.Button[contains(@text, 'Resume')]"
+  opp_list_review: "//android.widget.Button[contains(@text, 'Review')]"
   opp_list_progress_bar: "//android.view.View[@resource-id='org.commcare.dalvik:id/progressBar']"
 
   job_title_txt: "org.commcare.dalvik:id/tv_job_title"

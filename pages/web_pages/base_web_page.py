@@ -261,7 +261,8 @@ class BaseWebPage:
         return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
 
     def generate_date_range(self, days_to_add: int, opt=1):
-        start = datetime.today()
+        today = datetime.today()
+        start = today + timedelta(days=2)
         end = start + timedelta(days=days_to_add)
 
         if opt==1:

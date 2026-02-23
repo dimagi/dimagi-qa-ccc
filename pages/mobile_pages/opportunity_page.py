@@ -34,11 +34,16 @@ class OpportunityPage(BasePage):
     OPP_LIST_DATE = locators.get("opportunity_page", "opp_list_date")
     OPP_LIST_TYPE = locators.get("opportunity_page", "opp_list_type")
     OPP_LIST_JOB_TYPE = locators.get("opportunity_page", "opp_list_job_type")
+    OPP_LIST_RESUME = locators.get("opportunity_page", "opp_list_resume")
+    OPP_LIST_REVIEW = locators.get("opportunity_page", "opp_list_review")
+    OPP_LIST_VIEW_INFO = locators.get("opportunity_page", "opp_list_view_info")
 
     APP_DOWNLOAD_PROGRESS = locators.get("opportunity_page", "download_learn_app_progress_bar")
     LEARN_APP_START_BTN = locators.get("learn_app_page", "learn_app_start_btn")
     SYNC_BTN = locators.get("opportunity_page", "sync_btn")
     NOTIFICATION_BTN = locators.get("opportunity_page", "notification_btn")
+
+
 
     def verify_job_card(self):
         self.click_element(self.SYNC_BTN)
@@ -144,7 +149,8 @@ class OpportunityPage(BasePage):
         self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
         self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
         time.sleep(10)
-        assert self.is_displayed(self.LEARN_APP_START_BTN), "Learn app start button is not visible"
+        assert self.is_displayed(self.LEARN_APP_START_BTN), "Start button is not visible"
+        print("Download completed. Start button is visible")
 
     def open_opportunity_from_list(self, opp_name, opp_status):
         # self.click_element(self.SYNC_BTN)
@@ -164,8 +170,8 @@ class OpportunityPage(BasePage):
         self.click_element(self.SYNC_BTN)
         time.sleep(10)
 
-        opp_name = opp_name.strip().lower()
-        opp_status = opp_status.strip().lower()
+        # opp_name = opp_name.strip().lower()
+        # opp_status = opp_status.strip().lower()
 
         max_scrolls = 10
         scroll_count = 0
@@ -175,19 +181,41 @@ class OpportunityPage(BasePage):
 
             for row in rows:
                 try:
-                    name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
-                    status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
+                    name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
 
-                    if name == opp_name and status == opp_status:
-                        print(f"Opportunity found: {name}, [{status}]")
-                        row.click()
-                        time.sleep(5)
-                        return  # stop function immediately
+                    if name != opp_name:
+                        continue
 
-                except Exception:
+                    print(f"Opportunity found: {name}")
+
+                    if str(opp_status).lower() == "delivery":
+                        buttons = row.find_elements(*self.OPP_LIST_RESUME)
+                    else:
+                        buttons = row.find_elements(*self.OPP_LIST_REVIEW)
+
+                    if not buttons:
+                        continue
+
+                    button = buttons[0]
+
+                    # Ensure visible before clicking
+                    self.driver.execute_script("arguments[0].scrollIntoView(true);", button)
+                    time.sleep(1)
+
+                    button.click()
+                    time.sleep(5)
+
+                    try:
+                        self.download_learn_app()
+                    except:
+                        print("No Learn or Delivery app Download button present")
+
+                    return
+
+                except Exception as e:
+                    print(f"Row error: {e}")
                     continue
 
-            # Not found → scroll
             self.scroll_down()
             scroll_count += 1
 

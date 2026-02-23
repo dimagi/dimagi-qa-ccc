@@ -46,6 +46,11 @@ def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, conf
     delivery = DeliveryAppPage(mobile_driver)
 
 
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq(config, settings)
+        cchq_login_page.navigate_to_connect_page(config)
+        connect_home_page.signin_to_connect_page_using_cchq()
+
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
         home.click_signup()
@@ -68,11 +73,6 @@ def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, conf
 
     with allure.step("Submit the form on the Delivery App without GPS location"):
         result = delivery.submit_form("Registration Form", record_loc=False)
-
-    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config, settings)
-        cchq_login_page.navigate_to_connect_page(config)
-        connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Change the organization"):
         connect_home_page.select_organization_from_list(data["org_name"])

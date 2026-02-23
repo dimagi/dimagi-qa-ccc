@@ -73,10 +73,6 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
     opportunity = OpportunityPage(mobile_driver)
     app_notifications = AppNotifications(mobile_driver)
 
-    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
-        cchq_login_page.valid_login_cchq(config, settings)
-        cchq_login_page.navigate_to_connect_page(config)
-        connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -92,6 +88,11 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
         home.nav_to_opportunities()
         pid.handle_fingerprint_auth()
         opportunity.verify_opportunity_list()
+
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq(config, settings)
+        cchq_login_page.navigate_to_connect_page(config)
+        connect_home_page.signin_to_connect_page_using_cchq()
 
     with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
         connect_home_page.select_organization_from_list(data["org_name"])

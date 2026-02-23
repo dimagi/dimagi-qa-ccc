@@ -45,6 +45,15 @@ class BasePage:
         except:
             return False
 
+    def is_present(self, locator, timeout=10):
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located(*locator)
+            )
+            return True
+        except:
+            return False
+
     def get_elements(self, locator, timeout=10):
         return self.wait.until(EC.presence_of_all_elements_located(locator))
 
