@@ -18,6 +18,7 @@ TC_3_to_4:
   opportunity_name: "test_opp_221225_01"
   org_name: "PM_Automation_01"
 
+
 TC_5:
   country_code: "+7426"
   phone_number: "7426017"
@@ -25,6 +26,7 @@ TC_5:
   backup_code: "742617"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
+  org_name_staging: "PM_Automation_01"
 
 TC_6:
   country_code: "+7426"
@@ -41,6 +43,7 @@ TC_7:
   backup_code: "742614"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
+  org_name_staging: "PM_Automation_01"
 
 TC_8:
   country_code: "+7426"
@@ -57,6 +60,7 @@ TC_9:
   backup_code: "742611"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
+  org_name_staging: "PM_Automation_01"
   user_id: "7f065c23251bf386d439"
 
 TC_10:
@@ -66,4 +70,5 @@ TC_10:
   backup_code: "742606"
   opportunity_name: "test_opp_120126_01"
   org_name: "Automation_Test_01"
+  org_name_staging: "PM_Automation_01"
   user_id: "5bbf8b4664d2cd1b6537"

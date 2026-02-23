@@ -152,7 +152,7 @@ class OpportunityPage(BasePage):
         assert self.is_displayed(self.LEARN_APP_START_BTN), "Start button is not visible"
         print("Download completed. Start button is visible")
 
-    def open_opportunity_from_list(self, opp_name, opp_status):
+    # def open_opportunity_from_list(self, opp_name, opp_status):
         # self.click_element(self.SYNC_BTN)
         # time.sleep(1)
         # # Iterate
@@ -166,12 +166,9 @@ class OpportunityPage(BasePage):
         #         time.sleep(15)
         #         # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
         #         break
-
+    def open_opportunity_from_list(self, opp_name, opp_status):
         self.click_element(self.SYNC_BTN)
         time.sleep(10)
-
-        # opp_name = opp_name.strip().lower()
-        # opp_status = opp_status.strip().lower()
 
         max_scrolls = 10
         scroll_count = 0
@@ -183,39 +180,28 @@ class OpportunityPage(BasePage):
                 try:
                     name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
 
-                    if name != opp_name:
-                        continue
-
-                    print(f"Opportunity found: {name}")
-
                     if str(opp_status).lower() == "delivery":
-                        buttons = row.find_elements(*self.OPP_LIST_RESUME)
+                        status = row.find_element(*self.OPP_LIST_RESUME)
+                        button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
                     else:
-                        buttons = row.find_elements(*self.OPP_LIST_REVIEW)
+                        status = row.find_element(*self.OPP_LIST_REVIEW)
+                        button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
+                    print(name, button_name)
+                    if name == opp_name :
+                        print(f"Opportunity found: {name}, [{button_name}]")
+                        status.click()
+                        time.sleep(5)
+                        if button_name.lower()=="resume" :
+                            try:
+                                self.download_learn_app()
+                            except:
+                                print("No Learn or Delivery app Download button present")
+                        return  # stop function immediately
 
-                    if not buttons:
-                        continue
-
-                    button = buttons[0]
-
-                    # Ensure visible before clicking
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", button)
-                    time.sleep(1)
-
-                    button.click()
-                    time.sleep(5)
-
-                    try:
-                        self.download_learn_app()
-                    except:
-                        print("No Learn or Delivery app Download button present")
-
-                    return
-
-                except Exception as e:
-                    print(f"Row error: {e}")
+                except Exception:
                     continue
 
+            # Not found → scroll
             self.scroll_down()
             scroll_count += 1
 

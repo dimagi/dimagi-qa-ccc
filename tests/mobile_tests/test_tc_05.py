@@ -75,7 +75,10 @@ def test_delivery_app_registrations_and_approval(web_driver, mobile_driver, conf
         result = delivery.submit_form("Registration Form", record_loc=False)
 
     with allure.step("Change the organization"):
-        connect_home_page.select_organization_from_list(data["org_name"])
+        if 'staging' in config.get("cchq_url"):
+            connect_home_page.select_organization_from_list(data["org_name_staging"])
+        else:
+            connect_home_page.select_organization_from_list(data["org_name"])
 
     with allure.step("Navigate to the Connect Workers details in Opportunity"):
         opp_dashboard_page.navigate_to_services_delivered(data["opportunity_name"])
