@@ -120,7 +120,7 @@ learn_app_page:
   sync_with_server : "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Sync with Server']"
 
 delivery_app_page:
-  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivey App')]"
+  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivery App')]"
   delivery_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
   view_job_status_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='View Job Status']"
   case_list_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/row_txt']"
