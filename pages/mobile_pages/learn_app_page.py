@@ -159,7 +159,7 @@ class LearnAppPage(BasePage):
 
     def download_delivery_app(self):
         self.click_element(self.DOWNLOAD_DELIVERY_APP_BTN)
-        time.sleep(5)
+        time.sleep(15)
         self.wait_for_element(self.DELIVERY_APP_HEADER_TXT)
         assert self.is_displayed(self.DELIVERY_APP_HEADER_TXT)
 

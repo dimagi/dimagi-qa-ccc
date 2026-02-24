@@ -279,8 +279,6 @@ def test_payment_and_related_notifications(web_driver, mobile_driver, config, te
     with allure.step("Navigate to view job status"):
         delivery.nav_to_view_job()
 
-
-
     with allure.step("Change the organization"):
         connect_home_page.select_organization_from_list(data["org_name"])
 
