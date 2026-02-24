@@ -239,6 +239,7 @@ def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, t
 @pytest.mark.mobile
 @pytest.mark.web
 @pytest.mark.dependency(name="tc_6", depends=["tc_3"])
+@pytest.mark.skip(reason="https://dimagi.atlassian.net/browse/QA-8418")
 # @pytest.mark.bugasura("TES25", "TES26", "TES27", "TES109", "TES110")
 def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_6")

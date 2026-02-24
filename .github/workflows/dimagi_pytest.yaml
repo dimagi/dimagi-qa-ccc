@@ -10,7 +10,8 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '30 4 * * 1-5'   # Weekdays 10AM IST
+    - cron: '30 3 * * 1-5'   # 9:00 AM IST (PROD)
+    - cron: '30 4 * * 1-5'
 
   workflow_dispatch:
     inputs:
@@ -55,7 +56,13 @@ jobs:
               echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
             fi
           else
-            echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            if [ "${{ github.event.schedule }}" = "30 3 * * 1-5" ]; then
+              echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
+            elif [ "${{ github.event.schedule }}" = "30 4 * * 1-5" ]; then
+              echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
+            else
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            fi
           fi
 
 # --------------------------------------------------------
@@ -168,7 +175,7 @@ jobs:
     name: Generate Combined Allure Report
     runs-on: ubuntu-latest
     needs: [ web-tests, mobile-tests ]
-    if: always()
+    if: ${{ !cancelled() }}
 
     steps:
       - uses: actions/download-artifact@v4
@@ -436,5 +443,5 @@ jobs:
 # --------------------------------------------------------
 
       - name: Fail Workflow If Tests Failed
-        if: steps.aggregate.outputs.overall == 'failure'
+        if: steps.aggregate.outputs.stage_status == 'FAILURE' || steps.aggregate.outputs.prod_status == 'FAILURE'
         run: exit 1
