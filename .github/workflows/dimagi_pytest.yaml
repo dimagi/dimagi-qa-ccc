@@ -91,7 +91,7 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html
+          pytest -v tests/web_tests --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Web JUnit
         if: always()
@@ -144,7 +144,7 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html
+          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Mobile JUnit
         if: always()
@@ -175,51 +175,71 @@ jobs:
         with:
           path: artifacts
 
-      - name: Parse Environment Results
+      - name: Parse Environment Results (Correct Failure + Error Handling)
         id: aggregate
         run: |
-          overall="success"
-          summary=""
+          parse_results () {
+            pattern=$1
+            total=0; failed=0; errors=0; skipped=0;
 
-          # detect environments dynamically
-          envs=$(ls artifacts | grep junit | sed 's/.*-//' | sort -u)
-
-          for env in $envs; do
-            total=0; failed=0; skipped=0;
-
-            for file in $(find artifacts -name "*-${env}.xml"); do
+            for file in $(find artifacts -name "$pattern"); do
               t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
               f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
               s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
 
               total=$((total + ${t:-0}))
               failed=$((failed + ${f:-0}))
+              errors=$((errors + ${e:-0}))
               skipped=$((skipped + ${s:-0}))
             done
 
-            passed=$((total - failed - skipped))
+            total_failed=$((failed + errors))
+            passed=$((total - total_failed - skipped))
 
-            if [ "$failed" -gt 0 ]; then
+            if [ "$total_failed" -gt 0 ]; then
               status="failure"
-              overall="failure"
             else
               status="success"
             fi
 
-            summary="${summary}\n${env} → ${status} (Passed: ${passed} | Failed: ${failed} | Skipped: ${skipped})"
+            echo "$status,$passed,$total_failed,$errors,$skipped"
+          }
+
+          for env in stage prod; do
+            web=$(parse_results "web-${env}.xml")
+            mobile=$(parse_results "mobile-${env}.xml")
+
+            IFS=',' read web_status web_pass web_fail web_err web_skip <<< "$web"
+            IFS=',' read mob_status mob_pass mob_fail mob_err mob_skip <<< "$mobile"
+
+            if [ "$web_status" = "failure" ] || [ "$mob_status" = "failure" ]; then
+              env_status="FAILURE"
+              color="danger"
+            else
+              env_status="SUCCESS"
+              color="good"
+            fi
+
+            echo "${env}_web_pass=$web_pass" >> $GITHUB_OUTPUT
+            echo "${env}_web_fail=$web_fail" >> $GITHUB_OUTPUT
+            echo "${env}_web_err=$web_err" >> $GITHUB_OUTPUT
+            echo "${env}_web_skip=$web_skip" >> $GITHUB_OUTPUT
+
+            echo "${env}_mobile_pass=$mob_pass" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_fail=$mob_fail" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_err=$mob_err" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_skip=$mob_skip" >> $GITHUB_OUTPUT
+
+            echo "${env}_status=$env_status" >> $GITHUB_OUTPUT
+            echo "${env}_color=$color" >> $GITHUB_OUTPUT
           done
-
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$summary" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "overall=$overall" >> $GITHUB_OUTPUT
 
       # --------------------------------------------------------
 # Slack
 # --------------------------------------------------------
 
-      - name: Slack Notification
+      - name: Slack Notification - Stage
         if: always() && env.SEND_SLACK == 'true'
         uses: slackapi/slack-github-action@v2.1.1
         with:
@@ -229,21 +249,93 @@ jobs:
             {
               "attachments": [
                 {
-                  "color": "${{ steps.aggregate.outputs.overall == 'success' && 'good' || 'danger' }}",
+                  "color": "${{ steps.aggregate.outputs.stage_color }}",
                   "text": "*CommCare-Connect Test Automation Report*\n\n\
-                    Run: #${{ github.run_number }}\n\
-                    ${{ steps.aggregate.outputs.summary }}\n\n\
+                    Run: #${{ github.run_number }}\n\n\
+                    *STAGE — ${{ steps.aggregate.outputs.stage_status }}*\n\n\
+                    Web → Passed: ${{ steps.aggregate.outputs.stage_web_pass }} | Failed: ${{ steps.aggregate.outputs.stage_web_fail }} | Errors: ${{ steps.aggregate.outputs.stage_web_err }} | Skipped: ${{ steps.aggregate.outputs.stage_web_skip }}\n\
+                    Mobile → Passed: ${{ steps.aggregate.outputs.stage_mobile_pass }} | Failed: ${{ steps.aggregate.outputs.stage_mobile_fail }} | Errors: ${{ steps.aggregate.outputs.stage_mobile_err }} | Skipped: ${{ steps.aggregate.outputs.stage_mobile_skip }}\n\n\
                     https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                  ]
-                  }
-                  
+                }
+              ]
+            }
+      - name: Slack Notification - Prod
+        if: always() && env.SEND_SLACK == 'true'
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.aggregate.outputs.prod_color }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+                    Run: #${{ github.run_number }}\n\n\
+                    *PROD — ${{ steps.aggregate.outputs.prod_status }}*\n\n\
+                    Web → Passed: ${{ steps.aggregate.outputs.prod_web_pass }} | Failed: ${{ steps.aggregate.outputs.prod_web_fail }} | Errors: ${{ steps.aggregate.outputs.prod_web_err }} | Skipped: ${{ steps.aggregate.outputs.prod_web_skip }}\n\
+                    Mobile → Passed: ${{ steps.aggregate.outputs.prod_mobile_pass }} | Failed: ${{ steps.aggregate.outputs.prod_mobile_fail }} | Errors: ${{ steps.aggregate.outputs.prod_mobile_err }} | Skipped: ${{ steps.aggregate.outputs.prod_mobile_skip }}\n\n\
+                    https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
+            }
+#      - name: Slack Notification
+#        if: always() && env.SEND_SLACK == 'true'
+#        uses: slackapi/slack-github-action@v2.1.1
+#        with:
+#          webhook-type: incoming-webhook
+#          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+#          payload: |
+#            {
+#              "attachments": [
+#                {
+#                  "color": "${{ steps.aggregate.outputs.overall == 'success' && 'good' || 'danger' }}",
+#                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+#                    Run: #${{ github.run_number }}\n\
+#                    ${{ steps.aggregate.outputs.summary }}\n\n\
+#                    https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#                  }
+#                  ]
+#                  }
+#
 
       # --------------------------------------------------------
 # Email
 # --------------------------------------------------------
 
-      - name: Send Email Notification
+#      - name: Send Email Notification
+#        if: always() && env.SEND_EMAIL == 'true'
+#        uses: dawidd6/action-send-mail@v3
+#        with:
+#          server_address: smtp.gmail.com
+#          server_port: 587
+#          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+#          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+#          subject: >
+#            CommCare-Connect Tests -
+#            ${{ steps.aggregate.outputs.overall == 'success' && 'SUCCESS' || 'FAILURE' }}
+#            - Run #${{ github.run_number }}
+#          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+#          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+#
+#          html_body: |
+#            <h2>CommCare-Connect Test Automation Report</h2>
+#            <p><b>Run:</b> #${{ github.run_number }}</p>
+#            <p><b>Branch:</b> ${{ github.ref_name }}</p>
+#
+#            <pre>
+#            ${{ steps.aggregate.outputs.summary }}
+#            </pre>
+#
+#            <br>
+#            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+#            View Full Run
+#            </a>
+#
+#
+#          attachments: |
+#            artifacts/**/report-*.html
+      - name: Send Email - Stage
         if: always() && env.SEND_EMAIL == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
@@ -251,30 +343,93 @@ jobs:
           server_port: 587
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+
           subject: >
-            CommCare-Connect Tests -
-            ${{ steps.aggregate.outputs.overall == 'success' && 'SUCCESS' || 'FAILURE' }}
-            - Run #${{ github.run_number }}
+            CommCare-Connect STAGE -
+            ${{ steps.aggregate.outputs.stage_status }} -
+            Run #${{ github.run_number }}
+
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
 
           html_body: |
-            <h2>CommCare-Connect Test Automation Report</h2>
+            <h2>CommCare-Connect Test Automation Report - STAGE</h2>
+
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
-            <pre>
-            ${{ steps.aggregate.outputs.summary }}
-            </pre>
-            
+            <h3>Web Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.stage_web_pass }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.stage_web_fail }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.stage_web_err }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.stage_web_skip }}</li>
+            </ul>
+
+            <h3>Mobile Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.stage_mobile_pass }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.stage_mobile_fail }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.stage_mobile_err }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.stage_mobile_skip }}</li>
+            </ul>
+
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
             </a>
-            
 
           attachments: |
-            artifacts/**/report-*.html
+            artifacts/**/report-web-stage.html
+            artifacts/**/report-mobile-stage.html
+      
+      - name: Send Email - Prod
+        if: always() && env.SEND_EMAIL == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+
+          subject: >
+            CommCare-Connect PROD -
+            ${{ steps.aggregate.outputs.prod_status }} -
+            Run #${{ github.run_number }}
+
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+
+          html_body: |
+            <h2>CommCare-Connect Test Automation Report - PROD</h2>
+      
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.ref_name }}</p>
+      
+            <h3>Web Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.prod_web_pass }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.prod_web_fail }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.prod_web_err }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.prod_web_skip }}</li>
+            </ul>
+      
+            <h3>Mobile Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.prod_mobile_pass }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.prod_mobile_fail }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.prod_mobile_err }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.prod_mobile_skip }}</li>
+            </ul>
+      
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+
+          attachments: |
+            artifacts/**/report-web-prod.html
+            artifacts/**/report-mobile-prod.html
 
 # --------------------------------------------------------
 # Fail Workflow If Needed

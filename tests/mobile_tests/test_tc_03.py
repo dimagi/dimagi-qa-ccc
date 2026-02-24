@@ -51,7 +51,7 @@ def created_opportunity(web_driver,test_data, config, settings):
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.dependency(name="tc_3", scope="class")
+@pytest.mark.dependency(name="tc_3")
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
 def test_opportunity_invite_notifications_and_details(created_opportunity, web_driver, mobile_driver, config, test_data, settings):
@@ -133,7 +133,7 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
   """)
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.dependency(name="tc_4", depends=["tc_3"], scope="class")
+@pytest.mark.dependency(name="tc_4", depends=["tc_3"])
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES20", "TES21", "TES22")
 def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, test_data, settings):
@@ -238,7 +238,7 @@ def test_learn_app_assessments_delivery_app(web_driver, mobile_driver, config, t
 
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.dependency(name="tc_6", depends=["tc_3"], scope="class")
+@pytest.mark.dependency(name="tc_6", depends=["tc_3"])
 # @pytest.mark.bugasura("TES25", "TES26", "TES27", "TES109", "TES110")
 def test_payment_and_related_notifications(web_driver, mobile_driver, config, test_data, settings):
     data = test_data.get("TC_6")
