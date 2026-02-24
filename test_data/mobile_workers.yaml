@@ -30,9 +30,13 @@ TC_5:
 
 TC_6:
   country_code: "+7426"
-  phone_number: "7426018"
-  username: "Automation User 18"
-  backup_code: "742618"
+  phone_number: "7426034"
+  username: "Automation User 34"
+  backup_code: "742634"
+#  country_code: "+7426"
+#  phone_number: "7426018"
+#  username: "Automation User 18"
+#  backup_code: "742618"
   opportunity_name: "test_opp_221225_01"
   org_name: "PM_Automation_01"
 

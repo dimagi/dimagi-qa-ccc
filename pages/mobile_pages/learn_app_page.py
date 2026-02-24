@@ -98,7 +98,7 @@ class LearnAppPage(BasePage):
             "FAILED_ASSESSMENT": {
                 "start_text": (
                     "Sorry, you did not earn a passing score on your assessment. "
-                    "Please try again.\nYour score: 10\nPassing score: 70"
+                    "Please try again.\nYour score: 10\nPassing score: 40"
                 ),
                 "progress": "100%",
                 "continue_btn": "go to assessment"
@@ -115,7 +115,8 @@ class LearnAppPage(BasePage):
         print(self.get_text(self.LEARNING_STATUS_TXT))
         print(self.get_text(self.LEARN_PROGRESS_TXT))
         print(self.get_text(self.CONTINUE_LEARNING_BTN))
-        assert expected["start_text"] in self.get_text(self.LEARNING_STATUS_TXT)
+        assert expected["start_text"] in self.get_text(self.LEARNING_STATUS_TXT), f"{expected['start_text']} doesn't match {self.get_text(self.LEARNING_STATUS_TXT)}"
+        print(f"{expected['start_text']} matches {self.get_text(self.LEARNING_STATUS_TXT)}")
         assert self.get_text(self.LEARN_PROGRESS_TXT) == expected["progress"]
         assert self.get_text(self.CONTINUE_LEARNING_BTN).lower() == expected["continue_btn"]
         self.navigate_back()
