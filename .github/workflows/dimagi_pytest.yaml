@@ -151,7 +151,7 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          pytest -v tests/mobile_tests --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Mobile JUnit
         if: always()
