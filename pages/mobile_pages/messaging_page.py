@@ -43,7 +43,7 @@ class Message(BasePage):
             name = channel.text.strip()
             print(name)
             if name == channel_name:
-                self.click_element(self.CHANNEL_NAME)
+                channel.click()
             assert self.is_displayed(self.MESSAGE_INPUT)
 
     def fill_survey_form(self, timeout=30):

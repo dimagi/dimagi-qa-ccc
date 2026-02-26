@@ -110,8 +110,8 @@ class MessagingPage(BaseWebPage):
         self.click_continue_btn()
         time.sleep(1)
         self.select_what_to_send_input("Connect Message")
-        self.select_user_recipients(user_recipients)
         self.enter_message_in_broadcast("Automation Test Message")
+        self.select_user_recipients(user_recipients)
         self.click_save_btn()
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
 
