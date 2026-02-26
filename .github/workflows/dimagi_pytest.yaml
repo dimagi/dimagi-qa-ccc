@@ -182,12 +182,9 @@ jobs:
         with:
           path: artifacts
 
-      # --------------------------------------------------------
-      # Parse Results + Build Dynamic Attachments
-      # --------------------------------------------------------
-
       - name: Parse Results
         id: aggregate
+        shell: bash
         run: |
           parse_results () {
             pattern=$1
@@ -225,15 +222,35 @@ jobs:
             echo "$status,$color,$passed,$total_failed,$errors,$skipped"
           }
 
+          # Only environments that actually produced junit xml
           envs=$(find artifacts -name "*.xml" | sed -E 's/.*-(stage|prod)\.xml/\1/' | sort -u)
 
           for env in $envs; do
-            web=$(parse_results "web-${env}.xml")
-            mobile=$(parse_results "mobile-${env}.xml")
+            web="$(parse_results "web-${env}.xml")"
+            mobile="$(parse_results "mobile-${env}.xml")"
 
-            IFS=',' read web_status web_color web_pass web_fail web_err web_skip <<< "$web"
-            IFS=',' read mob_status mob_color mob_pass mob_fail mob_err mob_skip <<< "$mobile"
+            env_has_web="false"
+            env_has_mobile="false"
 
+            web_status=""; web_pass=""; web_fail=""; web_err=""; web_skip=""
+            mob_status=""; mob_pass=""; mob_fail=""; mob_err=""; mob_skip=""
+
+            if [ -n "$web" ]; then
+              env_has_web="true"
+              IFS=',' read web_status web_color web_pass web_fail web_err web_skip <<< "$web"
+            fi
+
+            if [ -n "$mobile" ]; then
+              env_has_mobile="true"
+              IFS=',' read mob_status mob_color mob_pass mob_fail mob_err mob_skip <<< "$mobile"
+            fi
+
+            # If neither scope ran for this env, skip it
+            if [ "$env_has_web" != "true" ] && [ "$env_has_mobile" != "true" ]; then
+              continue
+            fi
+
+            # Env status = FAILURE if any executed scope failed
             if [ "$web_status" = "FAILURE" ] || [ "$mob_status" = "FAILURE" ]; then
               env_status="FAILURE"
               env_color="danger"
@@ -245,37 +262,42 @@ jobs:
             echo "${env}_status=$env_status" >> $GITHUB_OUTPUT
             echo "${env}_color=$env_color" >> $GITHUB_OUTPUT
 
-            echo "${env}_web_pass=${web_pass:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_web_fail=${web_fail:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_web_err=${web_err:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_web_skip=${web_skip:-0}" >> $GITHUB_OUTPUT
+            echo "${env}_has_web=$env_has_web" >> $GITHUB_OUTPUT
+            echo "${env}_has_mobile=$env_has_mobile" >> $GITHUB_OUTPUT
 
-            echo "${env}_mobile_pass=${mob_pass:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_mobile_fail=${mob_fail:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_mobile_err=${mob_err:-0}" >> $GITHUB_OUTPUT
-            echo "${env}_mobile_skip=${mob_skip:-0}" >> $GITHUB_OUTPUT
+            echo "${env}_web_pass=$web_pass" >> $GITHUB_OUTPUT
+            echo "${env}_web_fail=$web_fail" >> $GITHUB_OUTPUT
+            echo "${env}_web_err=$web_err" >> $GITHUB_OUTPUT
+            echo "${env}_web_skip=$web_skip" >> $GITHUB_OUTPUT
 
-            # Build dynamic attachments
-            attachments=""
+            echo "${env}_mobile_pass=$mob_pass" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_fail=$mob_fail" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_err=$mob_err" >> $GITHUB_OUTPUT
+            echo "${env}_mobile_skip=$mob_skip" >> $GITHUB_OUTPUT
 
-            web_file=$(find artifacts -name "report-web-${env}.html" | head -1)
-            mobile_file=$(find artifacts -name "report-mobile-${env}.html" | head -1)
+            # NEWLINE-separated attachments (what action-send-mail expects)
+            web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
+            mob_file="$(find artifacts -name "report-mobile-${env}.html" | head -1)"
 
-            if [ -f "$web_file" ]; then
-              attachments="$attachments $web_file"
+            att=""
+            if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
+              att="${att}${web_file}"$'\n'
+            fi
+            if [ "$env_has_mobile" = "true" ] && [ -n "$mob_file" ] && [ -f "$mob_file" ]; then
+              att="${att}${mob_file}"$'\n'
             fi
 
-            if [ -f "$mobile_file" ]; then
-              attachments="$attachments $mobile_file"
-            fi
-
-            echo "${env}_attachments=$attachments" >> $GITHUB_OUTPUT
+            {
+              echo "${env}_attachments<<EOF"
+              printf "%s" "$att"
+              echo
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
           done
-      
 
-      # --------------------------------------------------------
+      # -----------------------------
       # Slack Notifications
-      # --------------------------------------------------------
+      # -----------------------------
 
       - name: Slack Notification - Stage
         if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_SLACK == 'true' }}
@@ -291,8 +313,8 @@ jobs:
                   "text": "*CommCare-Connect Test Automation Report*\n\n\
                   Run: #${{ github.run_number }}\n\n\
                   *STAGE — ${{ steps.aggregate.outputs.stage_status }}*\n\n\
-                  ${{ steps.aggregate.outputs.has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}\
-                  ${{ steps.aggregate.outputs.has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_mobile_pass, steps.aggregate.outputs.stage_mobile_fail, steps.aggregate.outputs.stage_mobile_err, steps.aggregate.outputs.stage_mobile_skip) || '' }}\n\
+                  ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}\
+                  ${{ steps.aggregate.outputs.stage_has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_mobile_pass, steps.aggregate.outputs.stage_mobile_fail, steps.aggregate.outputs.stage_mobile_err, steps.aggregate.outputs.stage_mobile_skip) || '' }}\n\
                   https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                 }
               ]
@@ -312,19 +334,16 @@ jobs:
                   "text": "*CommCare-Connect Test Automation Report*\n\n\
                   Run: #${{ github.run_number }}\n\n\
                   *PROD — ${{ steps.aggregate.outputs.prod_status }}*\n\n\
-                  ${{ steps.aggregate.outputs.has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}\
-                  ${{ steps.aggregate.outputs.has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_mobile_pass, steps.aggregate.outputs.prod_mobile_fail, steps.aggregate.outputs.prod_mobile_err, steps.aggregate.outputs.prod_mobile_skip) || '' }}\n\
+                  ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}\
+                  ${{ steps.aggregate.outputs.prod_has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_mobile_pass, steps.aggregate.outputs.prod_mobile_fail, steps.aggregate.outputs.prod_mobile_err, steps.aggregate.outputs.prod_mobile_skip) || '' }}\n\
                   https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                 }
               ]
             }
 
-      # --------------------------------------------------------
+      # -----------------------------
       # Email Notifications
-      # --------------------------------------------------------
-      # --------------------------------------------------------
-      # Email Notifications (Dynamic Attachments)
-      # --------------------------------------------------------
+      # -----------------------------
 
       - name: Send Email - Stage
         if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_EMAIL == 'true' }}
@@ -345,15 +364,14 @@ jobs:
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
-            ${{ steps.aggregate.outputs.stage_web_pass != '' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}
+            ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}
 
-            ${{ steps.aggregate.outputs.stage_mobile_pass != '' && format('<h3>Mobile Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.stage_mobile_pass, steps.aggregate.outputs.stage_mobile_fail, steps.aggregate.outputs.stage_mobile_err, steps.aggregate.outputs.stage_mobile_skip) || '' }}
+            ${{ steps.aggregate.outputs.stage_has_mobile == 'true' && format('<h3>Mobile Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.stage_mobile_pass, steps.aggregate.outputs.stage_mobile_fail, steps.aggregate.outputs.stage_mobile_err, steps.aggregate.outputs.stage_mobile_skip) || '' }}
 
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
             </a>
-
           attachments: ${{ steps.aggregate.outputs.stage_attachments }}
 
       - name: Send Email - Prod
@@ -375,15 +393,14 @@ jobs:
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
-            ${{ steps.aggregate.outputs.prod_web_pass != '' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}
+            ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}
 
-            ${{ steps.aggregate.outputs.prod_mobile_pass != '' && format('<h3>Mobile Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.prod_mobile_pass, steps.aggregate.outputs.prod_mobile_fail, steps.aggregate.outputs.prod_mobile_err, steps.aggregate.outputs.prod_mobile_skip) || '' }}
+            ${{ steps.aggregate.outputs.prod_has_mobile == 'true' && format('<h3>Mobile Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.prod_mobile_pass, steps.aggregate.outputs.prod_mobile_fail, steps.aggregate.outputs.prod_mobile_err, steps.aggregate.outputs.prod_mobile_skip) || '' }}
 
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
             </a>
-
           attachments: ${{ steps.aggregate.outputs.prod_attachments }}
 
       - name: Fail Workflow If Tests Failed
