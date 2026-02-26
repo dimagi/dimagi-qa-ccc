@@ -102,7 +102,10 @@ class MessagingPage(BaseWebPage):
         self.enter_name_in_conditional_alert("Automation Message Alert")
         time.sleep(1)
         self.click_continue_btn()
-        self.select_case_type("automation")
+        if "staging" in self.get_current_url():
+            self.select_case_type("case")
+        else:
+            self.select_case_type("automation")
         self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         time.sleep(1)
@@ -152,9 +155,14 @@ class MessagingPage(BaseWebPage):
         self.verify_options_present_in_what_to_send(values)
 
     def click_save_btn(self):
-        self.scroll_into_view(self.SAVE_BUTTON)
         time.sleep(2)
-        self.click_element(self.SAVE_BUTTON)
+        self.scroll_to_element(self.SAVE_BUTTON)
+        time.sleep(2)
+        self.js_click(self.SAVE_BUTTON)
+        if 'staging' in self.get_current_url():
+            time.sleep(200)
+        else:
+            time.sleep(60)
 
     def click_last_page_in_pagination(self):
         pagination = self.wait_for_element(self.PAGINATION_CONTAINER)

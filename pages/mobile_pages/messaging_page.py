@@ -36,9 +36,11 @@ class Message(BasePage):
         self.click_element(self.NAVIGATION_DRAWER)
         self.click_element(self.MESSAGING_BTN)
         time.sleep(2)
-        if self.get_text(self.CHANNEL_NAME) == channel_name:
-            self.click_element(self.CHANNEL_NAME)
-        assert self.is_displayed(self.MESSAGE_INPUT)
+        channels = self.get_elements(self.CHANNEL_NAME)
+        for channel in channels:
+            if channel.text.strip() == channel_name:
+                self.click_element(self.CHANNEL_NAME)
+            assert self.is_displayed(self.MESSAGE_INPUT)
 
     def fill_survey_form(self, timeout=30):
         start_time = time.time()

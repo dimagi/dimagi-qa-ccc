@@ -118,56 +118,92 @@ def web_driver(request, config):
 #         result.user_properties.append(("bugasura_tc_ids", tc_ids))
 #         result.nodeid = f"[{tc_ids}]{item.name}"
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_makereport(item, call):
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item):
-    pytest_html = item.config.pluginmanager.getplugin("html")
-
-    outcome = yield
-    report = outcome.get_result()
-
-    if report.when not in ("call", "setup"):
+    if call.when != "call":
         return
 
-    if report.failed:
-        mobile = getattr(item, "mobile_driver", None)
-        web = getattr(item, "web_driver", None)
+    if call.excinfo is None:
+        return
 
-        extra = getattr(report, "extra", [])
+    mobile_driver = item.funcargs.get("mobile_driver")
+    web_driver = item.funcargs.get("web_driver")
 
-        def capture(driver):
-            if not driver:
-                return None
-            try:
-                driver.execute_script("return 1")
-                png = driver.get_screenshot_as_png()
-                return png
-            except Exception as e:
-                print(f"[WARN] Screenshot failed: {e}")
-                return None
+    pytest_html = item.config.pluginmanager.getplugin("html")
 
-        for driver in [mobile, web]:
-            png = capture(driver)
-            if png:
-                # ✅ Allure
-                allure.attach(
-                    png,
-                    name="Failure Screenshot",
-                    attachment_type=AttachmentType.PNG
-                )
+    def attach(driver, label):
+        if not driver:
+            return
+        try:
+            png = driver.get_screenshot_as_png()
+            if not png:
+                return
 
-                # ✅ pytest-html (base64 embed)
-                if pytest_html:
-                    screen_img = _capture_screenshot(driver)
-                    html_img = (
-                            '<div><img src="data:image/png;base64,%s" alt="screenshot" '
-                            'style="width:600px;height:300px;" '
-                            'onclick="window.open(this.src)" align="right"/></div>'
-                            % screen_img
-                    )
-                    extra.append(pytest_html.extras.html(html_img))
+            # Allure
+            allure.attach(png, label, AttachmentType.PNG)
 
-        report.extra = extra
+            # pytest-html
+            if pytest_html:
+                extra = getattr(item, "extra", [])
+                extra.append(pytest_html.extras.image(png))
+                item.extra = extra
+
+        except Exception as e:
+            print(f"[WARN] Screenshot failed: {e}")
+
+    attach(mobile_driver, "Mobile Screenshot")
+    attach(web_driver, "Web Screenshot")
+
+# @pytest.hookimpl(hookwrapper=True)
+# def pytest_runtest_makereport(item):
+#     pytest_html = item.config.pluginmanager.getplugin("html")
+#
+#     outcome = yield
+#     report = outcome.get_result()
+#
+#     if report.when not in ("call", "setup"):
+#         return
+#
+#     if report.failed:
+#         mobile = getattr(item, "mobile_driver", None)
+#         web = getattr(item, "web_driver", None)
+#
+#         extra = getattr(report, "extra", [])
+#
+#         def capture(driver):
+#             if not driver:
+#                 return None
+#             try:
+#                 driver.execute_script("return 1")
+#                 png = driver.get_screenshot_as_png()
+#                 return png
+#             except Exception as e:
+#                 print(f"[WARN] Screenshot failed: {e}")
+#                 return None
+#
+#         for driver in [mobile, web]:
+#             png = capture(driver)
+#             if png:
+#                 # ✅ Allure
+#                 allure.attach(
+#                     png,
+#                     name="Failure Screenshot",
+#                     attachment_type=AttachmentType.PNG
+#                 )
+#
+#                 # ✅ pytest-html (base64 embed)
+#                 if pytest_html:
+#                     screen_img = _capture_screenshot(driver)
+#                     html_img = (
+#                             '<div><img src="data:image/png;base64,%s" alt="screenshot" '
+#                             'style="width:600px;height:300px;" '
+#                             'onclick="window.open(this.src)" align="right"/></div>'
+#                             % screen_img
+#                     )
+#                     extra.append(pytest_html.extras.html(html_img))
+#
+#         report.extra = extra
 
 def _capture_screenshot(driver):
     if not driver:
