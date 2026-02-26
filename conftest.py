@@ -118,42 +118,47 @@ def web_driver(request, config):
 #         result.user_properties.append(("bugasura_tc_ids", tc_ids))
 #         result.nodeid = f"[{tc_ids}]{item.name}"
 
-@pytest.hookimpl(tryfirst=True)
-def pytest_runtest_makereport(item, call):
-
-    if call.when != "call":
-        return
-
-    if call.excinfo is None:
-        return
-
-    mobile_driver = item.funcargs.get("mobile_driver")
-    web_driver = item.funcargs.get("web_driver")
-
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item):
     pytest_html = item.config.pluginmanager.getplugin("html")
 
-    def attach(driver, label):
-        if not driver:
-            return
-        try:
-            png = driver.get_screenshot_as_png()
-            if not png:
+    outcome = yield
+    report = outcome.get_result()
+
+    # Only attach on actual test failure
+    if report.when == "call" and report.failed:
+
+        mobile_driver = item.funcargs.get("mobile_driver")
+        web_driver = item.funcargs.get("web_driver")
+
+        extra = getattr(report, "extra", [])
+
+        def attach(driver, label):
+            if not driver:
                 return
+            try:
+                png = driver.get_screenshot_as_png()
+                if not png:
+                    return
 
-            # Allure
-            allure.attach(png, label, AttachmentType.PNG)
+                # Allure
+                allure.attach(
+                    png,
+                    name=label,
+                    attachment_type=AttachmentType.PNG
+                )
 
-            # pytest-html
-            if pytest_html:
-                extra = getattr(item, "extra", [])
-                extra.append(pytest_html.extras.image(png))
-                item.extra = extra
+                # pytest-html
+                if pytest_html:
+                    extra.append(pytest_html.extras.image(png))
 
-        except Exception as e:
-            print(f"[WARN] Screenshot failed: {e}")
+            except Exception as e:
+                print(f"[WARN] Screenshot failed: {e}")
 
-    attach(mobile_driver, "Mobile Screenshot")
-    attach(web_driver, "Web Screenshot")
+        attach(mobile_driver, "Mobile Screenshot")
+        attach(web_driver, "Web Screenshot")
+
+        report.extra = extra
 
 # @pytest.hookimpl(hookwrapper=True)
 # def pytest_runtest_makereport(item):

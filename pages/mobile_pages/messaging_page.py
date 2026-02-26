@@ -34,11 +34,15 @@ class Message(BasePage):
 
     def open_channel_on_message(self, channel_name):
         self.click_element(self.NAVIGATION_DRAWER)
-        self.click_element(self.MESSAGING_BTN)
         time.sleep(2)
+        self.click_element(self.MESSAGING_BTN)
+        time.sleep(5)
         channels = self.get_elements(self.CHANNEL_NAME)
+        print(len(channels))
         for channel in channels:
-            if channel.text.strip() == channel_name:
+            name = channel.text.strip()
+            print(name)
+            if name == channel_name:
                 self.click_element(self.CHANNEL_NAME)
             assert self.is_displayed(self.MESSAGE_INPUT)
 
