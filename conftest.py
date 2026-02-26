@@ -125,7 +125,6 @@ def pytest_runtest_makereport(item):
     outcome = yield
     report = outcome.get_result()
 
-    # Only attach on actual test failure
     if report.when == "call" and report.failed:
 
         mobile_driver = item.funcargs.get("mobile_driver")
@@ -141,16 +140,17 @@ def pytest_runtest_makereport(item):
                 if not png:
                     return
 
-                # Allure
+                # ✅ Allure (raw bytes)
                 allure.attach(
                     png,
                     name=label,
                     attachment_type=AttachmentType.PNG
                 )
 
-                # pytest-html
+                # ✅ pytest-html (base64 string)
                 if pytest_html:
-                    extra.append(pytest_html.extras.image(png))
+                    b64 = base64.b64encode(png).decode("utf-8")
+                    extra.append(pytest_html.extras.image(b64))
 
             except Exception as e:
                 print(f"[WARN] Screenshot failed: {e}")
