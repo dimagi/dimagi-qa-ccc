@@ -60,7 +60,7 @@ class ConnectWorkersPage(BaseWebPage):
         self.nav_to_add_worker()
         self.enter_invite_users_in_opportunity(num_list)
         self.click_submit_btn()
-        time.sleep(10)
+        time.sleep(40)
         print("Sleeping for the the invite to get delivered...")
 
     def verify_invite_users_input_present(self):
