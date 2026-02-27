@@ -38,7 +38,7 @@ login_page:
   progress_bar: "org.commcare.dalvik:id/progress_bar"
 
 mobile_notifications:
-  invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
+  invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"
   invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
   expand_btn: "//android.widget.TextView[@text='CommCare']/ancestor::android.widget.RelativeLayout//android.widget.Button"
 #  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"

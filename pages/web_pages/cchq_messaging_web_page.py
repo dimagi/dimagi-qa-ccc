@@ -166,10 +166,7 @@ class MessagingPage(BaseWebPage):
         self.scroll_to_element(self.SAVE_BUTTON)
         time.sleep(2)
         self.js_click(self.SAVE_BUTTON)
-        if 'staging' in self.get_current_url():
-            time.sleep(100)
-        else:
-            time.sleep(50)
+        time.sleep(50)
 
     def click_last_page_in_pagination(self):
         pagination = self.wait_for_element(self.PAGINATION_CONTAINER)
