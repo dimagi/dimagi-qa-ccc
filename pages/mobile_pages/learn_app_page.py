@@ -66,6 +66,17 @@ class LearnAppPage(BasePage):
         assert self.get_text(self.LEARN_PROGRESS_TXT)== "100%"
         assert self.get_text(self.CONTINUE_LEARNING_BTN).lower() == "go to assessment"
 
+    def continue_learning(self):
+        try:
+            self.scroll_to_end()
+            time.sleep(2)
+            if self.is_displayed(self.CONTINUE_LEARNING_BTN):
+                self.click_element(self.CONTINUE_LEARNING_BTN)
+            else:
+                self.click_element(self.OPP_LIST_RESUME)
+        except:
+            print("No Continue learn button present")
+
     def complete_assessment(self, passing_score):
         self.scroll_to_end()
         time.sleep(2)
@@ -175,4 +186,4 @@ class LearnAppPage(BasePage):
 
     def sync_with_server(self):
         self.click_element(self.SYNC_WITH_SERVER)
-        time.sleep(2)
+        time.sleep(4)

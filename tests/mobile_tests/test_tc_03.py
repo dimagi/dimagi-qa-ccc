@@ -182,6 +182,7 @@ def test_learn_app_assessments_delivery_app(web_driver, config, test_data, setti
     with allure.step("Verify In Progress Job Status"):
         learn.sync_with_server()
         learn.verify_job_status("IN_PROGRESS")
+        learn.continue_learning()
 
     with allure.step("Complete Learning module"):
         learn.complete_learn_survey("Learn 2")
