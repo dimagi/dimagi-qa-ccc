@@ -57,8 +57,8 @@ opportunity_page:
   opp_list_date: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
   opp_list_type: "//android.widget.TextView[contains(@text,'Opportunity')]"
   opp_list_view_info: "//android.widget.Button[contains(@text, 'View Info')]"
-  opp_list_resume: "//android.widget.Button[contains(@text, 'Resume')]"
-  opp_list_review: "//android.widget.Button[contains(@text, 'Review')]"
+  opp_list_resume: "//android.widget.Button[contains(@text, 'Resume') or contains(@text, 'Proceed')]"
+  opp_list_review: "//android.widget.Button[contains(@text, 'Review') or contains(@text, 'View Opportunity')]"
   opp_list_progress_bar: "//android.view.View[@resource-id='org.commcare.dalvik:id/progressBar']"
 
   job_title_txt: "org.commcare.dalvik:id/tv_job_title"
@@ -70,7 +70,7 @@ opportunity_page:
   learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
   intro_learn_module_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
   intro_learn_summary_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
-  download_learn_app_btn: "org.commcare.dalvik:id/connect_job_intro_start_button"
+  download_learn_app_btn: "//android.widget.Button[contains(@text,'Start') or contains(@text, 'DOWNLOAD')]"
 
   close_delivery_details_btn: "org.commcare.dalvik:id/imgCloseDialog"
   delivery_details_review_txt: "org.commcare.dalvik:id/connect_review"

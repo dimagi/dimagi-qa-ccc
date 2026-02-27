@@ -167,45 +167,48 @@ class OpportunityPage(BasePage):
         #         # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
         #         break
     def open_opportunity_from_list(self, opp_name, opp_status):
-        self.click_element(self.SYNC_BTN)
-        time.sleep(10)
+        if self.is_present(self.JOB_TITLE_TXT):
+            print("Opportunity is already opened")
+        else:
+            self.click_element(self.SYNC_BTN)
+            time.sleep(10)
 
-        max_scrolls = 10
-        scroll_count = 0
+            max_scrolls = 10
+            scroll_count = 0
 
-        while scroll_count < max_scrolls:
-            rows = self.get_elements(self.OPP_LIST_CARD)
+            while scroll_count < max_scrolls:
+                rows = self.get_elements(self.OPP_LIST_CARD)
 
-            for row in rows:
-                try:
-                    name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
+                for row in rows:
+                    try:
+                        name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
 
-                    if str(opp_status).lower() == "delivery":
-                        status = row.find_element(*self.OPP_LIST_RESUME)
-                        button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
-                    else:
-                        status = row.find_element(*self.OPP_LIST_REVIEW)
-                        button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
-                    print(name, button_name)
-                    if name == opp_name :
-                        print(f"Opportunity found: {name}, [{button_name}]")
-                        status.click()
-                        time.sleep(5)
-                        if button_name.lower()=="resume" :
-                            try:
-                                self.download_learn_app()
-                            except:
-                                print("No Learn or Delivery app Download button present")
-                        return  # stop function immediately
+                        if str(opp_status).lower() == "delivery":
+                            status = row.find_element(*self.OPP_LIST_RESUME)
+                            button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
+                        else:
+                            status = row.find_element(*self.OPP_LIST_REVIEW)
+                            button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
+                        print(name, button_name)
+                        if name == opp_name :
+                            print(f"Opportunity found: {name}, [{button_name}]")
+                            status.click()
+                            time.sleep(5)
+                            if button_name.lower()=="resume" :
+                                try:
+                                    self.download_learn_app()
+                                except:
+                                    print("No Learn or Delivery app Download button present")
+                            return  # stop function immediately
 
-                except Exception:
-                    continue
+                    except Exception:
+                        continue
 
-            # Not found → scroll
-            self.scroll_down()
-            scroll_count += 1
+                # Not found → scroll
+                self.scroll_down()
+                scroll_count += 1
 
-        raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
+            raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
 
 
     def click_notification(self):

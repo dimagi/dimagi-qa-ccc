@@ -182,7 +182,7 @@ class MessagingPage(BaseWebPage):
     def is_created_alert_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
-        self.select_by_visible_text(self.PAGE_DROPDOWN_COND_ALERT, "100")
+        self.select_by_value(self.PAGE_DROPDOWN_COND_ALERT, "100")
         time.sleep(5)
         self.wait_for_element(self.NEW_CONDITIONAL_ALERT)
         self.scroll_into_view(self.NEW_CONDITIONAL_ALERT)
@@ -202,6 +202,7 @@ class MessagingPage(BaseWebPage):
         self.type(self.BROADCAST_NAME_INPUT, self.broadcast_full_name)
 
     def select_user_recipients(self, params):
+        time.sleep(3)
         recipient_ele = self.wait_for_element(self.USER_RECIPIENT_INPUT)
         self.click_element(self.USER_RECIPIENT_INPUT)
         for each in params:
@@ -219,7 +220,7 @@ class MessagingPage(BaseWebPage):
     def is_broadcast_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
-        self.select_by_visible_text(self.PAGE_DROPDOWN, "100")
+        self.select_by_value(self.PAGE_DROPDOWN, "100")
         time.sleep(5)
         broadcasts_table = self.wait_for_element(self.BROADCASTS_TABLE)
         name_elements = broadcasts_table.find_elements(By.XPATH, "//tr//td//a")

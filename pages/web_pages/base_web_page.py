@@ -86,6 +86,10 @@ class BaseWebPage:
         self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
         Select(element).select_by_visible_text(text)
 
+    def select_by_value(self, dropdown_locator, text):
+        select_source = Select(self.driver.find_element(*dropdown_locator))
+        select_source.select_by_value(text)
+
     def select_by_visible_text_manually(self, dropdown_locator, text):
         dropdown = self.wait.until(EC.element_to_be_clickable(dropdown_locator))
 

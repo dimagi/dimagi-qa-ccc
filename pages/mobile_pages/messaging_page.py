@@ -39,12 +39,14 @@ class Message(BasePage):
         time.sleep(5)
         channels = self.get_elements(self.CHANNEL_NAME)
         print(len(channels))
+        time.sleep(2)
         for channel in channels:
             name = channel.text.strip()
             print(name)
             if name == channel_name:
                 channel.click()
-            assert self.is_displayed(self.MESSAGE_INPUT)
+                break
+        assert self.is_displayed(self.MESSAGE_INPUT)
 
     def fill_survey_form(self, timeout=30):
         start_time = time.time()
