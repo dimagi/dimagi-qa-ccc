@@ -34,6 +34,8 @@ cchq_messaging_page:
     broadcasts_table: "//div[@id='immediate-broadcasts']//table"
     survey_form_input: "id_content-app_and_form_unique_id"
     expire_after_input: "id_content-survey_expiration_in_hours"
+    page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
+    page_dropdown_cond_alert: "//select[@class='form-control']"
 
 cchq_application_page:
     sidebar_settings_icon: "//*[@id='hq-sidebar']/nav/div[1]/div[1]"
