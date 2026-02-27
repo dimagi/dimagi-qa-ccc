@@ -59,13 +59,13 @@ TC_8:
 
 TC_9:
   country_code: "+7426"
-  phone_number: "7426011"
-  username: "Automation User 11"
-  backup_code: "742611"
+  phone_number: "7426121"
+  username: "CCC- Automationuser1"
+  backup_code: "123123"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
   org_name_staging: "PM_Automation_01"
-  user_id: "7f065c23251bf386d439"
+  user_id: "049b54d12e564f418397"
 
 TC_10:
   country_code: "+7426"
