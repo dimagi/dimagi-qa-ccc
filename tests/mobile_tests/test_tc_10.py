@@ -26,7 +26,7 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 @pytest.mark.web
 @pytest.mark.mobile
 # @pytest.mark.bugasura("TES36", "TES37", "TES38")
-def test_messaging_create_n_verify_broadcasts_with_new_message_options(web_driver, mobile_driver,  test_data, config, settings):
+def test_messaging_create_n_verify_broadcasts_with_new_message_options(web_driver, test_data, config, settings, mobile_driver):
     data = test_data.get("TC_10")
 
     cchq_login_page = LoginPage(web_driver)
@@ -71,15 +71,16 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(web_drive
     with allure.step("Get User Id from the Connect App"):
         user_id = delivery.get_user_id()
 
+    # Messaging_5
+    with allure.step("Create new Broadcast with Connect Message Option"):
+        cchq_messaging_page.create_new_broadcast_with_connect_message_option([user_id])
+
+
     with allure.step("Navigate to Messaging option"):
         if 'staging' in config.get("cchq_url"):
             message.open_channel_on_message("connectqa")
         else:
             message.open_channel_on_message("connetqa-prod")
-
-    # Messaging_5
-    with allure.step("Create new Broadcast with Connect Message Option"):
-        cchq_messaging_page.create_new_broadcast_with_connect_message_option([user_id])
 
     with allure.step("Verify Broadcast Connect Message shown"):
         message.verify_connect_message()

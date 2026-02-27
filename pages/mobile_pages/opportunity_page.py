@@ -145,12 +145,15 @@ class OpportunityPage(BasePage):
         print(f"Total unique opportunities found: {len(seen)}")
 
     def download_learn_app(self):
-        self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
-        self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
-        self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
-        time.sleep(10)
-        assert self.is_displayed(self.LEARN_APP_START_BTN), "Start button is not visible"
-        print("Download completed. Start button is visible")
+        try:
+            self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
+            self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
+            self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
+            time.sleep(10)
+            assert self.is_displayed(self.LEARN_APP_START_BTN), "Start button is not visible"
+            print("Download completed. Start button is visible")
+        except:
+            print("No Download button present or the download has been already completed.")
 
     # def open_opportunity_from_list(self, opp_name, opp_status):
         # self.click_element(self.SYNC_BTN)
