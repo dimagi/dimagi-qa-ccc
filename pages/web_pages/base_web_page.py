@@ -276,3 +276,25 @@ class BaseWebPage:
             start_date = start.strftime("%d-%m-%Y")
             end_date = end.strftime("%d-%m-%Y")
         return start_date, end_date
+
+    def is_displayed(self, locator):
+        try:
+            element = self.driver.find_element(*locator)
+            is_displayed = element.is_displayed()
+        except (TimeoutException, NoSuchElementException):
+            is_displayed = False
+        return bool(is_displayed)
+
+    def is_present(self, locator):
+        try:
+            element = self.driver.find_element(*locator)
+            is_displayed = True
+        except NoSuchElementException:
+            is_displayed = False
+        return bool(is_displayed)
+
+    def get_attribute(self, locator, attribute):
+        element = self.driver.find_element(*locator)
+        element_attribute = element.get_attribute(attribute)
+        print(element_attribute)
+        return element_attribute

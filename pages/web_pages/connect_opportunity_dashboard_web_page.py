@@ -21,6 +21,9 @@ class OpportunityDashboardPage(BaseWebPage):
     HAMBURGER_ICON = locators.get("opportunity_dashboard_page", "hamburger_icon")
     HAMBURGER_CONTEXT_MENU = locators.get("opportunity_dashboard_page", "hamburger_menu")
     PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
+    LEFT_ARROW = locators.get("connect_opportunities_page", "left_arrow")
+    RIGHT_ARROW = locators.get("connect_opportunities_page", "right_arrow")
+    PAGE_INPUT = locators.get("connect_opportunities_page", "page_input")
 
     def click_dashboard_card_in_opportunity(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
@@ -69,13 +72,23 @@ class OpportunityDashboardPage(BaseWebPage):
 
 
     def navigate_to_connect_workers(self, opp):
-        print(opp)
+        time.sleep(5)
         try:
-         self.select_by_visible_text(self.PAGE_SIZE, "100")
-         time.sleep(10)
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
         except:
             print("Dropdown not present")
-        self.click_link_by_text(opp)
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.verify_text_in_url("workers")
         time.sleep(1)
@@ -83,11 +96,23 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_services_delivered(self, opp):
         time.sleep(5)
         try:
-            self.select_by_visible_text(self.PAGE_SIZE, "100")
-            time.sleep(10)
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
         except:
             print("Dropdown not present")
-        self.click_link_by_text(opp)
+        next_page=True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
+
+        # self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)
@@ -95,11 +120,21 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_payments_earned(self, opp):
         time.sleep(5)
         try:
-            self.select_by_visible_text(self.PAGE_SIZE, "100")
-            time.sleep(10)
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
         except:
             print("Dropdown not present")
-        self.click_link_by_text(opp)
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
         time.sleep(2)
         self.click_dashboard_card_in_opportunity("Payments", "Earned")
         self.verify_text_in_url("workers/payments")
@@ -135,15 +170,24 @@ class OpportunityDashboardPage(BaseWebPage):
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
 
-
     def navigate_to_services_delivered(self, opp):
         time.sleep(5)
         try:
-            self.select_by_visible_text(self.PAGE_SIZE, "100")
-            time.sleep(10)
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
         except:
             print("Dropdown not present")
-        self.click_link_by_text(opp)
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)
