@@ -176,7 +176,7 @@ class OpportunityPage(BasePage):
             self.click_element(self.SYNC_BTN)
             time.sleep(10)
 
-            max_scrolls = 10
+            max_scrolls = 30
             scroll_count = 0
 
             while scroll_count < max_scrolls:
