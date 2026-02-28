@@ -104,7 +104,7 @@ class LearnAppPage(BasePage):
     def verify_job_status(self, status):
         JOB_STATUS_EXPECTATIONS = {
             "IN_PROGRESS": {
-                "start_text": "Finish learning to earn your certificate.",
+                "start_text": "Complete the assessment to finish training.",
                 "progress": "50%",
                 "continue_btn": "continue learning"
             },

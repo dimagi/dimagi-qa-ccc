@@ -58,6 +58,7 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
     data = test_data.get("TC_3_to_4")
     global opp_name
     opp_name = created_opportunity
+    print(opp_name)
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
@@ -137,7 +138,7 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
 def test_learn_app_assessments_delivery_app(web_driver, config, test_data, settings, mobile_driver):
     if opp_name is None:
         pytest.skip("Opportunity name missing")
-
+    print(opp_name)
     data = test_data.get("TC_3_to_4")
 
 
@@ -245,7 +246,7 @@ def test_learn_app_assessments_delivery_app(web_driver, config, test_data, setti
 def test_payment_and_related_notifications(web_driver, config, test_data, settings, mobile_driver):
     if opp_name is None:
         pytest.skip("Opportunity name missing")
-
+    print(opp_name)
     data = test_data.get("TC_6")
 
     cchq_login_page = LoginPage(web_driver)

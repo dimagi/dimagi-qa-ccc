@@ -58,11 +58,21 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(web_driver, t
         cchq_messaging_page.navigate_to_conditional_alerts_n_verify_what_to_send_options(["Connect Message", "Connect Survey"])
         cchq_home_page.click_option_under_messaging_tab("Conditional Alerts")
 
+    with allure.step("Click on Sign In / Register"):
+        home.open_side_menu()
+        home.click_signup()
+
     # Messaging_2
     with allure.step("Create new conditional alert with Connect Message option"):
         cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
         cchq_messaging_page.create_new_connect_message_conditional_alert(user_recipients=[data["user_id"]],
                                                                          entity_id_value=temp_id)
+
+    with allure.step("Sign in with existing demo user"):
+        pid.signin_existing_user(data["country_code"],
+                                 data["phone_number"],
+                                 data["username"],
+                                 data["backup_code"])
 
 
     # Messaging_3
@@ -70,16 +80,6 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(web_driver, t
         cchq_messaging_page.delete_existing_alerts("Automation Survey Alert")
         cchq_messaging_page.create_new_connect_survey_conditional_alert(user_recipients=[data["user_id"]],
                                                                          entity_id_value=temp_id)
-
-    with allure.step("Click on Sign In / Register"):
-        home.open_side_menu()
-        home.click_signup()
-
-    with allure.step("Sign in with existing demo user"):
-        pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])
 
     with allure.step("Open the Delivery App"):
         home.open_app_from_goto_connect()

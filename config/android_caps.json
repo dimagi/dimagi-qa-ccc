@@ -20,7 +20,7 @@
     "deviceName": "Google Pixel 7",
     "os_version": "13.0",
 
-    "newCommandTimeout": 1000,
+    "newCommandTimeout": 1500,
     "adbExecTimeout": 60000,
     "uiautomator2ServerInstallTimeout": 60000,
     "uiautomator2ServerLaunchTimeout": 60000,
@@ -38,7 +38,7 @@
       "enableBiometric": true,
       "appiumVersion": "2.0.1",
 
-      "idleTimeout": 1000
+      "idleTimeout": 2000
     }
   }
 }

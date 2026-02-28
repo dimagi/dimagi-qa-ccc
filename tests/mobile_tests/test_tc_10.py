@@ -44,25 +44,25 @@ def test_messaging_create_n_verify_broadcasts_with_new_message_options(web_drive
         cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
 
-    with allure.step("Navigate to Broadcasts under Messaging"):
-        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
-        cchq_home_page.verify_breadcrumb_text_present_cchq("Broadcasts")
-
-    # Messaging_4
-    with allure.step("Verify new message options available in What to Send dropdown in Broadcasts"):
-        cchq_messaging_page.click_add_broadcast_button()
-        cchq_messaging_page.verify_options_present_in_what_to_send(["Connect Message", "Connect Survey"])
-        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
-
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
         home.click_signup()
+
+    with allure.step("Navigate to Broadcasts under Messaging"):
+        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
+        cchq_home_page.verify_breadcrumb_text_present_cchq("Broadcasts")
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
                                  data["phone_number"],
                                  data["username"],
                                  data["backup_code"])
+
+    # Messaging_4
+    with allure.step("Verify new message options available in What to Send dropdown in Broadcasts"):
+        cchq_messaging_page.click_add_broadcast_button()
+        cchq_messaging_page.verify_options_present_in_what_to_send(["Connect Message", "Connect Survey"])
+        cchq_home_page.click_option_under_messaging_tab("Broadcasts")
 
     with allure.step("Open the Delivery App"):
         home.open_app_from_goto_connect()
