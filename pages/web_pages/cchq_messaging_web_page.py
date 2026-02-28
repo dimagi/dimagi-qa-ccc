@@ -36,7 +36,8 @@ class MessagingPage(BaseWebPage):
     BROADCASTS_TABLE = locators.get("cchq_messaging_page", "broadcasts_table")
     SURVEY_FORM_INPUT = locators.get("cchq_messaging_page", "survey_form_input")
     EXPIRE_AFTER_INPUT = locators.get("cchq_messaging_page", "expire_after_input")
-
+    PAGE_DROPDOWN = locators.get("cchq_messaging_page", "page_dropdown")
+    PAGE_DROPDOWN_COND_ALERT = locators.get("cchq_messaging_page", "page_dropdown_cond_alert")
 
     def click_new_conditional_alert_btn(self):
         self.click_element(self.NEW_CONDITIONAL_ALERT)
@@ -102,13 +103,21 @@ class MessagingPage(BaseWebPage):
         self.enter_name_in_conditional_alert("Automation Message Alert")
         time.sleep(1)
         self.click_continue_btn()
-        self.select_case_type("automation")
+        if "staging" in self.get_current_url():
+            self.select_case_type("case")
+        else:
+            self.select_case_type("automation")
         self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
-        time.sleep(1)
+        time.sleep(3)
+        self.wait_for_element(self.WHAT_TO_SEND_INPUT)
         self.select_what_to_send_input("Connect Message")
-        self.select_user_recipients(user_recipients)
+        time.sleep(1)
         self.enter_message_in_broadcast("Automation Test Message")
+        time.sleep(1)
+        self.select_recipients(["Users"])
+        time.sleep(1)
+        self.select_user_recipients(user_recipients)
         self.click_save_btn()
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
 
@@ -129,6 +138,7 @@ class MessagingPage(BaseWebPage):
         self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         self.select_what_to_send_input("Connect Survey")
+        self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
         self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
         self.enter_expire_after_for_alert("1")
@@ -152,9 +162,11 @@ class MessagingPage(BaseWebPage):
         self.verify_options_present_in_what_to_send(values)
 
     def click_save_btn(self):
-        self.scroll_into_view(self.SAVE_BUTTON)
         time.sleep(2)
-        self.click_element(self.SAVE_BUTTON)
+        self.scroll_to_element(self.SAVE_BUTTON)
+        time.sleep(2)
+        self.js_click(self.SAVE_BUTTON)
+        time.sleep(50)
 
     def click_last_page_in_pagination(self):
         pagination = self.wait_for_element(self.PAGINATION_CONTAINER)
@@ -167,7 +179,7 @@ class MessagingPage(BaseWebPage):
     def is_created_alert_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
-        # self.click_last_page_in_pagination()
+        self.select_by_value(self.PAGE_DROPDOWN_COND_ALERT, "100")
         time.sleep(5)
         self.wait_for_element(self.NEW_CONDITIONAL_ALERT)
         self.scroll_into_view(self.NEW_CONDITIONAL_ALERT)
@@ -187,6 +199,7 @@ class MessagingPage(BaseWebPage):
         self.type(self.BROADCAST_NAME_INPUT, self.broadcast_full_name)
 
     def select_user_recipients(self, params):
+        time.sleep(3)
         recipient_ele = self.wait_for_element(self.USER_RECIPIENT_INPUT)
         self.click_element(self.USER_RECIPIENT_INPUT)
         for each in params:
@@ -204,6 +217,8 @@ class MessagingPage(BaseWebPage):
     def is_broadcast_name_present_in_list(self, name):
         time.sleep(2)
         self.wait_for_page_to_load()
+        self.select_by_value(self.PAGE_DROPDOWN, "100")
+        time.sleep(5)
         broadcasts_table = self.wait_for_element(self.BROADCASTS_TABLE)
         name_elements = broadcasts_table.find_elements(By.XPATH, "//tr//td//a")
         name_texts = [el.text.strip() for el in name_elements]
@@ -218,8 +233,11 @@ class MessagingPage(BaseWebPage):
         time.sleep(1)
         self.enter_broadcast_name("Connect Message Broadcast")
         self.select_what_to_send_input("Connect Message")
+        self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
+        time.sleep(1)
         self.enter_message_in_broadcast("Test Connect Message Broadcast")
+        time.sleep(2)
         self.click_send_broadcast_btn()
         time.sleep(2)
         self.verify_text_in_url("/broadcasts/")
@@ -230,6 +248,7 @@ class MessagingPage(BaseWebPage):
         time.sleep(1)
         self.enter_broadcast_name("Connect Survey Broadcast")
         self.select_what_to_send_input("Connect Survey")
+        self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
         self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
         self.enter_expire_after_for_alert("1")

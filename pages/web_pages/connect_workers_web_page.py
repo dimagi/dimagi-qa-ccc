@@ -3,7 +3,7 @@ import time
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, PROJECT_ROOT
 from selenium.webdriver.common.keys import Keys
 from datetime import datetime, timedelta
 
@@ -60,6 +60,8 @@ class ConnectWorkersPage(BaseWebPage):
         self.nav_to_add_worker()
         self.enter_invite_users_in_opportunity(num_list)
         self.click_submit_btn()
+        time.sleep(40)
+        print("Sleeping for the the invite to get delivered...")
 
     def verify_invite_users_input_present(self):
         input_element = self.wait_for_element(self.INVITE_USERS_INPUT)
@@ -117,7 +119,7 @@ class ConnectWorkersPage(BaseWebPage):
         by, xpath_template = self.TAB_ITEM_BY_NAME
         xpath = xpath_template.format(tab_name=tab_name)
         self.click_element((by, xpath))
-        time.sleep(2)
+        time.sleep(10)
         self.verify_tab_is_active(tab_name)
 
     def verify_tab_is_active(self, tab_name):
@@ -402,7 +404,8 @@ class ConnectWorkersPage(BaseWebPage):
         return username_ele.text.strip()
 
     def import_make_payment_file(self):
-        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        project_root = PROJECT_ROOT
+        file_path = os.path.join(project_root, "test_data", "make_payment.xlsx")
         assert os.path.exists(file_path), f"File not found: {file_path}"
         print(file_path)
         file_input = self.wait_for_element(self.FILE_UPLOAD_IMPORT_PAYMENT)

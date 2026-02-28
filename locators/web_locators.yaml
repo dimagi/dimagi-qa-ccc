@@ -34,6 +34,8 @@ cchq_messaging_page:
     broadcasts_table: "//div[@id='immediate-broadcasts']//table"
     survey_form_input: "id_content-app_and_form_unique_id"
     expire_after_input: "id_content-survey_expiration_in_hours"
+    page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
+    page_dropdown_cond_alert: "//select[@class='form-control']"
 
 cchq_application_page:
     sidebar_settings_icon: "//*[@id='hq-sidebar']/nav/div[1]/div[1]"
@@ -41,8 +43,8 @@ cchq_application_page:
     copy_app_to_project_dropdown: "id_domain"
     name_input: "id_name"
     copy_button: "//*[@id='copy-app-form']/form/div/button"
-    make_new_version_button: "//*[@id='releases-table']/p[2]/button"
-    released_button: "//*[@id='releases-table']/div[8]/div/div[1]/div/div/button[1]"
+    make_new_version_button: "//button[contains(@data-bind,'Make New Version')]"
+    released_button: "(//button[contains(text(),'Released')])[1]"
 
 connect_home_page:
   signin_link: "log-in-link"
@@ -58,7 +60,7 @@ connect_home_page:
 connect_opportunities_page:
   add_opportunity_btn: "//*[@id='content']/div/div/div[1]/div/a"
   name_input: "id_name"
-  currency_input: "id_currency_fk"
+  currency_input: "id_currency"
   country_input: "id_country"
   short_description_input: "id_short_description"
   hq_server_dropdown: "id_hq_server"
@@ -87,6 +89,10 @@ connect_opportunities_page:
   is_test_filter_dropdown: "id_is_test"
   status_filter_dropdown: "id_status"
   apply_btn: "//button[contains(text(), 'Apply')]"
+  page_size: "page-size"
+  left_arrow: "//*[./i[contains(@class,'left')]]"
+  right_arrow: "//*[./i[contains(@class,'right')]]"
+  page_input: "//input[contains(@aria-label,'page')]"
 
 opportunity_dashboard_page:
   start_date_text: "//div[contains(@class,'infocard')][.//h6[normalize-space()='Start Date']]//p"
@@ -125,7 +131,8 @@ connect_workers_page:
 worker_visits_page:
   worker_visits_table_element: "(//table[contains(@class,'base-table')])[2]"
   worker_visits_select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
-  worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
+  worker_visits_row_item: "//tr[td[normalize-space()='test']and td[normalize-space()='delivery'] ]//input[@type='checkbox']"
+#  worker_visits_row_item: "//tr[.//td[contains(normalize-space(), '{date}')] and .//td[contains(normalize-space(), '{entity_name}')]]"
   approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
   approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
   reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
@@ -144,6 +151,6 @@ worker_visits_page:
 connect_programs_page:
   view_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'View Status')]"
   hide_status_btn: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]//button/span[contains(text(), 'Hide Status')]"
-  nms_invite_card: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div"
-  nms_invite_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div/div[6]/div[.//p[contains(text(), '{network_manager}')]]"
-  program_card_by_name: "//*[@id='content']/div/div[3]/div/div[1]/div[.//p[contains(text(), '{program}')]]"
+  nms_invite_card: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')]"
+  nms_invite_card_by_name: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')][.//p[contains(text(), '{network_manager}')]]"
+  program_card_by_name: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]"

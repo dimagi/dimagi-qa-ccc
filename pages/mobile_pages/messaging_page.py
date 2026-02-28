@@ -27,17 +27,26 @@ class Message(BasePage):
         pass
 
     def verify_connect_message(self):
-        time.sleep(5)
+        time.sleep(10)
         self.wait_for_element(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TIME_TXT)
 
     def open_channel_on_message(self, channel_name):
+        time.sleep(5)
         self.click_element(self.NAVIGATION_DRAWER)
+        time.sleep(7)
         self.click_element(self.MESSAGING_BTN)
+        time.sleep(5)
+        channels = self.get_elements(self.CHANNEL_NAME)
+        print(len(channels))
         time.sleep(2)
-        if self.get_text(self.CHANNEL_NAME) == channel_name:
-            self.click_element(self.CHANNEL_NAME)
+        for channel in channels:
+            name = channel.text.strip()
+            print(name)
+            if name == channel_name:
+                channel.click()
+                break
         assert self.is_displayed(self.MESSAGE_INPUT)
 
     def fill_survey_form(self, timeout=30):

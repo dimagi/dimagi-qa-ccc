@@ -31,9 +31,14 @@ class ConnectHomePage(BaseWebPage):
         self.click_organizations_in_sidebar()
 
     def signin_to_connect_page_using_cchq(self):
-        self.click_signin_link()
-        time.sleep(2)
-        self.click_login_with_cchq()
+        try:
+            self.click_signin_link()
+            time.sleep(2)
+            self.click_login_with_cchq()
+        except:
+            print("User already signed in")
+        finally:
+            self.click_organizations_in_sidebar()
 
     def click_organizations_in_sidebar(self):
         self.click_element(self.OPPORTUNITIES_NAVBAR_LINK)
@@ -60,11 +65,10 @@ class ConnectHomePage(BaseWebPage):
             return
         self.click_organization_dropdown()
         container = self.wait_for_element(self.ORGANIZATION_CONTAINER)
-        item_xpath = ".//li[.//p[normalize-space() = '" + organization_name + "']]"
+        item_xpath = f"//li[.//p[normalize-space() = '{organization_name}']]"
         try:
             item = container.find_element(By.XPATH, item_xpath)
             self.click_element(item)
         except NoSuchElementException:
             print(f"Organization {organization_name} not found")
             raise NoSuchElementException
-        time.sleep(2)

@@ -80,6 +80,7 @@ class DeliveryAppPage(BasePage):
             "name": name,
             "id": user_id_input
         }
+    time.sleep(20)
 
     def verify_payment_info(self):
         self.sync_with_server()

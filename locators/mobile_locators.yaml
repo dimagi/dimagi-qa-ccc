@@ -38,7 +38,7 @@ login_page:
   progress_bar: "org.commcare.dalvik:id/progress_bar"
 
 mobile_notifications:
-  invite_opp_title_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')]"
+  invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"
   invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
   expand_btn: "//android.widget.TextView[@text='CommCare']/ancestor::android.widget.RelativeLayout//android.widget.Button"
 #  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"
@@ -48,11 +48,18 @@ mobile_notifications:
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
 
 opportunity_page:
+  opp_list_new: "//android.widget.TextView[@text='New Opportunities']"
+  opp_list_in_progress: "//android.widget.TextView[@text='In Progress']"
+  opp_list_complete: "//android.widget.TextView[@text='Completed']"
   opp_list_job_type: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvJobType']"
   opp_list_card: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/rootCardView']"
   opp_list_title: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle']"
   opp_list_date: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvDate']"
   opp_list_type: "//android.widget.TextView[contains(@text,'Opportunity')]"
+  opp_list_view_info: "//android.widget.Button[contains(@text, 'View Info')]"
+  opp_list_resume: "//android.widget.Button[contains(@text, 'Resume') or contains(@text, 'Proceed')]"
+  opp_list_review: "//android.widget.Button[contains(@text, 'Review') or contains(@text, 'View Opportunity')]"
+  opp_list_progress_bar: "//android.view.View[@resource-id='org.commcare.dalvik:id/progressBar']"
 
   job_title_txt: "org.commcare.dalvik:id/tv_job_title"
   job_description_txt: "org.commcare.dalvik:id/tv_job_description"
@@ -63,7 +70,7 @@ opportunity_page:
   learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
   intro_learn_module_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
   intro_learn_summary_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
-  download_learn_app_btn: "org.commcare.dalvik:id/connect_job_intro_start_button"
+  download_learn_app_btn: "//android.widget.Button[contains(@text,'Start') or contains(@text, 'DOWNLOAD')]"
 
   close_delivery_details_btn: "org.commcare.dalvik:id/imgCloseDialog"
   delivery_details_review_txt: "org.commcare.dalvik:id/connect_review"
@@ -75,6 +82,12 @@ opportunity_page:
   sync_btn: "org.commcare.dalvik:id/action_sync"
   notification_btn: "org.commcare.dalvik:id/action_bell"
 
+view_info_screen:
+  new_opp_info: "org.commcare.dalvik:id/iv_new_opp"
+  learn_info: "org.commcare.dalvik:id/iv_learn"
+  review_info: "org.commcare.dalvik:id/iv_review"
+  delivery_info: "org.commcare.dalvik:id/iv_delivery"
+  connect_delivery_details: "org.commcare.dalvik:id/connect_delivery_details_container"
 
 learn_app_page:
   learn_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
@@ -107,7 +120,7 @@ learn_app_page:
   sync_with_server : "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Sync with Server']"
 
 delivery_app_page:
-  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivey App')]"
+  delivery_app_header_txt: "//android.view.ViewGroup//android.widget.TextView[contains(@text, 'Delivery App')]"
   delivery_app_start_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='Start']"
   view_job_status_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/card_text' and @text='View Job Status']"
   case_list_btn: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/row_txt']"

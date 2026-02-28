@@ -48,6 +48,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     MAX_CONNECT_WORKERS_INPUT = locators.get("connect_opportunities_page", "max_connect_workers")
     SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
     TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
+    PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
 
 
     def click_add_opportunity_btn(self):
@@ -55,9 +56,10 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def enter_name_in_opportunity(self , value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
-        self.opp_full_name = value + "_" + timestamp
+        self.opp_full_name =  value+ "_" +timestamp
         self.wait_for_element(self.OPP_NAME_INPUT)
         self.type(self.OPP_NAME_INPUT, self.opp_full_name)
+        return self.opp_full_name
 
     def select_currency_in_opportunity(self , value):
         self.wait_for_element(self.OPP_CURRENCY_INPUT)
@@ -76,53 +78,63 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.type(self.OPP_DESCRIPTION_INPUT, value)
 
     def select_hq_server_in_opportunity(self , value):
-        self.wait_for_element(self.OPP_SHORT_DESCRIPTION_INPUT)
+        self.wait_for_element(self.OPP_HQ_SERVER_DROPDOWN)
+        time.sleep(1)
         self.select_by_visible_text(self.OPP_HQ_SERVER_DROPDOWN, value)
+        time.sleep(3)
 
     def select_api_key_in_opportunity(self , value):
-        time.sleep(2)
+        time.sleep(8)
         self.wait_for_element(self.OPP_API_KEY_DROPDOWN)
+        print(f"Selecting {value}")
         self.select_by_visible_text(self.OPP_API_KEY_DROPDOWN, value)
 
     def select_learn_app_domain_in_opportunity(self , value):
         time.sleep(2)
-        self.scroll_into_view(self.OPP_LEARN_APP_DOMAIN_DROPDOWN)
+        self.scroll_to_element(self.OPP_LEARN_APP_DOMAIN_DROPDOWN)
         self.wait_for_element(self.OPP_LEARN_APP_DOMAIN_DROPDOWN)
         self.select_by_visible_text(self.OPP_LEARN_APP_DOMAIN_DROPDOWN, value)
 
     def select_deliver_app_domain_in_opportunity(self , value):
         time.sleep(2)
-        self.scroll_into_view(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN)
+        self.scroll_to_element(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN)
         self.wait_for_element(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN)
         self.select_by_visible_text(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN, value)
 
     def select_learn_app_in_opportunity(self , value):
         time.sleep(5)
-        self.scroll_into_view(self.OPP_LEARN_APP_DROPDOWN)
+        self.scroll_to_element(self.OPP_LEARN_APP_DROPDOWN)
         self.wait_for_clickable(self.OPP_LEARN_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
 
     def select_deliver_app_in_opportunity(self , value):
         time.sleep(5)
-        self.scroll_into_view(self.OPP_DELIVER_APP_DROPDOWN)
+        self.scroll_to_element(self.OPP_DELIVER_APP_DROPDOWN)
         self.wait_for_clickable(self.OPP_DELIVER_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_DELIVER_APP_DROPDOWN, value)
 
     def enter_learn_app_description_in_opportunity(self , value):
-        self.scroll_into_view(self.OPP_LEARN_APP_DESCRIPTION_INPUT)
+        self.scroll_to_element(self.OPP_LEARN_APP_DESCRIPTION_INPUT)
         self.wait_for_element(self.OPP_LEARN_APP_DESCRIPTION_INPUT)
         self.type(self.OPP_LEARN_APP_DESCRIPTION_INPUT, value)
 
     def enter_passing_score_in_opportunity(self , value):
-        self.scroll_into_view(self.OPP_LEARN_APP_PASSING_SCORE_INPUT)
+        self.scroll_to_element(self.OPP_LEARN_APP_PASSING_SCORE_INPUT)
         self.wait_for_element(self.OPP_LEARN_APP_PASSING_SCORE_INPUT)
         self.type(self.OPP_LEARN_APP_PASSING_SCORE_INPUT, value)
 
     def click_opportunity_in_opportunity(self , value):
+        time.sleep(5)
+        try:
+            self.select_by_visible_text(self.PAGE_SIZE, "100")
+            time.sleep(10)
+        except:
+            print("Dropdown not present")
         self.click_link_by_text(value)
+        time.sleep(3)
 
     def click_submit_btn(self):
-        self.scroll_into_view(self.SUBMIT_BUTTON)
+        self.scroll_to_element(self.SUBMIT_BUTTON)
         self.click_element(self.SUBMIT_BUTTON)
 
     def click_add_payment_unit_button(self):
@@ -142,11 +154,11 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.type(self.MAX_TOTAL_INPUT, value)
 
     def enter_start_date_in_payment_unit_of_opportunity(self , value):
-        self.scroll_into_view(self.START_DATE_INPUT)
+        self.scroll_to_element(self.START_DATE_INPUT)
         self.enter_date(self.START_DATE_INPUT, value)
 
     def enter_end_date_in_payment_unit_of_opportunity(self , value):
-        self.scroll_into_view(self.END_DATE_INPUT)
+        self.scroll_to_element(self.END_DATE_INPUT)
         self.enter_date(self.END_DATE_INPUT, value)
 
     def select_required_deliver_units_checkbox(self, required_text):
@@ -186,34 +198,58 @@ class ConnectOpportunitiesPage(BaseWebPage):
         assert element.is_displayed(), f"Opportunity '{opp_name}' not found in the table."
         print(f"Opportunity '{opp_name}' present in table.")
 
-    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app):
-        self.click_add_opportunity_btn()
-        time.sleep(1)
-        self.enter_name_in_opportunity(data["opportunity_name"])
+    def fill_opportunity_form(self, data, learn_app, delivery_app, env):
+        env = f"_{env}" if env == "staging" else ""
+        opp_name=self.enter_name_in_opportunity(data["opportunity_name"])
         self.select_currency_in_opportunity(data["currency"])
         self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
-        self.select_hq_server_in_opportunity(data["hq_server"])
         self.enter_description_in_opportunity(data["description"])
-        self.select_api_key_in_opportunity(data["api_key"])
-        self.select_learn_app_domain_in_opportunity(data["learn_app_domain"])
-        self.select_deliver_app_domain_in_opportunity(data["deliver_app_domain"])
+        self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
+        time.sleep(3)
+        self.select_api_key_in_opportunity(data[f"api_key{env}"])
+        time.sleep(3)
+        self.select_learn_app_domain_in_opportunity(data[f"learn_app_domain{env}"])
+        time.sleep(2)
+        self.select_deliver_app_domain_in_opportunity(data[f"deliver_app_domain{env}"])
+        time.sleep(5)
         self.select_learn_app_in_opportunity(learn_app)
         self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
         self.enter_passing_score_in_opportunity(data["passing_score"])
         self.click_submit_btn()
+        return opp_name
+
+    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
+        self.click_add_opportunity_btn()
+        time.sleep(5)
+        try:
+            opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
+        except:
+            self.refresh_current_page()
+            time.sleep(3)
+            opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
         time.sleep(3)
+        return opp_name
 
     def create_payment_unit_in_connect_page(self, data):
         self.click_add_payment_unit_button()
         self.enter_name_in_opportunity(data["payment_unit_name"])
         self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
         self.enter_description_in_opportunity(data["description"])
+
         self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
-        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
-        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        try:
+            start, end = self.generate_date_range(7, opt=1)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        except:
+            start, end = self.generate_date_range(7, opt=2)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
         self.click_submit_btn()
         time.sleep(3)
@@ -221,8 +257,20 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def setup_budget_in_connect_page(self, data):
         self.click_setup_budget_button()
-        self.enter_start_date_in_payment_unit_of_opportunity(data["start_date"])
-        self.enter_end_date_in_payment_unit_of_opportunity(data["end_date"])
+        try:
+            start, end = self.generate_date_range(7, opt=1)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        except:
+            start, end = self.generate_date_range(7, opt=2)
+            print(start, end)
+            self.enter_start_date_in_payment_unit_of_opportunity(start)
+            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        # start, end = self.generate_date_range(2)
+        # print(start, end)
+        # self.enter_start_date_in_payment_unit_of_opportunity(start)
+        # self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
