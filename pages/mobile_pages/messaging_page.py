@@ -35,7 +35,7 @@ class Message(BasePage):
     def open_channel_on_message(self, channel_name):
         time.sleep(5)
         self.click_element(self.NAVIGATION_DRAWER)
-        time.sleep(2)
+        time.sleep(7)
         self.click_element(self.MESSAGING_BTN)
         time.sleep(5)
         channels = self.get_elements(self.CHANNEL_NAME)
