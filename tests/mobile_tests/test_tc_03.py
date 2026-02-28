@@ -17,25 +17,37 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 from tests.web_tests.test_olp_01_02_03 import add_opportunity
 
 opp_name = None
+# @pytest.fixture(scope="function")
+# # @pytest.fixture(scope="session")
+# def created_opportunity(web_driver,test_data, config, settings):
+#     # driver = webdriver.Chrome()
+#     # driver.maximize_window()
+#     # try:
+#     # opp = add_opportunity(web_driver, test_data, config, settings)
+#     # finally:
+#     #     driver.quit()
+#     # return opp
+#     try:
+#         opp = add_opportunity(web_driver, test_data, config, settings)
+#         return opp
+#     except Exception as e:
+#         try:
+#             web_driver.save_screenshot("created_opportunity_failure.png")
+#         except Exception:
+#             pass
+#         raise
+#
+
 @pytest.fixture(scope="function")
-# @pytest.fixture(scope="session")
-def created_opportunity(web_driver,test_data, config, settings):
-    # driver = webdriver.Chrome()
-    # driver.maximize_window()
-    # try:
-    # opp = add_opportunity(web_driver, test_data, config, settings)
-    # finally:
-    #     driver.quit()
-    # return opp
-    try:
-        opp = add_opportunity(web_driver, test_data, config, settings)
-        return opp
-    except Exception as e:
-        try:
-            web_driver.save_screenshot("created_opportunity_failure.png")
-        except Exception:
-            pass
-        raise
+def created_opportunity(web_driver, test_data, config, settings, request):
+
+    if hasattr(request.config, "_cached_opp"):
+        return request.config._cached_opp
+
+    opp = add_opportunity(web_driver, test_data, config, settings)
+    request.config._cached_opp = opp
+    return opp
+
 @allure.feature("CONNECT")
 @allure.story("New Opportunity related validations")
 @allure.tag("CONNECT_3", "CONNECT_5", "CONNECT_14", "Notification_2", "Notification_4")
