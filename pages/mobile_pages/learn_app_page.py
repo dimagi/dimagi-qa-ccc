@@ -104,7 +104,7 @@ class LearnAppPage(BasePage):
     def verify_job_status(self, status):
         JOB_STATUS_EXPECTATIONS = {
             "IN_PROGRESS": {
-                "start_text": "Complete the assessment to finish training.",
+                "start_text": "Finish learning to earn your certificate.",
                 "progress": "50%",
                 "continue_btn": "continue learning"
             },
@@ -129,7 +129,8 @@ class LearnAppPage(BasePage):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
 
         # Start / message text
-        time.sleep(5)
+        time.sleep(7)
+        self.wait_for_element(self.LEARNING_STATUS_TXT)
         print(self.get_text(self.LEARNING_STATUS_TXT))
         print(self.get_text(self.LEARN_PROGRESS_TXT))
         print(self.get_text(self.CONTINUE_LEARNING_BTN))
