@@ -360,7 +360,7 @@ jobs:
             CommCare-Connect STAGE -
             ${{ steps.aggregate.outputs.stage_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
             <h2>CommCare-Connect Test Automation Report - STAGE</h2>
@@ -389,7 +389,7 @@ jobs:
             CommCare-Connect PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
             <h2>CommCare-Connect Test Automation Report - PROD</h2>

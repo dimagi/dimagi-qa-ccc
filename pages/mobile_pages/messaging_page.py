@@ -27,13 +27,13 @@ class Message(BasePage):
         pass
 
     def verify_connect_message(self):
-        time.sleep(10)
+        time.sleep(30)
         self.wait_for_element(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TIME_TXT)
 
     def open_channel_on_message(self, channel_name):
-        time.sleep(5)
+        time.sleep(20)
         self.click_element(self.NAVIGATION_DRAWER)
         time.sleep(7)
         self.click_element(self.MESSAGING_BTN)

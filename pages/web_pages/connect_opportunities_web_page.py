@@ -102,13 +102,13 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.select_by_visible_text(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN, value)
 
     def select_learn_app_in_opportunity(self , value):
-        time.sleep(5)
+        time.sleep(10)
         self.scroll_to_element(self.OPP_LEARN_APP_DROPDOWN)
         self.wait_for_clickable(self.OPP_LEARN_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
 
     def select_deliver_app_in_opportunity(self , value):
-        time.sleep(5)
+        time.sleep(10)
         self.scroll_to_element(self.OPP_DELIVER_APP_DROPDOWN)
         self.wait_for_clickable(self.OPP_DELIVER_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_DELIVER_APP_DROPDOWN, value)
@@ -208,11 +208,11 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.select_hq_server_in_opportunity(data[f"hq_server{env}"])
         time.sleep(3)
         self.select_api_key_in_opportunity(data[f"api_key{env}"])
-        time.sleep(3)
+        time.sleep(10)
         self.select_learn_app_domain_in_opportunity(data[f"learn_app_domain{env}"])
-        time.sleep(2)
-        self.select_deliver_app_domain_in_opportunity(data[f"deliver_app_domain{env}"])
         time.sleep(5)
+        self.select_deliver_app_domain_in_opportunity(data[f"deliver_app_domain{env}"])
+        time.sleep(30)
         self.select_learn_app_in_opportunity(learn_app)
         self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
@@ -227,7 +227,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
             opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
         except:
             self.refresh_current_page()
-            time.sleep(3)
+            time.sleep(30)
             opp_name=self.fill_opportunity_form(data, learn_app, delivery_app, env)
         time.sleep(3)
         return opp_name

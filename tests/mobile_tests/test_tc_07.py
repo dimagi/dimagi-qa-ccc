@@ -35,9 +35,6 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.web
 # @pytest.mark.bugasura("TES30", "TES32", "TES106")
 def test_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data, settings):
-    if 'staging' in config.get("cchq_url"):
-        pytest.xfail("Unable to connect server")
-
     data = test_data.get("TC_7")
 
     cchq_login_page = LoginPage(web_driver)
@@ -77,10 +74,7 @@ def test_notification_messaging_options_and_worker_suspension(web_driver, mobile
         cchq_login_page.valid_login_cchq(config, settings)
         cchq_login_page.navigate_to_connect_page(config)
         connect_home_page.signin_to_connect_page_using_cchq()
-        if 'staging' in config.get("cchq_url"):
-            connect_home_page.select_organization_from_list(data["org_name_staging"])
-        else:
-            connect_home_page.select_organization_from_list(data["org_name"])
+        connect_home_page.select_organization_from_list(data["org_name"])
 
 
     with allure.step("Navigate and verify Connect Workers details in Opportunity"):

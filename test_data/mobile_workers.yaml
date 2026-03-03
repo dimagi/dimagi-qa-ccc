@@ -42,12 +42,11 @@ TC_6:
 
 TC_7:
   country_code: "+7426"
-  phone_number: "7426014"
-  username: "Automation User 14"
-  backup_code: "742614"
-  opportunity_name: "test_opp_221225_01"
-  org_name: "Automation_Test_01"
-  org_name_staging: "PM_Automation_01"
+  phone_number: "7426426"
+  username: "Automation User 426"
+  backup_code: "123456"
+  opportunity_name: "test_07"
+  org_name: "PM_Automation_01"
 
 TC_8:
   country_code: "+7426"
