@@ -238,8 +238,12 @@ class OpportunityPage(BasePage):
             AppiumBy.XPATH,
             f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
             )
-
-        button.click()
+        time.sleep(1)
+        self.driver.execute_script(
+            "mobile: clickGesture",
+            {"elementId": button.id}
+            )
+        # button.click()
 
         if button_text.lower() == "resume":
             try:
