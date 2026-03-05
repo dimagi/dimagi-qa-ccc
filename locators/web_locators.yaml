@@ -55,7 +55,7 @@ connect_home_page:
   my_organization_navbar_item: "//i[contains(@class, 'fa-building')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
   organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
-  organization_name: "//header/div/div/div[1]/button/div/p[1]"
+  organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
 
 connect_opportunities_page:
   add_opportunity_btn: "//*[@id='content']/div/div/div[1]/div/a"
