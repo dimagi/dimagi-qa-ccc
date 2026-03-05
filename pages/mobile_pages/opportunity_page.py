@@ -1,5 +1,7 @@
 import time
 
+from appium.webdriver.common.appiumby import AppiumBy
+
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -169,50 +171,81 @@ class OpportunityPage(BasePage):
         #         time.sleep(15)
         #         # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
         #         break
+    # def open_opportunity_from_list(self, opp_name, opp_status):
+    #     if self.is_present(self.JOB_TITLE_TXT):
+    #         print("Opportunity is already opened")
+    #     else:
+    #         self.click_element(self.SYNC_BTN)
+    #         time.sleep(10)
+    #
+    #         max_scrolls = 150
+    #         scroll_count = 0
+    #
+    #         while scroll_count < max_scrolls:
+    #             rows = self.get_elements(self.OPP_LIST_CARD)
+    #
+    #             for row in rows:
+    #                 try:
+    #                     name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
+    #
+    #                     if str(opp_status).lower() == "delivery":
+    #                         status = row.find_element(*self.OPP_LIST_RESUME)
+    #                         button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
+    #                     else:
+    #                         status = row.find_element(*self.OPP_LIST_REVIEW)
+    #                         button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
+    #                     print(name, button_name)
+    #                     if name == opp_name :
+    #                         print(f"Opportunity found: {name}, [{button_name}]")
+    #                         status.click()
+    #                         time.sleep(5)
+    #                         if button_name.lower()=="resume" :
+    #                             try:
+    #                                 self.download_learn_app()
+    #                             except:
+    #                                 print("No Learn or Delivery app Download button present")
+    #                         return  # stop function immediately
+    #
+    #                 except Exception:
+    #                     continue
+    #
+    #             # Not found → scroll
+    #             self.scroll_down()
+    #             scroll_count += 1
+    #
+    #         raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
+
+    from appium.webdriver.common.appiumby import AppiumBy
+
     def open_opportunity_from_list(self, opp_name, opp_status):
+
         if self.is_present(self.JOB_TITLE_TXT):
-            print("Opportunity is already opened")
-        else:
-            self.click_element(self.SYNC_BTN)
-            time.sleep(10)
+            print("Opportunity already opened")
+            return
 
-            max_scrolls = 150
-            scroll_count = 0
+        self.click_element(self.SYNC_BTN)
+        time.sleep(5)
 
-            while scroll_count < max_scrolls:
-                rows = self.get_elements(self.OPP_LIST_CARD)
+        button_text = "Resume" if opp_status.lower() == "delivery" else "Review"
 
-                for row in rows:
-                    try:
-                        name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
+        # Scroll to opportunity
+        opportunity = self.scroll_to_text(opp_name)
 
-                        if str(opp_status).lower() == "delivery":
-                            status = row.find_element(*self.OPP_LIST_RESUME)
-                            button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
-                        else:
-                            status = row.find_element(*self.OPP_LIST_REVIEW)
-                            button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
-                        print(name, button_name)
-                        if name == opp_name :
-                            print(f"Opportunity found: {name}, [{button_name}]")
-                            status.click()
-                            time.sleep(5)
-                            if button_name.lower()=="resume" :
-                                try:
-                                    self.download_learn_app()
-                                except:
-                                    print("No Learn or Delivery app Download button present")
-                            return  # stop function immediately
+        print(f"Opportunity found: {opportunity.text}")
 
-                    except Exception:
-                        continue
+        # Find the button near the opportunity
+        button = self.driver.find_element(
+            AppiumBy.XPATH,
+            f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
+            )
 
-                # Not found → scroll
-                self.scroll_down()
-                scroll_count += 1
+        button.click()
 
-            raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
-
+        if button_text.lower() == "resume":
+            try:
+                self.download_learn_app()
+            except:
+                print("No Learn or Delivery app Download button present")
 
     def click_notification(self):
         self.wait_for_element(self.NOTIFICATION_BTN)

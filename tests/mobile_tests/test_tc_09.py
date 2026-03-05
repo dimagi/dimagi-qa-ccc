@@ -87,6 +87,7 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(web_driver, t
 
     with allure.step("Submit the form on the Delivery App"):
         delivery.submit_form("Registration Form", user_id_input=temp_id)
+        delivery.nav_to_view_job()
 
     with allure.step("Navigate to Messaging option"):
         if 'staging' in config.get("cchq_url"):

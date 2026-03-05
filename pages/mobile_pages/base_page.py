@@ -119,9 +119,59 @@ class BasePage:
                     )
         raise NoSuchElementException(f"Element {locator} not found after scrolling")
 
-    def scroll_to_text(self, text):
-        return self.driver.find_element(
-            AppiumBy.ANDROID_UIAUTOMATOR,
-            f'new UiScrollable(new UiSelector().scrollable(true))'
-            f'.scrollIntoView(new UiSelector().text("{text}"));'
-            )
+    # def scroll_to_text(self, text):
+    #     return self.driver.find_element(
+    #         AppiumBy.ANDROID_UIAUTOMATOR,
+    #         f'new UiScrollable(new UiSelector().scrollable(true))'
+    #         f'.scrollIntoView(new UiSelector().text("{text}"));'
+    #         )
+
+
+    def scroll_to_text(self, text, max_swipes=30):
+        """
+        Scrolls until text is visible.
+        Stops automatically if end of list is reached.
+        Works well with RecyclerView.
+        """
+
+        previous_page_source = ""
+
+        for i in range(max_swipes):
+
+            # Check if text already visible
+            elements = self.driver.find_elements(
+                AppiumBy.XPATH, f"//*[contains(@text,'{text}')]"
+                )
+
+            if elements:
+                print(f"Found '{text}' after {i} scrolls")
+                return elements[0]
+
+            # Detect end of list
+            current_page_source = self.driver.page_source
+            if current_page_source == previous_page_source:
+                raise Exception(f"Reached end of list. '{text}' not found.")
+
+            previous_page_source = current_page_source
+
+            # Scroll
+            size = self.driver.get_window_size()
+
+            start_x = size["width"] * 0.5
+            start_y = size["height"] * 0.8
+            end_x = size["width"] * 0.5
+            end_y = size["height"] * 0.3
+
+            self.driver.swipe(start_x, start_y, end_x, end_y, 800)
+
+            time.sleep(1)
+
+        raise Exception(f"'{text}' not found after {max_swipes} scrolls.")
+
+    def format_locator(self, locator, *args, **kwargs):
+        by, value = locator
+
+        if args or kwargs:
+            value = value.format(*args, **kwargs)
+
+        return by, value
