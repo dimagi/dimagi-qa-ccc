@@ -39,7 +39,7 @@ login_page:
 
 mobile_notifications:
   invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"
-  invite_opp_txt: "//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')]"
+  invite_opp_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a new job in Commcare Connect')])[1]"
   expand_btn: "//android.widget.TextView[@text='CommCare']/ancestor::android.widget.RelativeLayout//android.widget.Button"
 #  payment_received_title_txt: "//android.widget.TextView[@resource-id='android:id/title' and @text='Payment received']"
   payment_received_title_txt: "//android.widget.TextView[@text='Payment received']"
