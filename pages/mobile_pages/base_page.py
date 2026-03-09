@@ -175,3 +175,9 @@ class BasePage:
             value = value.format(*args, **kwargs)
 
         return by, value
+
+    def js_click_element(self, locator):
+        element = self.wait.until(EC.presence_of_element_located(locator))
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
+        self.wait.until(EC.visibility_of(element))
+        self.driver.execute_script("arguments[0].click();", element)

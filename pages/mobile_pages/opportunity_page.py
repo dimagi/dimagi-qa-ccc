@@ -234,17 +234,22 @@ class OpportunityPage(BasePage):
         print(f"Opportunity found: {opportunity.text}")
 
         # Find the button near the opportunity
-        button = self.driver.find_element(
+        button = (
             AppiumBy.XPATH,
             f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
             )
-        time.sleep(1)
-        self.driver.execute_script(
-            "mobile: clickGesture",
-            {"elementId": button.id}
-            )
+        # button = self.driver.find_element(
+        #     AppiumBy.XPATH,
+        #     f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
+        #     )
+        time.sleep(2)
+        # self.driver.execute_script(
+        #     "mobile: clickGesture",
+        #     {"elementId": button.id}
+        #     )
+        self.js_click_element(button)
         # button.click()
-
+        time.sleep(2)
         if button_text.lower() == "resume":
             try:
                 self.download_learn_app()
