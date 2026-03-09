@@ -247,7 +247,7 @@ class OpportunityPage(BasePage):
         #     "mobile: clickGesture",
         #     {"elementId": button.id}
         #     )
-        self.js_click_element(button)
+        self.click_element(button)
         # button.click()
         time.sleep(2)
         if button_text.lower() == "resume":
