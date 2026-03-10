@@ -135,8 +135,8 @@ jobs:
       fail-fast: false
       matrix:
         environment: ${{ fromJSON(needs.resolve-matrix.outputs.matrix).environment }}
-      exclude:
-        - environment: stage
+        exclude:
+          - environment: stage
 
     env:
       TEST_ENV: ${{ matrix.environment }}
