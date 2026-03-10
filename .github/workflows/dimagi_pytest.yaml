@@ -130,6 +130,7 @@ jobs:
       github.event_name != 'workflow_dispatch' ||
       (github.event_name == 'workflow_dispatch' &&
       (inputs.test_scope == 'mobile' || inputs.test_scope == 'both'))
+      && matrix.environment != 'stage'
 
     strategy:
       fail-fast: false
