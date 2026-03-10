@@ -130,12 +130,13 @@ jobs:
       github.event_name != 'workflow_dispatch' ||
       (github.event_name == 'workflow_dispatch' &&
       (inputs.test_scope == 'mobile' || inputs.test_scope == 'both'))
-      && matrix.environment != 'stage'
 
     strategy:
       fail-fast: false
       matrix:
         environment: ${{ fromJSON(needs.resolve-matrix.outputs.matrix).environment }}
+      exclude:
+        - environment: stage
 
     env:
       TEST_ENV: ${{ matrix.environment }}
