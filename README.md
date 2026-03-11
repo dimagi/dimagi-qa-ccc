@@ -66,7 +66,9 @@ Dimagi/
 ├── conftest.py
 ├── pytest.ini
 ├── README.md
+├── settings-sample.cfg
 └── requirements.txt
+
 ```
 ---
 
@@ -75,6 +77,7 @@ Dimagi/
 - **Pytest fixtures** for driver management and setup/teardown
 - **Separate execution flows** for Web and Mobile tests
 - **Allure reporting** for detailed test insights
+- **Pytest reporting** for easier access and test insights
 - **CI/CD ready** with GitHub Actions
 - **BrowserStack integration** for cloud mobile execution
 - **Secure secrets handling** via GitHub Secrets
@@ -117,7 +120,6 @@ The `config/` directory contains environment-specific configuration files.
 
 #### `env.yaml`
 - Used to manage environment-level settings such as:
-  - Application Username & Password
   - Application URLs
   - BrowserStack URL
   - Appium local server URL
@@ -130,6 +132,14 @@ The `config/` directory contains environment-specific configuration files.
   - Platform name & version
   - App package and activity
   - Other Appium-related capabilities
+
+#### `settings-sample.cfg`
+- Used to manage test credentials and execution platform:
+  - Rename the file settings-sample.cfg to settings.cfg
+  - Execution platform for mobile tests- "browserstack" or "local" (in case an emulator is setup on local)
+  - BrowserStack Username and Access Key
+  - Commcare login credentials
+- Modify this file to switch between Execution platforms, user credentials.
 
 ---
 
@@ -188,14 +198,21 @@ pytest -v tests/web_tests
 
 Run Mobile Tests
 ```
-pytest -v tests/mobile_tests --run_on=local
+pytest -v tests/mobile_tests
 ```
 
 Run a specific test file
 ```
 pytest -v tests/web_tests/test_olp_1_2_3.py
-pytest -v tests/mobile_tests/test_tc_1.py --run_on=local
+pytest -v tests/mobile_tests/test_tc_1.py 
 ```
+
+### 📊 Normal Pytest Reports (Local Execution)
+Generate Allure Results
+```
+pytest -v tests/web_tests --html=report.html --self-contained-html --tb=short
+```
+No extra steps needed to generate the reports after execution.
 
 ### 📊 Allure Reports (Local Execution)
 Generate Allure Results
@@ -235,6 +252,11 @@ Steps to Open Allure report from GitHub Artifacts
 ```bash
 allure open "path_to_downloaded_report_folder"
 ```
+
+Steps to Open Pytest report from GitHub Artifacts
+- Download the html report zips file from workflow artifacts
+- Unzip and extract the files in file explorer
+- Or if your email address is one of the recipients in the email notifications, the report.html files for we and prod will be attached 
 
 ### 🔐 GitHub Secrets Configuration
 Add secrets under:
@@ -284,7 +306,7 @@ To enable the CI pipeline to send notifications to a specific Slack channel, fol
 
 > The webhook URL should be treated as a secret; anyone with this URL can post messages to the channel.
 
----
+**Currently the channel showcasing the Connect test results is #qa-connect-automated-test-results**
 
 ### ✉️ Configuring Email Notifications
 
@@ -307,38 +329,16 @@ The framework can send test execution notifications via email. Follow these step
 > The workflow or script will use these secrets to send notifications to the specified recipients.
 
 ---
+### ▶️ Manually Trigger Tests on Github
+- Go to link : https://github.com/dimagi/dimagi-qa-ccc/actions/workflows/dimagi_pytest.yaml
+- Find the Run workflow button on the Right side of the screen
+- ![img.png](img.png)
+- The above screen will open with 3 fields: Branch (select main), Environment (prod or stage or both), Scope (web or mobile or both)
+- Once all fields are selected, click on the green Run workflow button
+
 ## ⚠️ Mobile Test Execution – Important Considerations
 
-### 1. Test Cases Requiring New Users (TC_3 & TC_4)
-
-The following mobile test cases require a **fresh user on every execution**:
-
-- **TC_3** – Opportunity Invite & Notifications  
-- **TC_4** – Learn App Assessments (Delivery App)
-
-#### Prerequisites
-Before running these tests:
-
-1. Manually create a **new mobile user** in the system.
-2. Invite this user to **any existing opportunity**  
-   (Do NOT use opportunity: `test_opp_221225_01`)
-
-#### Update Test Data
-After creating the user, update the following file:
-test_data/mobile_workers.yaml
-
-Under section: TC_3_to_4
-
-
-Provide:
-- `phone_number`
-- `username`
-- `backup_code`
-
-These values must match the newly created user.
-
-
-### 2. Payment Flow Limitation (TC_6)
+### 1. Payment Flow Limitation (TC_6)
 
 - **TC_6 (Payment Flow)** can be executed **only once per user per day as per functionality**.
 - If this test needs to be re-run multiple times:
@@ -350,5 +350,5 @@ These values must match the newly created user.
 
 This limitation is due to business rules on the backend.
 
-
+**P.S. This testcase is currently skipped due to a known bug on the latest apks.
 

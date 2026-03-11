@@ -33,25 +33,18 @@ class WorkerVisitsPage(BaseWebPage):
 
 
     def set_select_all_checkbox_worker_visits(self, state):
-        checkbox = self.wait_for_element(self.WORKER_VISITS_SELECT_ALL_CHECKBOX)
-        if checkbox.is_selected() != state:
-            checkbox.click()
+        time.sleep(2)
+        self.wait_for_element(self.WORKER_VISITS_SELECT_ALL_CHECKBOX)
+        if self.is_selected(self.WORKER_VISITS_SELECT_ALL_CHECKBOX) != state:
+            self.click_element(self.WORKER_VISITS_SELECT_ALL_CHECKBOX)
         time.sleep(2)
         self.verify_approve_and_reject_all_btns_present()
 
-    def set_row_checkbox_from_list(self, row_data_list):
-        if len(row_data_list) != 3:
-            raise ValueError("row_data must contain exactly 3 items: [date, entity_name, check_status]")
-        date, entity_name, check = row_data_list
-        by, xpath = self.WORKER_VISITS_ROW
-        actual_xpath = xpath.format(date=date, entity_name=entity_name)
-        table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
-        row = table.find_element(By.XPATH, actual_xpath)
-        checkbox = row.find_element(By.XPATH, ".//td[1]//input[@type='checkbox']")
-        self.wait_for_clickable(checkbox)
-        if checkbox.is_selected() != check:
-            checkbox.click()
-        time.sleep(1)
+    def set_row_checkbox_from_list(self, check):
+        self.wait_for_clickable(self.WORKER_VISITS_ROW)
+        if self.is_selected(self.WORKER_VISITS_ROW) != check:
+            self.click_element(self.WORKER_VISITS_ROW)
+            time.sleep(1)
         self.verify_approve_and_reject_all_btns_present()
 
     def click_row_item_from_list(self, row_data_list):

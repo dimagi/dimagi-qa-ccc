@@ -20,13 +20,19 @@ class OpportunityDashboardPage(BaseWebPage):
     PROGRESS_FUNNEL = locators.get("opportunity_dashboard_page", "progress_funnel")
     HAMBURGER_ICON = locators.get("opportunity_dashboard_page", "hamburger_icon")
     HAMBURGER_CONTEXT_MENU = locators.get("opportunity_dashboard_page", "hamburger_menu")
-
+    PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
+    LEFT_ARROW = locators.get("connect_opportunities_page", "left_arrow")
+    RIGHT_ARROW = locators.get("connect_opportunities_page", "right_arrow")
+    PAGE_INPUT = locators.get("connect_opportunities_page", "page_input")
 
     def click_dashboard_card_in_opportunity(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
-        self.scroll_into_view((by, actual_xpath))
-        self.click_element((by, actual_xpath))
+        print(by, actual_xpath)
+        self.scroll_to_element((by, actual_xpath))
+        time.sleep(1)
+        self.js_click((by, actual_xpath))
+        time.sleep(3)
 
     def verify_start_date_card_value_present(self):
         element = self.wait_for_element(self.START_DATE_TEXT)
@@ -43,14 +49,15 @@ class OpportunityDashboardPage(BaseWebPage):
     def verify_dashboard_card_details_present(self, title, subtitle):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
-        self.scroll_into_view((by, actual_xpath))
+        print(by, actual_xpath)
+        self.scroll_to_element((by, actual_xpath))
         card = self.wait_for_element((by, actual_xpath))
         count = card.find_element(By.XPATH, ".//h3[contains(@class,'text-2xl')]").text.strip()
         assert count != "", f"{title} {subtitle} count is empty"
         print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
 
     def verify_progress_funnel_present(self):
-        self.scroll_into_view(self.PROGRESS_FUNNEL)
+        self.scroll_to_element(self.PROGRESS_FUNNEL)
         self.wait_for_element(self.PROGRESS_FUNNEL).is_displayed()
 
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
@@ -63,20 +70,72 @@ class OpportunityDashboardPage(BaseWebPage):
         self.verify_dashboard_card_details_present("Payments", "Earned")
         self.verify_dashboard_card_details_present("Payments", "Due")
 
+
     def navigate_to_connect_workers(self, opp):
-        self.click_link_by_text(opp)
+        time.sleep(5)
+        try:
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
+        except:
+            print("Dropdown not present")
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
         self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
         self.verify_text_in_url("workers")
         time.sleep(1)
 
     def navigate_to_services_delivered(self, opp):
-        self.click_link_by_text(opp)
+        time.sleep(5)
+        try:
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
+        except:
+            print("Dropdown not present")
+        next_page=True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
+
+        # self.click_link_by_text(opp)
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)
 
     def navigate_to_payments_earned(self, opp):
-        self.click_link_by_text(opp)
+        time.sleep(5)
+        try:
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
+        except:
+            print("Dropdown not present")
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
+        time.sleep(2)
         self.click_dashboard_card_in_opportunity("Payments", "Earned")
         self.verify_text_in_url("workers/payments")
         time.sleep(1)
@@ -111,9 +170,24 @@ class OpportunityDashboardPage(BaseWebPage):
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
 
-
     def navigate_to_services_delivered(self, opp):
-        self.click_link_by_text(opp)
+        time.sleep(5)
+        try:
+            self.select_by_value(self.PAGE_SIZE, "30")
+            time.sleep(15)
+            self.wait_for_page_to_load()
+        except:
+            print("Dropdown not present")
+        next_page = True
+        while next_page:
+            try:
+                self.click_link_by_text(opp)
+                next_page = False
+            except:
+                next_page = True
+                self.click(self.RIGHT_ARROW)
+                time.sleep(15)
+                self.wait_for_page_to_load()
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)

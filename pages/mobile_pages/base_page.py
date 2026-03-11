@@ -1,5 +1,8 @@
 import os
+import time
 
+from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common import NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions.pointer_input import PointerInput
@@ -11,7 +14,7 @@ class BasePage:
 
     def __init__(self, driver):
         self.driver = driver
-        self.wait = WebDriverWait(driver, 30)
+        self.wait = WebDriverWait(driver, 60)
 
     def wait_for_element(self, locator):
         return self.wait.until(EC.presence_of_element_located(locator))
@@ -37,6 +40,15 @@ class BasePage:
         try:
             WebDriverWait(self.driver, timeout).until(
                 EC.visibility_of_element_located(locator)
+            )
+            return True
+        except:
+            return False
+
+    def is_present(self, locator, timeout=10):
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.presence_of_element_located(*locator)
             )
             return True
         except:
@@ -86,3 +98,86 @@ class BasePage:
 
     def get_elements_if_present(self, locator):
         return self.driver.find_elements(*locator)
+
+    def scroll_down(self):
+        size = self.driver.get_window_size()
+        start_y = int(size['height'] * 0.8)
+        end_y = int(size['height'] * 0.3)
+        x = int(size['width'] / 2)
+
+        self.driver.swipe(x, start_y, x, end_y, 800)
+
+    def scroll_to_element(self, locator, max_swipes=5):
+        for _ in range(max_swipes):
+            try:
+                element = self.driver.find_element(*locator)
+                return element
+            except NoSuchElementException:
+                self.driver.find_element(
+                    AppiumBy.ANDROID_UIAUTOMATOR,
+                    'new UiScrollable(new UiSelector().scrollable(true)).scrollForward()'
+                    )
+        raise NoSuchElementException(f"Element {locator} not found after scrolling")
+
+    # def scroll_to_text(self, text):
+    #     return self.driver.find_element(
+    #         AppiumBy.ANDROID_UIAUTOMATOR,
+    #         f'new UiScrollable(new UiSelector().scrollable(true))'
+    #         f'.scrollIntoView(new UiSelector().text("{text}"));'
+    #         )
+
+
+    def scroll_to_text(self, text, max_swipes=30):
+        """
+        Scrolls until text is visible.
+        Stops automatically if end of list is reached.
+        Works well with RecyclerView.
+        """
+
+        previous_page_source = ""
+
+        for i in range(max_swipes):
+
+            # Check if text already visible
+            elements = self.driver.find_elements(
+                AppiumBy.XPATH, f"//*[contains(@text,'{text}')]"
+                )
+
+            if elements:
+                print(f"Found '{text}' after {i} scrolls")
+                return elements[0]
+
+            # Detect end of list
+            current_page_source = self.driver.page_source
+            if current_page_source == previous_page_source:
+                raise Exception(f"Reached end of list. '{text}' not found.")
+
+            previous_page_source = current_page_source
+
+            # Scroll
+            size = self.driver.get_window_size()
+
+            start_x = size["width"] * 0.5
+            start_y = size["height"] * 0.8
+            end_x = size["width"] * 0.5
+            end_y = size["height"] * 0.3
+
+            self.driver.swipe(start_x, start_y, end_x, end_y, 800)
+
+            time.sleep(1)
+
+        raise Exception(f"'{text}' not found after {max_swipes} scrolls.")
+
+    def format_locator(self, locator, *args, **kwargs):
+        by, value = locator
+
+        if args or kwargs:
+            value = value.format(*args, **kwargs)
+
+        return by, value
+
+    def js_click_element(self, locator):
+        element = self.wait.until(EC.presence_of_element_located(locator))
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
+        self.wait.until(EC.visibility_of(element))
+        self.driver.execute_script("arguments[0].click();", element)

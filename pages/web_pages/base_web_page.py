@@ -1,11 +1,15 @@
+from datetime import datetime, timedelta
+import json
 import os
+import time
 
 from selenium.common import TimeoutException, NoSuchElementException
+from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, PROJECT_ROOT
 from openpyxl import load_workbook
 
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
@@ -33,6 +37,14 @@ class BaseWebPage:
 
     def wait_for_element(self, locator):
         return self.wait.until(EC.presence_of_element_located(locator))
+
+    def is_selected(self, locator):
+        try:
+            element = self.driver.find_element(*locator)
+            is_selected = element.is_selected()
+        except TimeoutException:
+            is_selected = False
+        return bool(is_selected)
 
     def wait_for_clickable(self, locator):
         return self.wait.until(EC.element_to_be_clickable(locator))
@@ -66,16 +78,73 @@ class BaseWebPage:
         self.wait.until(EC.url_contains(url))
         assert url in self.driver.current_url, f"Expected URL '{url}' not opened. Found '{self.driver.current_url}'"
 
+    def get_current_url(self):
+        return self.driver.current_url
+
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
         self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
         Select(element).select_by_visible_text(text)
+
+    def select_by_value(self, dropdown_locator, text):
+        select_source = Select(self.driver.find_element(*dropdown_locator))
+        select_source.select_by_value(text)
+
+    def select_by_visible_text_manually(self, dropdown_locator, text):
+        dropdown = self.wait.until(EC.element_to_be_clickable(dropdown_locator))
+
+        # Click to focus
+        dropdown.click()
+
+        # Type partial text
+        dropdown.send_keys(text)
+
+        # Press Enter
+        dropdown.send_keys(Keys.ENTER)
+
+    def js_select_by_text(self, dropdown_locator, text):
+        # Find element normally (supports any locator tuple)
+        element = self.driver.find_element(*dropdown_locator)
+
+        # Use JS to change value based on visible text
+        self.driver.execute_script("""
+            var select = arguments[0];
+            var text = arguments[1];
+
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].text.trim() === text.trim()) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+
+            // Trigger native change event
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // If HTMX exists, trigger via HTMX too
+            if (window.htmx) {
+                htmx.trigger(select, 'change');
+            }
+        """, element, text
+                                   )
 
     def scroll_to_top(self):
         self.driver.execute_script("window.scrollTo(0, 0);")
 
     def scroll_to_bottom(self):
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+    def scroll_to_element(self, locator):
+        element = self.driver.find_element(*locator)
+        self.driver.execute_script("arguments[0].scrollIntoView();", element)
+
+    def js_click(self, locator, timeout=10):
+        element = WebDriverWait(self.driver, timeout, poll_frequency=0.25).until(
+            EC.presence_of_element_located(locator),
+            message=f"Couldn't find locator: {locator}"
+            )
+        self.driver.execute_script("arguments[0].click();", element)
+        time.sleep(1)
 
     def scroll_into_view(self, locator, center=True):
         element = self.wait.until(EC.presence_of_element_located(locator))
@@ -96,10 +165,17 @@ class BaseWebPage:
         raise TimeoutError("Element not visible after scrolling")
 
     def click_link_by_text(self, link_text: str):
-        xpath = f"//a[normalize-space()='{link_text}']"
+        xpath = f"(//a[contains(.,'{link_text}')])[1]"
         element = self.wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
         self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", element)
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        self.scroll_to_element((By.XPATH, xpath))
+        time.sleep(3)
+        try:
+            self.wait.until(EC.element_to_be_clickable((By.XPATH, xpath))).click()
+        except:
+            self.js_click((By.XPATH, xpath))
+        self.wait_for_page_load()
+        time.sleep(3)
 
     def is_breadcrumb_item_present(self, text: str) -> bool:
         xpath = f"//ul[contains(@class,'breadcrumb')]//a[contains(normalize-space(), '{text}')]"
@@ -159,7 +235,8 @@ class BaseWebPage:
             raise AssertionError(f"Element not found: {ele_name}")
 
     def write_payment_details_to_excel(self, params):
-        file_path = os.path.join(os.getcwd(), "test_data", "make_payment.xlsx")
+        project_root = PROJECT_ROOT
+        file_path = os.path.join(project_root, "test_data", "make_payment.xlsx")
         wb = load_workbook(file_path)
         sheet = wb["Sheet1"]
         for col in range(1, sheet.max_column + 1):
@@ -177,3 +254,47 @@ class BaseWebPage:
 
     def wait_for_js_alert_present(self):
         return self.wait.until(EC.alert_is_present())
+
+    def xpath_literal(self, text):
+        if "'" not in text:
+            return f"'{text}'"
+        if '"' not in text:
+            return f'"{text}"'
+        # If both quotes exist, use concat
+        parts = text.split("'")
+        return "concat(" + ", \"'\", ".join(f"'{p}'" for p in parts) + ")"
+
+    def generate_date_range(self, days_to_add: int, opt=1):
+        today = datetime.today()
+        start = today + timedelta(days=2)
+        end = start + timedelta(days=days_to_add)
+
+        if opt==1:
+            start_date = start.strftime("%m-%d-%Y")
+            end_date = end.strftime("%m-%d-%Y")
+        else:
+            start_date = start.strftime("%d-%m-%Y")
+            end_date = end.strftime("%d-%m-%Y")
+        return start_date, end_date
+
+    def is_displayed(self, locator):
+        try:
+            element = self.driver.find_element(*locator)
+            is_displayed = element.is_displayed()
+        except (TimeoutException, NoSuchElementException):
+            is_displayed = False
+        return bool(is_displayed)
+
+    def is_present(self, locator):
+        try:
+            element = self.driver.find_element(*locator)
+            is_displayed = True
+        except NoSuchElementException:
+            is_displayed = False
+        return bool(is_displayed)
+
+    def get_attribute(self, locator, attribute):
+        element = self.driver.find_element(*locator)
+        element_attribute = element.get_attribute(attribute)
+        print(element_attribute)
+        return element_attribute

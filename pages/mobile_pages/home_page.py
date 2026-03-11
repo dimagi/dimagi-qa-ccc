@@ -42,6 +42,8 @@ class HomePage(BasePage):
         self.wait_for_element(self.PHONE_INPUT)
 
     def is_username_displayed(self, name):
+        self.wait_for_element(self.HEADER_USERNAME)
+        time.sleep(2)
         return self.get_text(self.HEADER_USERNAME) == name
 
     def sign_out(self):
@@ -67,9 +69,10 @@ class HomePage(BasePage):
             self.NOTIFICATIONS_BTN,
             self.ABOUT_COMMCARE_BTN
         ]
-
+        time.sleep(2)
         for item in menu_items:
             assert self.is_displayed(item), f"Side menu option not visible: {item}"
+            print(f"Side menu option visible: {item}")
 
     def verify_refresh_opportunity(self):
         self.wait_for_element(self.NAVIGATION_DRAWER)

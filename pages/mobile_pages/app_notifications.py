@@ -27,7 +27,7 @@ class AppNotifications(BasePage):
 
     def verify_all_notifications(self):
         self.click_element(self.SYNC_BTN)
-
+        time.sleep(10)
         if self.is_displayed(self.NO_NOTIFICATION_TXT):
             print("No notifications found in the list")
             self.navigate_back()
