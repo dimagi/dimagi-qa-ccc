@@ -45,7 +45,7 @@ TC_7:
   phone_number: "7426426"
   username: "Automation User 426"
   backup_code: "123456"
-  opportunity_name: "test_07"
+  opportunity_name: "Suspend Opp"
   org_name: "PM_Automation_01"
 
 TC_8:

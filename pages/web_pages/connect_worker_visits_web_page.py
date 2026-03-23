@@ -124,7 +124,7 @@ class WorkerVisitsPage(BaseWebPage):
         table = self.wait_for_element(self.WORKER_VISITS_TABLE_ELEMENT)
         headers = table.find_elements(By.XPATH, ".//thead//th")
         actual_headers = []
-        for th in headers[1:]:
+        for th in headers:
             text = th.text.strip()
             if text:
                 actual_headers.append(text)
