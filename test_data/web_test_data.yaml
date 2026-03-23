@@ -73,7 +73,7 @@ WORKER_VISIT_VERIFICATION_PAGE_1_2:
   worker_name: "Deb Test 8/12"
 
 WORKER_VISIT_VERIFICATION_PAGE_3:
-  opportunity_name: "covid_opp_test"
+  opportunity_name: "Suspend Opp"
   worker_name: "Deb Test 8/12"
   reason: "Suspend user reason"
 
