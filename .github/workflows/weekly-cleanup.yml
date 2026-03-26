@@ -1,0 +1,311 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Connect Weekly Cleanup
+
+on:
+  schedule:
+    - cron: '0 2 * * 6'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - stage
+          - prod
+          - both
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  resolve-matrix:
+    name: Resolve Environment Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.environment }}" = "both" ]; then
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            else
+              echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
+            fi
+          else
+            if [ "${{ github.event.schedule }}" = "0 2 * * 6" ]; then
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            fi
+          fi
+
+# --------------------------------------------------------
+# Web Tests
+# --------------------------------------------------------
+
+  web-tests:
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.test_scope == 'web' || inputs.test_scope == 'both'))
+    name: Web Tests (${{ matrix.environment }})
+    needs: resolve-matrix
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
+
+    env:
+      TEST_ENV: ${{ matrix.environment }}
+      hq_username: ${{ secrets.hq_username }}
+      hq_password: ${{ secrets.hq_password }}
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+
+      - name: Run Web Tests
+        run: |
+          pytest -v -m cleanup --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 2 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: Upload Web JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-web-${{ matrix.environment }}
+          path: reports/web-${{ env.TEST_ENV }}.xml
+
+      - name: Upload Web HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-web-${{ matrix.environment }}
+          path: reports/report-web-${{ env.TEST_ENV }}.html
+
+# --------------------------------------------------------
+# Aggregate + Notifications
+# --------------------------------------------------------
+
+  generate-report:
+    name: Generate Combined Report
+    runs-on: ubuntu-latest
+    needs: [ web-tests ]
+    if: ${{ !cancelled() && (needs.web-tests.result != 'skipped') }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Parse Results
+        id: aggregate
+        shell: bash
+        run: |
+          parse_results () {
+            pattern=$1
+            total=0; failed=0; errors=0; skipped=0;
+
+            files=$(find artifacts -name "$pattern")
+            if [ -z "$files" ]; then
+              echo ""
+              return
+            fi
+
+            for file in $files; do
+              t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+              s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+
+              total=$((total + ${t:-0}))
+              failed=$((failed + ${f:-0}))
+              errors=$((errors + ${e:-0}))
+              skipped=$((skipped + ${s:-0}))
+            done
+
+            total_failed=$((failed + errors))
+            passed=$((total - total_failed - skipped))
+
+            if [ "$total_failed" -gt 0 ]; then
+              status="FAILURE"
+              color="danger"
+            else
+              status="SUCCESS"
+              color="good"
+            fi
+
+            echo "$status,$color,$passed,$total_failed,$errors,$skipped"
+          }
+
+          # Only environments that actually produced junit xml
+          envs=$(find artifacts -name "*.xml" | sed -E 's/.*-(stage|prod)\.xml/\1/' | sort -u)
+
+          for env in $envs; do
+            web="$(parse_results "web-${env}.xml")"
+  
+            env_has_web="false"
+  
+            web_status=""; web_pass=""; web_fail=""; web_err=""; web_skip=""
+
+            if [ -n "$web" ]; then
+              env_has_web="true"
+              IFS=',' read web_status web_color web_pass web_fail web_err web_skip <<< "$web"
+            fi
+
+            # If neither scope ran for this env, skip it
+            if [ "$env_has_web" != "true" ] ; then
+              continue
+            fi
+
+            # Env status = FAILURE if any executed scope failed
+            if [ "$web_status" = "FAILURE" ]; then
+              env_status="FAILURE"
+              env_color="danger"
+            else
+              env_status="SUCCESS"
+              env_color="good"
+            fi
+
+            echo "${env}_status=$env_status" >> $GITHUB_OUTPUT
+            echo "${env}_color=$env_color" >> $GITHUB_OUTPUT
+
+            echo "${env}_has_web=$env_has_web" >> $GITHUB_OUTPUT
+
+            echo "${env}_web_pass=$web_pass" >> $GITHUB_OUTPUT
+            echo "${env}_web_fail=$web_fail" >> $GITHUB_OUTPUT
+            echo "${env}_web_err=$web_err" >> $GITHUB_OUTPUT
+            echo "${env}_web_skip=$web_skip" >> $GITHUB_OUTPUT
+
+            # NEWLINE-separated attachments (what action-send-mail expects)
+            web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
+
+            att=""
+            if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
+              att="${att}${web_file}"$'\n'
+            fi
+
+            {
+              echo "${env}_attachments<<EOF"
+              printf "%s" "$att"
+              echo
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          done
+
+      # -----------------------------
+      # Slack Notifications
+      # -----------------------------
+
+      - name: Slack Notification - Stage
+        if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_SLACK == 'true' }}
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.aggregate.outputs.stage_color }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+                  Run: #${{ github.run_number }}\n\n\
+                  *STAGE — ${{ steps.aggregate.outputs.stage_status }}*\n\n\
+                  ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}\
+                  https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
+            }
+
+      - name: Slack Notification - Prod
+        if: ${{ steps.aggregate.outputs.prod_status != '' && env.SEND_SLACK == 'true' }}
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook-type: incoming-webhook
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.aggregate.outputs.prod_color }}",
+                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+                  Run: #${{ github.run_number }}\n\n\
+                  *PROD — ${{ steps.aggregate.outputs.prod_status }}*\n\n\
+                  ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}\
+                  https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              ]
+            }
+
+      # -----------------------------
+      # Email Notifications
+      # -----------------------------
+
+      - name: Send Email - Stage
+        if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_EMAIL == 'true' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: >
+            CommCare-Connect STAGE -
+            ${{ steps.aggregate.outputs.stage_status }} -
+            Run #${{ github.run_number }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+          html_body: |
+            <h2>CommCare-Connect Test Automation Report - STAGE</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.ref_name }}</p>
+
+            ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}
+
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+          attachments: ${{ steps.aggregate.outputs.stage_attachments }}
+
+      - name: Send Email - Prod
+        if: ${{ steps.aggregate.outputs.prod_status != '' && env.SEND_EMAIL == 'true' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: >
+            CommCare-Connect PROD -
+            ${{ steps.aggregate.outputs.prod_status }} -
+            Run #${{ github.run_number }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+          html_body: |
+            <h2>CommCare-Connect Test Automation Report - PROD</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.ref_name }}</p>
+
+            ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('<h3>Web Results</h3><ul><li><b>Passed:</b> {0}</li><li><b>Failed:</b> {1}</li><li><b>Errors:</b> {2}</li><li><b>Skipped:</b> {3}</li></ul>', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}
+
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+          attachments: ${{ steps.aggregate.outputs.prod_attachments }}
+
+      - name: Fail Workflow If Tests Failed
+        if: ${{ steps.aggregate.outputs.stage_status == 'FAILURE' || steps.aggregate.outputs.prod_status == 'FAILURE' }}
+        run: exit 1
