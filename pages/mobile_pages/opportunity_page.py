@@ -256,10 +256,11 @@ class OpportunityPage(BasePage):
         self.click_element(button)
         # button.click()
         time.sleep(2)
-        try:
-            self.download_learn_app()
-        except:
-            print("No Learn or Delivery app Download button present")
+        if button_text.lower() == "resume":
+            try:
+                self.download_learn_app()
+            except:
+                print("No Learn or Delivery app Download button present")
         # if button_text.lower() == "resume":
 
 
