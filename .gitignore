@@ -19,3 +19,6 @@ allure-report/
 
 # idea file
 .idea
+
+*/report.html
+*/*.png
