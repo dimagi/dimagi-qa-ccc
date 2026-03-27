@@ -141,7 +141,7 @@ class MessagingPage(BaseWebPage):
         self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
         if 'staging' in self.get_current_url():
-            self.select_survey_form_for_alert("SMS Tests [DO NOT DELETE] > Case List > Registration Form")
+            self.select_survey_form_for_alert("SMS Tests [DO NOT DELETE] > Surveys > Survey")
         else:
             self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
         self.enter_expire_after_for_alert("1")
