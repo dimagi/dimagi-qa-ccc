@@ -25,7 +25,10 @@ class LoginPage(BaseWebPage):
     def enter_username_and_password(self, username, password):
         self.wait_for_element(self.USERNAME_ELE).send_keys(username)
         self.wait_for_element(self.PASSWORD_ELE).send_keys(password)
-        self.click_element(self.ACCEPT_COOKIES_BUTTON)
+        try:
+            self.click_element(self.ACCEPT_COOKIES_BUTTON)
+        except:
+            print("No Cookies alert present")
         self.wait_for_element(self.PASSWORD_ELE).send_keys(Keys.ENTER)
         #self.click_element(self.SIGNIN_BUTTON)
 

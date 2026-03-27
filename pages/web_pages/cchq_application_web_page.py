@@ -1,4 +1,5 @@
 import time
+from wsgiref.validate import assert_
 
 from selenium.webdriver import Keys
 
@@ -21,6 +22,9 @@ class CCHQApplicationPage(BaseWebPage):
     COPY_BUTTON = locators.get("cchq_application_page", "copy_button")
     MAKE_NEW_VERSION_BUTTON = locators.get("cchq_application_page", "make_new_version_button")
     RELEASED_BUTTON = locators.get("cchq_application_page", "released_button")
+    DELETE_APP = locators.get("cchq_application_page", "delete_app")
+    DELETE_CONFIRM = locators.get("cchq_application_page", "delete_confirm")
+    DELETE_SUCCESS = locators.get("cchq_application_page", "delete_success")
 
     def click_sidebar_settings_icon(self):
         self.wait_for_element(self.SIDEBAR_SETTINGS_ICON)
@@ -100,3 +104,21 @@ class CCHQApplicationPage(BaseWebPage):
         self.click_copy_button()
         self.click_make_new_version_button()
         return f"Unreleased - {self.delivery_app_full_name}"
+
+    def delete_all_application(self, app):
+        self.wait_for_element(self.SIDEBAR_SETTINGS_ICON)
+        self.click(self.SIDEBAR_SETTINGS_ICON)
+        self.click_tab_by_name_in_application_settings("Actions")
+        time.sleep(2)
+        self.wait_for_element(self.DELETE_APP)
+        self.js_click(self.DELETE_APP)
+        time.sleep(2)
+        self.wait_for_element(self.DELETE_CONFIRM)
+        self.js_click(self.DELETE_CONFIRM)
+        time.sleep(2)
+        if self.is_present_and_displayed(self.DELETE_SUCCESS, 200):
+            print("Deleted the application", app)
+        elif 'dashboard' in self.get_current_url():
+            print(f"Deleted the application {app} and came to Dashboard")
+        else:
+            print(f"Application {app} not deleted.")

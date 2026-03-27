@@ -65,7 +65,7 @@ def created_opportunity(web_driver, test_data, config, settings, request):
 @pytest.mark.web
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
-def test_opportunity_invite_notifications_and_details(created_opportunity, web_driver, config, test_data, settings, mobile_driver):
+def test_03_opportunity_invite_notifications_and_details(created_opportunity, web_driver, config, test_data, settings, mobile_driver):
 
     data = test_data.get("TC_3_to_4")
     global opp_name
@@ -147,7 +147,7 @@ def test_opportunity_invite_notifications_and_details(created_opportunity, web_d
 @pytest.mark.web
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES20", "TES21", "TES22")
-def test_learn_app_assessments_delivery_app(web_driver, config, test_data, settings, mobile_driver):
+def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, settings, mobile_driver):
     if opp_name is None:
         pytest.skip("Opportunity name missing")
     print(opp_name)
@@ -255,7 +255,7 @@ def test_learn_app_assessments_delivery_app(web_driver, config, test_data, setti
 @pytest.mark.web
 @pytest.mark.skip(reason="https://dimagi.atlassian.net/browse/QA-8418")
 # @pytest.mark.bugasura("TES25", "TES26", "TES27", "TES109", "TES110")
-def test_payment_and_related_notifications(web_driver, config, test_data, settings, mobile_driver):
+def test_06_payment_and_related_notifications(web_driver, config, test_data, settings, mobile_driver):
     if opp_name is None:
         pytest.skip("Opportunity name missing")
     print(opp_name)

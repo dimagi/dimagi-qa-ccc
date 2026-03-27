@@ -29,19 +29,12 @@ from pages.web_pages.cchq_messaging_web_page import MessagingPage
 @pytest.mark.web
 @pytest.mark.mobile
 # @pytest.mark.bugasura("TES33", "TES34", "TES35")
-def test_messaging_create_n_verify_alerts_with_new_message_options(web_driver, test_data, config, settings, mobile_driver,):
+def test_09_messaging_create_n_verify_alerts_with_new_message_options(web_driver, test_data, config, settings, mobile_driver,):
     data = test_data.get("TC_9")
 
     cchq_login_page = LoginPage(web_driver)
     cchq_home_page = CCHQHomePage(web_driver)
     cchq_messaging_page = MessagingPage(web_driver)
-
-    # mobile driver and page initiation
-    pid = PersonalIDPage(mobile_driver)
-    home = HomePage(mobile_driver)
-    opportunity = OpportunityPage(mobile_driver)
-    delivery = DeliveryAppPage(mobile_driver)
-    message = Message(mobile_driver)
 
     temp_id = int(time.time() * 1000) % 1000000
 
@@ -57,6 +50,13 @@ def test_messaging_create_n_verify_alerts_with_new_message_options(web_driver, t
     with allure.step("Verify new message options available in What to Send dropdown in Conditional Alerts"):
         cchq_messaging_page.navigate_to_conditional_alerts_n_verify_what_to_send_options(["Connect Message", "Connect Survey"])
         cchq_home_page.click_option_under_messaging_tab("Conditional Alerts")
+
+    # mobile driver and page initiation
+    pid = PersonalIDPage(mobile_driver)
+    home = HomePage(mobile_driver)
+    opportunity = OpportunityPage(mobile_driver)
+    delivery = DeliveryAppPage(mobile_driver)
+    message = Message(mobile_driver)
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()

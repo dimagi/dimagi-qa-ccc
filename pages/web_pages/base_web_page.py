@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-from selenium.common import TimeoutException, NoSuchElementException
+from selenium.common import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -298,3 +298,29 @@ class BaseWebPage:
         element_attribute = element.get_attribute(attribute)
         print(element_attribute)
         return element_attribute
+
+    def find_elements(self, locator):
+        elements = self.driver.find_elements(*locator)
+        return elements
+
+    def is_present_and_displayed(self, locator, timeout=30):
+        try:
+            visible = EC.presence_of_element_located(locator)
+            element = WebDriverWait(self.driver, timeout, poll_frequency=0.5).until(visible,
+                                                                                  message="Element" + str(
+                                                                                      locator
+                                                                                      ) + "not displayed"
+                                                                                  )
+            is_displayed = element.is_displayed()
+        except TimeoutException:
+            is_displayed = False
+        except StaleElementReferenceException:
+            self.driver.refresh()
+            time.sleep(0.5)
+            visible = EC.presence_of_element_located(locator)
+            element = WebDriverWait(self.driver, timeout, poll_frequency=0.5).until(visible,
+                                                                                  message="Element" + str(locator
+                                                                                                          ) + "not displayed"
+                                                                                  )
+            is_displayed = element.is_displayed()
+        return bool(is_displayed)

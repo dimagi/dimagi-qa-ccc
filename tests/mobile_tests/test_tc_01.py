@@ -18,7 +18,7 @@ from pages.mobile_pages.home_page import HomePage
   """)
 @pytest.mark.mobile
 # @pytest.mark.bugasura("TES11", "TES12", "TES13", "TES15", "TES16")
-def test_login_and_home_page(mobile_driver, test_data):
+def test_01_login_and_home_page(mobile_driver, test_data):
     data = test_data.get("TC_1")
 
     pid = PersonalIDPage(mobile_driver)

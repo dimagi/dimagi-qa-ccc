@@ -140,7 +140,10 @@ class MessagingPage(BaseWebPage):
         self.select_what_to_send_input("Connect Survey")
         self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
-        self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
+        if 'staging' in self.get_current_url():
+            self.select_survey_form_for_alert("SMS Tests [DO NOT DELETE] > Case List > Registration Form")
+        else:
+            self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
         self.enter_expire_after_for_alert("1")
         self.click_save_btn()
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
