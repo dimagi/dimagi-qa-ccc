@@ -242,20 +242,26 @@ class OpportunityPage(BasePage):
         #     AppiumBy.XPATH,
         #     f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
         #     )
-        time.sleep(2)
+        time.sleep(4)
         # self.driver.execute_script(
         #     "mobile: clickGesture",
         #     {"elementId": button.id}
         #     )
-        self.wait_for_element(button)
+        if not self.is_present(button):
+            button = (
+                AppiumBy.XPATH,
+                f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Resume')]"
+                )
+        print(button)
         self.click_element(button)
         # button.click()
         time.sleep(2)
-        if button_text.lower() == "resume":
-            try:
-                self.download_learn_app()
-            except:
-                print("No Learn or Delivery app Download button present")
+        try:
+            self.download_learn_app()
+        except:
+            print("No Learn or Delivery app Download button present")
+        # if button_text.lower() == "resume":
+
 
     def click_notification(self):
         self.wait_for_element(self.NOTIFICATION_BTN)
