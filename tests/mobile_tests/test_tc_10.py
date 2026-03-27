@@ -33,24 +33,24 @@ def test_10_messaging_create_n_verify_broadcasts_with_new_message_options(web_dr
     cchq_home_page = CCHQHomePage(web_driver)
     cchq_messaging_page = MessagingPage(web_driver)
 
-    # mobile driver and page initiation
-    pid = PersonalIDPage(mobile_driver)
-    home = HomePage(mobile_driver)
-    opportunity = OpportunityPage(mobile_driver)
-    delivery = DeliveryAppPage(mobile_driver)
-    message = Message(mobile_driver)
 
     with allure.step("Login to CommCare HQ and verify Welcome title"):
         cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
 
-    with allure.step("Click on Sign In / Register"):
-        home.open_side_menu()
-        home.click_signup()
-
     with allure.step("Navigate to Broadcasts under Messaging"):
         cchq_home_page.click_option_under_messaging_tab("Broadcasts")
         cchq_home_page.verify_breadcrumb_text_present_cchq("Broadcasts")
+
+        # mobile driver and page initiation
+    pid = PersonalIDPage(mobile_driver)
+    home = HomePage(mobile_driver)
+    opportunity = OpportunityPage(mobile_driver)
+    delivery = DeliveryAppPage(mobile_driver)
+    message = Message(mobile_driver)
+    with allure.step("Click on Sign In / Register"):
+        home.open_side_menu()
+        home.click_signup()
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],

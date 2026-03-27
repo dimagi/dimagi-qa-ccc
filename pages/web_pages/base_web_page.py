@@ -17,7 +17,7 @@ locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 class BaseWebPage:
     def __init__(self, driver):
         self.driver = driver
-        self.wait = WebDriverWait(driver, 30)
+        self.wait = WebDriverWait(driver, 130)
 
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
 

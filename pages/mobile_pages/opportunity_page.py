@@ -247,6 +247,7 @@ class OpportunityPage(BasePage):
         #     "mobile: clickGesture",
         #     {"elementId": button.id}
         #     )
+        self.wait_for_element(button)
         self.click_element(button)
         # button.click()
         time.sleep(2)
