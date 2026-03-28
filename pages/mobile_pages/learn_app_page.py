@@ -154,7 +154,7 @@ class LearnAppPage(BasePage):
         print(f"{expected['start_text']} matches {self.get_text(self.LEARNING_STATUS_TXT)}")
         assert self.get_text(self.LEARN_PROGRESS_TXT) == expected["progress"]
         assert self.get_text(self.CONTINUE_LEARNING_BTN).lower() == expected["continue_btn"]
-
+        time.sleep(20)
 
     def verify_certificate_screen(self):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
