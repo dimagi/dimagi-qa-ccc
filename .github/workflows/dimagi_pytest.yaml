@@ -117,6 +117,13 @@ jobs:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
 
+      - name: Upload Allure Results - Web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-web-${{ matrix.environment }}
+          path: reports/allure-results/web
+
 # --------------------------------------------------------
 # Mobile Tests
 # --------------------------------------------------------
@@ -172,6 +179,13 @@ jobs:
           name: html-mobile-${{ matrix.environment }}
           path: reports/report-mobile-${{ env.TEST_ENV }}.html
 
+      - name: Upload Allure Results - Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-mobile-${{ matrix.environment }}
+          path: reports/allure-results/mobile
+
 # --------------------------------------------------------
 # Aggregate + Notifications
 # --------------------------------------------------------
@@ -186,6 +200,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
+      - name: Generate Allure Reports
+        if: always()
+        run: |
+          for dir in artifacts/allure-results-web-* artifacts/allure-results-mobile-*; do
+            [ -d "$dir" ] || continue
+            name="${dir##*allure-results-}"
+            allure generate "$dir" -o "artifacts/allure-report-${name}" --clean
+            zip -r "artifacts/allure-report-${name}.zip" "artifacts/allure-report-${name}"
+          done
+
+      - name: Upload Allure Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-reports
+          path: artifacts/allure-report-*.zip
+          if-no-files-found: ignore
 
       - name: Parse Results
         id: aggregate
@@ -283,13 +318,21 @@ jobs:
             # NEWLINE-separated attachments (what action-send-mail expects)
             web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
             mob_file="$(find artifacts -name "report-mobile-${env}.html" | head -1)"
+            allure_web_zip="$(find . -name "allure-report-web-${env}.zip" | head -1)"
+            allure_mob_zip="$(find . -name "allure-report-mobile-${env}.zip" | head -1)"
 
             att=""
             if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
               att="${att}${web_file}"$'\n'
             fi
+            if [ "$env_has_web" = "true" ] && [ -n "$allure_web_zip" ] && [ -f "$allure_web_zip" ]; then
+              att="${att}${allure_web_zip}"$'\n'
+            fi
             if [ "$env_has_mobile" = "true" ] && [ -n "$mob_file" ] && [ -f "$mob_file" ]; then
               att="${att}${mob_file}"$'\n'
+            fi
+            if [ "$env_has_mobile" = "true" ] && [ -n "$allure_mob_zip" ] && [ -f "$allure_mob_zip" ]; then
+              att="${att}${allure_mob_zip}"$'\n'
             fi
 
             {
@@ -391,7 +434,7 @@ jobs:
             CommCare-Connect PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
             <h2>CommCare-Connect Test Automation Report - PROD</h2>

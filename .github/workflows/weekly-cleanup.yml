@@ -93,6 +93,14 @@ jobs:
         with:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
+
+      - name: Upload Allure Results - Web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-web-${{ matrix.environment }}
+          path: reports/allure-results/web
+
 # --------------------------------------------------------
 # Aggregate + Notifications
 # --------------------------------------------------------
@@ -107,6 +115,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
+      - name: Generate Allure Reports
+        if: always()
+        run: |
+          for dir in artifacts/allure-results-web-*; do
+            [ -d "$dir" ] || continue
+            env="${dir##*allure-results-web-}"
+            allure generate "$dir" -o "artifacts/allure-report-web-${env}" --clean
+            zip -r "artifacts/allure-report-web-${env}.zip" "artifacts/allure-report-web-${env}"
+          done
+
+      - name: Upload Allure Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-reports-web
+          path: artifacts/allure-report-web-*.zip
+          if-no-files-found: ignore
 
       - name: Parse Results
         id: aggregate
@@ -191,11 +220,14 @@ jobs:
 
             # NEWLINE-separated attachments (what action-send-mail expects)
             web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
-
+            allure_web_zip="$(find . -name "allure-report-web-${env}.zip" | head -1)"
 
             att=""
             if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
               att="${att}${web_file}"$'\n'
+            fi
+            if [ "$env_has_web" = "true" ] && [ -n "$allure_web_zip" ] && [ -f "$allure_web_zip" ]; then
+              att="${att}${allure_web_zip}"$'\n'
             fi
 
             {
@@ -263,13 +295,13 @@ jobs:
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            CommCare-Connect STAGE -
+            Connect Cleanup STAGE -
             ${{ steps.aggregate.outputs.stage_status }} -
             Run #${{ github.run_number }}
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
-            <h2>CommCare-Connect Test Automation Report - STAGE</h2>
+            <h2>Connect Cleanup Test Automation Report - STAGE</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
@@ -290,13 +322,13 @@ jobs:
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            CommCare-Connect PROD -
+            Connect Cleanup PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
-            <h2>CommCare-Connect Test Automation Report - PROD</h2>
+            <h2>Connect Cleanup Test Automation Report - PROD</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
