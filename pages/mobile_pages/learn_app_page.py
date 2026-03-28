@@ -95,6 +95,7 @@ class LearnAppPage(BasePage):
                 break
         self.type_element(self.SCORE_INPUT, passing_score)
         self.click_element(self.FINISH_BTN)
+        time.sleep(10)
 
     def view_failed_assess_job_status(self):
         self.wait_for_element(self.VIEW_JOB_STATUS_BTN)
