@@ -157,14 +157,20 @@ class LearnAppPage(BasePage):
 
     def verify_certificate_screen(self):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
-        time.sleep(2)
+        try:
+            time.sleep(7)
+            self.wait_for_element(self.SYNC_BTN)
+            self.click_element(self.SYNC_BTN)
+            time.sleep(10)
+        except:
+            print("Sync button not present")
         elements = [
             self.CERT_TITLE_TXT,
             self.CERT_OPP_NAME_TXT,
             self.CERT_COMPLETE_DATE_TXT,
             self.CERT_WORKER_NAME_TXT,
             self.VIEW_OPP_DETAILS_BTN
-        ]
+            ]
 
         for items in elements:
             assert self.is_displayed(items), f"{items} is not visible"
