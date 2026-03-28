@@ -35,8 +35,11 @@ class BaseWebPage:
         el.clear()
         el.send_keys(text)
 
-    def wait_for_element(self, locator):
-        return self.wait.until(EC.presence_of_element_located(locator))
+    def wait_for_element(self, locator, timeout=None):
+        if timeout:
+            return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
+        else:
+            return self.wait.until(EC.presence_of_element_located(locator))
 
     def is_selected(self, locator):
         try:
@@ -246,8 +249,11 @@ class BaseWebPage:
         wb.save(file_path)
         print(params)
 
-    def wait_for_page_to_load(self):
-        self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+    def wait_for_page_to_load(self, timeout=None):
+        if timeout:
+            WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+        else:
+            self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
 
     def reload_page(self):
         self.driver.refresh()

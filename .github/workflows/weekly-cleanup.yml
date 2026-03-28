@@ -1,11 +1,16 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Connect Weekly Cleanup
 
+env:
+  SEND_SLACK: "true"
+  SEND_EMAIL: "true"
+
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   schedule:
-    - cron: '0 2 * * 6'
+    - cron: '0 2 * * 6'   # 9:00 AM IST (PROD)
 
   workflow_dispatch:
     inputs:
@@ -19,6 +24,10 @@ on:
           - prod
           - both
 
+
+# --------------------------------------------------------
+# Resolve Matrix
+# --------------------------------------------------------
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -53,7 +62,7 @@ jobs:
     if: >
       github.event_name != 'workflow_dispatch' ||
       (github.event_name == 'workflow_dispatch' &&
-      (inputs.test_scope == 'web' || inputs.test_scope == 'both'))
+      (inputs.test_scope == 'both'))
     name: Web Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest
@@ -78,7 +87,7 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v -m cleanup --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 2 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          pytest -v tests/web_tests -m cleanup --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Web JUnit
         if: always()
@@ -93,7 +102,6 @@ jobs:
         with:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
-
 # --------------------------------------------------------
 # Aggregate + Notifications
 # --------------------------------------------------------
@@ -154,9 +162,9 @@ jobs:
 
           for env in $envs; do
             web="$(parse_results "web-${env}.xml")"
-  
+
             env_has_web="false"
-  
+
             web_status=""; web_pass=""; web_fail=""; web_err=""; web_skip=""
 
             if [ -n "$web" ]; then
@@ -164,13 +172,14 @@ jobs:
               IFS=',' read web_status web_color web_pass web_fail web_err web_skip <<< "$web"
             fi
 
+
             # If neither scope ran for this env, skip it
-            if [ "$env_has_web" != "true" ] ; then
+            if [ "$env_has_web" != "true" ]; then
               continue
             fi
 
             # Env status = FAILURE if any executed scope failed
-            if [ "$web_status" = "FAILURE" ]; then
+            if [ "$web_status" = "FAILURE" ] ; then
               env_status="FAILURE"
               env_color="danger"
             else
@@ -188,8 +197,10 @@ jobs:
             echo "${env}_web_err=$web_err" >> $GITHUB_OUTPUT
             echo "${env}_web_skip=$web_skip" >> $GITHUB_OUTPUT
 
+
             # NEWLINE-separated attachments (what action-send-mail expects)
             web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
+
 
             att=""
             if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then

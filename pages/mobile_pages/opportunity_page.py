@@ -87,33 +87,6 @@ class OpportunityPage(BasePage):
         for item in menu_items:
             assert self.is_displayed(item), f"Learn details not visible: {item}"
 
-    # def verify_opportunity_list(self):
-    #     time.sleep(2)
-    #     cards = self.get_elements(self.OPP_LIST_CARD)
-    #     assert len(cards) > 0, "No opportunities found"
-    #     print(f"No of opportunity present {len(cards)}")
-    #     time.sleep(2)
-    #     for card in cards:
-    #         try:
-    #             name = card.find_element(*self.OPP_LIST_TITLE).text
-    #             print(name)
-    #             # opp_type = card.find_element(*self.OPP_LIST_TYPE).is_displayed()
-    #             date = card.find_element(*self.OPP_LIST_DATE).text
-    #             print(date)
-    #             assert name, "Opportunity name missing"
-    #             # assert opp_type, "Opportunity type missing"
-    #             assert date, "Opportunity date missing"
-    #         except:
-    #             self.scroll_to_end()
-    #             name = card.find_element(*self.OPP_LIST_TITLE).text
-    #             print(name)
-    #             # opp_type = card.find_element(*self.OPP_LIST_TYPE).is_displayed()
-    #             date = card.find_element(*self.OPP_LIST_DATE).text
-    #             print(date)
-    #             assert name, "Opportunity name missing"
-    #             # assert opp_type, "Opportunity type missing"
-    #             assert date, "Opportunity date missing"
-
     def verify_opportunity_list(self):
         time.sleep(2)
 
@@ -150,6 +123,7 @@ class OpportunityPage(BasePage):
         try:
             self.wait_for_element(self.DOWNLOAD_LEARN_APP_BTN)
             self.click_element(self.DOWNLOAD_LEARN_APP_BTN)
+            time.sleep(4)
             self.wait_for_element_to_disappear(self.APP_DOWNLOAD_PROGRESS)
             time.sleep(10)
             assert self.is_displayed(self.LEARN_APP_START_BTN), "Start button is not visible"
@@ -157,65 +131,20 @@ class OpportunityPage(BasePage):
         except:
             print("No Download button present or the download has been already completed.")
 
-    # def open_opportunity_from_list(self, opp_name, opp_status):
-        # self.click_element(self.SYNC_BTN)
-        # time.sleep(1)
-        # # Iterate
-        # rows = self.get_elements(self.OPP_LIST_CARD)
-        # for row in rows:
-        #     name = row.find_element(*self.OPP_LIST_TITLE).text.strip().lower()
-        #     status = row.find_element(*self.OPP_LIST_JOB_TYPE).text.strip().lower()
-        #     if name == opp_name.lower() and status == opp_status:
-        #         print(f"Opportunity found: {name}, [{status}]")
-        #         row.click()
-        #         time.sleep(15)
-        #         # assert self.is_displayed(self.LEARN_APP_START_BTN), "App not opened"
-        #         break
-    # def open_opportunity_from_list(self, opp_name, opp_status):
-    #     if self.is_present(self.JOB_TITLE_TXT):
-    #         print("Opportunity is already opened")
-    #     else:
-    #         self.click_element(self.SYNC_BTN)
-    #         time.sleep(10)
-    #
-    #         max_scrolls = 150
-    #         scroll_count = 0
-    #
-    #         while scroll_count < max_scrolls:
-    #             rows = self.get_elements(self.OPP_LIST_CARD)
-    #
-    #             for row in rows:
-    #                 try:
-    #                     name = row.find_element(*self.OPP_LIST_TITLE).text.strip()
-    #
-    #                     if str(opp_status).lower() == "delivery":
-    #                         status = row.find_element(*self.OPP_LIST_RESUME)
-    #                         button_name = row.find_element(*self.OPP_LIST_RESUME).text.strip()
-    #                     else:
-    #                         status = row.find_element(*self.OPP_LIST_REVIEW)
-    #                         button_name = row.find_element(*self.OPP_LIST_REVIEW).text.strip()
-    #                     print(name, button_name)
-    #                     if name == opp_name :
-    #                         print(f"Opportunity found: {name}, [{button_name}]")
-    #                         status.click()
-    #                         time.sleep(5)
-    #                         if button_name.lower()=="resume" :
-    #                             try:
-    #                                 self.download_learn_app()
-    #                             except:
-    #                                 print("No Learn or Delivery app Download button present")
-    #                         return  # stop function immediately
-    #
-    #                 except Exception:
-    #                     continue
-    #
-    #             # Not found → scroll
-    #             self.scroll_down()
-    #             scroll_count += 1
-    #
-    #         raise Exception(f"Opportunity '{opp_name}' with status '{opp_status}' not found after scrolling.")
-
-    from appium.webdriver.common.appiumby import AppiumBy
+    def verify_learn_app_open(self, opp_name):
+        if self.is_present(self.LEARN_APP_START_BTN):
+            print("Learn App is open")
+        else:
+            try:
+                button = (
+                    AppiumBy.XPATH,
+                    f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, 'Resume')]"
+                    )
+                time.sleep(3)
+                self.click_element(button)
+                self.wait_for_element(self.LEARN_APP_START_BTN)
+            except:
+                print("Unable to open Learn app")
 
     def open_opportunity_from_list(self, opp_name, opp_status):
 
@@ -254,14 +183,14 @@ class OpportunityPage(BasePage):
                 )
         print(button)
         self.click_element(button)
-        # button.click()
+
         time.sleep(2)
         if button_text.lower() == "resume":
             try:
                 self.download_learn_app()
             except:
                 print("No Learn or Delivery app Download button present")
-        # if button_text.lower() == "resume":
+
 
 
     def click_notification(self):

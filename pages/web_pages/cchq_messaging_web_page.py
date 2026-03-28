@@ -122,7 +122,7 @@ class MessagingPage(BaseWebPage):
         self.select_user_recipients(user_recipients)
         self.click_save_btn()
         time.sleep(5)
-        self.wait_for_page_to_load()
+        self.wait_for_page_to_load(130)
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
 
     def select_survey_form_for_alert(self, value):
@@ -185,14 +185,14 @@ class MessagingPage(BaseWebPage):
 
     def is_created_alert_name_present_in_list(self, name):
         self.reload_page()
-        self.wait_for_page_to_load()
-        self.wait_for_element(self.SEARCH_BOX)
+        self.wait_for_page_to_load(100)
+        self.wait_for_element(self.SEARCH_BOX, 150)
         self.type(self.SEARCH_BOX, name)
         self.click(self.SEARCH_BTN)
         time.sleep(5)
         # self.select_by_value(self.PAGE_DROPDOWN_COND_ALERT, "100")
         self.wait_for_page_to_load()
-        self.wait_for_element(self.NEW_CONDITIONAL_ALERT)
+        self.wait_for_element(self.NEW_CONDITIONAL_ALERT, 150)
         self.scroll_into_view(self.NEW_CONDITIONAL_ALERT)
         table_ele = self.wait_for_element(self.ALERTS_LIST)
         name_elements = table_ele.find_elements(By.XPATH, "//td//a")
@@ -227,7 +227,7 @@ class MessagingPage(BaseWebPage):
 
     def is_broadcast_name_present_in_list(self, name):
         time.sleep(2)
-        self.wait_for_page_to_load()
+        self.wait_for_page_to_load(100)
         self.select_by_value(self.PAGE_DROPDOWN, "100")
         time.sleep(5)
         self.wait_for_page_to_load()
@@ -251,7 +251,8 @@ class MessagingPage(BaseWebPage):
         self.enter_message_in_broadcast("Test Connect Message Broadcast")
         time.sleep(2)
         self.click_send_broadcast_btn()
-        self.wait_for_page_to_load()
+        time.sleep(5)
+        self.wait_for_page_to_load(130)
         time.sleep(2)
         self.verify_text_in_url("/broadcasts/")
         self.is_broadcast_name_present_in_list(self.broadcast_full_name)
