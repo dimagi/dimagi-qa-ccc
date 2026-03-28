@@ -5,10 +5,6 @@ env:
   SEND_EMAIL: "true"
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   schedule:
     - cron: '0 2 * * 6'   # 9:00 AM IST (PROD)
 
