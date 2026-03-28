@@ -6,7 +6,7 @@ env:
 
 on:
   schedule:
-    - cron: '0 2 * * 6'   # 9:00 AM IST (PROD)
+    - cron: '0 2 * * 6'   # 7:30 AM IST (PROD)
 
   workflow_dispatch:
     inputs:
@@ -29,7 +29,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   resolve-matrix:
     name: Resolve Environment Matrix
     runs-on: ubuntu-latest
@@ -55,10 +54,6 @@ jobs:
 # --------------------------------------------------------
 
   web-tests:
-    if: >
-      github.event_name != 'workflow_dispatch' ||
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.test_scope == 'both'))
     name: Web Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest
@@ -298,7 +293,7 @@ jobs:
             CommCare-Connect PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
             <h2>CommCare-Connect Test Automation Report - PROD</h2>
