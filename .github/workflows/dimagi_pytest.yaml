@@ -318,21 +318,13 @@ jobs:
             # NEWLINE-separated attachments (what action-send-mail expects)
             web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
             mob_file="$(find artifacts -name "report-mobile-${env}.html" | head -1)"
-            allure_web_zip="$(find . -name "allure-report-web-${env}.zip" | head -1)"
-            allure_mob_zip="$(find . -name "allure-report-mobile-${env}.zip" | head -1)"
 
             att=""
             if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
               att="${att}${web_file}"$'\n'
             fi
-            if [ "$env_has_web" = "true" ] && [ -n "$allure_web_zip" ] && [ -f "$allure_web_zip" ]; then
-              att="${att}${allure_web_zip}"$'\n'
-            fi
             if [ "$env_has_mobile" = "true" ] && [ -n "$mob_file" ] && [ -f "$mob_file" ]; then
               att="${att}${mob_file}"$'\n'
-            fi
-            if [ "$env_has_mobile" = "true" ] && [ -n "$allure_mob_zip" ] && [ -f "$allure_mob_zip" ]; then
-              att="${att}${allure_mob_zip}"$'\n'
             fi
 
             {
