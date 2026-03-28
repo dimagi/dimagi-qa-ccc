@@ -132,6 +132,7 @@ class LearnAppPage(BasePage):
         # Start / message text
         time.sleep(7)
         self.wait_for_element(self.SYNC_BTN)
+        self.click_element(self.SYNC_BTN)
         time.sleep(10)
         self.wait_for_element(self.LEARNING_STATUS_TXT)
         print(self.get_text(self.LEARNING_STATUS_TXT))
@@ -140,6 +141,7 @@ class LearnAppPage(BasePage):
         if expected["start_text"] not in self.get_text(self.LEARNING_STATUS_TXT):
             time.sleep(7)
             self.wait_for_element(self.SYNC_BTN)
+            self.click_element(self.SYNC_BTN)
             time.sleep(10)
             print(self.get_text(self.LEARNING_STATUS_TXT))
             print(self.get_text(self.LEARN_PROGRESS_TXT))
