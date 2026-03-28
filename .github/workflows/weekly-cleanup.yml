@@ -1,11 +1,12 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Connect Weekly Cleanup
+
+env:
+  SEND_SLACK: "true"
+  SEND_EMAIL: "true"
 
 on:
   schedule:
-    - cron: '0 2 * * 6'
+    - cron: '0 2 * * 6'   # 7:30 AM IST (PROD)
 
   workflow_dispatch:
     inputs:
@@ -19,12 +20,15 @@ on:
           - prod
           - both
 
+
+# --------------------------------------------------------
+# Resolve Matrix
+# --------------------------------------------------------
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-
   resolve-matrix:
     name: Resolve Environment Matrix
     runs-on: ubuntu-latest
@@ -50,10 +54,6 @@ jobs:
 # --------------------------------------------------------
 
   web-tests:
-    if: >
-      github.event_name != 'workflow_dispatch' ||
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.test_scope == 'web' || inputs.test_scope == 'both'))
     name: Web Tests (${{ matrix.environment }})
     needs: resolve-matrix
     runs-on: windows-latest
@@ -78,7 +78,7 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v -m cleanup --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 2 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          pytest -v tests/web_tests -m cleanup --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Web JUnit
         if: always()
@@ -94,6 +94,13 @@ jobs:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
 
+      - name: Upload Allure Results - Web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-web-${{ matrix.environment }}
+          path: reports/allure-results/web
+
 # --------------------------------------------------------
 # Aggregate + Notifications
 # --------------------------------------------------------
@@ -108,6 +115,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
+      - name: Generate Allure Reports
+        if: always()
+        run: |
+          for dir in artifacts/allure-results-web-*; do
+            [ -d "$dir" ] || continue
+            env="${dir##*allure-results-web-}"
+            allure generate "$dir" -o "artifacts/allure-report-web-${env}" --clean
+            zip -r "artifacts/allure-report-web-${env}.zip" "artifacts/allure-report-web-${env}"
+          done
+
+      - name: Upload Allure Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-reports-web
+          path: artifacts/allure-report-web-*.zip
+          if-no-files-found: ignore
 
       - name: Parse Results
         id: aggregate
@@ -154,9 +182,9 @@ jobs:
 
           for env in $envs; do
             web="$(parse_results "web-${env}.xml")"
-  
+
             env_has_web="false"
-  
+
             web_status=""; web_pass=""; web_fail=""; web_err=""; web_skip=""
 
             if [ -n "$web" ]; then
@@ -164,13 +192,14 @@ jobs:
               IFS=',' read web_status web_color web_pass web_fail web_err web_skip <<< "$web"
             fi
 
+
             # If neither scope ran for this env, skip it
-            if [ "$env_has_web" != "true" ] ; then
+            if [ "$env_has_web" != "true" ]; then
               continue
             fi
 
             # Env status = FAILURE if any executed scope failed
-            if [ "$web_status" = "FAILURE" ]; then
+            if [ "$web_status" = "FAILURE" ] ; then
               env_status="FAILURE"
               env_color="danger"
             else
@@ -188,12 +217,17 @@ jobs:
             echo "${env}_web_err=$web_err" >> $GITHUB_OUTPUT
             echo "${env}_web_skip=$web_skip" >> $GITHUB_OUTPUT
 
+
             # NEWLINE-separated attachments (what action-send-mail expects)
             web_file="$(find artifacts -name "report-web-${env}.html" | head -1)"
+            allure_web_zip="$(find . -name "allure-report-web-${env}.zip" | head -1)"
 
             att=""
             if [ "$env_has_web" = "true" ] && [ -n "$web_file" ] && [ -f "$web_file" ]; then
               att="${att}${web_file}"$'\n'
+            fi
+            if [ "$env_has_web" = "true" ] && [ -n "$allure_web_zip" ] && [ -f "$allure_web_zip" ]; then
+              att="${att}${allure_web_zip}"$'\n'
             fi
 
             {
@@ -261,13 +295,13 @@ jobs:
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            CommCare-Connect STAGE -
+            Connect Cleanup STAGE -
             ${{ steps.aggregate.outputs.stage_status }} -
             Run #${{ github.run_number }}
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
-            <h2>CommCare-Connect Test Automation Report - STAGE</h2>
+            <h2>Connect Cleanup Test Automation Report - STAGE</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 
@@ -288,13 +322,13 @@ jobs:
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            CommCare-Connect PROD -
+            Connect Cleanup PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
-            <h2>CommCare-Connect Test Automation Report - PROD</h2>
+            <h2>Connect Cleanup Test Automation Report - PROD</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.ref_name }}</p>
 

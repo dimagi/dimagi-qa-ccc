@@ -15,6 +15,8 @@ class CCHQHomePage(BaseWebPage):
     MESSAGING_TAB = locators.get("cchq_home_page", "messaging_tab")
     BREADCRUMB_CONTAINER = locators.get("cchq_home_page", "breadcrumb_container")
     APPLICATIONS_TAB = locators.get("cchq_home_page", "applications_tab")
+    APP_LIST = locators.get("cchq_home_page", "app_list")
+    APP_LINK = locators.get("cchq_home_page", "app_link")
 
     def verify_home_page_title(self, title):
         assert title in self.get_text(self.TITLE_ELE)
@@ -65,3 +67,27 @@ class CCHQHomePage(BaseWebPage):
                 print(f"{app} present under applications tab")
                 break
         self.click_element(self.APPLICATIONS_TAB)
+
+    def get_all_application_name(self):
+        self.click(self.APPLICATIONS_TAB)
+        app_list = self.find_elements(self.APP_LIST)
+        app_names = list()
+        if len(app_list)>0:
+            for items in app_list:
+                app_names.append(items.text)
+        else:
+            print("No test app present")
+        print(f"Total Apps present is {len(app_names)}")
+        print(app_names)
+        self.reload_page()
+        time.sleep(2)
+        return app_names
+
+    def open_application(self, app):
+        self.click(self.APPLICATIONS_TAB)
+        by, xpath = self.APP_LINK
+        actual_xpath = xpath.format(name=app)
+        print(by, actual_xpath)
+        self.wait_for_element((by, actual_xpath))
+        self.scroll_to_element((by, actual_xpath))
+        self.js_click((by, actual_xpath))

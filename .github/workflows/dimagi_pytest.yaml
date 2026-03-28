@@ -101,7 +101,7 @@ jobs:
 
       - name: Run Web Tests
         run: |
-          pytest -v tests/web_tests --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          pytest -v tests/web_tests -m "not cleanup" --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload Web JUnit
         if: always()
@@ -116,6 +116,13 @@ jobs:
         with:
           name: html-web-${{ matrix.environment }}
           path: reports/report-web-${{ env.TEST_ENV }}.html
+
+      - name: Upload Allure Results - Web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-web-${{ matrix.environment }}
+          path: reports/allure-results/web
 
 # --------------------------------------------------------
 # Mobile Tests
@@ -135,8 +142,8 @@ jobs:
       fail-fast: false
       matrix:
         environment: ${{ fromJSON(needs.resolve-matrix.outputs.matrix).environment }}
-        exclude:
-          - environment: stage
+#        exclude:
+#          - environment: stage
 
     env:
       TEST_ENV: ${{ matrix.environment }}
@@ -172,6 +179,13 @@ jobs:
           name: html-mobile-${{ matrix.environment }}
           path: reports/report-mobile-${{ env.TEST_ENV }}.html
 
+      - name: Upload Allure Results - Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-mobile-${{ matrix.environment }}
+          path: reports/allure-results/mobile
+
 # --------------------------------------------------------
 # Aggregate + Notifications
 # --------------------------------------------------------
@@ -186,6 +200,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
+      - name: Generate Allure Reports
+        if: always()
+        run: |
+          for dir in artifacts/allure-results-web-* artifacts/allure-results-mobile-*; do
+            [ -d "$dir" ] || continue
+            name="${dir##*allure-results-}"
+            allure generate "$dir" -o "artifacts/allure-report-${name}" --clean
+            zip -r "artifacts/allure-report-${name}.zip" "artifacts/allure-report-${name}"
+          done
+
+      - name: Upload Allure Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-reports
+          path: artifacts/allure-report-*.zip
+          if-no-files-found: ignore
 
       - name: Parse Results
         id: aggregate
@@ -391,7 +426,7 @@ jobs:
             CommCare-Connect PROD -
             ${{ steps.aggregate.outputs.prod_status }} -
             Run #${{ github.run_number }}
-          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com,
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
             <h2>CommCare-Connect Test Automation Report - PROD</h2>

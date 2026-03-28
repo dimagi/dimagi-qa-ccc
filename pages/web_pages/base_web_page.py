@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-from selenium.common import TimeoutException, NoSuchElementException
+from selenium.common import TimeoutException, NoSuchElementException, StaleElementReferenceException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,7 +17,7 @@ locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 class BaseWebPage:
     def __init__(self, driver):
         self.driver = driver
-        self.wait = WebDriverWait(driver, 30)
+        self.wait = WebDriverWait(driver, 60, poll_frequency=2)
 
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
 
@@ -35,8 +35,11 @@ class BaseWebPage:
         el.clear()
         el.send_keys(text)
 
-    def wait_for_element(self, locator):
-        return self.wait.until(EC.presence_of_element_located(locator))
+    def wait_for_element(self, locator, timeout=None):
+        if timeout:
+            return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
+        else:
+            return self.wait.until(EC.presence_of_element_located(locator))
 
     def is_selected(self, locator):
         try:
@@ -246,8 +249,11 @@ class BaseWebPage:
         wb.save(file_path)
         print(params)
 
-    def wait_for_page_to_load(self):
-        self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+    def wait_for_page_to_load(self, timeout=None):
+        if timeout:
+            WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+        else:
+            self.wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
 
     def reload_page(self):
         self.driver.refresh()
@@ -298,3 +304,29 @@ class BaseWebPage:
         element_attribute = element.get_attribute(attribute)
         print(element_attribute)
         return element_attribute
+
+    def find_elements(self, locator):
+        elements = self.driver.find_elements(*locator)
+        return elements
+
+    def is_present_and_displayed(self, locator, timeout=30):
+        try:
+            visible = EC.presence_of_element_located(locator)
+            element = WebDriverWait(self.driver, timeout, poll_frequency=0.5).until(visible,
+                                                                                  message="Element" + str(
+                                                                                      locator
+                                                                                      ) + "not displayed"
+                                                                                  )
+            is_displayed = element.is_displayed()
+        except TimeoutException:
+            is_displayed = False
+        except StaleElementReferenceException:
+            self.driver.refresh()
+            time.sleep(0.5)
+            visible = EC.presence_of_element_located(locator)
+            element = WebDriverWait(self.driver, timeout, poll_frequency=0.5).until(visible,
+                                                                                  message="Element" + str(locator
+                                                                                                          ) + "not displayed"
+                                                                                  )
+            is_displayed = element.is_displayed()
+        return bool(is_displayed)

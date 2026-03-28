@@ -27,7 +27,7 @@ class Message(BasePage):
         pass
 
     def verify_connect_message(self):
-        time.sleep(30)
+        time.sleep(60)
         self.wait_for_element(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TIME_TXT)
@@ -49,7 +49,7 @@ class Message(BasePage):
                 break
         assert self.is_displayed(self.MESSAGE_INPUT)
 
-    def fill_survey_form(self, timeout=30):
+    def fill_survey_form(self, timeout=50):
         start_time = time.time()
         answered_name = False
         answered_id = False
@@ -58,7 +58,7 @@ class Message(BasePage):
             try:
                 messages = self.get_elements(self.MESSAGE_TXT)
                 if not messages:
-                    time.sleep(1)
+                    time.sleep(5)
                     continue
 
                 last_message_text = messages[-1].text.strip().lower()
@@ -68,7 +68,7 @@ class Message(BasePage):
                     self.type_element(self.MESSAGE_INPUT, "test user")
                     self.click_element(self.SEND_MSG_BTN)
                     answered_name = True
-                    time.sleep(1)
+                    time.sleep(5)
                     continue
 
                 # ID question
@@ -80,7 +80,7 @@ class Message(BasePage):
 
             except Exception as e:
                 # Handles stale element during RecyclerView refresh
-                time.sleep(1)
+                time.sleep(5)
                 continue
 
         # Hard assertions

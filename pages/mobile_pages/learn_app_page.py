@@ -16,6 +16,7 @@ class LearnAppPage(BasePage):
     LEARNING_STATUS_TXT = locators.get("learn_app_page", "learn_status_txt")
     LEARN_PROGRESS_TXT = locators.get("learn_app_page", "learn_progress_txt")
     CONTINUE_LEARNING_BTN = locators.get("learn_app_page", "continue_learning_btn")
+    SYNC_BTN = locators.get("learn_app_page", "sync_btn")
     SCORE_INPUT = locators.get("learn_app_page", "score_input")
 
     CERT_TITLE_TXT = locators.get("learn_app_page", "cert_title_txt")
@@ -50,7 +51,7 @@ class LearnAppPage(BasePage):
                 el.click()
                 break
         self.click_element(self.FINISH_BTN)
-
+        time.sleep(10)
 
     def view_in_progress_job_status(self):
         self.wait_for_element(self.VIEW_JOB_STATUS_BTN)
@@ -94,6 +95,7 @@ class LearnAppPage(BasePage):
                 break
         self.type_element(self.SCORE_INPUT, passing_score)
         self.click_element(self.FINISH_BTN)
+        time.sleep(10)
 
     def view_failed_assess_job_status(self):
         self.wait_for_element(self.VIEW_JOB_STATUS_BTN)
@@ -130,26 +132,46 @@ class LearnAppPage(BasePage):
 
         # Start / message text
         time.sleep(7)
+        self.wait_for_element(self.SYNC_BTN)
+        self.click_element(self.SYNC_BTN)
+        time.sleep(10)
         self.wait_for_element(self.LEARNING_STATUS_TXT)
         print(self.get_text(self.LEARNING_STATUS_TXT))
         print(self.get_text(self.LEARN_PROGRESS_TXT))
         print(self.get_text(self.CONTINUE_LEARNING_BTN))
-        assert expected["start_text"] in self.get_text(self.LEARNING_STATUS_TXT), f"{expected['start_text']} doesn't match {self.get_text(self.LEARNING_STATUS_TXT)}"
+        if expected["start_text"] not in self.get_text(self.LEARNING_STATUS_TXT):
+            time.sleep(7)
+            self.wait_for_element(self.SYNC_BTN)
+            self.click_element(self.SYNC_BTN)
+            time.sleep(10)
+            print(self.get_text(self.LEARNING_STATUS_TXT))
+            print(self.get_text(self.LEARN_PROGRESS_TXT))
+            print(self.get_text(self.CONTINUE_LEARNING_BTN))
+        else:
+            print("Text matches")
+        assert expected["start_text"] in self.get_text(self.LEARNING_STATUS_TXT
+                                                       ), f"{expected['start_text']} doesn't match {self.get_text(self.LEARNING_STATUS_TXT)}"
         print(f"{expected['start_text']} matches {self.get_text(self.LEARNING_STATUS_TXT)}")
         assert self.get_text(self.LEARN_PROGRESS_TXT) == expected["progress"]
         assert self.get_text(self.CONTINUE_LEARNING_BTN).lower() == expected["continue_btn"]
-        # self.navigate_back()
+        time.sleep(20)
 
     def verify_certificate_screen(self):
         self.click_element(self.VIEW_JOB_STATUS_BTN)
-        time.sleep(2)
+        try:
+            time.sleep(7)
+            self.wait_for_element(self.SYNC_BTN)
+            self.click_element(self.SYNC_BTN)
+            time.sleep(10)
+        except:
+            print("Sync button not present")
         elements = [
             self.CERT_TITLE_TXT,
             self.CERT_OPP_NAME_TXT,
             self.CERT_COMPLETE_DATE_TXT,
             self.CERT_WORKER_NAME_TXT,
             self.VIEW_OPP_DETAILS_BTN
-        ]
+            ]
 
         for items in elements:
             assert self.is_displayed(items), f"{items} is not visible"
@@ -187,4 +209,4 @@ class LearnAppPage(BasePage):
 
     def sync_with_server(self):
         self.click_element(self.SYNC_WITH_SERVER)
-        time.sleep(4)
+        time.sleep(15)

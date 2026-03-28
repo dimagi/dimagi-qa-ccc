@@ -3,6 +3,8 @@ cchq_home_page:
   messaging_tab: "MessagingTab"
   breadcrumb_container: "hq-breadcrumbs"
   applications_tab: "ApplicationsTab"
+  app_list: "//a[contains(.,'Applications')]//following-sibling::ul/li/a[contains(.,'Learn App [')  or contains(.,'Delivery App [')][contains(.,':')]"
+  app_link: "(//li/a[contains(., '{name}')])[1]"
 
 cchq_login_page:
   welcome_title: "//h2[@class='text-center mt-3']"
@@ -36,6 +38,8 @@ cchq_messaging_page:
     expire_after_input: "id_content-survey_expiration_in_hours"
     page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
     page_dropdown_cond_alert: "//select[@class='form-control']"
+    search_box: "//form[@class='input-group']/input[@class='form-control']"
+    search_btn: "//button/i[contains(@class,'search')]"
 
 cchq_application_page:
     sidebar_settings_icon: "//*[@id='hq-sidebar']/nav/div[1]/div[1]"
@@ -45,6 +49,9 @@ cchq_application_page:
     copy_button: "//*[@id='copy-app-form']/form/div/button"
     make_new_version_button: "//button[contains(@data-bind,'Make New Version')]"
     released_button: "(//button[contains(text(),'Released')])[1]"
+    delete_app: "//a[@href='#delete-app-modal']"
+    delete_confirm: "(//button/i[contains(@class,'trash')])[last()]"
+    delete_success: "//div[contains(@class,'alert-success')][contains(.,'You have deleted an application.')]"
 
 connect_home_page:
   signin_link: "log-in-link"
@@ -56,6 +63,7 @@ connect_home_page:
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
   organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
   organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
+
 
 connect_opportunities_page:
   add_opportunity_btn: "//*[@id='content']/div/div/div[1]/div/a"
