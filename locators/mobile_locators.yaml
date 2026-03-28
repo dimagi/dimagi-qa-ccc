@@ -99,6 +99,7 @@ learn_app_page:
   learn_status_txt: "org.commcare.dalvik:id/connect_learning_status_text"
   learn_progress_txt: "org.commcare.dalvik:id/connect_learning_progress_text"
   continue_learning_btn: "org.commcare.dalvik:id/connect_learning_button"
+  sync_btn: "org.commcare.dalvik:id/btnSync"
   score_input: "//android.widget.FrameLayout[@resource-id='org.commcare.dalvik:id/form_entry_pane']//android.widget.EditText"
 
   cert_title_txt: "org.commcare.dalvik:id/connect_learn_cert_title"

@@ -16,6 +16,7 @@ class LearnAppPage(BasePage):
     LEARNING_STATUS_TXT = locators.get("learn_app_page", "learn_status_txt")
     LEARN_PROGRESS_TXT = locators.get("learn_app_page", "learn_progress_txt")
     CONTINUE_LEARNING_BTN = locators.get("learn_app_page", "continue_learning_btn")
+    SYNC_BTN = locators.get("learn_app_page", "sync_btn")
     SCORE_INPUT = locators.get("learn_app_page", "score_input")
 
     CERT_TITLE_TXT = locators.get("learn_app_page", "cert_title_txt")
@@ -50,7 +51,7 @@ class LearnAppPage(BasePage):
                 el.click()
                 break
         self.click_element(self.FINISH_BTN)
-
+        time.sleep(10)
 
     def view_in_progress_job_status(self):
         self.wait_for_element(self.VIEW_JOB_STATUS_BTN)
@@ -130,6 +131,8 @@ class LearnAppPage(BasePage):
 
         # Start / message text
         time.sleep(7)
+        self.wait_for_element(self.SYNC_BTN)
+        time.sleep(6)
         self.wait_for_element(self.LEARNING_STATUS_TXT)
         print(self.get_text(self.LEARNING_STATUS_TXT))
         print(self.get_text(self.LEARN_PROGRESS_TXT))
