@@ -253,7 +253,7 @@ jobs:
               "attachments": [
                 {
                   "color": "${{ steps.aggregate.outputs.stage_color }}",
-                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+                  "text": "*Connect Cleanup Test Automation Report*\n\n\
                   Run: #${{ github.run_number }}\n\n\
                   *STAGE — ${{ steps.aggregate.outputs.stage_status }}*\n\n\
                   ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}\
@@ -273,7 +273,7 @@ jobs:
               "attachments": [
                 {
                   "color": "${{ steps.aggregate.outputs.prod_color }}",
-                  "text": "*CommCare-Connect Test Automation Report*\n\n\
+                  "text": "*Connect Cleanup Test Automation Report*\n\n\
                   Run: #${{ github.run_number }}\n\n\
                   *PROD — ${{ steps.aggregate.outputs.prod_status }}*\n\n\
                   ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}\
