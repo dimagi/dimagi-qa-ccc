@@ -265,7 +265,10 @@ class MessagingPage(BaseWebPage):
         self.select_what_to_send_input("Connect Survey")
         self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
-        self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
+        if 'staging' in self.get_current_url():
+            self.select_survey_form_for_alert("SMS Tests [DO NOT DELETE] > Surveys > Survey")
+        else:
+            self.select_survey_form_for_alert("Delivery App - ETE > Surveys > Survey")
         self.enter_expire_after_for_alert("1")
         self.click_send_broadcast_btn()
         time.sleep(2)
