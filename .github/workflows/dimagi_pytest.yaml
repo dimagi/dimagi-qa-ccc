@@ -124,6 +124,70 @@ jobs:
           name: allure-results-web-${{ matrix.environment }}
           path: reports/allure-results/web
 
+      - name: Create run summary for dashboard (web)
+        if: always()
+        shell: bash
+        env:
+          TEST_ENV: ${{ matrix.environment }}
+        run: |
+          mkdir -p metrics_out
+          python - <<'PY'
+          import json, os, datetime
+          import xml.etree.ElementTree as ET
+
+          scope = "web"
+          env   = os.environ.get("TEST_ENV", "unknown")
+
+          data = {
+              "timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+              "env":    env,
+              "scope":  scope,
+              "suite":  f"CommCare-Connect {scope.capitalize()} Tests",
+              "status": "pass",
+              "passed":  0,
+              "failed":  0,
+              "skipped": 0,
+              "rerun_count": 0,
+              "github": {
+                  "run_id":     os.environ.get("GITHUB_RUN_ID"),
+                  "run_number": os.environ.get("GITHUB_RUN_NUMBER"),
+                  "repository": os.environ.get("GITHUB_REPOSITORY"),
+                  "run_url":    (
+                      f"{os.environ.get('GITHUB_SERVER_URL','https://github.com')}"
+                      f"/{os.environ.get('GITHUB_REPOSITORY')}"
+                      f"/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
+                  )
+              }
+          }
+
+          xml_path = f"reports/web-{env}.xml"
+          if os.path.exists(xml_path):
+              tree = ET.parse(xml_path)
+              root = tree.getroot()
+              ts = root if root.tag == "testsuite" else root.find("testsuite")
+              if ts is not None:
+                  total   = int(ts.get("tests",    0))
+                  failed  = int(ts.get("failures", 0)) + int(ts.get("errors", 0))
+                  skipped = int(ts.get("skipped",  0))
+                  data["passed"]  = max(total - failed - skipped, 0)
+                  data["failed"]  = failed
+                  data["skipped"] = skipped
+
+          data["status"] = "fail" if data["failed"] > 0 else "pass"
+
+          with open("metrics_out/run_summary.json", "w") as f:
+              json.dump(data, f)
+          print("run_summary.json created:", data)
+          PY
+
+      - name: Upload run summary (dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-summary-web-${{ matrix.environment }}
+          path: metrics_out/run_summary.json
+          retention-days: 30
+
 # --------------------------------------------------------
 # Mobile Tests
 # --------------------------------------------------------
@@ -185,6 +249,70 @@ jobs:
         with:
           name: allure-results-mobile-${{ matrix.environment }}
           path: reports/allure-results/mobile
+
+      - name: Create run summary for dashboard (mobile)
+        if: always()
+        shell: bash
+        env:
+          TEST_ENV: ${{ matrix.environment }}
+        run: |
+          mkdir -p metrics_out
+          python - <<'PY'
+          import json, os, datetime
+          import xml.etree.ElementTree as ET
+
+          scope = "mobile"
+          env   = os.environ.get("TEST_ENV", "unknown")
+
+          data = {
+              "timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
+              "env":    env,
+              "scope":  scope,
+              "suite":  f"CommCare-Connect {scope.capitalize()} Tests",
+              "status": "pass",
+              "passed":  0,
+              "failed":  0,
+              "skipped": 0,
+              "rerun_count": 0,
+              "github": {
+                  "run_id":     os.environ.get("GITHUB_RUN_ID"),
+                  "run_number": os.environ.get("GITHUB_RUN_NUMBER"),
+                  "repository": os.environ.get("GITHUB_REPOSITORY"),
+                  "run_url":    (
+                      f"{os.environ.get('GITHUB_SERVER_URL','https://github.com')}"
+                      f"/{os.environ.get('GITHUB_REPOSITORY')}"
+                      f"/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
+                  )
+              }
+          }
+
+          xml_path = f"reports/mobile-{env}.xml"
+          if os.path.exists(xml_path):
+              tree = ET.parse(xml_path)
+              root = tree.getroot()
+              ts = root if root.tag == "testsuite" else root.find("testsuite")
+              if ts is not None:
+                  total   = int(ts.get("tests",    0))
+                  failed  = int(ts.get("failures", 0)) + int(ts.get("errors", 0))
+                  skipped = int(ts.get("skipped",  0))
+                  data["passed"]  = max(total - failed - skipped, 0)
+                  data["failed"]  = failed
+                  data["skipped"] = skipped
+
+          data["status"] = "fail" if data["failed"] > 0 else "pass"
+
+          with open("metrics_out/run_summary.json", "w") as f:
+              json.dump(data, f)
+          print("run_summary.json created:", data)
+          PY
+
+      - name: Upload run summary (dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-summary-mobile-${{ matrix.environment }}
+          path: metrics_out/run_summary.json
+          retention-days: 30
 
 # --------------------------------------------------------
 # Aggregate + Notifications
