@@ -137,6 +137,26 @@ jobs:
           mkdir -p metrics
           touch metrics/runs.jsonl
 
+          # Remove any lines that are not valid JSON objects with a timestamp
+          python <<'CLEAN'
+          import json
+          path = "metrics/runs.jsonl"
+          lines = open(path, encoding="utf-8").read().splitlines()
+          clean = []
+          for line in lines:
+              line = line.strip()
+              if not line:
+                  continue
+              try:
+                  obj = json.loads(line)
+                  if isinstance(obj, dict) and obj.get("timestamp_utc"):
+                      clean.append(line)
+              except Exception:
+                  pass
+          with open(path, "w", encoding="utf-8") as f:
+              f.write("\n".join(clean) + ("\n" if clean else ""))
+          CLEAN
+
           python <<'PY'
           import json, os
 
@@ -148,8 +168,9 @@ jobs:
                           obj = json.loads(line)
                           rid   = (obj.get("github", {}).get("run_id") or obj.get("run_id"))
                           scope = obj.get("scope", "")
+                          env   = obj.get("env") or obj.get("environment", "")
                           if rid:
-                              existing_ids.add(f"{rid}__{scope}")
+                              existing_ids.add(f"{rid}__{scope}__{env}")
                       except Exception:
                           pass
 
@@ -184,7 +205,7 @@ jobs:
                               skipped_unknown += 1
                               continue
 
-                          key = f"{rid}__{scope}"
+                          key = f"{rid}__{scope}__{env}"
                           if key in existing_ids:
                               continue
 
