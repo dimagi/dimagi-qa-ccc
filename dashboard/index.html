@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CommCare-Connect Automation Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 24px;
+      color: #111;
+    }
+
+    h1 { font-size: 30px; margin-bottom: 6px; }
+    h2 { font-size: 20px; margin: 18px 0 10px; }
+    .subtle { color: #666; margin-bottom: 16px; }
+
+    .error {
+      display:none;
+      background: #fff2f2;
+      border: 1px solid #ffcccc;
+      color: #8a1f1f;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin: 12px 0 18px;
+      white-space: pre-wrap;
+    }
+
+    .filters { display:flex; flex-wrap: wrap; gap:16px; align-items:center; margin: 10px 0 18px; }
+    .filters label { display:flex; gap:8px; align-items:center; font-size: 14px; }
+    select { padding: 8px 10px; font-size: 13px; border: 1px solid #ccc; border-radius: 12px; background:#fff; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .card h3 {
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      margin: 0;
+    }
+    .card .value {
+      font-size: 21px;
+      font-weight: 750;
+      margin-top: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+    @media (max-width: 1000px) {
+      .grid2 { grid-template-columns: 1fr; }
+    }
+
+    .box {
+      border: 1px solid #eee;
+      border-radius: 18px;
+      padding: 16px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 320px !important;
+      flex-grow: 1;
+    }
+    #passEnvPie, #failEnvPie,
+    #passScopePie, #failScopePie {
+      height: 240px !important;
+    }
+
+    .pieWrap { max-width: 420px; margin: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+    th {
+      background: #fafafa;
+      font-weight: 600;
+      text-align: left;
+    }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .muted { color: #777; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-web    { background: #dbeafe; color: #1e40af; }
+    .badge-mobile { background: #d1fae5; color: #065f46; }
+  </style>
+</head>
+
+<body>
+  <h1>CommCare-Connect Automation Dashboard</h1>
+  <div class="subtle">Data source: <code>data/runs.jsonl</code></div>
+
+  <div id="err" class="error"></div>
+
+  <div class="filters">
+    <label>Scope:
+      <select id="scopeFilter">
+        <option value="All">All</option>
+        <option value="web">Web</option>
+        <option value="mobile">Mobile</option>
+      </select>
+    </label>
+
+    <label>Environment:
+      <select id="envFilter">
+        <option value="All">All</option>
+      </select>
+    </label>
+
+    <label>Suite:
+      <select id="suiteFilter">
+        <option value="All">All</option>
+      </select>
+    </label>
+
+    <label>Time window:
+      <select id="timeFilter">
+        <option value="1">Last 24h</option>
+        <option value="7" selected>Last 7d</option>
+        <option value="30">Last 30d</option>
+        <option value="60">Last 60d</option>
+        <option value="90">Last 90d</option>
+        <option value="all">All</option>
+      </select>
+    </label>
+
+    <label>Quarter:
+      <select id="quarterFilter">
+        <option value="All">All</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="cards">
+    <div class="card"><h3>Runs</h3><div class="value" id="runsCount">0</div></div>
+    <div class="card"><h3>Passed runs</h3><div class="value" id="passRuns">0</div></div>
+    <div class="card"><h3>Failed runs</h3><div class="value" id="failRuns">0</div></div>
+    <div class="card"><h3>Fail count</h3><div class="value" id="failCount">0</div></div>
+    <div class="card"><h3>Pass count</h3><div class="value" id="passCount">0</div></div>
+    <div class="card"><h3>Skip count</h3><div class="value" id="skipCount">0</div></div>
+    <div class="card"><h3>Reruns</h3><div class="value" id="rerunCount">0</div></div>
+  </div>
+
+  <!-- ROW 1: Pass + Fail by Environment -->
+  <div class="grid2">
+    <div class="box">
+      <h2>Pass by Environment</h2>
+      <div class="pieWrap"><canvas id="passEnvPie"></canvas></div>
+    </div>
+    <div class="box">
+      <h2>Fail by Environment</h2>
+      <div class="pieWrap"><canvas id="failEnvPie"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Pass + Fail by Scope -->
+  <div class="grid2" style="margin-top:22px;">
+    <div class="box">
+      <h2>Pass by Scope</h2>
+      <div class="pieWrap"><canvas id="passScopePie"></canvas></div>
+    </div>
+    <div class="box">
+      <h2>Fail by Scope</h2>
+      <div class="pieWrap"><canvas id="failScopePie"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Env × Scope grouped bar -->
+  <div class="box" style="margin-top:22px;">
+    <h2>Pass / Fail by Environment &amp; Scope</h2>
+    <div class="muted">Runs grouped by environment, split by scope (web / mobile).</div>
+    <canvas id="envScopeBars"></canvas>
+  </div>
+
+  <!-- ROW 4: Quarterly trend -->
+  <div class="box" style="margin-top:22px;">
+    <h2>Quarterly Fail Rate Trend</h2>
+    <div class="muted">Fail rate (%) across quarters for current filters.</div>
+    <canvas id="quarterTrend"></canvas>
+  </div>
+
+  <!-- ROW 5: Suite quarterly compare + top failing -->
+  <div class="grid2" style="margin-top:22px;">
+    <div class="box">
+      <h2>Per-suite quarterly comparison</h2>
+      <div class="muted">
+        If Suite = <b>All</b>, shows top 8 suites by failed runs (stacked by quarter, values are fail rate %).
+        If a suite is selected, shows that suite's quarterly fail rate.
+      </div>
+      <canvas id="suiteQuarterCompare"></canvas>
+    </div>
+    <div class="box">
+      <h2>Top failing suites</h2>
+      <div class="muted">Top 8 suites by failed runs in current filters.</div>
+      <canvas id="topFailSuites"></canvas>
+    </div>
+  </div>
+
+  <!-- ROW 6: Suite bars -->
+  <div class="box" style="margin-top:22px;">
+    <h2>Pass / Fail by Suite (runs)</h2>
+    <div class="muted">Shows top 10 suites by total runs in current filters.</div>
+    <canvas id="suiteBars"></canvas>
+  </div>
+
+  <!-- ROW 7: Failed runs table -->
+  <div class="box" style="margin-top:22px;">
+    <h2>&#10060; Failed Runs (click to open GitHub run)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Quarter</th>
+          <th>Env</th>
+          <th>Scope</th>
+          <th>Suite</th>
+          <th>Fail</th>
+          <th>Run</th>
+        </tr>
+      </thead>
+      <tbody id="failedTable"></tbody>
+    </table>
+  </div>
+
+  <!-- ROW 8: Recent runs table -->
+  <div class="box" style="margin-top:22px;">
+    <h2>Recent Runs (filtered)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Quarter</th>
+          <th>Env</th>
+          <th>Scope</th>
+          <th>Suite</th>
+          <th>Status</th>
+          <th>Fail</th>
+          <th>Reruns</th>
+        </tr>
+      </thead>
+      <tbody id="recentTable"></tbody>
+    </table>
+  </div>
+
+<script>
+  const PASS_BLUE = "#3b82f6";
+  const FAIL_RED  = "#e53935";
+
+  const SCOPE_COLORS = {
+    web:    { pass: "#3b82f6", fail: "#dc2626" },
+    mobile: { pass: "#22c55e", fail: "#f97316" },
+  };
+
+  const SUITE_COLORS = [
+    "#3b82f6","#22c55e","#f59e0b","#a855f7",
+    "#06b6d4","#ef4444","#84cc16","#ec4899",
+    "#0ea5e9","#fb7185","#10b981","#f97316"
+  ];
+
+  const FAIL_COLORS = [
+    "#7f1d1d","#b91c1c","#dc2626","#e11d48",
+    "#f43f5e","#f97316","#ea580c","#f59e0b","#d97706",
+  ];
+
+  const PASS_COLORS = [
+    "#1e3a8a","#3b82f6","#60a5fa","#22c55e",
+    "#4ade80","#34d399","#10b981","#a78bfa","#c4b5fd",
+  ];
+
+  const BAR_OPTS = {
+    barThickness: 16,
+    maxBarThickness: 18,
+    categoryPercentage: 0.58,
+    barPercentage: 0.85
+  };
+
+  const AXIS_TICKS = { font: { size: 11 }, padding: 2 };
+
+  const $ = (id) => document.getElementById(id);
+  const errBox = $("err");
+
+  let raw = [];
+  const charts = {};
+
+  function showError(msg) {
+    errBox.style.display = "block";
+    errBox.textContent = msg;
+  }
+
+  function safeParseJSONL(text) {
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const out = [];
+    for (const line of lines) {
+      try { out.push(JSON.parse(line)); }
+      catch (e) { /* ignore */ }
+    }
+    return out;
+  }
+
+  function quarterFromISO(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return "unknown";
+    return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
+  }
+
+  function uniqSorted(arr) {
+    return Array.from(new Set(arr)).sort((a,b) => (a>b?1:a<b?-1:0));
+  }
+
+  function fillSelect(selectEl, values) {
+    const first = selectEl.options[0];
+    selectEl.innerHTML = "";
+    selectEl.add(first);
+    for (const v of values) {
+      if (v === "All") continue;
+      selectEl.add(new Option(v, v));
+    }
+  }
+
+  function filtered() {
+    const sc = $("scopeFilter").value;
+    const s  = $("suiteFilter").value;
+    const e  = $("envFilter").value;
+    const q  = $("quarterFilter").value;
+    const t  = $("timeFilter").value;
+    const now = Date.now();
+
+    return raw.filter(r => {
+      if (sc !== "All" && r.scope !== sc) return false;
+      if (s  !== "All" && r.suite !== s)  return false;
+      if (e  !== "All" && r.env   !== e)  return false;
+      if (q  !== "All" && r.q     !== q)  return false;
+      if (t  !== "all") {
+        const ageDays = (now - new Date(r.timestamp_utc).getTime()) / 86400000;
+        if (ageDays > Number(t)) return false;
+      }
+      return true;
+    });
+  }
+
+  function draw(id, cfg) {
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart($(id), cfg);
+  }
+
+  function formatPct(x) {
+    if (!isFinite(x)) return 0;
+    return Math.round(x * 10) / 10;
+  }
+
+  function suiteColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return SUITE_COLORS[h % SUITE_COLORS.length];
+  }
+
+  function scopeBadge(scope) {
+    if (!scope) return '<span class="muted">—</span>';
+    const cls = scope === "web" ? "badge-web" : "badge-mobile";
+    return `<span class="badge ${cls}">${scope}</span>`;
+  }
+
+  // ---- KPIs
+  function renderKPIs(d) {
+    $("runsCount").textContent  = d.length;
+    $("passRuns").textContent   = d.filter(r => r.status === "pass").length;
+    $("failRuns").textContent   = d.filter(r => r.status === "fail").length;
+    $("passCount").textContent  = d.reduce((a,r) => a + (r.passed||0), 0);
+    $("failCount").textContent  = d.reduce((a,r) => a + (r.failed||0), 0);
+    $("skipCount").textContent  = d.reduce((a,r) => a + (r.skipped||0), 0);
+    $("rerunCount").textContent = d.reduce((a,r) => a + (r.rerun_count||0), 0);
+  }
+
+  // ---- Pass/Fail by Environment pies
+  function renderEnvPies(d) {
+    const passMap = {}, failMap = {};
+    for (const r of d) {
+      if (!r.env) continue;
+      if (r.status === "pass") passMap[r.env] = (passMap[r.env]||0) + 1;
+      if (r.status === "fail") failMap[r.env] = (failMap[r.env]||0) + 1;
+    }
+
+    const passLabels = Object.keys(passMap);
+    draw("passEnvPie", {
+      type: "pie",
+      data: {
+        labels: passLabels,
+        datasets: [{ data: Object.values(passMap),
+          backgroundColor: passLabels.map((_,i) => PASS_COLORS[i % PASS_COLORS.length]),
+          borderColor: "#fff", borderWidth: 2 }]
+      },
+      options: { plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } } }
+    });
+
+    const failLabels = Object.keys(failMap);
+    draw("failEnvPie", {
+      type: "pie",
+      data: {
+        labels: failLabels,
+        datasets: [{ data: Object.values(failMap),
+          backgroundColor: failLabels.map((_,i) => FAIL_COLORS[i % FAIL_COLORS.length]),
+          borderColor: "#fff", borderWidth: 2 }]
+      },
+      options: { plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } } }
+    });
+  }
+
+  // ---- Pass/Fail by Scope pies
+  function renderScopePies(d) {
+    const passMap = {}, failMap = {};
+    for (const r of d) {
+      const sc = r.scope || "unknown";
+      if (r.status === "pass") passMap[sc] = (passMap[sc]||0) + 1;
+      if (r.status === "fail") failMap[sc] = (failMap[sc]||0) + 1;
+    }
+
+    const SCOPE_PASS_BG = { web: "#3b82f6", mobile: "#22c55e", unknown: "#d1d5db" };
+    const SCOPE_FAIL_BG = { web: "#dc2626", mobile: "#f97316", unknown: "#9ca3af" };
+
+    const passLabels = Object.keys(passMap);
+    draw("passScopePie", {
+      type: "pie",
+      data: {
+        labels: passLabels,
+        datasets: [{ data: Object.values(passMap),
+          backgroundColor: passLabels.map(l => SCOPE_PASS_BG[l] || "#93c5fd"),
+          borderColor: "#fff", borderWidth: 2 }]
+      },
+      options: { plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } } }
+    });
+
+    const failLabels = Object.keys(failMap);
+    draw("failScopePie", {
+      type: "pie",
+      data: {
+        labels: failLabels,
+        datasets: [{ data: Object.values(failMap),
+          backgroundColor: failLabels.map(l => SCOPE_FAIL_BG[l] || "#fca5a5"),
+          borderColor: "#fff", borderWidth: 2 }]
+      },
+      options: { plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } } }
+    });
+  }
+
+  // ---- Env × Scope grouped bar
+  function renderEnvScopeBars(d) {
+    const envs   = uniqSorted(d.map(r => r.env).filter(Boolean));
+    const scopes = uniqSorted(d.map(r => r.scope).filter(Boolean));
+
+    // m[env][scope] = {p, f}
+    const m = {};
+    for (const r of d) {
+      if (!r.env || !r.scope) continue;
+      m[r.env] ??= {};
+      m[r.env][r.scope] ??= { p:0, f:0 };
+      if (r.status === "pass") m[r.env][r.scope].p++;
+      else                     m[r.env][r.scope].f++;
+    }
+
+    const SCOPE_PASS_BG = { web: "#3b82f6", mobile: "#22c55e" };
+    const SCOPE_FAIL_BG = { web: "#93c5fd", mobile: "#86efac" };
+
+    const datasets = [];
+    for (const sc of scopes) {
+      datasets.push({
+        label: `${sc} – passed`,
+        data: envs.map(e => (m[e]?.[sc]?.p || 0)),
+        backgroundColor: SCOPE_PASS_BG[sc] || PASS_BLUE,
+        stack: sc,
+        ...BAR_OPTS
+      });
+      datasets.push({
+        label: `${sc} – failed`,
+        data: envs.map(e => (m[e]?.[sc]?.f || 0)),
+        backgroundColor: SCOPE_FAIL_BG[sc] || FAIL_RED,
+        stack: sc,
+        ...BAR_OPTS
+      });
+    }
+
+    draw("envScopeBars", {
+      type: "bar",
+      data: { labels: envs, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } },
+        scales: {
+          x: { ticks: { ...AXIS_TICKS, maxRotation: 0 } },
+          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        }
+      }
+    });
+  }
+
+  // ---- Quarterly trend
+  function renderQuarterTrend(d) {
+    const qMap = {};
+    for (const r of d) {
+      if (!r.q) continue;
+      qMap[r.q] ??= { t:0, f:0 };
+      qMap[r.q].t++;
+      if (r.status === "fail") qMap[r.q].f++;
+    }
+
+    const labels = Object.keys(qMap).sort();
+    const rates  = labels.map(q => {
+      const v = qMap[q];
+      return v.t ? formatPct((v.f / v.t) * 100) : 0;
+    });
+
+    draw("quarterTrend", {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Fail rate (%)",
+          data: rates,
+          borderColor: FAIL_RED,
+          backgroundColor: "transparent",
+          pointBackgroundColor: FAIL_RED,
+          pointRadius: 3, pointHoverRadius: 4, tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } },
+        scales: {
+          x: { ticks: AXIS_TICKS },
+          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        }
+      }
+    });
+  }
+
+  // ---- Suite bars (top 10)
+  function renderSuiteBars(d) {
+    const m = {};
+    for (const r of d) {
+      const s = r.suite;
+      if (!s) continue;
+      m[s] ??= { p:0, f:0, t:0 };
+      m[s].t++;
+      if (r.status === "pass") m[s].p++;
+      else m[s].f++;
+    }
+
+    const suites = Object.entries(m)
+      .sort((a,b) => b[1].t - a[1].t).slice(0,10).map(([s]) => s);
+
+    draw("suiteBars", {
+      type: "bar",
+      data: {
+        labels: suites,
+        datasets: [
+          { label: "Passed", data: suites.map(s => m[s].p), backgroundColor: PASS_BLUE, ...BAR_OPTS },
+          { label: "Failed", data: suites.map(s => m[s].f), backgroundColor: FAIL_RED,  ...BAR_OPTS }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } },
+        scales: {
+          x: { stacked: false, ticks: { ...AXIS_TICKS, maxRotation: 0 } },
+          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        }
+      }
+    });
+  }
+
+  // ---- Top failing suites
+  function renderTopFailSuites(d) {
+    const m = {};
+    for (const r of d) {
+      const s = r.suite;
+      if (!s) continue;
+      m[s] ??= { f:0 };
+      if (r.status === "fail") m[s].f++;
+    }
+
+    const suites = Object.entries(m)
+      .sort((a,b) => b[1].f - a[1].f)
+      .filter(([,v]) => v.f > 0).slice(0,8).map(([s]) => s);
+    const vals = suites.map(s => m[s].f);
+
+    draw("topFailSuites", {
+      type: "bar",
+      data: {
+        labels: suites.length ? suites : ["No failures"],
+        datasets: [{
+          label: "Failed runs",
+          data:  suites.length ? vals : [0],
+          backgroundColor: suites.length ? suites.map(suiteColor) : [FAIL_RED],
+          ...BAR_OPTS
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:"bottom", labels:{ font:{size:11} } } },
+        scales: {
+          x: { ticks: { ...AXIS_TICKS, maxRotation: 0 } },
+          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        }
+      }
+    });
+  }
+
+  // ---- Suite × quarter comparison
+  function renderSuiteQuarterCompare(d) {
+    const selectedSuite = $("suiteFilter").value;
+    const per  = {};
+    const qSet = new Set();
+
+    for (const r of d) {
+      if (!r.suite || !r.q) continue;
+      qSet.add(r.q);
+      per[r.suite] ??= {};
+      per[r.suite][r.q] ??= { t:0, f:0 };
+      per[r.suite][r.q].t++;
+      if (r.status === "fail") per[r.suite][r.q].f++;
+    }
+
+    const quarters = Array.from(qSet).sort();
+
+    if (!quarters.length) {
+      draw("suiteQuarterCompare", {
+        type:"bar",
+        data:{ labels:["No data"], datasets:[{ label:"Fail rate (%)", data:[0], backgroundColor: FAIL_RED, ...BAR_OPTS }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}, scales:{y:{beginAtZero:true}} }
+      });
+      return;
+    }
+
+    if (selectedSuite !== "All") {
+      const rates = quarters.map(q => {
+        const v = per[selectedSuite]?.[q] || { t:0, f:0 };
+        return v.t ? formatPct((v.f/v.t)*100) : 0;
+      });
+      draw("suiteQuarterCompare", {
+        type:"bar",
+        data:{ labels: quarters, datasets:[{
+          label: `${selectedSuite} fail rate (%)`,
+          data: rates, backgroundColor: suiteColor(selectedSuite), ...BAR_OPTS
+        }]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:"bottom", labels:{ font:{size:11} } } },
+          scales:{ x:{ ticks: AXIS_TICKS }, y:{ beginAtZero:true, ticks: AXIS_TICKS } }
+        }
+      });
+      return;
+    }
+
+    const failTotals = Object.entries(per).map(([s, byQ]) => {
+      let f = 0;
+      for (const q in byQ) f += byQ[q].f;
+      return [s, f];
+    });
+
+    const topSuites = failTotals.sort((a,b)=>b[1]-a[1]).filter(([,f])=>f>0).slice(0,8).map(([s])=>s);
+    if (!topSuites.length) {
+      Object.entries(per).map(([s,byQ])=>{
+        let t=0; for (const q in byQ) t+=byQ[q].t; return [s,t];
+      }).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([s])=>topSuites.push(s));
+    }
+
+    const datasets = topSuites.map(s => ({
+      label: s,
+      data: quarters.map(q => {
+        const v = per[s]?.[q] || { t:0, f:0 };
+        return v.t ? formatPct((v.f/v.t)*100) : 0;
+      }),
+      backgroundColor: suiteColor(s), ...BAR_OPTS
+    }));
+
+    draw("suiteQuarterCompare", {
+      type:"bar",
+      data:{ labels: quarters, datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:"bottom", labels:{ font:{size:11} } } },
+        scales:{
+          x:{ stacked:true, ticks: AXIS_TICKS },
+          y:{ stacked:true, beginAtZero:true, ticks: AXIS_TICKS }
+        }
+      }
+    });
+  }
+
+  // ---- Tables
+  function renderTables(d) {
+    const failedBody = $("failedTable");
+    const recentBody = $("recentTable");
+    failedBody.innerHTML = "";
+    recentBody.innerHTML = "";
+
+    const failed = d.filter(r => r.status === "fail")
+      .sort((a,b) => new Date(b.timestamp_utc) - new Date(a.timestamp_utc));
+
+    for (const r of failed) {
+      const url = r.github?.run_url ||
+        (r.github?.run_id && r.github?.repository
+          ? `https://github.com/${r.github.repository}/actions/runs/${r.github.run_id}`
+          : "");
+      failedBody.innerHTML += `
+        <tr>
+          <td>${r.timestamp_utc || ""}</td>
+          <td>${r.q || ""}</td>
+          <td>${r.env || ""}</td>
+          <td>${scopeBadge(r.scope)}</td>
+          <td>${r.suite || ""}</td>
+          <td>${r.failed ?? 0}</td>
+          <td>${url ? `<a target="_blank" href="${url}">Open run &#8599;</a>` : `<span class="muted">&#8212;</span>`}</td>
+        </tr>`;
+    }
+
+    const recent = d.slice()
+      .sort((a,b) => new Date(b.timestamp_utc) - new Date(a.timestamp_utc))
+      .slice(0, 20);
+
+    for (const r of recent) {
+      recentBody.innerHTML += `
+        <tr>
+          <td>${r.timestamp_utc || ""}</td>
+          <td>${r.q || ""}</td>
+          <td>${r.env || ""}</td>
+          <td>${scopeBadge(r.scope)}</td>
+          <td>${r.suite || ""}</td>
+          <td>${r.status || ""}</td>
+          <td>${r.failed ?? 0}</td>
+          <td>${r.rerun_count ?? 0}</td>
+        </tr>`;
+    }
+  }
+
+  // ---- Main render
+  function renderAll() {
+    const d = filtered();
+    renderKPIs(d);
+    renderEnvPies(d);
+    renderScopePies(d);
+    renderEnvScopeBars(d);
+    renderQuarterTrend(d);
+    renderSuiteQuarterCompare(d);
+    renderTopFailSuites(d);
+    renderSuiteBars(d);
+    renderTables(d);
+  }
+
+  function initFiltersFromData() {
+    const suites = uniqSorted(raw.map(r => r.suite).filter(Boolean));
+    const envs   = uniqSorted(raw.map(r => r.env).filter(Boolean));
+    const qs     = uniqSorted(raw.map(r => r.q).filter(Boolean));
+
+    fillSelect($("suiteFilter"), suites);
+    fillSelect($("envFilter"),   envs);
+    fillSelect($("quarterFilter"), qs);
+
+    ["scopeFilter","suiteFilter","envFilter","timeFilter","quarterFilter"].forEach(id => {
+      $(id).addEventListener("change", () => renderAll());
+    });
+  }
+
+  async function loadData() {
+    const url = "data/runs.jsonl?v=" + Date.now();
+    let text;
+    try {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}`);
+      text = await resp.text();
+    } catch (e) {
+      showError(
+        "Could not load metrics data.\n" +
+        `Tried: ${url}\n\n` +
+        "Check that GitHub Pages has published the latest artifact and that site/data/runs.jsonl exists.\n\n" +
+        "Error: " + (e?.message ?? String(e))
+      );
+      return;
+    }
+
+    const arr = safeParseJSONL(text);
+    if (!arr.length) {
+      showError(
+        "runs.jsonl loaded but contained 0 valid rows.\n" +
+        "GitHub Pages might still be serving a stale build — try hard refresh."
+      );
+    }
+
+    const ALLOWED_ENVS = new Set(["stage", "prod"]);
+    raw = arr
+      .filter(r => r.timestamp_utc && ALLOWED_ENVS.has(r.env))
+      .map(r => ({
+        ...r,
+        scope:  (r.scope  || "").toLowerCase(),
+        status: (r.status || "").toLowerCase(),
+        q: quarterFromISO(r.timestamp_utc),
+      }));
+
+    initFiltersFromData();
+    renderAll();
+  }
+
+  loadData();
+</script>
+</body>
+</html>
