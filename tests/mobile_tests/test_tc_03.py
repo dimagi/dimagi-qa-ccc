@@ -17,6 +17,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 from tests.web_tests.test_olp_01_02_03 import add_opportunity
 
 opp_name = None
+user_data = dict()
 
 @pytest.fixture(scope="function")
 def created_opportunity(web_driver, test_data, config, settings, request):
