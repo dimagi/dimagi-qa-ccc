@@ -53,7 +53,7 @@ def create_mobile_driver(config, settings, run_on, request):
         options.set_capability("app", bs_app_url)
 
         test_name = request.node.name
-        dynamic_session_name = f"PID Tests - {env.upper()} - {test_name}"
+        dynamic_session_name = f"Connect Tests - {env.upper()} - {test_name}"
         # dynamic_build_name = f"PID Regression - {env.upper()}"
 
         bstack_opts = caps.get("bstack:options", {}).copy()
