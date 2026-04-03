@@ -48,7 +48,7 @@ def created_opportunity(web_driver, test_data, config, settings, request):
 def test_03_opportunity_invite_notifications_and_details(created_opportunity, web_driver, config, test_data, settings, mobile_driver):
 
     data = test_data.get("TC_3_to_4")
-    global opp_name
+    global opp_name, user_data
     opp = created_opportunity
     print(opp)
 
@@ -65,6 +65,19 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
     opportunity = OpportunityPage(mobile_driver)
     app_notifications = AppNotifications(mobile_driver)
 
+    if 'staging' in config.get("cchq_url"):
+        user_data = {
+                    "phone_number_staging": "7426134",
+                    "username_staging": "Automation User 44",
+                    "backup_code_staging": "742644"
+            }
+    else:
+        user_data = {
+            "phone_number": "7426034",
+            "username": "Automation User 34",
+            "backup_code": "742634"
+            }
+
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -72,9 +85,9 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Verify Opportunity List in Opportunity Dashboard"):
         home.nav_to_opportunities()
@@ -157,9 +170,9 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Open the learn app page"):
         home.open_app_from_goto_connect()
@@ -265,9 +278,9 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Open the delivery app"):
         home.open_app_from_goto_connect()
