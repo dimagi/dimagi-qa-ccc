@@ -67,15 +67,15 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     if 'staging' in config.get("cchq_url"):
         user_data = {
-                    "phone_number_staging": "7426134",
-                    "username_staging": "Automation User 44",
-                    "backup_code_staging": "742644"
+                    "phone_number": data["phone_number_staging"],
+                    "username" :data["username_staging"],
+                    "backup_code": data["backup_code_staging"]
             }
     else:
         user_data = {
-            "phone_number": "7426034",
-            "username": "Automation User 34",
-            "backup_code": "742634"
+            "phone_number": data["phone_number"],
+            "username" :data["username"],
+            "backup_code": data["backup_code"]
             }
 
 
