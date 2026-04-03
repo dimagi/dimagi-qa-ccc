@@ -490,10 +490,10 @@
     }
 
     const SCOPE_PASS_BG = { web: "#3b82f6", mobile: "#22c55e" };
-    const SCOPE_FAIL_BG = { web: "#93c5fd", mobile: "#86efac" };
 
     const datasets = [];
-    for (const sc of scopes) {
+    for (let si = 0; si < scopes.length; si++) {
+      const sc = scopes[si];
       datasets.push({
         label: `${sc} – passed`,
         data: envs.map(e => (m[e]?.[sc]?.p || 0)),
@@ -504,7 +504,7 @@
       datasets.push({
         label: `${sc} – failed`,
         data: envs.map(e => (m[e]?.[sc]?.f || 0)),
-        backgroundColor: SCOPE_FAIL_BG[sc] || FAIL_RED,
+        backgroundColor: FAIL_COLORS[si % FAIL_COLORS.length],
         stack: sc,
         ...BAR_OPTS
       });
@@ -622,7 +622,7 @@
         datasets: [{
           label: "Failed runs",
           data:  suites.length ? vals : [0],
-          backgroundColor: suites.length ? suites.map(suiteColor) : [FAIL_RED],
+          backgroundColor: suites.length ? suites.map((_,i) => FAIL_COLORS[i % FAIL_COLORS.length]) : [FAIL_COLORS[0]],
           ...BAR_OPTS
         }]
       },
@@ -672,7 +672,7 @@
         type:"bar",
         data:{ labels: quarters, datasets:[{
           label: `${selectedSuite} fail rate (%)`,
-          data: rates, backgroundColor: suiteColor(selectedSuite), ...BAR_OPTS
+          data: rates, backgroundColor: FAIL_COLORS[0], ...BAR_OPTS
         }]},
         options:{ responsive:true, maintainAspectRatio:false,
           plugins:{ legend:{ position:"bottom", labels:{ font:{size:11} } } },
@@ -695,13 +695,13 @@
       }).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([s])=>topSuites.push(s));
     }
 
-    const datasets = topSuites.map(s => ({
+    const datasets = topSuites.map((s, i) => ({
       label: s,
       data: quarters.map(q => {
         const v = per[s]?.[q] || { t:0, f:0 };
         return v.t ? formatPct((v.f/v.t)*100) : 0;
       }),
-      backgroundColor: suiteColor(s), ...BAR_OPTS
+      backgroundColor: FAIL_COLORS[i % FAIL_COLORS.length], ...BAR_OPTS
     }));
 
     draw("suiteQuarterCompare", {
