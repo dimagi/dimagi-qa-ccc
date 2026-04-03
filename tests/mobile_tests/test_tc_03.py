@@ -93,9 +93,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
         connect_workers_page.invite_workers_to_opportunity([data["country_code"]+data["phone_number"]])
 
     with allure.step("Verify push notification shown for the invite"):
-        notifications.open_notifications()
-        notifications.verify_opportunity_invite()
-        notifications.click_opportunity_invite()
+        notifications.check_and_open_notification()
 
     with allure.step("Handle Fingerprint Authentication"):
         pid.handle_fingerprint_auth()

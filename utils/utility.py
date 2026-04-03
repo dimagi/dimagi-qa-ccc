@@ -44,6 +44,19 @@ def open_notification(driver):
             1000
         )
 
+def close_notification(driver):
+    try:
+        driver.execute_script("mobile: closeNotifications")
+    except:
+        size = driver.get_window_size()
+        driver.swipe(
+            size["width"] // 2,
+            int(size["height"] * 0.6),
+            size["width"] // 2,
+            int(size["height"] * 0.01),
+            1000
+        )
+
 def background_app(driver, seconds=3):
     driver.background_app(seconds)
 

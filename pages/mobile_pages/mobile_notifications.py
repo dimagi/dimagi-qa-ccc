@@ -2,7 +2,7 @@ import time
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
-from utils.utility import open_notification
+from utils.utility import open_notification, close_notification
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
@@ -25,6 +25,19 @@ class MobileNotifications(BasePage):
     def click_opportunity_invite(self):
         self.wait_for_element(self.INVITE_OPP_TITLE_TXT)
         self.click_element(self.INVITE_OPP_TITLE_TXT)
+
+    def check_and_open_notification(self, retries=5, wait_between=20):
+        for attempt in range(1, retries + 1):
+            try:
+                self.open_notifications()
+                self.verify_opportunity_invite()
+                self.click_opportunity_invite()
+                return
+            except:
+                close_notification(driver=self.driver)
+                if attempt < retries:
+                    time.sleep(wait_between)
+        raise AssertionError(f"Invite notification not found after {retries} attempts")
 
     def open_notifications(self):
         time.sleep(2)
