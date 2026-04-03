@@ -16,8 +16,11 @@ class BasePage:
         self.driver = driver
         self.wait = WebDriverWait(driver, 60, poll_frequency=2)
 
-    def wait_for_element(self, locator):
-        return self.wait.until(EC.presence_of_element_located(locator))
+    def wait_for_element(self, locator, timeout=None):
+        if timeout:
+            return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
+        else:
+            return self.wait.until(EC.presence_of_element_located(locator))
 
     def click_element(self, locator):
         self.wait.until(EC.element_to_be_clickable(locator)).click()

@@ -28,7 +28,7 @@ class Message(BasePage):
 
     def verify_connect_message(self):
         time.sleep(60)
-        self.wait_for_element(self.MESSAGE_TXT)
+        self.wait_for_element(self.MESSAGE_TXT, 60)
         self.is_displayed(self.MESSAGE_TXT)
         self.is_displayed(self.MESSAGE_TIME_TXT)
 
