@@ -18,7 +18,7 @@ class MobileNotifications(BasePage):
         if self.is_displayed(self.EXPAND_BTN, timeout=30):
             self.click_element(self.EXPAND_BTN)
         time.sleep(5)
-        self.wait_for_element(self.INVITE_OPP_TITLE_TXT)
+        self.wait_for_element(self.INVITE_OPP_TITLE_TXT, timeout=60)
         assert(self.is_displayed(self.INVITE_OPP_TITLE_TXT)
                & self.is_displayed(self.INVITE_OPP_TXT))
 
@@ -34,10 +34,18 @@ class MobileNotifications(BasePage):
                 self.click_opportunity_invite()
                 return
             except:
-                close_notification(driver=self.driver)
                 if attempt < retries:
+                    self.refresh_notifications()
                     time.sleep(wait_between)
+                else:
+                    close_notification(driver=self.driver)
         raise AssertionError(f"Invite notification not found after {retries} attempts")
+
+    def refresh_notifications(self):
+        close_notification(driver=self.driver)
+        time.sleep(2)
+        open_notification(driver=self.driver)
+        time.sleep(3)
 
     def open_notifications(self):
         time.sleep(2)
