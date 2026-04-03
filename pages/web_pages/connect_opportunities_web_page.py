@@ -136,9 +136,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
     def click_submit_btn(self):
         time.sleep(1)
         self.wait_for_element(self.SUBMIT_BUTTON)
-        time.sleep(1)
-        self.scroll_to_element(self.SUBMIT_BUTTON)
-        self.click_element(self.SUBMIT_BUTTON)
+        self.js_click(self.SUBMIT_BUTTON)
 
     def click_add_payment_unit_button(self):
         self.click_element(self.ADD_PAYMENT_UNIT_BUTTON)

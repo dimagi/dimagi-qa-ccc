@@ -16,9 +16,12 @@ TC_3_to_4:
   username: "Automation User 54"
   backup_code: "742654"
   org_name: "PM_Automation_01"
-  phone_number_staging: "7426134"
-  username_staging: "Automation User 44"
-  backup_code_staging: "742644"
+  phone_number_staging: "7426034"
+  username_staging: "Automation User 34"
+  backup_code_staging: "742634"
+#  phone_number_staging: "7426134"
+#  username_staging: "Automation User 44"
+#  backup_code_staging: "742644"
 
 
 
