@@ -103,7 +103,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
         connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_connect_workers(opp)
         # opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
-        connect_workers_page.invite_workers_to_opportunity([data["country_code"]+data["phone_number"]])
+        connect_workers_page.invite_workers_to_opportunity([data["country_code"]+user_data["phone_number"]])
 
     with allure.step("Verify push notification shown for the invite"):
         notifications.check_and_open_notification()
@@ -205,7 +205,7 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
         connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_connect_workers(opp_name)
         connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Failed")
+        connect_workers_page.verify_worker_assessment_status(user_data["username"], "Failed")
 
     with allure.step("Verify Job Status for Failed Assessment"):
         learn.sync_with_server()
@@ -221,7 +221,7 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
     with allure.step("Verify Assessment status in learn table for worker"):
         opp_dashboard_page.navigate_to_connect_workers(opp_name)
         connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")
+        connect_workers_page.verify_worker_assessment_status(user_data["username"], "Passed")
 
     with allure.step("Verify Completed Opportunity details"):
         learn.verify_opportunity_details_screen()
@@ -296,9 +296,9 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
     with allure.step("Make payment for the worker in the opportunity of Connect Dashboard Page"):
         opp_dashboard_page.navigate_to_payments_earned(opp_name)
         # opp_dashboard_page.navigate_to_payments_earned(data["opportunity_name"])
-        connect_workers_page.make_payment_with_date_for_worker(data["username"],
+        connect_workers_page.make_payment_with_date_for_worker(user_data["username"],
                                                          data["country_code"],
-                                                         data["phone_number"],
+                                                         user_data["phone_number"],
                                                         "100")
 
     with allure.step("Verify push notification shown for the payment"):
