@@ -17,26 +17,6 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 from tests.web_tests.test_olp_01_02_03 import add_opportunity
 
 opp_name = None
-# @pytest.fixture(scope="function")
-# # @pytest.fixture(scope="session")
-# def created_opportunity(web_driver,test_data, config, settings):
-#     # driver = webdriver.Chrome()
-#     # driver.maximize_window()
-#     # try:
-#     # opp = add_opportunity(web_driver, test_data, config, settings)
-#     # finally:
-#     #     driver.quit()
-#     # return opp
-#     try:
-#         opp = add_opportunity(web_driver, test_data, config, settings)
-#         return opp
-#     except Exception as e:
-#         try:
-#             web_driver.save_screenshot("created_opportunity_failure.png")
-#         except Exception:
-#             pass
-#         raise
-#
 
 @pytest.fixture(scope="function")
 def created_opportunity(web_driver, test_data, config, settings, request):
@@ -69,8 +49,8 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     data = test_data.get("TC_3_to_4")
     global opp_name
-    opp_name = created_opportunity
-    print(opp_name)
+    opp = created_opportunity
+    print(opp)
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
@@ -108,7 +88,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
         connect_home_page.select_organization_from_list(data["org_name"])
-        opp_dashboard_page.navigate_to_connect_workers(opp_name)
+        opp_dashboard_page.navigate_to_connect_workers(opp)
         # opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
         connect_workers_page.invite_workers_to_opportunity([data["country_code"]+data["phone_number"]])
 
@@ -121,7 +101,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
         pid.handle_fingerprint_auth()
 
     with allure.step("Verify the Opportunity Notifications"):
-        opportunity.open_opportunity_from_list(opp_name, "new opportunity")
+        opportunity.open_opportunity_from_list(opp, "new opportunity")
         opportunity.click_notification()
         app_notifications.verify_all_notifications()
 
@@ -129,6 +109,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
         opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()
+    opp_name=opp
 
 
 
