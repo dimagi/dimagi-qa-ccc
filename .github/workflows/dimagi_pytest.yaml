@@ -91,6 +91,7 @@ jobs:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 
     steps:
@@ -231,6 +232,7 @@ jobs:
       BIOMETRIC_ENABLED: "false"
       RUN_ON: "browserstack"
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
       - uses: actions/checkout@v4

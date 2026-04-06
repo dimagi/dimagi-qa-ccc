@@ -117,7 +117,7 @@ def analyse(xml_path: str) -> int:
     ]
 
     for i, f in enumerate(failures, 1):
-        print(f"\n[ai_failure_analyst] Analysing ({i}/{len(failures)}): {f['name']} …")
+        print(f"\n[ai_failure_analyst] Analysing ({i}/{len(failures)}): {f['name']} ...")
         diagnosis = _analyse_failure(client, f["name"], f["error"])
 
         block = (
@@ -132,12 +132,69 @@ def analyse(xml_path: str) -> int:
     report_text = "\n".join(report_lines)
     report_path = PROJECT_ROOT / "ai_failure_report.md"
     report_path.write_text(report_text, encoding="utf-8")
-    print(f"\n[ai_failure_analyst] Report written → {report_path}")
+    print(f"\n[ai_failure_analyst] Report written -> {report_path}")
     return len(failures)
+
+
+def post_to_slack(webhook_url: str, scope: str, env: str):
+    """Post the AI failure report to Slack as a threaded comment."""
+    import json
+    import urllib.request
+
+    report_path = PROJECT_ROOT / "ai_failure_report.md"
+    if not report_path.exists():
+        print("[ai_failure_analyst] No report file found - nothing to post to Slack.")
+        return
+
+    content = report_path.read_text(encoding="utf-8").strip()
+    if not content or "No failures" in content:
+        return
+
+    # Slack text limit per attachment is ~3000 chars
+    if len(content) > 2800:
+        content = content[:2800] + "\n... [truncated - see full report artifact]"
+
+    payload = {
+        "attachments": [
+            {
+                "color": "danger",
+                "title": f":robot_face: AI Failure Analysis — {scope.upper()} ({env.upper()})",
+                "text": content,
+                "footer": "ai_failure_analyst | gpt-4o-mini",
+                "mrkdwn_in": ["text"],
+            }
+        ]
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        webhook_url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        print("[ai_failure_analyst] Slack notification sent.")
+    except Exception as e:
+        print(f"[ai_failure_analyst] Slack post failed (non-fatal): {e}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python utils/ai_failure_analyst.py <path/to/junit.xml>")
         sys.exit(1)
-    analyse(sys.argv[1])
+
+    xml_file = sys.argv[1]
+    count = analyse(xml_file)
+
+    if count > 0:
+        webhook = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+        if webhook:
+            # Infer scope and env from filename (e.g. "reports/web-stage.xml")
+            stem = Path(xml_file).stem          # "web-stage"
+            parts = stem.split("-", 1)
+            scope = parts[0] if len(parts) > 0 else "unknown"
+            env   = parts[1] if len(parts) > 1 else "unknown"
+            post_to_slack(webhook, scope, env)
+        else:
+            print("[ai_failure_analyst] SLACK_WEBHOOK_URL not set - skipping Slack post.")
