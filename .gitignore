@@ -20,5 +20,10 @@ allure-report/
 # idea file
 .idea
 
+# Claude Code memory
+.claude/
+
+# Generated test reports
+report.html
 */report.html
 */*.png

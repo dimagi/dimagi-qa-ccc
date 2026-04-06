@@ -1,0 +1,107 @@
+name: AI Test Case Generator
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'ai_testcases/**.txt'
+
+jobs:
+  generate:
+    name: Generate Test Modules from .txt Files
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install openai
+
+      - name: Detect changed .txt files (excluding samples)
+        id: changed
+        run: |
+          SKIP="ai_testcases/sample_web_test.txt ai_testcases/sample_mobile_test.txt"
+
+          # Files added or modified in this push, inside ai_testcases/, ending in .txt
+          FILES=$(git diff --name-only --diff-filter=AM ${{ github.event.before }} ${{ github.sha }} \
+            | grep '^ai_testcases/.*\.txt$' || true)
+
+          TARGETS=""
+          for f in $FILES; do
+            if echo "$SKIP" | grep -qw "$f"; then
+              echo "Skipping sample: $f"
+            else
+              TARGETS="$TARGETS $f"
+            fi
+          done
+
+          TARGETS=$(echo "$TARGETS" | xargs)   # trim whitespace
+          echo "targets=$TARGETS" >> $GITHUB_OUTPUT
+
+          if [ -z "$TARGETS" ]; then
+            echo "No new .txt files to process."
+          else
+            echo "Will generate tests for: $TARGETS"
+          fi
+
+      - name: Generate test modules
+        if: steps.changed.outputs.targets != ''
+        run: |
+          for f in ${{ steps.changed.outputs.targets }}; do
+            echo "Processing $f ..."
+            python ai_testcases/generate_test.py "$f"
+          done
+
+      - name: AI Review generated tests
+        if: steps.changed.outputs.targets != ''
+        id: review
+        run: |
+          GENERATED=$(git diff --name-only -- tests/web_tests/ tests/mobile_tests/ | tr '\n' ' ')
+          if [ -z "$GENERATED" ]; then
+            echo "No generated files to review."
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Reviewing: $GENERATED"
+            python ai_testcases/review_generated.py $GENERATED
+            EXIT=$?
+            if [ $EXIT -eq 0 ] || [ $EXIT -eq 2 ]; then
+              echo "passed=true" >> $GITHUB_OUTPUT
+            else
+              echo "passed=false" >> $GITHUB_OUTPUT
+              echo "::warning::AI review flagged issues in generated tests. Check output above."
+            fi
+          fi
+
+      - name: Commit generated test files
+        if: steps.changed.outputs.targets != '' && steps.review.outputs.passed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add tests/web_tests/ tests/mobile_tests/
+
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "auto: generate test modules from ai_testcases/ [skip ci]"
+            git push
+          fi
+
+      - name: Fail if review blocked commit
+        if: steps.changed.outputs.targets != '' && steps.review.outputs.passed == 'false'
+        run: |
+          echo "::error::Generated tests failed AI review — commit blocked. Fix the .txt file and retry."
+          exit 1

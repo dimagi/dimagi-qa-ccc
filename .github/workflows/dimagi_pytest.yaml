@@ -90,6 +90,7 @@ jobs:
       hq_password: ${{ secrets.hq_password }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 
     steps:
@@ -102,6 +103,18 @@ jobs:
       - name: Run Web Tests
         run: |
           pytest -v tests/web_tests -m "not cleanup" --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: AI Failure Analysis (Web)
+        if: always()
+        run: python utils/ai_failure_analyst.py reports/web-${{ env.TEST_ENV }}.xml
+
+      - name: Upload AI Failure Report (Web)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-failure-report-web-${{ matrix.environment }}
+          path: ai_failure_report.md
+          if-no-files-found: ignore
 
       - name: Upload Web JUnit
         if: always()
@@ -217,6 +230,7 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BIOMETRIC_ENABLED: "false"
       RUN_ON: "browserstack"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -227,7 +241,19 @@ jobs:
 
       - name: Run Mobile Tests
         run: |
-          pytest -v tests/mobile_tests --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          pytest -v tests/mobile_tests --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: AI Failure Analysis (Mobile)
+        if: always()
+        run: python utils/ai_failure_analyst.py reports/mobile-${{ env.TEST_ENV }}.xml
+
+      - name: Upload AI Failure Report (Mobile)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-failure-report-mobile-${{ matrix.environment }}
+          path: ai_failure_report.md
+          if-no-files-found: ignore
 
       - name: Upload Mobile JUnit
         if: always()

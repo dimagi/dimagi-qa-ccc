@@ -77,56 +77,6 @@ def create_mobile_driver(config, settings, run_on, request):
 
     return driver
 
-import os, json, subprocess
-
-# def bstack_upload_apk_with_curl(apk_path: str, bs_user: str, bs_key: str, custom_id: str | None = None) -> str:
-#     """
-#     Uploads an APK to BrowserStack App Automate using curl and returns the bs:// app_url.
-#     - apk_path: absolute/relative path to your APK (e.g., user_inputs/sureadhere.apk)
-#     - bs_user / bs_key: BrowserStack credentials
-#     - custom_id (optional): stable alias so your code can keep referring to the same id
-#     Raises RuntimeError on any failure.
-#     """
-#     apk_path = os.path.abspath(apk_path)
-#     print(apk_path)
-#     if not os.path.exists(apk_path):
-#         raise RuntimeError(f"APK not found at: {apk_path}")
-#
-#     cmd = [
-#         "curl",
-#         "-u", f"{bs_user}:{bs_key}",
-#         "-X", "POST",
-#         "https://api-cloud.browserstack.com/app-automate/upload",
-#         "-F", f"file=@{apk_path}",
-#         "--http1.1",
-#         "--retry", "5",
-#         "--retry-delay", "5",
-#         "--retry-all-errors",
-#         "--connect-timeout", "60",
-#         "--max-time", "900"
-#         ]
-#     if custom_id:
-#         cmd += ["-F", f"custom_id={custom_id}"]
-#
-#     res = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-#     if res.returncode != 0:
-#         raise RuntimeError(f"curl failed (code {res.returncode}): {res.stderr or res.stdout}")
-#
-#     try:
-#         payload = json.loads(res.stdout.strip() or "{}")
-#     except json.JSONDecodeError:
-#         raise RuntimeError(f"Unexpected response from BrowserStack: {res.stdout}")
-#
-#     app_url = payload.get("app_url")
-#     if isinstance(app_url, str) and app_url.startswith("bs://"):
-#         return app_url
-#
-#     # If you used a custom_id and the server says “already uploaded”, you can still use bs://<custom_id>.
-#     err = (payload.get("error") or "").lower()
-#     if custom_id and ("duplicate" in err or "already" in err):
-#         return f"bs://{custom_id}"
-#
-#     raise RuntimeError(f"Upload failed: {payload}")
 
 def bstack_upload_apk_with_curl(apk_path: str, bs_user: str, bs_key: str, custom_id: str | None = None) -> str:
     apk_path = os.path.abspath(apk_path)
