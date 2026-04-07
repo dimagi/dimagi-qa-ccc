@@ -62,7 +62,7 @@ class OpportunityDashboardPage(BaseWebPage):
 
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
         self.click_link_by_text(data["opportunity_name"])
-        self.verify_dashboard_card_details_present("Connect Workers", "Invited")
+        self.verify_dashboard_card_details_present("Connect Workers", '')
         self.verify_dashboard_card_details_present("Connect Workers", "Yet to Accept Invitation")
         self.verify_dashboard_card_details_present("Connect Workers", "Inactive last 3 days")
         self.verify_dashboard_card_details_present("Services Delivered", "Total")
@@ -90,8 +90,7 @@ class OpportunityDashboardPage(BaseWebPage):
                 time.sleep(15)
                 self.wait_for_page_to_load()
 
-        subtitle = 'Invited' if 'staging' in self.get_current_url() else ''
-        self.click_dashboard_card_in_opportunity("Connect Workers", subtitle)
+        self.click_dashboard_card_in_opportunity("Connect Workers", '')
         self.verify_text_in_url("workers")
         time.sleep(1)
 
