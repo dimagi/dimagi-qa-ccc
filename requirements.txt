@@ -32,3 +32,6 @@ openpyxl==3.1.5
 pytest-html
 pytest-rerunfailures
 openai>=1.0.0
+matplotlib
+Pillow
+slack_sdk

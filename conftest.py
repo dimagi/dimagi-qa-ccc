@@ -1,11 +1,22 @@
 import os
+import base64
+from io import BytesIO
+from pathlib import Path
 
 import allure
 import pytest
 from pytest_html import extras
 from allure_commons.types import AttachmentType
-import base64
 from utils.helpers import ConfigLoader, SettingsLoader
+
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    _CHARTS_AVAILABLE = True
+except ImportError:
+    _CHARTS_AVAILABLE = False
 from drivers.appium_driver import create_mobile_driver
 from drivers.web_driver import create_web_driver
 from utils.helpers import TestDataLoader
@@ -133,3 +144,140 @@ def _capture_screenshot(driver):
 @pytest.fixture(scope="session")
 def test_data():
     return TestDataLoader()
+
+
+# ─── Summary Charts ──────────────────────────────────────────────────────────
+
+_test_stats: dict = {}
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if not _CHARTS_AVAILABLE:
+        print("[charts] matplotlib/Pillow not installed — skipping chart generation.")
+        return
+    tr = session.config.pluginmanager.get_plugin("terminalreporter")
+    if not tr:
+        return
+    global _test_stats
+    _test_stats = {
+        "passed":  len(tr.stats.get("passed",  [])),
+        "failed":  len(tr.stats.get("failed",  [])),
+        "skipped": len(tr.stats.get("skipped", [])),
+        "error":   len(tr.stats.get("error",   [])),
+        "reruns":  len(tr.stats.get("rerun",   [])),
+    }
+    _save_summary_charts(_test_stats)
+
+
+def _save_summary_charts(stats: dict) -> None:
+    out_dir = Path("slack_charts")
+    out_dir.mkdir(exist_ok=True)
+
+    passed  = stats.get("passed",  0)
+    failed  = stats.get("failed",  0)
+    skipped = stats.get("skipped", 0)
+    reruns  = stats.get("reruns",  0)
+
+    # Donut pie chart
+    fig, ax = plt.subplots()
+    wedges, _ = ax.pie(
+        [passed, failed, skipped],
+        labels=None,
+        colors=["#66bb6a", "#ef5350", "#fad000"],
+        startangle=90,
+        wedgeprops=dict(width=0.4),
+    )
+    ax.axis("equal")
+    ax.set_title("Test Summary")
+    ax.legend(
+        [f"Passed: {passed}", f"Failed: {failed}", f"Skipped: {skipped}"],
+        loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.15),
+    )
+    fig.savefig(out_dir / "summary_pie.png", bbox_inches="tight")
+    plt.close(fig)
+
+    # Bar chart — only when there are failures or reruns
+    bar_path = None
+    if failed > 0 or reruns > 0:
+        fig, ax = plt.subplots()
+        bars = ax.bar(["Failed", "Reruns"], [failed, reruns], color=["#ef5350", "#ffa726"])
+        ax.set_ylabel("Number of Tests")
+        ax.set_title("Failures and Reruns")
+        ax.legend(bars, [f"Failed: {failed}", f"Reruns: {reruns}"],
+                  loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.15))
+        bar_path = out_dir / "summary_bar.png"
+        fig.savefig(bar_path, bbox_inches="tight")
+        plt.close(fig)
+
+    _combine_charts(out_dir / "summary_pie.png", bar_path, out_dir / "summary_combined.png")
+
+
+def _combine_charts(pie_path: Path, bar_path, combined_path: Path) -> None:
+    pie = Image.open(pie_path)
+    if bar_path and bar_path.exists():
+        bar = Image.open(bar_path)
+        bar = bar.resize((bar.width * pie.height // bar.height, pie.height))
+        combined = Image.new("RGB", (pie.width + bar.width, pie.height), (255, 255, 255))
+        combined.paste(pie, (0, 0))
+        combined.paste(bar, (pie.width, 0))
+    else:
+        combined = pie.copy()
+    combined.save(combined_path)
+    print(f"[charts] Combined chart saved: {combined_path}")
+
+
+def _matplotlib_img(fig) -> str:
+    buf = BytesIO()
+    plt.tight_layout()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode("utf-8")
+
+
+def pytest_html_results_summary(prefix, summary, postfix, session):
+    if not _CHARTS_AVAILABLE:
+        return
+    tr = session.config.pluginmanager.get_plugin("terminalreporter")
+    if not tr:
+        return
+    stats = tr.stats if hasattr(tr, "stats") else {}
+
+    passed  = len(stats.get("passed",  []))
+    failed  = len(stats.get("failed",  []))
+    skipped = len(stats.get("skipped", []))
+    reruns  = len(stats.get("rerun",   []))
+
+    # Donut pie
+    fig, ax = plt.subplots()
+    wedges, _ = ax.pie(
+        [passed, failed, skipped],
+        labels=None,
+        colors=["#66bb6a", "#ef5350", "#fad000"],
+        startangle=90,
+        wedgeprops=dict(width=0.4),
+    )
+    ax.axis("equal")
+    plt.legend(wedges,
+               [f"Passed: {passed}", f"Failed: {failed}", f"Skipped: {skipped}"],
+               title="Results", loc="upper center",
+               bbox_to_anchor=(0.5, -0.08), ncol=3)
+    pie_img = _matplotlib_img(fig)
+
+    # Bar chart
+    bar_img = None
+    if failed > 0 or reruns > 0:
+        fig, ax = plt.subplots()
+        bars = ax.bar(["Failed", "Reruns"], [failed, reruns], color=["#ef5350", "#ff9933"])
+        ax.set_title("Failures and Reruns")
+        ax.set_ylabel("Number of Tests")
+        plt.legend(bars, [f"Failed: {failed}", f"Reruns: {reruns}"],
+                   loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
+        bar_img = _matplotlib_img(fig)
+
+    html = "<div style='text-align:center; margin-top:20px;'>"
+    html += f"<h3>Test Summary</h3><img src='data:image/png;base64,{pie_img}' style='max-width:500px;'/>"
+    if bar_img:
+        html += f"<h3>Failures and Reruns</h3><img src='data:image/png;base64,{bar_img}' style='max-width:500px;'/>"
+    html += "</div>"
+    summary.append(html)
