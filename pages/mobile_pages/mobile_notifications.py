@@ -26,7 +26,7 @@ class MobileNotifications(BasePage):
         self.wait_for_element(self.INVITE_OPP_TITLE_TXT)
         self.click_element(self.INVITE_OPP_TITLE_TXT)
 
-    def check_and_open_notification(self, retries=5, wait_between=20):
+    def check_and_open_notification(self, retries=10, wait_between=20):
         for attempt in range(1, retries + 1):
             try:
                 self.open_notifications()
