@@ -89,7 +89,9 @@ class OpportunityDashboardPage(BaseWebPage):
                 self.click(self.RIGHT_ARROW)
                 time.sleep(15)
                 self.wait_for_page_to_load()
-        self.click_dashboard_card_in_opportunity("Connect Workers", "Invited")
+
+        subtitle = 'Invited' if 'staging' in self.get_current_url() else ''
+        self.click_dashboard_card_in_opportunity("Connect Workers", subtitle)
         self.verify_text_in_url("workers")
         time.sleep(1)
 
