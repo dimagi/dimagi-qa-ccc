@@ -568,6 +568,7 @@ jobs:
         env:
           SLACK_TOKEN:   ${{ secrets.SLACK_QA_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          GITHUB_TOKEN:  ${{ github.token }}
           ENV_NAME:      stage
           ENV_STATUS:    ${{ steps.aggregate.outputs.stage_status }}
           HAS_WEB:       ${{ steps.aggregate.outputs.stage_has_web }}
@@ -607,6 +608,22 @@ jobs:
           run_url    = f"{server}/{repo}/actions/runs/{run_id}"
           dashboard_url = "https://dimagi.github.io/dimagi-qa-ccc/"
           env_lower  = env_name.lower()
+          gh_token   = os.environ.get("GITHUB_TOKEN", "")
+
+          def get_artifact_url(scope, env_lower):
+              import urllib.request, json as _json
+              artifact_name = f"html-{scope}-{env_lower}"
+              api_url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+              req = urllib.request.Request(api_url, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      data = _json.loads(r.read())
+                  for a in data.get("artifacts", []):
+                      if a["name"] == artifact_name:
+                          return f"{server}/{repo}/actions/runs/{run_id}/artifacts/{a['id']}"
+              except Exception as e:
+                  print(f"Could not fetch artifact ID for {artifact_name}: {e}")
+              return run_url
 
           client = WebClient(token=token)
 
@@ -620,10 +637,12 @@ jobs:
               if not info["has"]:
                   continue
 
+              artifact_url = get_artifact_url(scope, env_lower)
+              scope_icon = "✅" if int(info["fail"] or 0) == 0 else "❌"
               comment = (
-                  f"{icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
+                  f"{scope_icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
                   f"{info['icon']} {scope.capitalize()} → ✅ {info['pass']} | ❌ {info['fail']} | ⏭ {info['skip']}\n"
-                  f"📎 Artifact: <{run_url}|Download here>\n"
+                  f"📎 Artifact: <{artifact_url}|Download here>\n"
                   f"🔗 Dashboard: <{dashboard_url}|{dashboard_url}>"
               )
 
@@ -705,6 +724,7 @@ jobs:
         env:
           SLACK_TOKEN:   ${{ secrets.SLACK_QA_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          GITHUB_TOKEN:  ${{ github.token }}
           ENV_NAME:      prod
           ENV_STATUS:    ${{ steps.aggregate.outputs.prod_status }}
           HAS_WEB:       ${{ steps.aggregate.outputs.prod_has_web }}
@@ -744,6 +764,22 @@ jobs:
           run_url    = f"{server}/{repo}/actions/runs/{run_id}"
           dashboard_url = "https://dimagi.github.io/dimagi-qa-ccc/"
           env_lower  = env_name.lower()
+          gh_token   = os.environ.get("GITHUB_TOKEN", "")
+
+          def get_artifact_url(scope, env_lower):
+              import urllib.request, json as _json
+              artifact_name = f"html-{scope}-{env_lower}"
+              api_url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+              req = urllib.request.Request(api_url, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      data = _json.loads(r.read())
+                  for a in data.get("artifacts", []):
+                      if a["name"] == artifact_name:
+                          return f"{server}/{repo}/actions/runs/{run_id}/artifacts/{a['id']}"
+              except Exception as e:
+                  print(f"Could not fetch artifact ID for {artifact_name}: {e}")
+              return run_url
 
           client = WebClient(token=token)
 
@@ -757,10 +793,12 @@ jobs:
               if not info["has"]:
                   continue
 
+              artifact_url = get_artifact_url(scope, env_lower)
+              scope_icon = "✅" if int(info["fail"] or 0) == 0 else "❌"
               comment = (
-                  f"{icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
+                  f"{scope_icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
                   f"{info['icon']} {scope.capitalize()} → ✅ {info['pass']} | ❌ {info['fail']} | ⏭ {info['skip']}\n"
-                  f"📎 Artifact: <{run_url}|Download here>\n"
+                  f"📎 Artifact: <{artifact_url}|Download here>\n"
                   f"🔗 Dashboard: <{dashboard_url}|{dashboard_url}>"
               )
 
