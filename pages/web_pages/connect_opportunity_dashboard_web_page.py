@@ -46,15 +46,16 @@ class OpportunityDashboardPage(BaseWebPage):
         print(f"End date in Opportunity Dashboard --> {value}")
         assert value != "", "Start Date card value is empty in Opportunity Dashboard"
 
-    def verify_dashboard_card_details_present(self, title, subtitle):
+    def verify_dashboard_card_details_present(self, title, subtitle, count_section=True):
         by, value = self.DASHBOARD_CARD
         actual_xpath = value.format(title=title, subtitle=subtitle)
         print(by, actual_xpath)
         self.scroll_to_element((by, actual_xpath))
         card = self.wait_for_element((by, actual_xpath))
-        count = card.find_element(By.XPATH, ".//h3[contains(@class,'text-2xl')]").text.strip()
-        assert count != "", f"{title} {subtitle} count is empty"
-        print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
+        if count_section:
+            count = card.find_element(By.XPATH, ".//h3[contains(@class,'text-2xl')]").text.strip()
+            assert count != "", f"{title} {subtitle} count is empty"
+            print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
 
     def verify_progress_funnel_present(self):
         self.scroll_to_element(self.PROGRESS_FUNNEL)
@@ -62,11 +63,12 @@ class OpportunityDashboardPage(BaseWebPage):
 
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
         self.click_link_by_text(data["opportunity_name"])
-        self.verify_dashboard_card_details_present("Connect Workers", '')
-        self.verify_dashboard_card_details_present("Connect Workers", "Yet to Accept Invitation")
+        self.verify_dashboard_card_details_present("Connect Workers", '', count_section=False)
+        self.verify_dashboard_card_details_present("Tasks Assigned to Connect Workers", '')
         self.verify_dashboard_card_details_present("Connect Workers", "Inactive last 3 days")
         self.verify_dashboard_card_details_present("Services Delivered", "Total")
-        self.verify_dashboard_card_details_present("Services Delivered", "Pending NM Review")
+        self.verify_dashboard_card_details_present("View Progress Map", "", count_section=False)
+        self.verify_dashboard_card_details_present("Audit Opportunity", "", count_section=False)
         self.verify_dashboard_card_details_present("Payments", "Earned")
         self.verify_dashboard_card_details_present("Payments", "Due")
 

@@ -648,7 +648,24 @@ jobs:
                                   break
                       except Exception:
                           pass
-                      print(f"Chart uploaded for {scope}-{env_lower}")
+                      # Fallback: find ts via channel history if not in shares response
+                      if not parent_ts:
+                          import time
+                          time.sleep(2)
+                          try:
+                              now = time.time()
+                              history = client.conversations_history(channel=channel, limit=5)
+                              for msg in history.get("messages", []):
+                                  if now - float(msg.get("ts", 0)) < 60 and msg.get("files"):
+                                      msg_text = msg.get("text", "") or ""
+                                      file_comment = (msg.get("files") or [{}])[0].get("initial_comment", {}).get("comment", "") or ""
+                                      combined = (msg_text + file_comment).lower()
+                                      if env_lower in combined and scope in combined:
+                                          parent_ts = msg["ts"]
+                                          break
+                          except Exception as ts_err:
+                              print(f"Could not get ts from history: {ts_err}")
+                      print(f"Chart uploaded for {scope}-{env_lower}, parent_ts={parent_ts}")
                   except Exception as e:
                       print(f"Chart upload failed ({scope}): {e}")
                       try:
@@ -768,7 +785,24 @@ jobs:
                                   break
                       except Exception:
                           pass
-                      print(f"Chart uploaded for {scope}-{env_lower}")
+                      # Fallback: find ts via channel history if not in shares response
+                      if not parent_ts:
+                          import time
+                          time.sleep(2)
+                          try:
+                              now = time.time()
+                              history = client.conversations_history(channel=channel, limit=5)
+                              for msg in history.get("messages", []):
+                                  if now - float(msg.get("ts", 0)) < 60 and msg.get("files"):
+                                      msg_text = msg.get("text", "") or ""
+                                      file_comment = (msg.get("files") or [{}])[0].get("initial_comment", {}).get("comment", "") or ""
+                                      combined = (msg_text + file_comment).lower()
+                                      if env_lower in combined and scope in combined:
+                                          parent_ts = msg["ts"]
+                                          break
+                          except Exception as ts_err:
+                              print(f"Could not get ts from history: {ts_err}")
+                      print(f"Chart uploaded for {scope}-{env_lower}, parent_ts={parent_ts}")
                   except Exception as e:
                       print(f"Chart upload failed ({scope}): {e}")
                       try:
