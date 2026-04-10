@@ -238,7 +238,7 @@
     <canvas id="quarterTrend"></canvas>
   </div>
 
-  <!-- ROW 5: Env pass/fail bar + mini pies per env -->
+  <!-- ROW 5: Env pass/fail bar + Pass/Fail by Trigger -->
   <div class="grid2" style="margin-top:22px;">
     <div class="box">
       <h2>Pass vs Fail by Environment</h2>
@@ -246,18 +246,9 @@
       <canvas id="envBars"></canvas>
     </div>
     <div class="box">
-      <h2>Pass / Fail split per Environment</h2>
-      <div class="muted">Proportion of passed vs failed runs for each environment.</div>
-      <div class="env-pies-grid">
-        <div class="env-pie-cell">
-          <h3>Stage</h3>
-          <canvas id="envPie_stage"></canvas>
-        </div>
-        <div class="env-pie-cell">
-          <h3>Prod</h3>
-          <canvas id="envPie_prod"></canvas>
-        </div>
-      </div>
+      <h2>Pass vs Fail by Trigger</h2>
+      <div class="muted">Number of passed and failed runs per workflow trigger type.</div>
+      <canvas id="triggerBars"></canvas>
     </div>
   </div>
 
@@ -671,44 +662,36 @@
     });
   }
 
-  // ---- Mini pie per environment
-  function renderEnvMiniPies(d) {
-    for (const env of ENV_ORDER) {
-      const canvasId = `envPie_${env}`;
-      if (!$(canvasId)) continue;
-      const envRuns = d.filter(r => r.env === env);
-      const pass = envRuns.filter(r => r.status === "pass").length;
-      const fail = envRuns.filter(r => r.status === "fail").length;
-      if (envRuns.length === 0) {
-        draw(canvasId, {
-          type: "pie",
-          data: { labels: ["No data"], datasets: [{ data: [1], backgroundColor: ["#e5e7eb"], borderColor: "#fff", borderWidth: 2 }] },
-          options: { plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-        });
-        continue;
-      }
-      draw(canvasId, {
-        type: "pie",
-        data: {
-          labels: ["Passed", "Failed"],
-          datasets: [{ data: [pass, fail], backgroundColor: [PASS_BLUE, FAIL_RED], borderColor: "#fff", borderWidth: 2 }]
-        },
-        options: {
-          plugins: {
-            legend: { position: "bottom", labels: { font: { size: 10 }, boxWidth: 10 } },
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const total = pass + fail;
-                  const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
-                  return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
-                }
-              }
-            }
-          }
-        }
-      });
+  // ---- Pass vs Fail grouped bar by Trigger
+  function renderTriggerBars(d) {
+    const TRIGGER_ORDER = ["Scheduled", "Manual", "Push/Pull", "Post Deploy"];
+    const map = {};
+    for (const t of TRIGGER_ORDER) map[t] = { p: 0, f: 0 };
+    for (const r of d) {
+      const t = r.trigger || "Unknown";
+      map[t] ??= { p: 0, f: 0 };
+      if (r.status === "pass") map[t].p++;
+      else map[t].f++;
     }
+    const labels = TRIGGER_ORDER.filter(t => map[t].p + map[t].f > 0);
+    draw("triggerBars", {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "Passed runs", data: labels.map(t => map[t].p), backgroundColor: PASS_BLUE, ...BAR_OPTS },
+          { label: "Failed runs",  data: labels.map(t => map[t].f), backgroundColor: FAIL_RED,  ...BAR_OPTS }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
+        scales: {
+          x: { ticks: AXIS_TICKS },
+          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        }
+      }
+    });
   }
 
   // ---- Tables
@@ -768,7 +751,7 @@
     renderEnvScopeBars(d);
     renderQuarterTrend(d);
     renderEnvBars(d);
-    renderEnvMiniPies(d);
+    renderTriggerBars(d);
     renderSuiteBars(d);
     renderTables(d);
   }
