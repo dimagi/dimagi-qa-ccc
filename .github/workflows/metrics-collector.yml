@@ -275,7 +275,8 @@ jobs:
           import json, datetime
           from collections import defaultdict
 
-          now    = datetime.datetime.now(datetime.timezone.utc)
+          IST    = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+          now    = datetime.datetime.now(IST)
           cutoff = now - datetime.timedelta(hours=24)
 
           ALLOWED_ENVS   = {"stage", "prod"}

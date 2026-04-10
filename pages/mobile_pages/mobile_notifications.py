@@ -18,15 +18,15 @@ class MobileNotifications(BasePage):
         if self.is_displayed(self.EXPAND_BTN, timeout=30):
             self.click_element(self.EXPAND_BTN)
         time.sleep(5)
-        self.wait_for_element(self.INVITE_OPP_TITLE_TXT, timeout=60)
+        self.scroll_to_element(self.INVITE_OPP_TITLE_TXT)
         assert(self.is_displayed(self.INVITE_OPP_TITLE_TXT)
                & self.is_displayed(self.INVITE_OPP_TXT))
 
     def click_opportunity_invite(self):
-        self.wait_for_element(self.INVITE_OPP_TITLE_TXT)
+        self.scroll_to_element(self.INVITE_OPP_TITLE_TXT)
         self.click_element(self.INVITE_OPP_TITLE_TXT)
 
-    def check_and_open_notification(self, retries=10, wait_between=20):
+    def check_and_open_notification(self, retries=6, wait_between=20):
         for attempt in range(1, retries + 1):
             try:
                 self.open_notifications()
