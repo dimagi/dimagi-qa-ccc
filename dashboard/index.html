@@ -81,7 +81,8 @@
       flex-grow: 1;
     }
     #passEnvPie, #failEnvPie,
-    #passScopePie, #failScopePie {
+    #passScopePie, #failScopePie,
+    #triggerBars {
       height: 240px !important;
     }
 
@@ -246,9 +247,9 @@
       <canvas id="envBars"></canvas>
     </div>
     <div class="box">
-      <h2>Pass vs Fail by Trigger</h2>
-      <div class="muted">Number of passed and failed runs per workflow trigger type.</div>
-      <canvas id="triggerBars"></canvas>
+      <h2>Runs by Trigger Type</h2>
+      <div class="muted">Distribution of runs across workflow trigger types.</div>
+      <div class="pieWrap"><canvas id="triggerBars"></canvas></div>
     </div>
   </div>
 
@@ -662,33 +663,40 @@
     });
   }
 
-  // ---- Pass vs Fail grouped bar by Trigger
+  // ---- Pass vs Fail pie by Trigger
   function renderTriggerBars(d) {
     const TRIGGER_ORDER = ["Scheduled", "Manual", "Push/Pull", "Post Deploy"];
+    const TRIGGER_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"];
     const map = {};
-    for (const t of TRIGGER_ORDER) map[t] = { p: 0, f: 0 };
+    for (const t of TRIGGER_ORDER) map[t] = 0;
     for (const r of d) {
       const t = r.trigger || "Unknown";
-      map[t] ??= { p: 0, f: 0 };
-      if (r.status === "pass") map[t].p++;
-      else map[t].f++;
+      map[t] = (map[t] || 0) + 1;
     }
-    const labels = TRIGGER_ORDER.filter(t => map[t].p + map[t].f > 0);
+    const labels = TRIGGER_ORDER.filter(t => map[t] > 0);
     draw("triggerBars", {
-      type: "bar",
+      type: "pie",
       data: {
         labels,
-        datasets: [
-          { label: "Passed runs", data: labels.map(t => map[t].p), backgroundColor: PASS_BLUE, ...BAR_OPTS },
-          { label: "Failed runs",  data: labels.map(t => map[t].f), backgroundColor: FAIL_RED,  ...BAR_OPTS }
-        ]
+        datasets: [{
+          data: labels.map(t => map[t]),
+          backgroundColor: labels.map(t => TRIGGER_COLORS[TRIGGER_ORDER.indexOf(t)] || "#9ca3af"),
+          borderColor: "#fff",
+          borderWidth: 2
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
-        scales: {
-          x: { ticks: AXIS_TICKS },
-          y: { beginAtZero: true, ticks: AXIS_TICKS }
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const total = labels.reduce((s, t) => s + map[t], 0);
+                const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+                return `${ctx.label}: ${ctx.parsed} runs (${pct}%)`;
+              }
+            }
+          }
         }
       }
     });
