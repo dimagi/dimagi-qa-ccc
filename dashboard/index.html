@@ -81,9 +81,31 @@
       flex-grow: 1;
     }
     #passEnvPie, #failEnvPie,
-    #passScopePie, #failScopePie,
-    #triggerBars {
+    #passScopePie, #failScopePie {
       height: 240px !important;
+    }
+
+    .trigger-pies {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .trigger-pie-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .trigger-pie-cell h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      margin: 0 0 8px;
+    }
+    #triggerPassPie, #triggerFailPie {
+      height: auto !important;
+      max-width: 280px;
+      width: 100% !important;
     }
 
     .pieWrap { max-width: 420px; margin: auto; }
@@ -247,9 +269,18 @@
       <canvas id="envBars"></canvas>
     </div>
     <div class="box">
-      <h2>Runs by Trigger Type</h2>
-      <div class="muted">Distribution of runs across workflow trigger types.</div>
-      <div class="pieWrap"><canvas id="triggerBars"></canvas></div>
+      <h2>Pass vs Fail by Trigger Type</h2>
+      <div class="muted">Distribution of passing and failing runs across workflow triggers.</div>
+      <div class="trigger-pies">
+        <div class="trigger-pie-cell">
+          <h3>Pass by Trigger</h3>
+          <canvas id="triggerPassPie"></canvas>
+        </div>
+        <div class="trigger-pie-cell">
+          <h3>Fail by Trigger</h3>
+          <canvas id="triggerFailPie"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -663,43 +694,56 @@
     });
   }
 
-  // ---- Pass vs Fail pie by Trigger
+  // ---- Pass by Trigger + Fail by Trigger pies
   function renderTriggerBars(d) {
-    const TRIGGER_ORDER = ["Scheduled", "Manual", "Push/Pull", "Post Deploy"];
-    const TRIGGER_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"];
-    const map = {};
-    for (const t of TRIGGER_ORDER) map[t] = 0;
+    const TRIGGER_ORDER  = ["Post Deploy", "Manual", "Push/Pull", "Scheduled"];
+    const TRIGGER_PASS_COLORS = ["#1e3a8a", "#60a5fa", "#93c5fd", "#22c55e"];
+    const TRIGGER_FAIL_COLORS = ["#7f1d1d", "#b91c1c", "#f43f5e", "#dc2626"];
+
+    const passMap = {}, failMap = {};
+    for (const t of TRIGGER_ORDER) { passMap[t] = 0; failMap[t] = 0; }
     for (const r of d) {
       const t = r.trigger || "Unknown";
-      map[t] = (map[t] || 0) + 1;
+      passMap[t] = (passMap[t] || 0);
+      failMap[t] = (failMap[t] || 0);
+      if (r.status === "pass") passMap[t]++;
+      else failMap[t]++;
     }
-    const labels = TRIGGER_ORDER.filter(t => map[t] > 0);
-    draw("triggerBars", {
-      type: "pie",
-      data: {
-        labels,
-        datasets: [{
-          data: labels.map(t => map[t]),
-          backgroundColor: labels.map(t => TRIGGER_COLORS[TRIGGER_ORDER.indexOf(t)] || "#9ca3af"),
-          borderColor: "#fff",
-          borderWidth: 2
-        }]
-      },
-      options: {
-        plugins: {
-          legend: { position: "bottom", labels: { font: { size: 11 } } },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const total = labels.reduce((s, t) => s + map[t], 0);
-                const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
-                return `${ctx.label}: ${ctx.parsed} runs (${pct}%)`;
+
+    const PIE_OPTS = (map, colors) => {
+      const labels = TRIGGER_ORDER.filter(t => map[t] > 0);
+      const total  = labels.reduce((s, t) => s + map[t], 0);
+      return {
+        type: "pie",
+        data: {
+          labels,
+          datasets: [{
+            data: labels.map(t => map[t]),
+            backgroundColor: labels.map(t => colors[TRIGGER_ORDER.indexOf(t)] || "#9ca3af"),
+            borderColor: "#fff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          maintainAspectRatio: true,
+          aspectRatio: 1,
+          plugins: {
+            legend: { position: "bottom", labels: { font: { size: 11 }, boxWidth: 12 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+                  return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                }
               }
             }
           }
         }
-      }
-    });
+      };
+    };
+
+    draw("triggerPassPie", PIE_OPTS(passMap, TRIGGER_PASS_COLORS));
+    draw("triggerFailPie", PIE_OPTS(failMap, TRIGGER_FAIL_COLORS));
   }
 
   // ---- Tables
