@@ -2,12 +2,15 @@ import os
 import time
 
 from appium.webdriver.common.appiumby import AppiumBy
-from selenium.common import NoSuchElementException
+from selenium.common import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException, TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+# Self-healing locators: enabled when AI_HEALING_ENABLED=true and OPENAI_API_KEY is set
+_AI_HEALING_ENABLED = os.getenv("AI_HEALING_ENABLED", "false").lower() == "true"
 
 class BasePage:
     BIOMETRIC_ENABLED = os.getenv("BIOMETRIC_ENABLED", "false").lower() == "true"
@@ -16,11 +19,60 @@ class BasePage:
         self.driver = driver
         self.wait = WebDriverWait(driver, 60, poll_frequency=2)
 
-    def wait_for_element(self, locator):
-        return self.wait.until(EC.presence_of_element_located(locator))
+    def wait_for_element(self, locator, timeout=None):
+        try:
+            if timeout:
+                return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
+            else:
+                return self.wait.until(EC.presence_of_element_located(locator))
+        except TimeoutException:
+            if _AI_HEALING_ENABLED:
+                return self._ai_heal_mobile(locator)
+            raise
 
-    def click_element(self, locator):
-        self.wait.until(EC.element_to_be_clickable(locator)).click()
+    def _ai_heal_mobile(self, locator):
+        """Fall back to AI to find an alternative locator when the original times out."""
+        try:
+            from openai import OpenAI
+            import os as _os
+            api_key = _os.environ.get("OPENAI_API_KEY", "").strip()
+            if not api_key:
+                raise TimeoutException(f"Element not found and AI healing has no API key: {locator}")
+
+            page_src = self.driver.page_source[:6000]
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=100,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"In this Android XML page source, find an element that matches "
+                        f"the intent of locator {locator}. "
+                        "Reply with ONLY a valid XPath or resource-id string, nothing else.\n\n"
+                        f"{page_src}"
+                    )
+                }],
+            )
+            healed = response.choices[0].message.content.strip()
+            if not healed:
+                raise TimeoutException(f"AI healing returned empty result for: {locator}")
+
+            by = AppiumBy.XPATH if (healed.startswith("//") or healed.startswith("(")) else AppiumBy.ID
+            print(f"[AI HEAL] Original: {locator} → Healed: ({by}, {healed})")
+            return self.driver.find_element(by, healed)
+        except Exception as e:
+            raise TimeoutException(f"Element not found and AI healing failed ({e}): {locator}")
+
+    def click_element(self, locator, retries=2):
+        for attempt in range(retries + 1):
+            try:
+                self.wait.until(EC.element_to_be_clickable(locator)).click()
+                return
+            except (StaleElementReferenceException, ElementClickInterceptedException):
+                if attempt == retries:
+                    raise
+                time.sleep(0.5)
 
     def type_element(self, locator, text):
         el = self.wait.until(EC.visibility_of_element_located(locator))
@@ -63,22 +115,29 @@ class BasePage:
     def wait_for_element_to_disappear(self, locator):
         return self.wait.until(EC.invisibility_of_element(locator))
 
-    def tap_element(self, locator):
-        element = self.wait_for_element(locator)
-        loc = element.location
-        size = element.size
+    def tap_element(self, locator, retries=2):
+        for attempt in range(retries + 1):
+            try:
+                element = self.wait_for_element(locator)
+                loc = element.location
+                size = element.size
 
-        x = loc["x"] + size["width"] // 2
-        y = loc["y"] + size["height"] // 2
+                x = loc["x"] + size["width"] // 2
+                y = loc["y"] + size["height"] // 2
 
-        finger = PointerInput("touch", "finger")
-        actions = ActionBuilder(self.driver, mouse=finger)
+                finger = PointerInput("touch", "finger")
+                actions = ActionBuilder(self.driver, mouse=finger)
 
-        actions.pointer_action.move_to_location(x, y)
-        actions.pointer_action.pointer_down()
-        actions.pointer_action.pointer_up()
+                actions.pointer_action.move_to_location(x, y)
+                actions.pointer_action.pointer_down()
+                actions.pointer_action.pointer_up()
 
-        actions.perform()
+                actions.perform()
+                return
+            except StaleElementReferenceException:
+                if attempt == retries:
+                    raise
+                time.sleep(0.5)
 
     def scroll_to_end(self):
         actions = ActionChains(self.driver)

@@ -17,26 +17,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 from tests.web_tests.test_olp_01_02_03 import add_opportunity
 
 opp_name = None
-# @pytest.fixture(scope="function")
-# # @pytest.fixture(scope="session")
-# def created_opportunity(web_driver,test_data, config, settings):
-#     # driver = webdriver.Chrome()
-#     # driver.maximize_window()
-#     # try:
-#     # opp = add_opportunity(web_driver, test_data, config, settings)
-#     # finally:
-#     #     driver.quit()
-#     # return opp
-#     try:
-#         opp = add_opportunity(web_driver, test_data, config, settings)
-#         return opp
-#     except Exception as e:
-#         try:
-#             web_driver.save_screenshot("created_opportunity_failure.png")
-#         except Exception:
-#             pass
-#         raise
-#
+user_data = dict()
 
 @pytest.fixture(scope="function")
 def created_opportunity(web_driver, test_data, config, settings, request):
@@ -66,11 +47,12 @@ def created_opportunity(web_driver, test_data, config, settings, request):
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
 def test_03_opportunity_invite_notifications_and_details(created_opportunity, web_driver, config, test_data, settings, mobile_driver):
-
+    # if 'staging' in config.get("cchq_url"):
+    #     pytest.xfail("https://dimagi.atlassian.net/browse/CI-554")
     data = test_data.get("TC_3_to_4")
-    global opp_name
-    opp_name = created_opportunity
-    print(opp_name)
+    global opp_name, user_data
+    opp = created_opportunity
+    print(opp)
 
     # web driver and page initiation
     cchq_login_page = LoginPage(web_driver)
@@ -85,6 +67,19 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
     opportunity = OpportunityPage(mobile_driver)
     app_notifications = AppNotifications(mobile_driver)
 
+    if 'staging' in config.get("cchq_url"):
+        user_data = {
+                    "phone_number": data["phone_number_staging"],
+                    "username" :data["username_staging"],
+                    "backup_code": data["backup_code_staging"]
+            }
+    else:
+        user_data = {
+            "phone_number": data["phone_number"],
+            "username" :data["username"],
+            "backup_code": data["backup_code"]
+            }
+
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -92,9 +87,9 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Verify Opportunity List in Opportunity Dashboard"):
         home.nav_to_opportunities()
@@ -108,20 +103,18 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
 
     with allure.step("Invite Workers to Opportunity in Connect Dashboard Page"):
         connect_home_page.select_organization_from_list(data["org_name"])
-        opp_dashboard_page.navigate_to_connect_workers(opp_name)
+        opp_dashboard_page.navigate_to_connect_workers(opp)
         # opp_dashboard_page.navigate_to_connect_workers(data["opportunity_name"])
-        connect_workers_page.invite_workers_to_opportunity([data["country_code"]+data["phone_number"]])
+        connect_workers_page.invite_workers_to_opportunity([data["country_code"]+user_data["phone_number"]])
 
     with allure.step("Verify push notification shown for the invite"):
-        notifications.open_notifications()
-        notifications.verify_opportunity_invite()
-        notifications.click_opportunity_invite()
+        notifications.check_and_open_notification()
 
     with allure.step("Handle Fingerprint Authentication"):
         pid.handle_fingerprint_auth()
 
     with allure.step("Verify the Opportunity Notifications"):
-        opportunity.open_opportunity_from_list(opp_name, "new opportunity")
+        opportunity.open_opportunity_from_list(opp, "new opportunity")
         opportunity.click_notification()
         app_notifications.verify_all_notifications()
 
@@ -129,6 +122,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
         opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()
+    opp_name=opp
 
 
 
@@ -178,9 +172,9 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Open the learn app page"):
         home.open_app_from_goto_connect()
@@ -213,7 +207,7 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
         connect_home_page.select_organization_from_list(data["org_name"])
         opp_dashboard_page.navigate_to_connect_workers(opp_name)
         connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Failed")
+        connect_workers_page.verify_worker_assessment_status(user_data["username"], "Failed")
 
     with allure.step("Verify Job Status for Failed Assessment"):
         learn.sync_with_server()
@@ -229,7 +223,7 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
     with allure.step("Verify Assessment status in learn table for worker"):
         opp_dashboard_page.navigate_to_connect_workers(opp_name)
         connect_workers_page.click_tab_by_name("Learn")
-        connect_workers_page.verify_worker_assessment_status(data["username"], "Passed")
+        connect_workers_page.verify_worker_assessment_status(user_data["username"], "Passed")
 
     with allure.step("Verify Completed Opportunity details"):
         learn.verify_opportunity_details_screen()
@@ -286,9 +280,9 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
 
     with allure.step("Sign in with existing demo user"):
         pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])   # test number
+                                 user_data["phone_number"],
+                                 user_data["username"],
+                                 user_data["backup_code"])   # test number
 
     with allure.step("Open the delivery app"):
         home.open_app_from_goto_connect()
@@ -304,9 +298,9 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
     with allure.step("Make payment for the worker in the opportunity of Connect Dashboard Page"):
         opp_dashboard_page.navigate_to_payments_earned(opp_name)
         # opp_dashboard_page.navigate_to_payments_earned(data["opportunity_name"])
-        connect_workers_page.make_payment_with_date_for_worker(data["username"],
+        connect_workers_page.make_payment_with_date_for_worker(user_data["username"],
                                                          data["country_code"],
-                                                         data["phone_number"],
+                                                         user_data["phone_number"],
                                                         "100")
 
     with allure.step("Verify push notification shown for the payment"):

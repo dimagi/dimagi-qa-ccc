@@ -1,0 +1,34 @@
+# ============================================================
+# SAMPLE WEB TEST — copy this file, rename it (e.g. my_login_test.txt),
+# fill in your own details, then run the generator.
+# ============================================================
+
+# ----- Test Configuration -----
+Test Name: Verify User Can Login to CommCare HQ and View Home Page
+Test Type: web
+Feature: Authentication
+Story: User Login Flow
+Tags: AUTH_1, AUTH_2
+Description:
+  This test verifies that a valid user can log in to CommCare HQ and
+  land on the home page successfully.
+
+# ----- Test Steps -----
+# Write each step as a plain sentence. Be specific about:
+#   - What you click / type
+#   - What you expect to see / verify
+#   - Any data you use (reference a Test Data ID if needed)
+
+1. Open the CommCare HQ login page using the environment URL
+2. Enter the username from credentials stored in settings
+3. Enter the password from credentials stored in settings
+4. Click the Sign In button
+5. Verify the home page title shows "Welcome"
+
+# ----- Test Data (optional) -----
+# If your test needs specific data beyond credentials, list it here.
+# Give each block a unique ID starting with the test tag (e.g. AUTH_1).
+# The generator will tell you which YAML file to update.
+
+# AUTH_1:
+#   expected_title: "Welcome"

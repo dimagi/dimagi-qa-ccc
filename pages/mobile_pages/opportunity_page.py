@@ -155,7 +155,7 @@ class OpportunityPage(BasePage):
         self.click_element(self.SYNC_BTN)
         time.sleep(5)
 
-        button_text = "Resume" if opp_status.lower() == "delivery" else "Review"
+        button_text = "Resume" if opp_status.lower() == "delivery" else "View Opportunity"
 
         # Scroll to opportunity
         opportunity = self.scroll_to_text(opp_name)
@@ -179,7 +179,7 @@ class OpportunityPage(BasePage):
         if not self.is_present(button):
             button = (
                 AppiumBy.XPATH,
-                f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Resume')]"
+                f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Resume') or contains(@text, 'Proceed')]"
                 )
         print(button)
         self.click_element(button)

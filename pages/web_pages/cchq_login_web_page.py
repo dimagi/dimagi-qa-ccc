@@ -37,6 +37,7 @@ class LoginPage(BaseWebPage):
         try:
             cchq_url = config.get("cchq_url")
             self.driver.get(cchq_url)
+            self.wait_for_page_to_load()
             self.verify_login_page_title("Welcome")
             self.enter_username_and_password(
                 settings.get(

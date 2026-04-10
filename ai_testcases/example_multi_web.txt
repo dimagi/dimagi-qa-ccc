@@ -1,0 +1,59 @@
+# ============================================================
+# MULTI-TEST EXAMPLE — multiple test cases in one file.
+# Separate each test case with [TEST CASE N] on its own line.
+# All cases in this file go into a single generated .py file.
+# ============================================================
+
+[TEST CASE 1]
+Test Name: Verify Login to CommCare HQ
+Test Type: web
+Feature: Authentication
+Story: Program Manager Login
+Tags: AUTH_1
+Description:
+  Verifies a program manager can log in to CommCare HQ
+  and land on the home dashboard.
+
+Steps:
+1. Open CommCare HQ using the environment URL from settings
+2. Enter the username from settings credentials
+3. Enter the password from settings credentials
+4. Click Sign In
+5. Verify the home page title shows "Welcome"
+
+
+[TEST CASE 2]
+Test Name: Verify Program Manager Can Navigate to Connect Page
+Test Type: web
+Feature: Authentication
+Story: Navigate from CommCare HQ to Connect
+Tags: AUTH_2
+Description:
+  Verifies that after logging in to CommCare HQ a program manager
+  can navigate to the Connect page in a new browser tab.
+
+Steps:
+1. Log in to CommCare HQ using credentials from settings
+2. Verify the home page title shows "Welcome"
+3. Navigate to the Connect page in a new browser tab
+4. Verify the Connect page URL contains the connect domain
+5. Sign in to Connect using the CommCare HQ account
+6. Verify the organisation selection screen is shown
+
+
+[TEST CASE 3]
+Test Name: Verify Program Manager Can Select Organisation
+Test Type: web
+Feature: Organisation
+Story: Select organisation from Connect landing page
+Tags: AUTH_3
+Description:
+  Verifies that after signing in to Connect the program manager
+  can select their organisation and reach the main Connect dashboard.
+
+Steps:
+1. Log in to CommCare HQ using credentials from settings
+2. Navigate to the Connect page in a new browser tab
+3. Sign in to Connect using CommCare HQ credentials
+4. Select the organisation "PM_Automation_01" from the list
+5. Verify the Connect dashboard is shown for "PM_Automation_01"

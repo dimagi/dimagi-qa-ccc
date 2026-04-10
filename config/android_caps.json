@@ -30,8 +30,8 @@
     "autoGrantPermissions": true,
 
     "bstack:options": {
-      "projectName": "Dimagi Mobile Automation",
-      "buildName": "PID Regression",
+      "projectName": "Connect Mobile Automation",
+      "buildName": "Connect Mobile Regression",
 
       "debug": true,
       "networkLogs": true,

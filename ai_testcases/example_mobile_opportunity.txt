@@ -1,0 +1,39 @@
+Test Name: Verify Mobile User Can View and Accept an Opportunity
+Test Type: mobile
+Feature: Opportunity
+Story: Worker views opportunity details and accepts invite
+Tags: TC_5, TC_6
+Description:
+  This test verifies that a Connect mobile worker can log in to the app,
+  receive an opportunity invite notification, view the opportunity details,
+  and accept it successfully.
+
+Test Data ID: TC_5
+
+Steps:
+1. Open the side navigation menu in the app
+2. Click Sign In / Register
+3. Enter the phone number from test data TC_5 (country code and number)
+4. Complete fingerprint authentication when prompted
+5. Confirm the demo user popup if it appears
+6. Enter the username from test data TC_5
+7. Enter the backup code from test data TC_5 and continue
+8. Verify the user's name is displayed on the home screen
+9. Open the notification panel to check for an opportunity invite
+10. Tap on the opportunity invite notification
+11. Verify the opportunity name from test data TC_5 is shown on the details screen
+12. Verify the opportunity description, payment details, and start date are visible
+13. Tap the "Accept" button to accept the opportunity
+14. Verify the opportunity now appears in the user's opportunity list
+15. Sign out using Forget Personal ID
+
+# ---------------------------------------------------------------
+# Test Data — add these entries to test_data/mobile_workers.yaml
+# ---------------------------------------------------------------
+# TC_5:
+#   country_code: "+7426"
+#   phone_number: "7426050"
+#   username: "Auto Worker 50"
+#   backup_code: "742605"
+#   opportunity_name: "Automation Opportunity March"
+#   org_name: "PM_Automation_01"

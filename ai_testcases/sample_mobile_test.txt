@@ -1,0 +1,38 @@
+# ============================================================
+# SAMPLE MOBILE TEST — copy this file, rename it, fill in your
+# details, then run the generator.
+# ============================================================
+
+# ----- Test Configuration -----
+Test Name: Verify User Can Sign In to CommCare Connect App
+Test Type: mobile
+Feature: PID & CONNECT
+Story: Login Related Validations
+Tags: PID_5, CONNECT_1
+Description:
+  This test verifies that a user can sign in to the CommCare Connect
+  mobile app using their phone number, fingerprint, and backup code,
+  and then see the home screen with all side-menu options.
+
+# ----- Test Steps -----
+1. Open the side navigation menu
+2. Click on the Sign In / Register button
+3. Enter the phone number from test data TC_SAMPLE (country code and number)
+4. Complete fingerprint authentication
+5. Confirm the demo user popup
+6. Enter the username from test data TC_SAMPLE
+7. Verify the backup code entry screen is shown
+8. Enter an incorrect backup code and verify the error message
+9. Enter the correct backup code from test data TC_SAMPLE and continue
+10. Verify the user's name is displayed on the home screen
+11. Verify all side menu options are visible
+12. Sign out by clicking Forget Personal ID
+
+# ----- Test Data -----
+# Add the following entry to test_data/mobile_workers.yaml:
+#
+# TC_SAMPLE:
+#   country_code: "+1"
+#   phone_number: "5550001"
+#   username: "Sample User"
+#   backup_code: "555000"

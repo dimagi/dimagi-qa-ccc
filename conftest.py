@@ -1,14 +1,24 @@
 import os
+import base64
+from io import BytesIO
+from pathlib import Path
 
 import allure
 import pytest
 from pytest_html import extras
 from allure_commons.types import AttachmentType
-import base64
 from utils.helpers import ConfigLoader, SettingsLoader
+
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    _CHARTS_AVAILABLE = True
+except ImportError:
+    _CHARTS_AVAILABLE = False
 from drivers.appium_driver import create_mobile_driver
 from drivers.web_driver import create_web_driver
-# from utils.reporting import attach_mobile_screenshot, attach_web_screenshot
 from utils.helpers import TestDataLoader
 from selenium.common import TimeoutException, WebDriverException
 
@@ -21,11 +31,6 @@ def pytest_addoption(parser):
         default=None,
         help="Environment to run tests against: prod or stage"
     )
-    # parser.addoption(
-    #     "--run_on",
-    #     action="store",
-    #     default="browserstack",
-    #     help="Execution target: local or browserstack")
 
 
 @pytest.fixture(scope="session")
@@ -49,7 +54,6 @@ def run_on(settings):
         key="run_on",
         default="local"
         )
-    # return request.config.getoption("--run_on")
 
 
 # MOBILE DRIVER FIXTURE (only created if test needs it)
@@ -82,41 +86,6 @@ def web_driver(request, config):
     yield driver
     driver.quit()
 
-
-# Attach screenshots on failure (mobile & web)
-# @pytest.hookimpl(hookwrapper=True)
-# def pytest_runtest_makereport(item):
-#     outcome = yield
-#     result = outcome.get_result()
-#
-#     if result.when == "call" and result.failed:
-#         # Attach failure reason
-#         allure.attach(
-#             str(result.longrepr),
-#             name="Failure Reason",
-#             attachment_type=AttachmentType.TEXT
-#         )
-#
-#         # Attach screenshots
-#         mobile = item.funcargs.get("mobile_driver")
-#         web = item.funcargs.get("web_driver")
-#
-#         try:
-#             if mobile:
-#                 attach_mobile_screenshot(mobile, "Mobile Failure Screenshot")
-#
-#             if web:
-#                 attach_web_screenshot(web, "Web Failure Screenshot")
-#
-#         except Exception as e:
-#             print(f"take screenshot failed {e}")
-#
-#     # Append Bugasura TC IDs to test name in xml results
-#     marker = item.get_closest_marker("bugasura")
-#     if marker:
-#         tc_ids = ",".join(marker.args)
-#         result.user_properties.append(("bugasura_tc_ids", tc_ids))
-#         result.nodeid = f"[{tc_ids}]{item.name}"
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item):
@@ -160,56 +129,6 @@ def pytest_runtest_makereport(item):
 
         report.extra = extra
 
-# @pytest.hookimpl(hookwrapper=True)
-# def pytest_runtest_makereport(item):
-#     pytest_html = item.config.pluginmanager.getplugin("html")
-#
-#     outcome = yield
-#     report = outcome.get_result()
-#
-#     if report.when not in ("call", "setup"):
-#         return
-#
-#     if report.failed:
-#         mobile = getattr(item, "mobile_driver", None)
-#         web = getattr(item, "web_driver", None)
-#
-#         extra = getattr(report, "extra", [])
-#
-#         def capture(driver):
-#             if not driver:
-#                 return None
-#             try:
-#                 driver.execute_script("return 1")
-#                 png = driver.get_screenshot_as_png()
-#                 return png
-#             except Exception as e:
-#                 print(f"[WARN] Screenshot failed: {e}")
-#                 return None
-#
-#         for driver in [mobile, web]:
-#             png = capture(driver)
-#             if png:
-#                 # ✅ Allure
-#                 allure.attach(
-#                     png,
-#                     name="Failure Screenshot",
-#                     attachment_type=AttachmentType.PNG
-#                 )
-#
-#                 # ✅ pytest-html (base64 embed)
-#                 if pytest_html:
-#                     screen_img = _capture_screenshot(driver)
-#                     html_img = (
-#                             '<div><img src="data:image/png;base64,%s" alt="screenshot" '
-#                             'style="width:600px;height:300px;" '
-#                             'onclick="window.open(this.src)" align="right"/></div>'
-#                             % screen_img
-#                     )
-#                     extra.append(pytest_html.extras.html(html_img))
-#
-#         report.extra = extra
-
 def _capture_screenshot(driver):
     if not driver:
         return None
@@ -225,3 +144,140 @@ def _capture_screenshot(driver):
 @pytest.fixture(scope="session")
 def test_data():
     return TestDataLoader()
+
+
+# ─── Summary Charts ──────────────────────────────────────────────────────────
+
+_test_stats: dict = {}
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if not _CHARTS_AVAILABLE:
+        print("[charts] matplotlib/Pillow not installed — skipping chart generation.")
+        return
+    tr = session.config.pluginmanager.get_plugin("terminalreporter")
+    if not tr:
+        return
+    global _test_stats
+    _test_stats = {
+        "passed":  len(tr.stats.get("passed",  [])),
+        "failed":  len(tr.stats.get("failed",  [])),
+        "skipped": len(tr.stats.get("skipped", [])),
+        "error":   len(tr.stats.get("error",   [])),
+        "reruns":  len(tr.stats.get("rerun",   [])),
+    }
+    _save_summary_charts(_test_stats)
+
+
+def _save_summary_charts(stats: dict) -> None:
+    out_dir = Path("slack_charts")
+    out_dir.mkdir(exist_ok=True)
+
+    passed  = stats.get("passed",  0)
+    failed  = stats.get("failed",  0)
+    skipped = stats.get("skipped", 0)
+    reruns  = stats.get("reruns",  0)
+
+    # Donut pie chart
+    fig, ax = plt.subplots()
+    wedges, _ = ax.pie(
+        [passed, failed, skipped],
+        labels=None,
+        colors=["#66bb6a", "#ef5350", "#fad000"],
+        startangle=90,
+        wedgeprops=dict(width=0.4),
+    )
+    ax.axis("equal")
+    ax.set_title("Test Summary")
+    ax.legend(
+        [f"Passed: {passed}", f"Failed: {failed}", f"Skipped: {skipped}"],
+        loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.15),
+    )
+    fig.savefig(out_dir / "summary_pie.png", bbox_inches="tight")
+    plt.close(fig)
+
+    # Bar chart — only when there are failures or reruns
+    bar_path = None
+    if failed > 0 or reruns > 0:
+        fig, ax = plt.subplots()
+        bars = ax.bar(["Failed", "Reruns"], [failed, reruns], color=["#ef5350", "#ffa726"])
+        ax.set_ylabel("Number of Tests")
+        ax.set_title("Failures and Reruns")
+        ax.legend(bars, [f"Failed: {failed}", f"Reruns: {reruns}"],
+                  loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.15))
+        bar_path = out_dir / "summary_bar.png"
+        fig.savefig(bar_path, bbox_inches="tight")
+        plt.close(fig)
+
+    _combine_charts(out_dir / "summary_pie.png", bar_path, out_dir / "summary_combined.png")
+
+
+def _combine_charts(pie_path: Path, bar_path, combined_path: Path) -> None:
+    pie = Image.open(pie_path)
+    if bar_path and bar_path.exists():
+        bar = Image.open(bar_path)
+        bar = bar.resize((bar.width * pie.height // bar.height, pie.height))
+        combined = Image.new("RGB", (pie.width + bar.width, pie.height), (255, 255, 255))
+        combined.paste(pie, (0, 0))
+        combined.paste(bar, (pie.width, 0))
+    else:
+        combined = pie.copy()
+    combined.save(combined_path)
+    print(f"[charts] Combined chart saved: {combined_path}")
+
+
+def _matplotlib_img(fig) -> str:
+    buf = BytesIO()
+    plt.tight_layout()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode("utf-8")
+
+
+def pytest_html_results_summary(prefix, summary, postfix, session):
+    if not _CHARTS_AVAILABLE:
+        return
+    tr = session.config.pluginmanager.get_plugin("terminalreporter")
+    if not tr:
+        return
+    stats = tr.stats if hasattr(tr, "stats") else {}
+
+    passed  = len(stats.get("passed",  []))
+    failed  = len(stats.get("failed",  []))
+    skipped = len(stats.get("skipped", []))
+    reruns  = len(stats.get("rerun",   []))
+
+    # Donut pie
+    fig, ax = plt.subplots()
+    wedges, _ = ax.pie(
+        [passed, failed, skipped],
+        labels=None,
+        colors=["#66bb6a", "#ef5350", "#fad000"],
+        startangle=90,
+        wedgeprops=dict(width=0.4),
+    )
+    ax.axis("equal")
+    plt.legend(wedges,
+               [f"Passed: {passed}", f"Failed: {failed}", f"Skipped: {skipped}"],
+               title="Results", loc="upper center",
+               bbox_to_anchor=(0.5, -0.08), ncol=3)
+    pie_img = _matplotlib_img(fig)
+
+    # Bar chart
+    bar_img = None
+    if failed > 0 or reruns > 0:
+        fig, ax = plt.subplots()
+        bars = ax.bar(["Failed", "Reruns"], [failed, reruns], color=["#ef5350", "#ff9933"])
+        ax.set_title("Failures and Reruns")
+        ax.set_ylabel("Number of Tests")
+        plt.legend(bars, [f"Failed: {failed}", f"Reruns: {reruns}"],
+                   loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
+        bar_img = _matplotlib_img(fig)
+
+    html = "<div style='text-align:center; margin-top:20px;'>"
+    html += f"<h3>Test Summary</h3><img src='data:image/png;base64,{pie_img}' style='max-width:500px;'/>"
+    if bar_img:
+        html += f"<h3>Failures and Reruns</h3><img src='data:image/png;base64,{bar_img}' style='max-width:500px;'/>"
+    html += "</div>"
+    summary.append(html)

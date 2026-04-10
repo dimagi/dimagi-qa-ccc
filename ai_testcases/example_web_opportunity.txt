@@ -1,0 +1,51 @@
+Test Name: Verify User Can Create an Opportunity in Connect Page
+Test Type: web
+Feature: Opportunity Lifecycle
+Story: Add and configure a new opportunity
+Tags: OLP_10, OLP_11
+Description:
+  This test verifies that a program manager can log in to CommCare HQ,
+  navigate to the Connect page, and successfully create a new opportunity
+  with a payment unit and budget configured.
+
+Test Data ID: OLP_10
+
+Steps:
+1. Log in to CommCare HQ using credentials from settings
+2. Verify the home page title shows "Welcome"
+3. Navigate to the Connect page in a new tab
+4. Sign in to Connect using the CommCare HQ account
+5. Select the organization "PM_Automation_01" from the organization list
+6. Click on Opportunities in the Connect navigation menu
+7. Click the "Add Opportunity" button
+8. Fill in the opportunity name from test data OLP_10
+9. Select the currency from test data OLP_10
+10. Select the country from test data OLP_10
+11. Enter the short description from test data OLP_10
+12. Select the Learn App from test data OLP_10
+13. Select the Delivery App from test data OLP_10
+14. Enter the passing score from test data OLP_10
+15. Click Save to create the opportunity
+16. Verify the opportunity was created and its name appears on the page
+17. Add a payment unit using data from test data OLP_11
+18. Verify the payment unit was saved successfully
+
+# ---------------------------------------------------------------
+# Test Data — add these entries to test_data/web_test_data.yaml
+# ---------------------------------------------------------------
+# OLP_10:
+#   opportunity_name: "Automation Opportunity March"
+#   currency: "USD (US Dollar)"
+#   country: "United States"
+#   short_description: "Automated test opportunity"
+#   learn_app: "Unreleased - Learn App [Job 1]"
+#   deliver_app: "Unreleased - Delivey App [Job 2]"
+#   passing_score: "50"
+#
+# OLP_11:
+#   payment_unit_name: "Auto Payment Unit"
+#   amount: "200"
+#   max_total: "2000"
+#   max_daily: "20"
+#   start_date: "01-06-2027"
+#   end_date: "01-06-2028"

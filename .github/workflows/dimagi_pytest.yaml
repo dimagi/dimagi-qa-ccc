@@ -90,6 +90,7 @@ jobs:
       hq_password: ${{ secrets.hq_password }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 
     steps:
@@ -102,6 +103,18 @@ jobs:
       - name: Run Web Tests
         run: |
           pytest -v tests/web_tests -m "not cleanup" --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/web --junitxml=reports/web-${{ env.TEST_ENV }}.xml --html=reports/report-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: AI Failure Analysis (Web)
+        if: always()
+        run: python utils/ai_failure_analyst.py reports/web-${{ env.TEST_ENV }}.xml
+
+      - name: Upload AI Failure Report (Web)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-failure-report-web-${{ matrix.environment }}
+          path: ai_failure_report.md
+          if-no-files-found: ignore
 
       - name: Upload Web JUnit
         if: always()
@@ -123,6 +136,14 @@ jobs:
         with:
           name: allure-results-web-${{ matrix.environment }}
           path: reports/allure-results/web
+
+      - name: Upload Charts - Web
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slack_charts-web-${{ matrix.environment }}
+          path: slack_charts/
+          if-no-files-found: ignore
 
       - name: Create run summary for dashboard (web)
         if: always()
@@ -229,6 +250,7 @@ jobs:
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       BIOMETRIC_ENABLED: "false"
       RUN_ON: "browserstack"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -240,6 +262,18 @@ jobs:
       - name: Run Mobile Tests
         run: |
           pytest -v tests/mobile_tests --capture=tee-sys  --env=${{ env.TEST_ENV }} --reruns 1 --alluredir=reports/allure-results/mobile --junitxml=reports/mobile-${{ env.TEST_ENV }}.xml --html=reports/report-mobile-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: AI Failure Analysis (Mobile)
+        if: always()
+        run: python utils/ai_failure_analyst.py reports/mobile-${{ env.TEST_ENV }}.xml
+
+      - name: Upload AI Failure Report (Mobile)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-failure-report-mobile-${{ matrix.environment }}
+          path: ai_failure_report.md
+          if-no-files-found: ignore
 
       - name: Upload Mobile JUnit
         if: always()
@@ -261,6 +295,14 @@ jobs:
         with:
           name: allure-results-mobile-${{ matrix.environment }}
           path: reports/allure-results/mobile
+
+      - name: Upload Charts - Mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slack_charts-mobile-${{ matrix.environment }}
+          path: slack_charts/
+          if-no-files-found: ignore
 
       - name: Create run summary for dashboard (mobile)
         if: always()
@@ -491,47 +533,371 @@ jobs:
       # Slack Notifications
       # -----------------------------
 
-      - name: Slack Notification - Stage
-        if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_SLACK == 'true' }}
-        uses: slackapi/slack-github-action@v2.1.1
+      - name: Post AI Analysis as PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
         with:
-          webhook-type: incoming-webhook
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "${{ steps.aggregate.outputs.stage_color }}",
-                  "text": "*CommCare-Connect Test Automation Report*\n\n\
-                  Run: #${{ github.run_number }}\n\n\
-                  *STAGE — ${{ steps.aggregate.outputs.stage_status }}*\n\n\
-                  ${{ steps.aggregate.outputs.stage_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_web_pass, steps.aggregate.outputs.stage_web_fail, steps.aggregate.outputs.stage_web_err, steps.aggregate.outputs.stage_web_skip) || '' }}\
-                  ${{ steps.aggregate.outputs.stage_has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.stage_mobile_pass, steps.aggregate.outputs.stage_mobile_fail, steps.aggregate.outputs.stage_mobile_err, steps.aggregate.outputs.stage_mobile_skip) || '' }}\n\
-                  https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const envs = ['stage', 'prod'];
+            const scopes = ['web', 'mobile'];
+            let body = '## :robot: AI Failure Analysis\n\n';
+            let hasContent = false;
+
+            for (const env of envs) {
+              for (const scope of scopes) {
+                const reportPath = `artifacts/ai-failure-report-${scope}-${env}/ai_failure_report.md`;
+                if (fs.existsSync(reportPath)) {
+                  const content = fs.readFileSync(reportPath, 'utf8').trim();
+                  if (content && !content.includes('No failures')) {
+                    body += `<details>\n<summary><b>${scope.toUpperCase()} — ${env.toUpperCase()}</b></summary>\n\n${content}\n\n</details>\n\n`;
+                    hasContent = true;
+                  }
                 }
-              ]
+              }
             }
 
-      - name: Slack Notification - Prod
-        if: ${{ steps.aggregate.outputs.prod_status != '' && env.SEND_SLACK == 'true' }}
-        uses: slackapi/slack-github-action@v2.1.1
-        with:
-          webhook-type: incoming-webhook
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "attachments": [
-                {
-                  "color": "${{ steps.aggregate.outputs.prod_color }}",
-                  "text": "*CommCare-Connect Test Automation Report*\n\n\
-                  Run: #${{ github.run_number }}\n\n\
-                  *PROD — ${{ steps.aggregate.outputs.prod_status }}*\n\n\
-                  ${{ steps.aggregate.outputs.prod_has_web == 'true' && format('Web → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_web_pass, steps.aggregate.outputs.prod_web_fail, steps.aggregate.outputs.prod_web_err, steps.aggregate.outputs.prod_web_skip) || '' }}\
-                  ${{ steps.aggregate.outputs.prod_has_mobile == 'true' && format('Mobile → Passed: {0} | Failed: {1} | Errors: {2} | Skipped: {3}\n', steps.aggregate.outputs.prod_mobile_pass, steps.aggregate.outputs.prod_mobile_fail, steps.aggregate.outputs.prod_mobile_err, steps.aggregate.outputs.prod_mobile_skip) || '' }}\n\
-                  https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                }
-              ]
+            if (!hasContent) {
+              console.log('No AI failure reports found — skipping PR comment.');
+              return;
             }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.startsWith('## :robot: AI Failure Analysis'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Slack Notify + Charts + AI Analysis - Stage
+        if: ${{ steps.aggregate.outputs.stage_status != '' && env.SEND_SLACK == 'true' }}
+        env:
+          SLACK_TOKEN:   ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          GITHUB_TOKEN:  ${{ github.token }}
+          ENV_NAME:      stage
+          ENV_STATUS:    ${{ steps.aggregate.outputs.stage_status }}
+          HAS_WEB:       ${{ steps.aggregate.outputs.stage_has_web }}
+          HAS_MOBILE:    ${{ steps.aggregate.outputs.stage_has_mobile }}
+          WEB_PASS:      ${{ steps.aggregate.outputs.stage_web_pass }}
+          WEB_FAIL:      ${{ steps.aggregate.outputs.stage_web_fail }}
+          WEB_ERR:       ${{ steps.aggregate.outputs.stage_web_err }}
+          WEB_SKIP:      ${{ steps.aggregate.outputs.stage_web_skip }}
+          MOB_PASS:      ${{ steps.aggregate.outputs.stage_mobile_pass }}
+          MOB_FAIL:      ${{ steps.aggregate.outputs.stage_mobile_fail }}
+          MOB_ERR:       ${{ steps.aggregate.outputs.stage_mobile_err }}
+          MOB_SKIP:      ${{ steps.aggregate.outputs.stage_mobile_skip }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os, pathlib
+          from slack_sdk import WebClient
+          from slack_sdk.errors import SlackApiError
+
+          token   = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured — skipping")
+              raise SystemExit(0)
+
+          env_name   = os.environ.get("ENV_NAME", "stage")
+          env        = env_name.upper()
+          status     = os.environ.get("ENV_STATUS", "")
+          icon       = "✅" if status == "SUCCESS" else "❌"
+          has_web    = os.environ.get("HAS_WEB", "false").lower() == "true"
+          has_mobile = os.environ.get("HAS_MOBILE", "false").lower() == "true"
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          run_id     = os.environ.get("GITHUB_RUN_ID", "")
+          repo       = os.environ.get("GITHUB_REPOSITORY", "")
+          server     = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+          run_url    = f"{server}/{repo}/actions/runs/{run_id}"
+          dashboard_url = "https://dimagi.github.io/dimagi-qa-ccc/"
+          env_lower  = env_name.lower()
+          gh_token   = os.environ.get("GITHUB_TOKEN", "")
+
+          def get_artifact_url(scope, env_lower):
+              import urllib.request, json as _json
+              artifact_name = f"html-{scope}-{env_lower}"
+              api_url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+              req = urllib.request.Request(api_url, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      data = _json.loads(r.read())
+                  for a in data.get("artifacts", []):
+                      if a["name"] == artifact_name:
+                          return f"{server}/{repo}/actions/runs/{run_id}/artifacts/{a['id']}"
+              except Exception as e:
+                  print(f"Could not fetch artifact ID for {artifact_name}: {e}")
+              return run_url
+
+          client = WebClient(token=token)
+
+          scope_info = {
+              "web":    {"has": has_web,    "pass": os.environ.get("WEB_PASS", 0), "fail": os.environ.get("WEB_FAIL", 0), "skip": os.environ.get("WEB_SKIP", 0), "icon": "🌐"},
+              "mobile": {"has": has_mobile, "pass": os.environ.get("MOB_PASS", 0), "fail": os.environ.get("MOB_FAIL", 0), "skip": os.environ.get("MOB_SKIP", 0), "icon": "📱"},
+          }
+
+          for scope in ["web", "mobile"]:
+              info = scope_info[scope]
+              if not info["has"]:
+                  continue
+
+              artifact_url = get_artifact_url(scope, env_lower)
+              scope_icon = "✅" if int(info["fail"] or 0) == 0 else "❌"
+              comment = (
+                  f"{scope_icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
+                  f"{info['icon']} {scope.capitalize()} → ✅ {info['pass']} | ❌ {info['fail']} | ⏭ {info['skip']}\n"
+                  f"📎 Artifact: <{artifact_url}|Download here>\n"
+                  f"🔗 Dashboard: <{dashboard_url}|{dashboard_url}>"
+              )
+
+              chart = pathlib.Path(f"artifacts/slack_charts-{scope}-{env_lower}/summary_combined.png")
+              parent_ts = None
+
+              if chart.exists():
+                  try:
+                      resp = client.files_upload_v2(
+                          file=str(chart),
+                          filename=f"summary_combined_{scope}_{env_lower}.png",
+                          title="summary combined",
+                          channel=channel,
+                          initial_comment=comment,
+                      )
+                      try:
+                          shares = resp.get("file", {}).get("shares", {})
+                          for visibility in ("private", "public"):
+                              ch_shares = shares.get(visibility, {}).get(channel, [])
+                              if ch_shares:
+                                  parent_ts = ch_shares[0].get("ts")
+                                  break
+                      except Exception:
+                          pass
+                      # Fallback: find ts via channel history if not in shares response
+                      if not parent_ts:
+                          import time
+                          time.sleep(2)
+                          try:
+                              now = time.time()
+                              history = client.conversations_history(channel=channel, limit=5)
+                              for msg in history.get("messages", []):
+                                  if now - float(msg.get("ts", 0)) < 60 and msg.get("files"):
+                                      msg_text = msg.get("text", "") or ""
+                                      file_comment = (msg.get("files") or [{}])[0].get("initial_comment", {}).get("comment", "") or ""
+                                      combined = (msg_text + file_comment).lower()
+                                      if env_lower in combined and scope in combined:
+                                          parent_ts = msg["ts"]
+                                          break
+                          except Exception as ts_err:
+                              print(f"Could not get ts from history: {ts_err}")
+                      print(f"Chart uploaded for {scope}-{env_lower}, parent_ts={parent_ts}")
+                  except Exception as e:
+                      print(f"Chart upload failed ({scope}): {e}")
+                      try:
+                          resp = client.chat_postMessage(channel=channel, text=comment, mrkdwn=True)
+                          parent_ts = resp["ts"]
+                      except Exception as e2:
+                          print(f"chat_postMessage fallback failed: {e2}")
+              else:
+                  print(f"No chart found: {chart}")
+                  try:
+                      resp = client.chat_postMessage(channel=channel, text=comment, mrkdwn=True)
+                      parent_ts = resp["ts"]
+                  except SlackApiError as e:
+                      print(f"chat_postMessage failed: {e}")
+
+              if parent_ts:
+                  report = pathlib.Path(f"artifacts/ai-failure-report-{scope}-{env_lower}/ai_failure_report.md")
+                  if report.exists():
+                      content = report.read_text(encoding="utf-8").strip()
+                      if content and "No failures" not in content:
+                          if len(content) > 3000:
+                              content = content[:3000] + "\n... [see artifact for full report]"
+                          try:
+                              client.chat_postMessage(
+                                  channel=channel,
+                                  thread_ts=parent_ts,
+                                  text=f"🤖 *AI Failure Analysis — {scope.upper()} ({env})*\n\n{content}",
+                                  mrkdwn=True,
+                              )
+                              print(f"AI analysis posted for {scope}-{env_lower}")
+                          except Exception as e:
+                              print(f"AI thread failed ({scope}): {e}")
+          PY
+
+      - name: Slack Notify + Charts + AI Analysis - Prod
+        if: ${{ steps.aggregate.outputs.prod_status != '' && env.SEND_SLACK == 'true' }}
+        env:
+          SLACK_TOKEN:   ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          GITHUB_TOKEN:  ${{ github.token }}
+          ENV_NAME:      prod
+          ENV_STATUS:    ${{ steps.aggregate.outputs.prod_status }}
+          HAS_WEB:       ${{ steps.aggregate.outputs.prod_has_web }}
+          HAS_MOBILE:    ${{ steps.aggregate.outputs.prod_has_mobile }}
+          WEB_PASS:      ${{ steps.aggregate.outputs.prod_web_pass }}
+          WEB_FAIL:      ${{ steps.aggregate.outputs.prod_web_fail }}
+          WEB_ERR:       ${{ steps.aggregate.outputs.prod_web_err }}
+          WEB_SKIP:      ${{ steps.aggregate.outputs.prod_web_skip }}
+          MOB_PASS:      ${{ steps.aggregate.outputs.prod_mobile_pass }}
+          MOB_FAIL:      ${{ steps.aggregate.outputs.prod_mobile_fail }}
+          MOB_ERR:       ${{ steps.aggregate.outputs.prod_mobile_err }}
+          MOB_SKIP:      ${{ steps.aggregate.outputs.prod_mobile_skip }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os, pathlib
+          from slack_sdk import WebClient
+          from slack_sdk.errors import SlackApiError
+
+          token   = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured — skipping")
+              raise SystemExit(0)
+
+          env_name   = os.environ.get("ENV_NAME", "prod")
+          env        = env_name.upper()
+          status     = os.environ.get("ENV_STATUS", "")
+          icon       = "✅" if status == "SUCCESS" else "❌"
+          has_web    = os.environ.get("HAS_WEB", "false").lower() == "true"
+          has_mobile = os.environ.get("HAS_MOBILE", "false").lower() == "true"
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          run_id     = os.environ.get("GITHUB_RUN_ID", "")
+          repo       = os.environ.get("GITHUB_REPOSITORY", "")
+          server     = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+          run_url    = f"{server}/{repo}/actions/runs/{run_id}"
+          dashboard_url = "https://dimagi.github.io/dimagi-qa-ccc/"
+          env_lower  = env_name.lower()
+          gh_token   = os.environ.get("GITHUB_TOKEN", "")
+
+          def get_artifact_url(scope, env_lower):
+              import urllib.request, json as _json
+              artifact_name = f"html-{scope}-{env_lower}"
+              api_url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+              req = urllib.request.Request(api_url, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      data = _json.loads(r.read())
+                  for a in data.get("artifacts", []):
+                      if a["name"] == artifact_name:
+                          return f"{server}/{repo}/actions/runs/{run_id}/artifacts/{a['id']}"
+              except Exception as e:
+                  print(f"Could not fetch artifact ID for {artifact_name}: {e}")
+              return run_url
+
+          client = WebClient(token=token)
+
+          scope_info = {
+              "web":    {"has": has_web,    "pass": os.environ.get("WEB_PASS", 0), "fail": os.environ.get("WEB_FAIL", 0), "skip": os.environ.get("WEB_SKIP", 0), "icon": "🌐"},
+              "mobile": {"has": has_mobile, "pass": os.environ.get("MOB_PASS", 0), "fail": os.environ.get("MOB_FAIL", 0), "skip": os.environ.get("MOB_SKIP", 0), "icon": "📱"},
+          }
+
+          for scope in ["web", "mobile"]:
+              info = scope_info[scope]
+              if not info["has"]:
+                  continue
+
+              artifact_url = get_artifact_url(scope, env_lower)
+              scope_icon = "✅" if int(info["fail"] or 0) == 0 else "❌"
+              comment = (
+                  f"{scope_icon} 📊 [{env}] CommCare-Connect {scope.capitalize()} Tests — Run #{run_number}\n"
+                  f"{info['icon']} {scope.capitalize()} → ✅ {info['pass']} | ❌ {info['fail']} | ⏭ {info['skip']}\n"
+                  f"📎 Artifact: <{artifact_url}|Download here>\n"
+                  f"🔗 Dashboard: <{dashboard_url}|{dashboard_url}>"
+              )
+
+              chart = pathlib.Path(f"artifacts/slack_charts-{scope}-{env_lower}/summary_combined.png")
+              parent_ts = None
+
+              if chart.exists():
+                  try:
+                      resp = client.files_upload_v2(
+                          file=str(chart),
+                          filename=f"summary_combined_{scope}_{env_lower}.png",
+                          title="summary combined",
+                          channel=channel,
+                          initial_comment=comment,
+                      )
+                      try:
+                          shares = resp.get("file", {}).get("shares", {})
+                          for visibility in ("private", "public"):
+                              ch_shares = shares.get(visibility, {}).get(channel, [])
+                              if ch_shares:
+                                  parent_ts = ch_shares[0].get("ts")
+                                  break
+                      except Exception:
+                          pass
+                      # Fallback: find ts via channel history if not in shares response
+                      if not parent_ts:
+                          import time
+                          time.sleep(2)
+                          try:
+                              now = time.time()
+                              history = client.conversations_history(channel=channel, limit=5)
+                              for msg in history.get("messages", []):
+                                  if now - float(msg.get("ts", 0)) < 60 and msg.get("files"):
+                                      msg_text = msg.get("text", "") or ""
+                                      file_comment = (msg.get("files") or [{}])[0].get("initial_comment", {}).get("comment", "") or ""
+                                      combined = (msg_text + file_comment).lower()
+                                      if env_lower in combined and scope in combined:
+                                          parent_ts = msg["ts"]
+                                          break
+                          except Exception as ts_err:
+                              print(f"Could not get ts from history: {ts_err}")
+                      print(f"Chart uploaded for {scope}-{env_lower}, parent_ts={parent_ts}")
+                  except Exception as e:
+                      print(f"Chart upload failed ({scope}): {e}")
+                      try:
+                          resp = client.chat_postMessage(channel=channel, text=comment, mrkdwn=True)
+                          parent_ts = resp["ts"]
+                      except Exception as e2:
+                          print(f"chat_postMessage fallback failed: {e2}")
+              else:
+                  print(f"No chart found: {chart}")
+                  try:
+                      resp = client.chat_postMessage(channel=channel, text=comment, mrkdwn=True)
+                      parent_ts = resp["ts"]
+                  except SlackApiError as e:
+                      print(f"chat_postMessage failed: {e}")
+
+              if parent_ts:
+                  report = pathlib.Path(f"artifacts/ai-failure-report-{scope}-{env_lower}/ai_failure_report.md")
+                  if report.exists():
+                      content = report.read_text(encoding="utf-8").strip()
+                      if content and "No failures" not in content:
+                          if len(content) > 3000:
+                              content = content[:3000] + "\n... [see artifact for full report]"
+                          try:
+                              client.chat_postMessage(
+                                  channel=channel,
+                                  thread_ts=parent_ts,
+                                  text=f"🤖 *AI Failure Analysis — {scope.upper()} ({env})*\n\n{content}",
+                                  mrkdwn=True,
+                              )
+                              print(f"AI analysis posted for {scope}-{env_lower}")
+                          except Exception as e:
+                              print(f"AI thread failed ({scope}): {e}")
+          PY
 
       # -----------------------------
       # Email Notifications

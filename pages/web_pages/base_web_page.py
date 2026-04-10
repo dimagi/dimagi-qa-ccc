@@ -12,6 +12,9 @@ from selenium.webdriver.support.ui import Select
 from utils.helpers import LocatorLoader, PROJECT_ROOT
 from openpyxl import load_workbook
 
+# Self-healing locators: enabled when AI_HEALING_ENABLED=true and OPENAI_API_KEY is set
+_AI_HEALING_ENABLED = os.getenv("AI_HEALING_ENABLED", "false").lower() == "true"
+
 locators = LocatorLoader("locators/web_locators.yaml", platform="web")
 
 class BaseWebPage:
@@ -36,10 +39,47 @@ class BaseWebPage:
         el.send_keys(text)
 
     def wait_for_element(self, locator, timeout=None):
-        if timeout:
-            return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
-        else:
-            return self.wait.until(EC.presence_of_element_located(locator))
+        try:
+            if timeout:
+                return WebDriverWait(self.driver, timeout=timeout, poll_frequency=2).until(EC.presence_of_element_located(locator))
+            else:
+                return self.wait.until(EC.presence_of_element_located(locator))
+        except TimeoutException:
+            if _AI_HEALING_ENABLED:
+                return self._ai_heal_web(locator)
+            raise
+
+    def _ai_heal_web(self, locator):
+        """Fall back to AI to find an alternative locator when the original times out."""
+        try:
+            from openai import OpenAI
+            api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+            if not api_key:
+                raise TimeoutException(f"Element not found and AI healing has no API key: {locator}")
+
+            page_src = self.driver.page_source[:6000]
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                max_tokens=150,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"In this HTML page source, find an element that matches "
+                        f"the intent of locator {locator}. "
+                        "Reply with ONLY a valid XPath string (starting with //), nothing else.\n\n"
+                        f"{page_src}"
+                    )
+                }],
+            )
+            healed = response.choices[0].message.content.strip()
+            if not healed or not healed.startswith("/"):
+                raise TimeoutException(f"AI healing returned unusable result for: {locator}")
+
+            print(f"[AI HEAL] Original: {locator} → Healed: (By.XPATH, {healed})")
+            return self.driver.find_element(By.XPATH, healed)
+        except Exception as e:
+            raise TimeoutException(f"Element not found and AI healing failed ({e}): {locator}")
 
     def is_selected(self, locator):
         try:
@@ -52,8 +92,15 @@ class BaseWebPage:
     def wait_for_clickable(self, locator):
         return self.wait.until(EC.element_to_be_clickable(locator))
 
-    def click_element(self, locator):
-        self.wait.until(EC.element_to_be_clickable(locator)).click()
+    def click_element(self, locator, retries=2):
+        for attempt in range(retries + 1):
+            try:
+                self.wait.until(EC.element_to_be_clickable(locator)).click()
+                return
+            except (StaleElementReferenceException, ElementClickInterceptedException):
+                if attempt == retries:
+                    raise
+                time.sleep(0.5)
 
     def type_element(self, locator, text):
         el = self.wait.until(EC.visibility_of_element_located(locator))
