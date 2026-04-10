@@ -150,6 +150,7 @@ jobs:
         shell: bash
         env:
           TEST_ENV: ${{ matrix.environment }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           mkdir -p metrics_out
           python - <<'PY'
@@ -159,11 +160,22 @@ jobs:
           scope = "web"
           env   = os.environ.get("TEST_ENV", "unknown")
 
+          EVENT_TRIGGER_MAP = {
+              "schedule":         "Scheduled",
+              "workflow_dispatch": "Manual",
+              "push":             "Push/Pull",
+              "pull_request":     "Push/Pull",
+              "workflow_run":     "Post Deploy",
+          }
+          raw_event = os.environ.get("GITHUB_EVENT_NAME", "unknown")
+          trigger   = EVENT_TRIGGER_MAP.get(raw_event, raw_event)
+
           data = {
               "timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
-              "env":    env,
-              "scope":  scope,
-              "suite":  f"CommCare-Connect {scope.capitalize()} Tests",
+              "env":     env,
+              "scope":   scope,
+              "suite":   f"CommCare-Connect {scope.capitalize()} Tests",
+              "trigger": trigger,
               "status": "pass",
               "passed":  0,
               "failed":  0,
@@ -297,6 +309,7 @@ jobs:
         shell: bash
         env:
           TEST_ENV: ${{ matrix.environment }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           mkdir -p metrics_out
           python - <<'PY'
@@ -306,11 +319,22 @@ jobs:
           scope = "mobile"
           env   = os.environ.get("TEST_ENV", "unknown")
 
+          EVENT_TRIGGER_MAP = {
+              "schedule":         "Scheduled",
+              "workflow_dispatch": "Manual",
+              "push":             "Push/Pull",
+              "pull_request":     "Push/Pull",
+              "workflow_run":     "Post Deploy",
+          }
+          raw_event = os.environ.get("GITHUB_EVENT_NAME", "unknown")
+          trigger   = EVENT_TRIGGER_MAP.get(raw_event, raw_event)
+
           data = {
               "timestamp_utc": datetime.datetime.utcnow().isoformat() + "Z",
-              "env":    env,
-              "scope":  scope,
-              "suite":  f"CommCare-Connect {scope.capitalize()} Tests",
+              "env":     env,
+              "scope":   scope,
+              "suite":   f"CommCare-Connect {scope.capitalize()} Tests",
+              "trigger": trigger,
               "status": "pass",
               "passed":  0,
               "failed":  0,
