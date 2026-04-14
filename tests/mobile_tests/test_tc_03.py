@@ -159,6 +159,8 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
     learn = LearnAppPage(mobile_driver)
+    mobile_notifications = MobileNotifications(mobile_driver)
+    app_notifications = AppNotifications(mobile_driver)
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config, settings)
@@ -219,6 +221,19 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
     with allure.step("Verify Job Status for Passed Assessment"):
         learn.sync_with_server()
         learn.verify_certificate_screen()
+
+    with allure.step("Wait for and click assessment scored push notification from OS tray"):
+        mobile_notifications.check_and_open_assessment_notification()
+
+    with allure.step("Verify certificate screen still displayed after notification tap"):
+        learn.verify_certificate_screen()
+
+    with allure.step("Navigate to in-app notifications and verify assessment scored notification"):
+        home.open_side_menu()
+        home.nav_to_notifications()
+        app_notifications.verify_assessment_scored_notification()
+        home.nav_to_opportunities()
+        opportunity.open_opportunity_from_list(opp_name, "new opportunity")
 
     with allure.step("Verify Assessment status in learn table for worker"):
         opp_dashboard_page.navigate_to_connect_workers(opp_name)
