@@ -12,12 +12,12 @@ TC_2:
 
 TC_3_to_4:
   country_code: "+7426"
-#  phone_number: "7426054"
-#  username: "Automation User 54"
-#  backup_code: "742654"
-  phone_number: "7426034"
-  username: "Automation User 34"
-  backup_code: "742634"
+  phone_number: "7426055"
+  username: "Automation User 55"
+  backup_code: "742655"
+#  phone_number: "7426034"
+#  username: "Automation User 34"
+#  backup_code: "742634"
   org_name: "PM_Automation_01"
   phone_number_staging: "7426034"
   username_staging: "Automation User 34"

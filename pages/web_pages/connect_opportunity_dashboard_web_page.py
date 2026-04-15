@@ -76,7 +76,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_connect_workers(self, opp):
         time.sleep(5)
         try:
-            self.select_by_value(self.PAGE_SIZE, "30")
+            self.select_by_value(self.PAGE_SIZE, "20")
             time.sleep(15)
             self.wait_for_page_to_load()
         except:
@@ -99,7 +99,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_services_delivered(self, opp):
         time.sleep(5)
         try:
-            self.select_by_value(self.PAGE_SIZE, "30")
+            self.select_by_value(self.PAGE_SIZE, "20")
             time.sleep(15)
             self.wait_for_page_to_load()
         except:
@@ -123,7 +123,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_payments_earned(self, opp):
         time.sleep(5)
         try:
-            self.select_by_value(self.PAGE_SIZE, "30")
+            self.select_by_value(self.PAGE_SIZE, "20")
             time.sleep(15)
             self.wait_for_page_to_load()
         except:
@@ -176,7 +176,7 @@ class OpportunityDashboardPage(BaseWebPage):
     def navigate_to_services_delivered(self, opp):
         time.sleep(5)
         try:
-            self.select_by_value(self.PAGE_SIZE, "30")
+            self.select_by_value(self.PAGE_SIZE, "20")
             time.sleep(15)
             self.wait_for_page_to_load()
         except:

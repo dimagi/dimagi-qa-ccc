@@ -57,6 +57,30 @@ def close_notification(driver):
             1000
         )
 
+def clear_notifications(driver):
+    """Click Android's 'Clear all' button inside the notification shade."""
+    from appium.webdriver.common.appiumby import AppiumBy
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.common.exceptions import TimeoutException
+
+    selectors = [
+        (AppiumBy.XPATH, '//*[@content-desc="Clear all notifications"]'),
+        (AppiumBy.XPATH, '//*[contains(@content-desc,"Clear all")]'),
+        (AppiumBy.XPATH, '//*[@text="CLEAR ALL" or @text="Clear all" or @text="Clear All"]'),
+        (AppiumBy.ANDROID_UIAUTOMATOR,
+         'new UiSelector().descriptionContains("Clear all")'),
+    ]
+    for locator in selectors:
+        try:
+            el = WebDriverWait(driver, 5).until(EC.element_to_be_clickable(locator))
+            el.click()
+            print(f"Cleared notifications via UI using {locator}")
+            return
+        except (TimeoutException, Exception):
+            continue
+    print("clear_notifications: 'Clear all' button not found — notification panel may already be empty")
+
 def background_app(driver, seconds=3):
     driver.background_app(seconds)
 

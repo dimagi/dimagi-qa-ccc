@@ -67,6 +67,18 @@ def mobile_driver(request, config, settings, run_on):
     driver = create_mobile_driver(config, settings, run_on, request)
     driver.run_on = run_on
     yield driver
+    #
+    # # Sign out so the next test always starts from a logged-out state,
+    # # while noReset:true (BrowserStack) keeps the FCM token intact.
+    # if run_on == "browserstack":
+    #     try:
+    #         from pages.mobile_pages.home_page import HomePage
+    #         home = HomePage(driver)
+    #         if home.is_displayed(home.HEADER_USERNAME, timeout=5):
+    #             home.sign_out()
+    #     except Exception as e:
+    #         print(f"[WARN] Sign-out in teardown failed: {e}")
+
     try:
         driver.terminate_app("org.commcare.dalvik")
     except Exception as e:
