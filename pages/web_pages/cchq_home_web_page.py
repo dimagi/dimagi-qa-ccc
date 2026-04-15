@@ -19,6 +19,8 @@ class CCHQHomePage(BaseWebPage):
     APP_LINK = locators.get("cchq_home_page", "app_link")
 
     def verify_home_page_title(self, title):
+        text = self.get_text(self.TITLE_ELE)
+        print(text)
         assert title in self.get_text(self.TITLE_ELE)
 
     def click_option_under_messaging_tab(self, option):

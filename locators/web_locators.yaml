@@ -10,7 +10,7 @@ cchq_login_page:
   welcome_title: "//h2[@class='text-center mt-3']"
   username_field: "//input[@id='id_auth-username']"
   password_field: "//input[@id='id_auth-password']"
-  signin_button: "//button[text()='Sign In']"
+  signin_button: "(//button[@type='submit'])[last()]"
   cookie_accept_button: "hs-eu-confirmation-button"
   close_notification: "//div[@class='frame-close']/button[1]"
   iframe: "//iframe[contains(@src,'/embed/frame')]"

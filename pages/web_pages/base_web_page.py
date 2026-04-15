@@ -382,3 +382,12 @@ class BaseWebPage:
                                                                                   )
             is_displayed = element.is_displayed()
         return bool(is_displayed)
+
+    def switch_to_default_content(self):
+        self.driver.switch_to.default_content()
+        print("Switched to default content")
+
+    def switch_to_frame(self, frame_name):
+        frame = self.driver.find_element(*frame_name)
+        self.driver.switch_to.frame(frame)
+        print("Switched to frame.")

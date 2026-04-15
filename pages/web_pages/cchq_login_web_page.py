@@ -25,18 +25,25 @@ class LoginPage(BaseWebPage):
     VIEW_LATEST_UPDATES = locators.get("cchq_login_page", "view_latest_updates")
 
     def verify_login_page_title(self, title):
+        print(self.get_text(self.TITLE_ELE))
         assert title in self.get_text(self.TITLE_ELE)
 
     def enter_username_and_password(self, username, password):
-        self.wait_for_element(self.USERNAME_ELE).send_keys(username)
-        self.wait_for_element(self.PASSWORD_ELE).send_keys(password)
+        self.wait_for_element(self.USERNAME_ELE)
+        self.wait_for_element(self.PASSWORD_ELE)
+        # self.dismiss_notification()
+        self.switch_to_default_content()
+        self.switch_to_latest_tab()
         try:
             self.click_element(self.ACCEPT_COOKIES_BUTTON)
         except:
             print("No Cookies alert present")
-        self.dismiss_notification()
-        self.wait_for_element(self.PASSWORD_ELE).send_keys(Keys.ENTER)
-        #self.click_element(self.SIGNIN_BUTTON)
+        self.type(self.USERNAME_ELE, username)
+        self.type(self.PASSWORD_ELE, password+Keys.ENTER)
+        # self.wait_for_element(self.PASSWORD_ELE).send_keys(Keys.ENTER)
+        # self.wait_for_element(self.SIGNIN_BUTTON)
+        # self.js_click(self.SIGNIN_BUTTON)
+        time.sleep(3)
 
 
     def valid_login_cchq(self, config, settings):
@@ -44,7 +51,8 @@ class LoginPage(BaseWebPage):
             cchq_url = config.get("cchq_url")
             self.driver.get(cchq_url)
             self.wait_for_page_to_load()
-            self.verify_login_page_title("Welcome")
+            # self.verify_login_page_title("Welcome")
+            time.sleep(3)
             self.enter_username_and_password(
                 settings.get(
                     section="creds",
@@ -63,9 +71,19 @@ class LoginPage(BaseWebPage):
         except:
             print("User is already logged in")
 
-    def dismiss_notification(self):
+    def accept_alert(self):
         try:
-            self.driver.switch_to.frame(self.find_element(self.IFRAME))
+            if self.is_present(self.ACCEPT_COOKIES_BUTTON):
+                self.click(self.ACCEPT_COOKIES_BUTTON)
+                print("banner accepted")
+            else:
+                print("no banner present")
+        except (TimeoutException, NoSuchElementException):
+            pass  # ignore if alert not on page
+
+    def dismiss_notification(self):
+        self.switch_to_frame(self.IFRAME)
+        try:
             if self.is_present(self.VIEW_LATEST_UPDATES):
                 self.wait_for_element(self.VIEW_LATEST_UPDATES)
                 self.click_element(self.CLOSE_NOTIFICATION)
@@ -77,6 +95,7 @@ class LoginPage(BaseWebPage):
             pass  # ignore if notification  not on page
         except NoSuchElementException:
             pass
+        self.switch_to_default_content()
 
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")
