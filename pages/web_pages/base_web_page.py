@@ -38,6 +38,11 @@ class BaseWebPage:
         el.clear()
         el.send_keys(text)
 
+    def find_element(self, locator):
+        # self.wait_after_interaction()
+        element = self.driver.find_element(*locator)
+        return element
+
     def wait_for_element(self, locator, timeout=None):
         try:
             if timeout:

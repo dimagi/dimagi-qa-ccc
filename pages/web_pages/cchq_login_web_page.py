@@ -1,4 +1,6 @@
 import time
+
+from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver import Keys
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
@@ -18,6 +20,9 @@ class LoginPage(BaseWebPage):
     PASSWORD_ELE = locators.get("cchq_login_page", "password_field")
     SIGNIN_BUTTON = locators.get("cchq_login_page", "signin_button")
     ACCEPT_COOKIES_BUTTON = locators.get("cchq_login_page", "cookie_accept_button")
+    CLOSE_NOTIFICATION = locators.get("cchq_login_page", "close_notification")
+    IFRAME = locators.get("cchq_login_page", "iframe")
+    VIEW_LATEST_UPDATES = locators.get("cchq_login_page", "view_latest_updates")
 
     def verify_login_page_title(self, title):
         assert title in self.get_text(self.TITLE_ELE)
@@ -29,6 +34,7 @@ class LoginPage(BaseWebPage):
             self.click_element(self.ACCEPT_COOKIES_BUTTON)
         except:
             print("No Cookies alert present")
+        self.dismiss_notification()
         self.wait_for_element(self.PASSWORD_ELE).send_keys(Keys.ENTER)
         #self.click_element(self.SIGNIN_BUTTON)
 
@@ -57,6 +63,20 @@ class LoginPage(BaseWebPage):
         except:
             print("User is already logged in")
 
+    def dismiss_notification(self):
+        try:
+            self.driver.switch_to.frame(self.find_element(self.IFRAME))
+            if self.is_present(self.VIEW_LATEST_UPDATES):
+                self.wait_for_element(self.VIEW_LATEST_UPDATES)
+                self.click_element(self.CLOSE_NOTIFICATION)
+                print("notification dismissed")
+            else:
+                print("no notification present")
+            self.driver.switch_to.default_content()
+        except TimeoutException:
+            pass  # ignore if notification  not on page
+        except NoSuchElementException:
+            pass
 
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")
