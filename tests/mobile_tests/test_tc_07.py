@@ -52,19 +52,19 @@ def test_07_notification_messaging_options_and_worker_suspension(web_driver, mob
     message = Message(mobile_driver)
 
 
-    # with allure.step("Click on Sign In / Register"):
-    #     home.open_side_menu()
-    #     home.click_signup()
+    with allure.step("Click on Sign In / Register"):
+        home.open_side_menu()
+        home.click_signup()
 
-    # with allure.step("Sign in with existing demo user"):
-    #     pid.signin_existing_user(data["country_code"],
-    #                              data["phone_number"],
-    #                              data["username"],
-    #                              data["backup_code"])
+    with allure.step("Sign in with existing demo user"):
+        pid.signin_existing_user(data["country_code"],
+                                 data["phone_number"],
+                                 data["username"],
+                                 data["backup_code"])
 
-    # with allure.step("Open the app notifications screen"):
-    #     home.nav_to_notifications()
-    #     app_notification.verify_all_notifications()
+    with allure.step("Open the app notifications screen"):
+        home.nav_to_notifications()
+        app_notification.verify_all_notifications()
 
     with allure.step("Navigate to Messaging option"):
         home.nav_to_messaging()
