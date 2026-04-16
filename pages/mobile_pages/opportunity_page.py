@@ -13,6 +13,7 @@ class OpportunityPage(BasePage):
     JOB_DESCRIPTION_TXT = locators.get("opportunity_page", "job_description_txt")
     VIEW_MORE_BTN = locators.get("opportunity_page", "view_more_btn")
     JOB_END_DATE_TXT = locators.get("opportunity_page", "job_end_date_txt")
+    JOB_COMPLETE_BY_DATE_TXT = locators.get("opportunity_page", "job_complete_by_date_text")
 
     DELIVERY_DETAILS_REVIEW_TXT = locators.get("opportunity_page", "delivery_details_review_txt")
     TOTAL_VISIT_TXT = locators.get("opportunity_page", "total_visit_txt")
@@ -62,12 +63,13 @@ class OpportunityPage(BasePage):
                 self.JOB_TITLE_TXT,
                 self.JOB_DESCRIPTION_TXT,
                 self.VIEW_MORE_BTN,
-                self.JOB_END_DATE_TXT
+                self.JOB_COMPLETE_BY_DATE_TXT
             ]
 
         for item in menu_items:
             print(menu_items, item)
             assert self.is_displayed(item), f"Job Card details not visible: {item}"
+            print(f"Job Card details visible: {item}")
 
     def verify_delivery_details(self):
         self.click_element(self.VIEW_MORE_BTN)

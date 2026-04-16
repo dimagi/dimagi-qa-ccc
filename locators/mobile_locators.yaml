@@ -60,8 +60,9 @@ opportunity_page:
 
   job_title_txt: "org.commcare.dalvik:id/tv_job_title"
   job_description_txt: "org.commcare.dalvik:id/tv_job_description"
-  view_more_btn: "org.commcare.dalvik:id/tv_view_more"
-  job_end_date_txt: "org.commcare.dalvik:id/connect_job_end_date"
+  view_more_btn: "org.commcare.dalvik:id/acb_view_info"
+  job_end_date_txt: "org.commcare.dalvik:id/tv_end_date"
+  job_complete_by_date_text: "org.commcare.dalvik:id/connect_job_end_date_sub_heading"
 
   learn_details_txt: "//android.widget.TextView[@text='Learn Details']"
   learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
