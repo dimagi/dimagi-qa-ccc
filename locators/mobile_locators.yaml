@@ -66,12 +66,14 @@ opportunity_page:
 
   learn_details_txt: "//android.widget.TextView[@text='Learn Details']"
   learn_title_txt: "org.commcare.dalvik:id/connect_job_intro_learning_title"
+  learn_complete_txt: "//android.widget.TextView[contains(@text,'Complete') or contains(@text,'complete')][contains(@text,'learn modules')]"
   intro_learn_module_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
-  intro_learn_summary_txt: "org.commcare.dalvik:id/connect_job_intro_learning"
+  intro_learn_summary_txt: "org.commcare.dalvik:id/tv_learn_modules_list"
   download_learn_app_btn: "//android.widget.Button[contains(@text,'Start') or contains(@text, 'DOWNLOAD')]"
 
   close_delivery_details_btn: "org.commcare.dalvik:id/imgCloseDialog"
   delivery_details_review_txt: "org.commcare.dalvik:id/connect_review"
+  delivery_title_txt: "org.commcare.dalvik:id/connect_delivery_title"
   total_visit_txt: "org.commcare.dalvik:id/connect_delivery_total_visits_text"
   delivery_days_txt: "org.commcare.dalvik:id/connect_delivery_days_text"
   delivery_max_daily_txt: "org.commcare.dalvik:id/connect_delivery_max_daily_text"
