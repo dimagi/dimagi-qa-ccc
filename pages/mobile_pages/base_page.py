@@ -100,7 +100,7 @@ class BasePage:
     def is_present(self, locator, timeout=10):
         try:
             WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_element_located(*locator)
+                EC.presence_of_element_located(locator)
             )
             return True
         except:

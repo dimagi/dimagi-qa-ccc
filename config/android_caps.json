@@ -35,10 +35,11 @@
 
       "debug": true,
       "networkLogs": true,
+      "consoleLogs": "info",
       "enableBiometric": true,
       "appiumVersion": "2.0.1",
 
-      "idleTimeout": 2000
+      "idleTimeout": 300
     }
   }
 }

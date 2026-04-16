@@ -57,6 +57,16 @@ def close_notification(driver):
             1000
         )
 
+def pull_refresh_notifications(driver):
+    """Swipe down within the open notification shade to trigger a pull-to-refresh."""
+    size = driver.get_window_size()
+    x = size["width"] // 2
+    # Start near the top of the shade content, pull down to mid-screen
+    start_y = int(size["height"] * 0.15)
+    end_y   = int(size["height"] * 0.55)
+    driver.swipe(x, start_y, x, end_y, 800)
+    time.sleep(3)
+
 def clear_notifications(driver):
     """Click Android's 'Clear all' button inside the notification shade."""
     from appium.webdriver.common.appiumby import AppiumBy

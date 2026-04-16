@@ -2,7 +2,7 @@ import time
 
 from pages.mobile_pages.base_page import BasePage
 from utils.helpers import LocatorLoader
-from utils.utility import open_notification, close_notification, clear_notifications
+from utils.utility import open_notification, close_notification, clear_notifications, pull_refresh_notifications
 
 locators = LocatorLoader("locators/mobile_locators.yaml", platform="mobile")
 
@@ -39,27 +39,42 @@ class MobileNotifications(BasePage):
             print(f"getNotifications failed: {e}")
         return False
 
-    def check_and_open_notification(self, retries=5, wait_between=10):
-        """Poll until the invite notification is received, then open the shade and click it."""
+    def check_and_open_notification(self, retries=5, wait_between=5):
         for attempt in range(1, retries + 1):
-            print(f"Waiting for invite notification (attempt {attempt}/{retries})...")
-            if self._invite_in_system_notifications():
-                open_notification(driver=self.driver)
-                time.sleep(3)
-                if self.is_displayed(self.EXPAND_BTN, timeout=5):
-                    self.click_element(self.EXPAND_BTN)
-                self.scroll_to_element(self.INVITE_OPP_TITLE_TXT)
-                self.click_element(self.INVITE_OPP_TITLE_TXT)
+            try:
+                self.open_notifications()
+                self.verify_opportunity_invite()
+                self.click_opportunity_invite()
                 return
-            if attempt < retries:
-                time.sleep(wait_between)
-        raise AssertionError(f"Invite notification not received after {retries} attempts ({retries * wait_between}s)")
+            except:
+                if attempt < retries:
+                    self.refresh_notifications()
+                    time.sleep(wait_between)
+                else:
+                    close_notification(driver=self.driver)
+        raise AssertionError(f"Invite notification not found after {retries} attempts")
+
+    # def check_and_open_notification(self, retries=5, wait_between=10):
+    #     """Poll until the invite notification is received, then open the shade and click it."""
+    #     for attempt in range(1, retries + 1):
+    #         print(f"Waiting for invite notification (attempt {attempt}/{retries})...")
+    #         if self._invite_in_system_notifications():
+    #             open_notification(driver=self.driver)
+    #             time.sleep(3)
+    #             if self.is_displayed(self.EXPAND_BTN, timeout=5):
+    #                 self.click_element(self.EXPAND_BTN)
+    #             self.scroll_to_element(self.INVITE_OPP_TITLE_TXT)
+    #             self.click_element(self.INVITE_OPP_TITLE_TXT)
+    #             return
+    #         if attempt < retries:
+    #             time.sleep(wait_between)
+    #     raise AssertionError(f"Invite notification not received after {retries} attempts ({retries * wait_between}s)")
 
     def refresh_notifications(self):
-        close_notification(driver=self.driver)
-        time.sleep(2)
+        # Open shade if not already open, then pull down within it to refresh
         open_notification(driver=self.driver)
-        time.sleep(3)
+        time.sleep(2)
+        pull_refresh_notifications(driver=self.driver)
 
     def clear_all_notifications(self):
         clear_notifications(driver=self.driver)

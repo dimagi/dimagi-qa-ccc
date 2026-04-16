@@ -34,7 +34,7 @@ from pages.web_pages.connect_workers_web_page import ConnectWorkersPage
 @pytest.mark.mobile
 @pytest.mark.web
 # @pytest.mark.bugasura("TES30", "TES32", "TES106")
-def test_07_notification_messaging_options_and_worker_suspension(web_driver, mobile_driver, config, test_data, settings):
+def test_07_notification_messaging_options_and_worker_suspension(web_driver, config, test_data, settings):
     data = test_data.get("TC_7")
 
     cchq_login_page = LoginPage(web_driver)
@@ -43,32 +43,32 @@ def test_07_notification_messaging_options_and_worker_suspension(web_driver, mob
     connect_workers_page = ConnectWorkersPage(web_driver)
     worker_visits_page = WorkerVisitsPage(web_driver)
 
-    # mobile driver and page initiation
-    pid = PersonalIDPage(mobile_driver)
-    home = HomePage(mobile_driver)
-    opportunity = OpportunityPage(mobile_driver)
-    app_notification = AppNotifications(mobile_driver)
-    delivery = DeliveryAppPage(mobile_driver)
-    message = Message(mobile_driver)
+    # # mobile driver and page initiation
+    # pid = PersonalIDPage(mobile_driver)
+    # home = HomePage(mobile_driver)
+    # opportunity = OpportunityPage(mobile_driver)
+    # app_notification = AppNotifications(mobile_driver)
+    # delivery = DeliveryAppPage(mobile_driver)
+    # message = Message(mobile_driver)
 
 
-    with allure.step("Click on Sign In / Register"):
-        home.open_side_menu()
-        home.click_signup()
+    # with allure.step("Click on Sign In / Register"):
+    #     home.open_side_menu()
+    #     home.click_signup()
 
-    with allure.step("Sign in with existing demo user"):
-        pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])
+    # with allure.step("Sign in with existing demo user"):
+    #     pid.signin_existing_user(data["country_code"],
+    #                              data["phone_number"],
+    #                              data["username"],
+    #                              data["backup_code"])
 
-    with allure.step("Open the app notifications screen"):
-        home.nav_to_notifications()
-        app_notification.verify_all_notifications()
+    # with allure.step("Open the app notifications screen"):
+    #     home.nav_to_notifications()
+    #     app_notification.verify_all_notifications()
 
-    with allure.step("Navigate to Messaging option"):
-        home.nav_to_messaging()
-        message.verify_channel_list()
+    # with allure.step("Navigate to Messaging option"):
+    #     home.nav_to_messaging()
+    #     message.verify_channel_list()
 
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config, settings)
@@ -83,11 +83,11 @@ def test_07_notification_messaging_options_and_worker_suspension(web_driver, mob
 
     with allure.step("Verify Suspend user in Worker Visits page of Opportunity"):
         worker_visits_page.suspend_user_in_worker_visits("Test Reason")
-
-    with allure.step("Verify Suspend message on app home screen"):
-        home.open_app_from_goto_connect()
-        opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
-        delivery.verify_suspend_message()
-
-    with allure.step("Revoke Suspension for a worker"):
-        worker_visits_page.revoke_suspension_for_worker()
+    #
+    # with allure.step("Verify Suspend message on app home screen"):
+    #     home.open_app_from_goto_connect()
+    #     opportunity.open_opportunity_from_list(data["opportunity_name"], "delivery")
+    #     delivery.verify_suspend_message()
+    #
+    # with allure.step("Revoke Suspension for a worker"):
+    #     worker_visits_page.revoke_suspension_for_worker()

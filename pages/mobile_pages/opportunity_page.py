@@ -47,17 +47,26 @@ class OpportunityPage(BasePage):
 
 
 
-    def verify_job_card(self):
+    def verify_job_card(self, opp_status='old'):
         self.click_element(self.SYNC_BTN)
         time.sleep(5)
-        menu_items = [
-            self.JOB_TITLE_TXT,
-            self.JOB_DESCRIPTION_TXT,
-            self.VIEW_MORE_BTN,
-            self.JOB_END_DATE_TXT
-        ]
+        if 'new' in opp_status.lower():
+            menu_items = [
+                self.JOB_TITLE_TXT,
+                self.JOB_DESCRIPTION_TXT,
+                # self.VIEW_MORE_BTN,
+                self.JOB_END_DATE_TXT
+                ]
+        else:
+            menu_items = [
+                self.JOB_TITLE_TXT,
+                self.JOB_DESCRIPTION_TXT,
+                self.VIEW_MORE_BTN,
+                self.JOB_END_DATE_TXT
+            ]
 
         for item in menu_items:
+            print(menu_items, item)
             assert self.is_displayed(item), f"Job Card details not visible: {item}"
 
     def verify_delivery_details(self):
@@ -192,8 +201,9 @@ class OpportunityPage(BasePage):
                 print("No Learn or Delivery app Download button present")
 
 
-
     def click_notification(self):
+        self.click_element(self.SYNC_BTN)
+        time.sleep(5)
         self.wait_for_element(self.NOTIFICATION_BTN)
         self.click_element(self.NOTIFICATION_BTN)
 

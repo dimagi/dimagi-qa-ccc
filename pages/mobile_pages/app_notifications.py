@@ -25,7 +25,7 @@ class AppNotifications(BasePage):
         time.sleep(2)
         simulate_fingerprint(driver=self.driver, run_on=self.driver.run_on)
 
-    def verify_all_notifications(self):
+    def verify_all_notifications(self, opp=None):
         self.click_element(self.SYNC_BTN)
         time.sleep(10)
         if self.is_displayed(self.NO_NOTIFICATION_TXT):
@@ -42,10 +42,12 @@ class AppNotifications(BasePage):
         assert count > 0, "No notifications found"
 
         for i in range(count):
+            print(texts[i].text.strip(), times[i].text.strip())
             assert icons[i].is_displayed(), f"Notification icon missing at index {i}"
             assert texts[i].text.strip(), f"Notification text empty at index {i}"
             assert times[i].text.strip(), f"Notification time missing at index {i}"
             assert arrows[i].is_displayed(), f"Notification arrow missing at index {i}"
-
+            if opp:
+                assert opp in texts[i].text.strip()
         self.navigate_back()
 

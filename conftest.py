@@ -1,5 +1,6 @@
 import os
 import base64
+import threading
 from io import BytesIO
 from pathlib import Path
 
@@ -66,7 +67,23 @@ def mobile_driver(request, config, settings, run_on):
 
     driver = create_mobile_driver(config, settings, run_on, request)
     driver.run_on = run_on
+
+    # Keep BrowserStack session alive during long web automation phases.
+    # Sends a lightweight ping every 60s so the session doesn't idle out.
+    _stop = threading.Event()
+    def _heartbeat():
+        while not _stop.wait(60):
+            try:
+                driver.get_window_size()
+            except Exception:
+                pass
+    _thread = threading.Thread(target=_heartbeat, daemon=True)
+    _thread.start()
+
     yield driver
+
+    _stop.set()
+    _thread.join(timeout=5)
     #
     # # Sign out so the next test always starts from a logged-out state,
     # # while noReset:true (BrowserStack) keeps the FCM token intact.

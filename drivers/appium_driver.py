@@ -8,6 +8,8 @@ from requests.auth import HTTPBasicAuth
 
 from utils.helpers import PROJECT_ROOT
 
+_apk_url_cache: dict = {}
+
 
 def create_mobile_driver(config, settings, run_on, request):
     caps = config.caps(run_on)
@@ -41,14 +43,17 @@ def create_mobile_driver(config, settings, run_on, request):
         else:
             raise Exception(f"Unknown env: {env}")
 
-        # 🔥 Upload dynamically
-        # custom_id = f"commcare_{env}"
-
-        bs_app_url = bstack_upload_apk_with_curl(
-            apk_path=apk_path,
-            bs_user=bs_user,
-            bs_key=bs_key
+        # Upload APK once per module — tests in the same file share the url,
+        # tests in different modules each get a fresh upload
+        module_name = request.module.__name__
+        cache_key = f"{env}:{module_name}"
+        if cache_key not in _apk_url_cache:
+            _apk_url_cache[cache_key] = bstack_upload_apk_with_curl(
+                apk_path=apk_path,
+                bs_user=bs_user,
+                bs_key=bs_key
             )
+        bs_app_url = _apk_url_cache[cache_key]
 
         options.set_capability("app", bs_app_url)
 

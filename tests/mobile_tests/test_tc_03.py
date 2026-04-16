@@ -47,8 +47,8 @@ def created_opportunity(web_driver, test_data, config, settings, request):
 # @pytest.mark.xfail
 # @pytest.mark.bugasura("TES17", "TES19", "TES28", "TES107", "TES108")
 def test_03_opportunity_invite_notifications_and_details(created_opportunity, web_driver, config, test_data, settings, mobile_driver):
-    # if 'staging' in config.get("cchq_url"):
-    #     pytest.xfail("https://dimagi.atlassian.net/browse/CI-554")
+    if 'staging' in config.get("cchq_url"):
+        pytest.xfail("https://dimagi.atlassian.net/browse/CI-554")
     data = test_data.get("TC_3_to_4")
     global opp_name, user_data
     opp = created_opportunity
@@ -112,18 +112,22 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
             notifications.check_and_open_notification()
             notifications.close_notifications()
             opportunity.open_opportunity_from_list(opp, "new opportunity")
+            flag=True
         except:
+            flag=False
             print("Push Notification validation failed")
 
-    # with allure.step("Handle Fingerprint Authentication"):
-    #     pid.handle_fingerprint_auth()
+    with allure.step("Handle Fingerprint Authentication"):
+        pid.handle_fingerprint_auth()
 
     with allure.step("Verify the Opportunity Notifications"):
         opportunity.click_notification()
-        app_notifications.verify_all_notifications()
+        app_notifications.verify_all_notifications(opp)
 
     with allure.step("Verify the Opportunity Details"):
-        opportunity.verify_job_card()
+        if not flag:
+            opportunity.open_opportunity_from_list(opp, "new opportunity")
+        opportunity.verify_job_card("new opportunity")
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()
     opp_name=opp

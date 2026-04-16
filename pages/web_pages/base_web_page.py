@@ -3,7 +3,8 @@ import json
 import os
 import time
 
-from selenium.common import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.common import TimeoutException, NoSuchElementException, StaleElementReferenceException, \
+    ElementClickInterceptedException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC

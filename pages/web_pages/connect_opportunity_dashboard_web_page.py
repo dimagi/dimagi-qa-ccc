@@ -1,6 +1,7 @@
 import time
 
 from selenium.common import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
 from utils.helpers import LocatorLoader
@@ -73,71 +74,55 @@ class OpportunityDashboardPage(BaseWebPage):
         self.verify_dashboard_card_details_present("Payments", "Due")
 
 
-    def navigate_to_connect_workers(self, opp):
+    def _find_and_click_opp_in_table(self, opp):
+        """Scan all //tr//td/a links on the current page. If opp is found, scroll to it
+        inside the inner container and click. Returns True if clicked, False if not found."""
+        links = self.driver.find_elements(By.XPATH, "//tr//td//a")
+        print(f"Links found on page: {len(links)}")
+        for link in links:
+            if opp in link.text:
+                print(f"Found opportunity: {link.text.strip()}")
+                self.driver.execute_script(
+                    "arguments[0].scrollIntoView({block:'center', inline:'nearest'});", link
+                )
+                time.sleep(1)
+                self.driver.execute_script("arguments[0].click();", link)
+                self.wait_for_page_load()
+                time.sleep(2)
+                return True
+        return False
+
+    def _navigate_to_opp_in_table(self, opp):
+        """Page through the opportunities table until opp is found and clicked."""
         time.sleep(5)
         try:
-            self.select_by_value(self.PAGE_SIZE, "20")
-            time.sleep(15)
+            self.select_by_value(self.PAGE_SIZE, "100")
+            time.sleep(5)
             self.wait_for_page_to_load()
         except:
             print("Dropdown not present")
-        next_page = True
-        while next_page:
-            try:
-                self.click_link_by_text(opp)
-                next_page = False
-            except:
-                next_page = True
-                self.click(self.RIGHT_ARROW)
-                time.sleep(15)
-                self.wait_for_page_to_load()
+        while True:
+            if self._find_and_click_opp_in_table(opp):
+                return
+            print(f"'{opp}' not on this page, going to next page")
+            self.click(self.RIGHT_ARROW)
+            time.sleep(5)
+            self.wait_for_page_to_load()
 
+    def navigate_to_connect_workers(self, opp):
+        self._navigate_to_opp_in_table(opp)
         self.click_dashboard_card_in_opportunity("Connect Workers", '')
         self.verify_text_in_url("workers")
         time.sleep(1)
 
     def navigate_to_services_delivered(self, opp):
-        time.sleep(5)
-        try:
-            self.select_by_value(self.PAGE_SIZE, "20")
-            time.sleep(15)
-            self.wait_for_page_to_load()
-        except:
-            print("Dropdown not present")
-        next_page=True
-        while next_page:
-            try:
-                self.click_link_by_text(opp)
-                next_page = False
-            except:
-                next_page = True
-                self.click(self.RIGHT_ARROW)
-                time.sleep(15)
-                self.wait_for_page_to_load()
-
-        # self.click_link_by_text(opp)
+        self._navigate_to_opp_in_table(opp)
         self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
         self.verify_text_in_url("workers/deliver")
         time.sleep(1)
 
     def navigate_to_payments_earned(self, opp):
-        time.sleep(5)
-        try:
-            self.select_by_value(self.PAGE_SIZE, "20")
-            time.sleep(15)
-            self.wait_for_page_to_load()
-        except:
-            print("Dropdown not present")
-        next_page = True
-        while next_page:
-            try:
-                self.click_link_by_text(opp)
-                next_page = False
-            except:
-                next_page = True
-                self.click(self.RIGHT_ARROW)
-                time.sleep(15)
-                self.wait_for_page_to_load()
+        self._navigate_to_opp_in_table(opp)
         time.sleep(2)
         self.click_dashboard_card_in_opportunity("Payments", "Earned")
         self.verify_text_in_url("workers/payments")
@@ -173,24 +158,3 @@ class OpportunityDashboardPage(BaseWebPage):
         else:
             raise ValueError(f"Hamburger menu item '{value}' not found.")
 
-    def navigate_to_services_delivered(self, opp):
-        time.sleep(5)
-        try:
-            self.select_by_value(self.PAGE_SIZE, "20")
-            time.sleep(15)
-            self.wait_for_page_to_load()
-        except:
-            print("Dropdown not present")
-        next_page = True
-        while next_page:
-            try:
-                self.click_link_by_text(opp)
-                next_page = False
-            except:
-                next_page = True
-                self.click(self.RIGHT_ARROW)
-                time.sleep(15)
-                self.wait_for_page_to_load()
-        self.click_dashboard_card_in_opportunity("Services Delivered", "Total")
-        self.verify_text_in_url("workers/deliver")
-        time.sleep(1)

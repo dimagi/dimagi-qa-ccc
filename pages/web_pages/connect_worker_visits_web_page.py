@@ -159,8 +159,10 @@ class WorkerVisitsPage(BaseWebPage):
                 break
 
     def suspend_user_in_worker_visits(self, reason):
-        self.click_element(self.USERNAME_SECTION)
-        time.sleep(3)
+        self.wait_for_element(self.USERNAME_SECTION)
+        self.js_click(self.USERNAME_SECTION)
+        time.sleep(1)
+        self.wait_for_element(self.SUSPEND_BUTTON)
         self.click_element(self.SUSPEND_BUTTON)
         time.sleep(3)
         self.wait_for_element(self.SUSPEND_USER_REASON_INPUT)
