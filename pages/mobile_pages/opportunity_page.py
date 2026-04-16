@@ -49,24 +49,22 @@ class OpportunityPage(BasePage):
     NOTIFICATION_BTN = locators.get("opportunity_page", "notification_btn")
 
 
-
-    def verify_job_card(self, opp_status='old'):
+    def verify_job_card(self):
         self.click_element(self.SYNC_BTN)
         time.sleep(5)
-        if 'new' in opp_status.lower():
-            menu_items = [
-                self.JOB_TITLE_TXT,
-                self.JOB_DESCRIPTION_TXT,
-                # self.VIEW_MORE_BTN,
-                self.JOB_END_DATE_TXT
-                ]
-        else:
-            menu_items = [
-                self.JOB_TITLE_TXT,
-                self.JOB_DESCRIPTION_TXT,
-                self.VIEW_MORE_BTN,
-                self.JOB_COMPLETE_BY_DATE_TXT
+        menu_items = [
+            self.JOB_TITLE_TXT,
+            self.JOB_DESCRIPTION_TXT,
+            self.JOB_END_DATE_TXT
             ]
+
+        # else:
+        #     menu_items = [
+        #         self.JOB_TITLE_TXT,
+        #         self.JOB_DESCRIPTION_TXT,
+        #         self.VIEW_MORE_BTN,
+        #         self.JOB_COMPLETE_BY_DATE_TXT
+        #     ]
 
         for item in menu_items:
             print(menu_items, item)

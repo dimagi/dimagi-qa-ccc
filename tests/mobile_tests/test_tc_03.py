@@ -127,7 +127,7 @@ def test_03_opportunity_invite_notifications_and_details(created_opportunity, we
     with allure.step("Verify the Opportunity Details"):
         if not flag:
             opportunity.open_opportunity_from_list(opp, "new opportunity")
-        opportunity.verify_job_card("new opportunity")
+        opportunity.verify_job_card()
         opportunity.verify_delivery_details()
         opportunity.verify_learn_details()
     opp_name=opp
