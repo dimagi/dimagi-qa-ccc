@@ -72,7 +72,7 @@ class OpportunityPage(BasePage):
             print(f"Job Card details visible: {item}")
 
     def verify_delivery_details(self):
-        self.click_element(self.VIEW_MORE_BTN)
+        #self.click_element(self.VIEW_MORE_BTN)
         menu_items = [
             self.DELIVERY_TITLE_TXT,
             self.TOTAL_VISIT_TXT,
