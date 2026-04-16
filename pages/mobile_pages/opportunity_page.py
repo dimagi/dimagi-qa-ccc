@@ -85,6 +85,7 @@ class OpportunityPage(BasePage):
 
         for item in menu_items:
             assert self.is_displayed(item), f"Delivery details not visible: {item}"
+            print(f"Delivery details visible: {item}")
 
         # self.click_element(self.CLOSE_DELIVERY_DETAILS_BTN)
 
