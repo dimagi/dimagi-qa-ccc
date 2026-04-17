@@ -82,7 +82,7 @@ def test_10_messaging_create_n_verify_broadcasts_with_new_message_options(web_dr
             message.open_channel_on_message("connetqa-prod")
 
     with allure.step("Verify Broadcast Connect Message shown"):
-        message.verify_connect_message(msg)
+        message.verify_connect_message(msg=msg)
 
     # Messaging_6
     with allure.step("Create new Broadcast with Connect Survey Option"):

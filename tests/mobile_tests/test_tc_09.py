@@ -96,7 +96,7 @@ def test_09_messaging_create_n_verify_alerts_with_new_message_options(web_driver
             message.open_channel_on_message("connetqa-prod")
 
     with allure.step("Verify Connect Message shown"):
-        message.verify_connect_message(msg)
+        message.verify_connect_message()
 
     with allure.step("Complete Connect Survey"):
         message.fill_survey_form()

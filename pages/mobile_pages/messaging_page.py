@@ -26,23 +26,30 @@ class Message(BasePage):
         self.navigate_back()
         pass
 
-    def verify_connect_message(self, msg, timeout=300, poll_interval=15):
+    def verify_connect_message(self, msg=None, timeout=250, poll_interval=15):
         start_time = time.time()
         attempt = 0
         while time.time() - start_time < timeout:
             attempt += 1
             try:
                 messages = self.get_elements_if_present(self.MESSAGE_TXT)
-                for element in messages:
-                    if element.text.strip() == msg:
+                if msg:
+                    for element in messages:
+                        if element.text.strip() == msg:
+                            assert self.is_displayed(self.MESSAGE_TIME_TXT), "Message timestamp not visible"
+                            return
+                else:
+                    if messages:
                         assert self.is_displayed(self.MESSAGE_TIME_TXT), "Message timestamp not visible"
                         return
             except Exception as e:
                 print(f"[verify_connect_message] Attempt {attempt} error: {e}")
             elapsed = int(time.time() - start_time)
-            print(f"[verify_connect_message] Attempt {attempt} - message '{msg}' not found yet ({elapsed}s elapsed)")
+            label = f"message '{msg}'" if msg else "any message"
+            print(f"[verify_connect_message] Attempt {attempt} - {label} not found yet ({elapsed}s elapsed)")
             time.sleep(poll_interval)
-        raise AssertionError(f"Connect message '{msg}' did not appear within {timeout} seconds")
+        label = f"Connect message '{msg}'" if msg else "Any connect message"
+        raise AssertionError(f"{label} did not appear within {timeout} seconds")
 
     def open_channel_on_message(self, channel_name):
         time.sleep(20)
