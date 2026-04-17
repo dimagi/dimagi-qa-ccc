@@ -107,12 +107,12 @@ class LearnAppPage(BasePage):
         JOB_STATUS_EXPECTATIONS = {
             "IN_PROGRESS": {
                 "start_text": "Finish learning to earn your certificate.",
-                "progress": "50%",
+                "progress": "33%",
                 "continue_btn": "continue learning"
             },
             "COMPLETED": {
                 "start_text": "Complete the assessment to finish training.",
-                "progress": "100%",
+                "progress": "66%",
                 "continue_btn": "go to assessment"
             },
             "FAILED_ASSESSMENT": {
@@ -120,7 +120,7 @@ class LearnAppPage(BasePage):
                     "Sorry, you did not earn a passing score on your assessment. "
                     "Please try again.\nYour score: 10\nPassing score: 40"
                 ),
-                "progress": "100%",
+                "progress": "66%",
                 "continue_btn": "go to assessment"
             }
         }
@@ -197,6 +197,7 @@ class LearnAppPage(BasePage):
 
         for items in elements:
             assert self.is_displayed(items), f"{items} is not visible"
+            print(f"{items} is visible")
 
     def download_delivery_app(self):
         try:
