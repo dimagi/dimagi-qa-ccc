@@ -73,8 +73,7 @@ def test_10_messaging_create_n_verify_broadcasts_with_new_message_options(web_dr
 
     # Messaging_5
     with allure.step("Create new Broadcast with Connect Message Option"):
-        cchq_messaging_page.create_new_broadcast_with_connect_message_option([user_id])
-
+        msg = cchq_messaging_page.create_new_broadcast_with_connect_message_option([user_id])
 
     with allure.step("Navigate to Messaging option"):
         if 'staging' in config.get("cchq_url"):
@@ -83,7 +82,7 @@ def test_10_messaging_create_n_verify_broadcasts_with_new_message_options(web_dr
             message.open_channel_on_message("connetqa-prod")
 
     with allure.step("Verify Broadcast Connect Message shown"):
-        message.verify_connect_message()
+        message.verify_connect_message(msg)
 
     # Messaging_6
     with allure.step("Create new Broadcast with Connect Survey Option"):

@@ -3,6 +3,7 @@ import time
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
+from utils.generate_random_string import fetch_random_string
 from utils.helpers import LocatorLoader
 from datetime import datetime
 from selenium.webdriver.support import expected_conditions as EC
@@ -115,7 +116,8 @@ class MessagingPage(BaseWebPage):
         self.wait_for_element(self.WHAT_TO_SEND_INPUT)
         self.select_what_to_send_input("Connect Message")
         time.sleep(1)
-        self.enter_message_in_broadcast("Automation Test Message")
+        msg = "Automation Test Message"+fetch_random_string()
+        self.enter_message_in_broadcast(msg)
         time.sleep(1)
         self.select_recipients(["Users"])
         time.sleep(1)
@@ -124,6 +126,8 @@ class MessagingPage(BaseWebPage):
         time.sleep(5)
         self.wait_for_page_to_load(130)
         self.is_created_alert_name_present_in_list(self.cond_alert_full_name)
+        time.sleep(20)
+        return msg
 
     def select_survey_form_for_alert(self, value):
         self.scroll_into_view(self.SURVEY_FORM_INPUT)
@@ -249,7 +253,8 @@ class MessagingPage(BaseWebPage):
         self.select_recipients(["Users"])
         self.select_user_recipients(user_recipients)
         time.sleep(1)
-        self.enter_message_in_broadcast("Test Connect Message Broadcast")
+        msg = "Test Connect Message Broadcast"+fetch_random_string()
+        self.enter_message_in_broadcast(msg)
         time.sleep(2)
         self.click_send_broadcast_btn()
         time.sleep(5)
@@ -257,6 +262,9 @@ class MessagingPage(BaseWebPage):
         time.sleep(2)
         self.verify_text_in_url("/broadcasts/")
         self.is_broadcast_name_present_in_list(self.broadcast_full_name)
+        print("Sleeping for the message to get delivered")
+        time.sleep(20)
+        return msg
 
     def create_new_broadcast_with_connect_survey_option(self, user_recipients):
         self.click_add_broadcast_button()

@@ -65,7 +65,7 @@ def test_09_messaging_create_n_verify_alerts_with_new_message_options(web_driver
     # Messaging_2
     with allure.step("Create new conditional alert with Connect Message option"):
         cchq_messaging_page.delete_existing_alerts("Automation Message Alert")
-        cchq_messaging_page.create_new_connect_message_conditional_alert(user_recipients=[data["user_id"]],
+        msg = cchq_messaging_page.create_new_connect_message_conditional_alert(user_recipients=[data["user_id"]],
                                                                          entity_id_value=temp_id)
 
     with allure.step("Sign in with existing demo user"):
@@ -96,7 +96,7 @@ def test_09_messaging_create_n_verify_alerts_with_new_message_options(web_driver
             message.open_channel_on_message("connetqa-prod")
 
     with allure.step("Verify Connect Message shown"):
-        message.verify_connect_message()
+        message.verify_connect_message(msg)
 
     with allure.step("Complete Connect Survey"):
         message.fill_survey_form()
