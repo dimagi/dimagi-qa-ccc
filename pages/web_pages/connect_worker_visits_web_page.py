@@ -89,7 +89,7 @@ class WorkerVisitsPage(BaseWebPage):
         tabs_container = self.wait_for_element(self.TABS_CONTAINER)
         missing_tabs = []
         for tab in expected_tabs:
-            tab_xpath = "//label[contains(@class,'tab')][normalize-space(./text()[normalize-space()][1])='" + tab + "']"
+            tab_xpath = "//*[contains(@class,'tab')][normalize-space(./text()[normalize-space()][1])='" + tab + "']"
             try:
                 element = tabs_container.find_element(By.XPATH, tab_xpath)
                 if not element.is_displayed():
