@@ -37,7 +37,7 @@ class DeliveryAppPage(BasePage):
     PAYMENT_ROWS = locators.get("delivery_app_page", "payment_rows")
     ROW_AMOUNT_TXT = locators.get("delivery_app_page", "row_amount_txt")
     ROW_STATUS_TXT = locators.get("delivery_app_page", "row_status_txt")
-    RECEIVED_BTN =locators.get("delivery_app_page", "received_btn")
+    RECEIVED_BTN = locators.get("delivery_app_page", "received_btn")
     CONFIRM_PAYMENT_POPUP_TXT = locators.get("delivery_app_page", "confirm_pay_popup_btn")
     PAYMENT_YES_BTN = locators.get("delivery_app_page", "payment_yes_btn")
     PAYMENT_NO_BTN = locators.get("delivery_app_page", "payment_no_btn")
@@ -144,7 +144,7 @@ class DeliveryAppPage(BasePage):
         )
 
     def confirm_pay_on_payment_tab(self, confirm):
-        self.click_element(self.RECEIVED_BTN)
+        self.click_element(self.REVERT_BTN)
         self.wait_for_element(self.CONFIRM_PAYMENT_POPUP_TXT)
         if confirm == "Yes":
             self.click_element(self.PAYMENT_YES_BTN)

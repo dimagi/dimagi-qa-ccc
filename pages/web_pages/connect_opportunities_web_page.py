@@ -258,16 +258,20 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def setup_budget_in_connect_page(self, data):
         self.click_setup_budget_button()
-        try:
-            start, end = self.generate_date_range(7, opt=1)
-            print(start, end)
-            self.enter_start_date_in_payment_unit_of_opportunity(start)
-            self.enter_end_date_in_payment_unit_of_opportunity(end)
-        except:
-            start, end = self.generate_date_range(7, opt=2)
-            print(start, end)
-            self.enter_start_date_in_payment_unit_of_opportunity(start)
-            self.enter_end_date_in_payment_unit_of_opportunity(end)
+        # try:
+        #     start, end = self.generate_date_range(7, opt=1)
+        #     print(start, end)
+        #     self.enter_start_date_in_payment_unit_of_opportunity(start)
+        #     self.enter_end_date_in_payment_unit_of_opportunity(end)
+        # except:
+        #     start, end = self.generate_date_range(7, opt=2)
+        #     print(start, end)
+        #     self.enter_start_date_in_payment_unit_of_opportunity(start)
+        #     self.enter_end_date_in_payment_unit_of_opportunity(end)
+        start, end = self.generate_date_range(7, opt=2)
+        print(start, end)
+        self.enter_start_date_in_payment_unit_of_opportunity(start)
+        self.enter_end_date_in_payment_unit_of_opportunity(end)
         # start, end = self.generate_date_range(2)
         # print(start, end)
         # self.enter_start_date_in_payment_unit_of_opportunity(start)

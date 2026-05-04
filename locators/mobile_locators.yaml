@@ -163,7 +163,7 @@ delivery_app_page:
   payment_tab: "//android.widget.HorizontalScrollView[@resource-id='org.commcare.dalvik:id/connect_delivery_progress_tabs']//android.widget.LinearLayout[2]"
 
 app_notification:
-  payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
+  payment_txt: "//android.widget.TextView[contains(@text, 'A payment is now available for')]"
   notification_header_txt: "//android.widget.TextView[@text='Notifications']"
   no_notification_txt: "org.commcare.dalvik:id/tvNoNotifications"
   notification_sync_btn: "org.commcare.dalvik:id/notification_cloud_sync"

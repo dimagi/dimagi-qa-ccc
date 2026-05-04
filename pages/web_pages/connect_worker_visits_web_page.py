@@ -99,10 +99,10 @@ class WorkerVisitsPage(BaseWebPage):
         assert not missing_tabs, f"Missing tabs: {', '.join(missing_tabs)}"
 
     def verify_worker_visits_tabs_present(self):
-        try:
-            self.verify_tabs_present(["Pending NM Review", "Approved", "Rejected", "All"])
-        except:
+        if 'staging' in self.get_current_url():
             self.verify_tabs_present(["Visits", "Tasks"])
+        else:
+            self.verify_tabs_present(["Pending NM Review", "Approved", "Rejected", "All"])
 
 
     def click_tab_by_name(self, tab_name):
