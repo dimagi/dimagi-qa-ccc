@@ -149,7 +149,31 @@
     a { color: #2563eb; text-decoration: none; }
     a:hover { text-decoration: underline; }
     .muted { color: #777; }
-
+    
+    .other-dashboards {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .other-dashboards a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: 1px solid #2563eb;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #2563eb;
+      background: #eff6ff;
+      transition: background 0.15s, color 0.15s;
+    }
+    .other-dashboards a:hover {
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+    }
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -166,6 +190,11 @@
   <h1>CommCare-Connect Automation Dashboard</h1>
   <div class="subtle">Data source: <code>data/runs.jsonl</code></div>
 
+  <div class="other-dashboards">
+    <a href="https://dimagi.github.io/dimagi-qa/" target="_blank" rel="noopener">CommCare Dashboard ↗</a>
+    <a href="https://dimagi.github.io/dimagi-qa-sureadhere/" target="_blank" rel="noopener">SureAdhere Dashboard ↗</a>
+  </div>
+  
   <div id="err" class="error"></div>
 
   <div class="filters">
