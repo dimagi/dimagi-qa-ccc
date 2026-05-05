@@ -1,5 +1,4 @@
 import allure
-import notifications
 import pytest
 from selenium import webdriver
 
