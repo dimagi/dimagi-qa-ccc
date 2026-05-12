@@ -91,7 +91,7 @@ class CCHQApplicationPage(BaseWebPage):
         self.enter_learn_app_name_in_copy_application()
         self.click_copy_button()
         self.click_make_new_version_button()
-        return f"Unreleased - {self.learn_app_full_name}"
+        return self.learn_app_full_name
 
     def create_copy_of_delivery_app(self):
         self.click_sidebar_settings_icon()
@@ -103,7 +103,7 @@ class CCHQApplicationPage(BaseWebPage):
         self.enter_delivery_app_name_in_copy_application()
         self.click_copy_button()
         self.click_make_new_version_button()
-        return f"Unreleased - {self.delivery_app_full_name}"
+        return self.delivery_app_full_name
 
     def delete_all_application(self, app):
         self.wait_for_element(self.SIDEBAR_SETTINGS_ICON)

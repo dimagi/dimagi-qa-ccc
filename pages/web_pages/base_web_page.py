@@ -139,8 +139,16 @@ class BaseWebPage:
 
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
-        self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
-        Select(element).select_by_visible_text(text)
+        try:
+            self.wait.until(lambda d: any(
+                option.text.strip() == text for option in Select(d.find_element(*dropdown_locator)).options))
+        except TimeoutException:
+            available_options = [o.text.strip() for o in Select(self.driver.find_element(*dropdown_locator)).options]
+            raise TimeoutException(
+                f"Option '{text}' not found in dropdown '{dropdown_locator}'.\n"
+                f"Available options are: {available_options}"
+            )
+        Select(self.driver.find_element(*dropdown_locator)).select_by_visible_text(text)
 
     def select_by_value(self, dropdown_locator, text):
         select_source = Select(self.driver.find_element(*dropdown_locator))

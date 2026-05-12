@@ -108,6 +108,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
         self.wait_for_element(self.OPP_LEARN_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
 
+
     def select_deliver_app_in_opportunity(self , value):
         time.sleep(10)
         self.scroll_to_element(self.OPP_DELIVER_APP_DROPDOWN)
@@ -203,7 +204,7 @@ class ConnectOpportunitiesPage(BaseWebPage):
 
     def fill_opportunity_form(self, data, learn_app, delivery_app, env):
         env = f"_{env}" if env == "staging" else ""
-        opp_name=self.enter_name_in_opportunity(data["opportunity_name"])
+        opp_name = self.enter_name_in_opportunity(data["opportunity_name"])
         self.select_currency_in_opportunity(data["currency"])
         self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
