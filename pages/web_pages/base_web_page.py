@@ -139,16 +139,8 @@ class BaseWebPage:
 
     def select_by_visible_text(self, dropdown_locator, text):
         element = self.wait.until(EC.presence_of_element_located(dropdown_locator))
-        try:
-            self.wait.until(lambda d: any(
-                option.text.strip() == text for option in Select(d.find_element(*dropdown_locator)).options))
-        except TimeoutException:
-            available_options = [o.text.strip() for o in Select(self.driver.find_element(*dropdown_locator)).options]
-            raise TimeoutException(
-                f"Option '{text}' not found in dropdown '{dropdown_locator}'.\n"
-                f"Available options are: {available_options}"
-            )
-        Select(self.driver.find_element(*dropdown_locator)).select_by_visible_text(text)
+        self.wait.until(lambda d: any(option.text.strip() == text for option in Select(element).options))
+        Select(element).select_by_visible_text(text)
 
     def select_by_value(self, dropdown_locator, text):
         select_source = Select(self.driver.find_element(*dropdown_locator))
@@ -257,21 +249,25 @@ class BaseWebPage:
         )
 
     def enter_date(self, locator, date_value: str):
+        # Convert DD-MM-YYYY to YYYY-MM-DD for HTML date inputs
+        parts = date_value.split("-")
+        if len(parts) == 3 and len(parts[2]) == 4:
+            formatted = f"{parts[2]}-{parts[1]}-{parts[0]}"
+        else:
+            formatted = date_value
+
         element = self.wait.until(EC.visibility_of_element_located(locator))
-        try:
-            element.clear()
-            element.send_keys(date_value)
-        except Exception:
-            self.driver.execute_script(
-                "arguments[0].value = arguments[1];"
-                "arguments[0].dispatchEvent(new Event('change'));",
-                element,
-                date_value
-            )
-        actual_value = element.get_attribute("value")
-        assert sorted(actual_value) == sorted(date_value), (
-            f"Failed to set date. Expected '{date_value}', but got '{actual_value}'"
+        self.driver.execute_script(
+            "arguments[0].value = arguments[1];"
+            "arguments[0].dispatchEvent(new Event('change'));",
+            element,
+            formatted
         )
+        actual_value = element.get_attribute("value")
+        assert actual_value == formatted, (
+            f"Failed to set date. Expected '{formatted}', but got '{actual_value}'"
+        )
+        
 
     def click_submit_btn(self):
         self.scroll_into_view(self.SUBMIT_BUTTON)
