@@ -12,6 +12,7 @@ class ConnectHomePage(BaseWebPage):
         super().__init__(driver)
 
     SIGNIN_LINK = locators.get("connect_home_page", "signin_link")
+    LOGIN_LINK = locators.get("connect_home_page", "login_link")
     LOGIN_WITH_CC_HQ = locators.get("connect_home_page", "login_with_cc_hq")
     AUTHORIZE_BUTTON = locators.get("connect_home_page", "authorize_button")
     OPPORTUNITIES_NAVBAR_LINK = locators.get("connect_home_page", "opportunities_navbar_item")
@@ -22,8 +23,8 @@ class ConnectHomePage(BaseWebPage):
     ORGANIZATION_NAME = locators.get("connect_home_page", "organization_name")
 
 
-    def click_signin_link(self):
-        self.click_element(self.SIGNIN_LINK)
+    def click_login_link(self):
+        self.click_element(self.LOGIN_LINK)
 
     def click_login_with_cchq(self):
         self.click_element(self.LOGIN_WITH_CC_HQ)
@@ -32,7 +33,7 @@ class ConnectHomePage(BaseWebPage):
 
     def signin_to_connect_page_using_cchq(self):
         try:
-            self.click_signin_link()
+            self.click_login_link()
             time.sleep(2)
             self.click_login_with_cchq()
         except:

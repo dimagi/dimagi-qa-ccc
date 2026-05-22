@@ -57,6 +57,7 @@ cchq_application_page:
     delete_success: "//div[contains(@class,'alert-success')][contains(.,'You have deleted an application.')]"
 
 connect_home_page:
+  login_link: "//nav[@id='primary-nav']//a[@href='/accounts/login/']"
   signin_link: "log-in-link"
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
   authorize_button: "//input[@type='submit' and @name='allow']"
