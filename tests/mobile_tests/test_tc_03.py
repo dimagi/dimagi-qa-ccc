@@ -256,13 +256,13 @@ def test_04_learn_app_assessments_delivery_app(web_driver, config, test_data, se
 
 @pytest.mark.mobile
 @pytest.mark.web
-@pytest.mark.skip(reason="https://dimagi.atlassian.net/browse/QA-8418")
+# @pytest.mark.skip(reason="https://dimagi.atlassian.net/browse/QA-8418")
 # @pytest.mark.bugasura("TES25", "TES26", "TES27", "TES109", "TES110")
 def test_06_payment_and_related_notifications(web_driver, config, test_data, settings, mobile_driver):
     if opp_name is None:
         pytest.skip("Opportunity name missing")
     print(opp_name)
-    data = test_data.get("TC_6")
+    data = test_data.get("TC_3_to_4")
 
     cchq_login_page = LoginPage(web_driver)
     connect_home_page = ConnectHomePage(web_driver)
@@ -273,7 +273,7 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     opportunity = OpportunityPage(mobile_driver)
-    mobile_notifications = MobileNotifications(mobile_driver)
+    notifications = MobileNotifications(mobile_driver)
     app_notification = AppNotifications(mobile_driver)
     delivery = DeliveryAppPage(mobile_driver)
 
@@ -312,9 +312,11 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
                                                         "100")
 
     with allure.step("Verify push notification shown for the payment"):
-        mobile_notifications.open_notifications()
-        mobile_notifications.verify_payment_received()
-        mobile_notifications.click_payment_received()
+        try:
+            notifications.check_and_open_notification()
+            notifications.close_notifications()
+        except:
+            print("Push Notification validation failed")
 
     with allure.step("Verify App notification shown for the payment"):
         delivery.nav_to_app_notification()

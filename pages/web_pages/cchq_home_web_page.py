@@ -59,7 +59,7 @@ class CCHQHomePage(BaseWebPage):
 
     def verify_app_present_under_applications_tab(self, app):
         applications_tab = self.wait_for_element(self.APPLICATIONS_TAB)
-        self.click_element(self.APPLICATIONS_TAB)
+        self.js_click(self.APPLICATIONS_TAB)  # changed
         options = applications_tab.find_elements(By.XPATH, "//li//a")
         for each in options:
             if app in each.text:
@@ -68,7 +68,7 @@ class CCHQHomePage(BaseWebPage):
                 assert app in each.text, f"{app} not found under applications tab"
                 print(f"{app} present under applications tab")
                 break
-        self.click_element(self.APPLICATIONS_TAB)
+        self.js_click(self.APPLICATIONS_TAB)  # changed
 
     def get_all_application_name(self):
         self.click(self.APPLICATIONS_TAB)
