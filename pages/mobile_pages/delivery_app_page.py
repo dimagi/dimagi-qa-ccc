@@ -144,12 +144,12 @@ class DeliveryAppPage(BasePage):
         )
 
     def confirm_pay_on_payment_tab(self, confirm):
-        self.click_element(self.RECEIVED_BTN)
+        self.click_element(self.REVERT_BTN)
         self.wait_for_element(self.CONFIRM_PAYMENT_POPUP_TXT)
         if confirm == "Yes":
             self.click_element(self.PAYMENT_YES_BTN)
             time.sleep(2)
-            assert self.wait_for_element(self.REVERT_BTN)
+            assert self.wait_for_element(self.RECEIVED_BTN)
         else:
             self.click_element(self.PAYMENT_NO_BTN)
 

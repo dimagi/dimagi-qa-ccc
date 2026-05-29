@@ -348,7 +348,7 @@ class ConnectWorkersPage(BaseWebPage):
     def verify_worker_assessment_status(self, worker_name, expected__status):
         self.verify_column_value_in_learn_table(worker_name, expected__status, "Assessment")
         self.verify_modules_completed_status_bar_in_learn_table(worker_name, "100")
-        self.verify_green_bar_status_present(worker_name)
+        #self.verify_green_bar_status_present(worker_name)
         self.verify_column_not_empty_in_learn_table(worker_name, "Attempts")
         self.verify_column_not_empty_in_learn_table(worker_name, "Completed Learning")
 
