@@ -22,6 +22,9 @@ class LoginPage(BaseWebPage):
     ACCEPT_COOKIES_BUTTON = locators.get("cchq_login_page", "cookie_accept_button")
     CLOSE_NOTIFICATION = locators.get("cchq_login_page", "close_notification")
     IFRAME = locators.get("cchq_login_page", "iframe")
+    IFRAME_GUIDE_POPUP = locators.get("cchq_login_page","iframe_guide_popup")
+    GUIDE_POPUP = locators.get("cchq_login_page","guide_popup")
+    SKIP_ONBOARDING = locators.get("cchq_home_page", "skip_onboarding")
     VIEW_LATEST_UPDATES = locators.get("cchq_login_page", "view_latest_updates")
 
     def verify_login_page_title(self, title):
@@ -101,3 +104,23 @@ class LoginPage(BaseWebPage):
         connect_url = config.get("connect_url")
         self.open_url_in_new_tab(connect_url)
         assert connect_url in self.driver.current_url
+
+    def dismiss_guide_popup(self):
+        try:
+            # wait a few seconds for popup iframe to appear
+            self.wait_for_element(self.IFRAME_GUIDE_POPUP, timeout=8)
+
+            self.switch_to_frame(self.IFRAME_GUIDE_POPUP)
+
+            if self.is_present(self.GUIDE_POPUP):
+                self.wait_for_element(self.SKIP_ONBOARDING)
+                self.click_element(self.SKIP_ONBOARDING)
+                print("Skipped onboarding popup")
+
+        except (TimeoutException, NoSuchElementException):
+            print("No onboarding popup occurred")
+
+        finally:
+            self.switch_to_default_content()
+
+

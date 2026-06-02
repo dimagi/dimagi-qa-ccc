@@ -17,7 +17,7 @@ class CCHQHomePage(BaseWebPage):
     APPLICATIONS_TAB = locators.get("cchq_home_page", "applications_tab")
     APP_LIST = locators.get("cchq_home_page", "app_list")
     APP_LINK = locators.get("cchq_home_page", "app_link")
-    SKIP_ONBOARDING = locators.get("cchq_home_page", "skip_onboarding")
+    #SKIP_ONBOARDING = locators.get("cchq_home_page", "skip_onboarding")
 
     def verify_home_page_title(self, title):
         text = self.get_text(self.TITLE_ELE)
@@ -47,9 +47,6 @@ class CCHQHomePage(BaseWebPage):
     def select_app_under_applications_tab(self, app):
         applications_tab = self.wait_for_element(self.APPLICATIONS_TAB)
         self.click_element(self.APPLICATIONS_TAB)
-        if self.is_present_and_displayed(self.SKIP_ONBOARDING):
-            self.click(self.SKIP_ONBOARDING)
-            self.click_element(self.APPLICATIONS_TAB)
         options = applications_tab.find_elements(By.XPATH, "//li//a")
         for each in options:
             if app in each.text:
