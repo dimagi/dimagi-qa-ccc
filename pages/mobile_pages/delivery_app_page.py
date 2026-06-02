@@ -117,6 +117,7 @@ class DeliveryAppPage(BasePage):
     def nav_to_app_notification(self):
         self.click_element(self.NOTIFICATION_BTN)
 
+
     def verify_payment_popup(self):
         time.sleep(5)
         assert self.is_displayed(self.PAYMENT_CONFIRM_LBL_TXT), "Payment confirmation not displayed"

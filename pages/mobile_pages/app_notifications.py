@@ -20,6 +20,7 @@ class AppNotifications(BasePage):
 
 
     def verify_payment_received(self):
+        self.wait_for_element(self.PAYMENT_RECEIVED_TXT)
         assert self.is_displayed(self.PAYMENT_RECEIVED_TXT)
         self.click_element(self.PAYMENT_RECEIVED_TXT)
         time.sleep(2)
