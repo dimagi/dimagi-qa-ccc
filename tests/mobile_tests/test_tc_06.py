@@ -47,11 +47,17 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
         home.open_side_menu()
         home.click_signup()
 
+    with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
+        cchq_login_page.valid_login_cchq(config, settings)
+        cchq_login_page.navigate_to_connect_page(config)
+        connect_home_page.signin_to_connect_page_using_cchq()
+
     with allure.step("Change the organization"):
         if 'staging' in config.get("cchq_url"):
             connect_home_page.select_organization_from_list(data["org_name_staging"])
         else:
             connect_home_page.select_organization_from_list(data["org_name"])
+
 
     with allure.step("Sign in with existing demo user"):
         if 'staging' in config.get("cchq_url"):
