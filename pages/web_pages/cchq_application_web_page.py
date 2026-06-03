@@ -1,5 +1,4 @@
 import time
-from wsgiref.validate import assert_
 
 from selenium.webdriver import Keys
 
@@ -85,9 +84,9 @@ class CCHQApplicationPage(BaseWebPage):
         self.click_sidebar_settings_icon()
         self.click_tab_by_name_in_application_settings("Actions")
         if "www" in self.get_current_url():
-            self.select_copy_app_to_project_dropdown("connetqa-prod")
+            self.select_copy_app_to_project_dropdown("connectqa-automation-prod")
         else:
-            self.select_copy_app_to_project_dropdown("connectqa")
+            self.select_copy_app_to_project_dropdown("connectqa-automation")
         self.enter_learn_app_name_in_copy_application()
         self.click_copy_button()
         self.click_make_new_version_button()
@@ -97,9 +96,9 @@ class CCHQApplicationPage(BaseWebPage):
         self.click_sidebar_settings_icon()
         self.click_tab_by_name_in_application_settings("Actions")
         if "www" in self.get_current_url():
-            self.select_copy_app_to_project_dropdown("connetqa-prod")
+            self.select_copy_app_to_project_dropdown("connectqa-automation-prod")
         else:
-            self.select_copy_app_to_project_dropdown("connectqa")
+            self.select_copy_app_to_project_dropdown("connectqa-automation")
         self.enter_delivery_app_name_in_copy_application()
         self.click_copy_button()
         self.click_make_new_version_button()
