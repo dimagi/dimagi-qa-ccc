@@ -42,13 +42,21 @@ class AppNotifications(BasePage):
         count = len(texts)
         assert count > 0, "No notifications found"
 
+        opp_found = False
         for i in range(count):
             print(texts[i].text.strip(), times[i].text.strip())
             assert icons[i].is_displayed(), f"Notification icon missing at index {i}"
             assert texts[i].text.strip(), f"Notification text empty at index {i}"
             assert times[i].text.strip(), f"Notification time missing at index {i}"
             assert arrows[i].is_displayed(), f"Notification arrow missing at index {i}"
-            if opp:
-                assert opp in texts[i].text.strip()
-        self.navigate_back()
+
+            if opp and opp in texts[i].text.strip():
+                opp_found = True
+                arrows[i].click()  # or texts[i].click() — whichever opens the notification
+                break
+
+        if opp:
+            assert opp_found, f"No notification found for opportunity '{opp}'"
+        else:
+            self.navigate_back()
 

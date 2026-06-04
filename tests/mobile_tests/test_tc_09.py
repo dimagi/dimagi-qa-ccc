@@ -91,9 +91,9 @@ def test_09_messaging_create_n_verify_alerts_with_new_message_options(web_driver
 
     with allure.step("Navigate to Messaging option"):
         if 'staging' in config.get("cchq_url"):
-            message.open_channel_on_message("connectqa")
+            message.open_channel_on_message("connectqa-automation")
         else:
-            message.open_channel_on_message("connetqa-prod")
+            message.open_channel_on_message("connectqa-automation-prod")
 
     with allure.step("Verify Connect Message shown"):
         message.verify_connect_message()

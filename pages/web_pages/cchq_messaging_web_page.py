@@ -106,10 +106,10 @@ class MessagingPage(BaseWebPage):
         self.enter_name_in_conditional_alert("Automation Message Alert")
         time.sleep(1)
         self.click_continue_btn()
-        if "staging" in self.get_current_url():
-            self.select_case_type("case")
-        else:
-            self.select_case_type("automation")
+        # if "staging" in self.get_current_url():
+        #     self.select_case_type("case")
+        # else:
+        self.select_case_type("case")
         self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         time.sleep(3)
@@ -142,7 +142,7 @@ class MessagingPage(BaseWebPage):
         time.sleep(2)
         self.enter_name_in_conditional_alert("Automation Survey Alert")
         self.click_continue_btn()
-        self.select_case_type("automation")
+        self.select_case_type("case")
         self.select_n_apply_case_property_filter_with_entity_id(entity_id_value)
         self.click_continue_btn()
         self.select_what_to_send_input("Connect Survey")
@@ -168,7 +168,7 @@ class MessagingPage(BaseWebPage):
         time.sleep(2)
         self.enter_name_in_conditional_alert("Sample Test")
         self.click_continue_btn()
-        self.select_case_type("visit")
+        self.select_case_type("case")
         self.click_continue_btn()
         self.verify_options_present_in_what_to_send(values)
 
