@@ -130,16 +130,22 @@ class DeliveryAppPage(BasePage):
         # transferred total
         total_txt = self.get_text(self.TRANSFERRED_TOTAL_TXT)
         total_amount = int("".join(filter(str.isdigit, total_txt)))
-
-        # Iterate
-        rows = self.get_elements(self.ROW_AMOUNT_TXT)
+        # Scroll and collect all row amounts
         calculated_sum = 0
-
-        for row in rows:
-            amount_txt = row.text
-            amount = int("".join(filter(str.isdigit, amount_txt)))
-            calculated_sum += amount
-
+        seen_texts = set()
+        last_row_text = None
+        while True:
+            rows = self.get_elements(self.ROW_AMOUNT_TXT)
+            for row in rows:
+                row_txt = row.text.strip()
+                if row_txt and row_txt not in seen_texts:
+                    calculated_sum += int("".join(filter(str.isdigit, row_txt)))
+                    seen_texts.add(row_txt)
+            current_last = rows[-1].text.strip() if rows else None
+            if current_last == last_row_text:
+                break
+            last_row_text = current_last
+            self.scroll_down()
         assert calculated_sum == total_amount, (
             f"Transferred mismatch: UI={total_amount}, Calculated={calculated_sum}"
         )
