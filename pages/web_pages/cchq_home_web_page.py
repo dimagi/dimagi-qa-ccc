@@ -17,6 +17,7 @@ class CCHQHomePage(BaseWebPage):
     APPLICATIONS_TAB = locators.get("cchq_home_page", "applications_tab")
     APP_LIST = locators.get("cchq_home_page", "app_list")
     APP_LINK = locators.get("cchq_home_page", "app_link")
+    #SKIP_ONBOARDING = locators.get("cchq_home_page", "skip_onboarding")
 
     def verify_home_page_title(self, title):
         text = self.get_text(self.TITLE_ELE)

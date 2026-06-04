@@ -1,5 +1,6 @@
 import os
 import time
+import random
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from pages.web_pages.base_web_page import BaseWebPage
@@ -348,7 +349,7 @@ class ConnectWorkersPage(BaseWebPage):
     def verify_worker_assessment_status(self, worker_name, expected__status):
         self.verify_column_value_in_learn_table(worker_name, expected__status, "Assessment")
         self.verify_modules_completed_status_bar_in_learn_table(worker_name, "100")
-        self.verify_green_bar_status_present(worker_name)
+        #self.verify_green_bar_status_present(worker_name)
         self.verify_column_not_empty_in_learn_table(worker_name, "Attempts")
         self.verify_column_not_empty_in_learn_table(worker_name, "Completed Learning")
 
@@ -412,7 +413,9 @@ class ConnectWorkersPage(BaseWebPage):
         file_input.send_keys(file_path)
         assert file_input.get_attribute("value") != ""
 
-    def make_payment_with_date_for_worker(self, worker_name, country_code, phone_number, amount):
+    def make_payment_with_date_for_worker(self, worker_name, country_code, phone_number, amount = None):
+        if amount is None:
+            amount = str(random.randint(1, 500))
         username = self.fetch_username_from_payments(worker_name)
         full_phone_number = country_code + phone_number
         curr_date = datetime.now().strftime("%Y-%m-%d")

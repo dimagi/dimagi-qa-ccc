@@ -77,9 +77,9 @@ def test_10_messaging_create_n_verify_broadcasts_with_new_message_options(web_dr
 
     with allure.step("Navigate to Messaging option"):
         if 'staging' in config.get("cchq_url"):
-            message.open_channel_on_message("connectqa")
+            message.open_channel_on_message("connectqa-automation")
         else:
-            message.open_channel_on_message("connetqa-prod")
+            message.open_channel_on_message("connectqa-automation-prod")
 
     with allure.step("Verify Broadcast Connect Message shown"):
         message.verify_connect_message(msg=msg)

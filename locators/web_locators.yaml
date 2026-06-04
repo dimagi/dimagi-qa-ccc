@@ -2,6 +2,7 @@ cchq_home_page:
   welcome_title: "//h1[@class='mb-3 mt-5']"
   messaging_tab: "MessagingTab"
   breadcrumb_container: "hq-breadcrumbs"
+  skip_onboarding: "//button[contains(@class, 'userflowjs-bubble-button--default')]"
   applications_tab: "ApplicationsTab"
   app_list: "//a[contains(.,'Applications')]//following-sibling::ul/li/a[contains(.,'Learn App [')  or contains(.,'Delivery App [')][contains(.,':')]"
   app_link: "(//li/a[contains(., '{name}')])[1]"
@@ -14,6 +15,8 @@ cchq_login_page:
   cookie_accept_button: "hs-eu-confirmation-button"
   close_notification: "//div[@class='frame-close']/button[1]"
   iframe: "//iframe[contains(@src,'/embed/frame')]"
+  iframe_guide_popup: "//iframe[contains(@class,'userflowjs-bubble__frame')]"
+  guide_popup: "//div[contains(@class,'userflowjs-bubble-frame-root') and contains(@class,'appearance-modal')]"
   view_latest_updates: "//*[.='View latest updates']"
 
 cchq_messaging_page:

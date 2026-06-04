@@ -117,6 +117,7 @@ class DeliveryAppPage(BasePage):
     def nav_to_app_notification(self):
         self.click_element(self.NOTIFICATION_BTN)
 
+
     def verify_payment_popup(self):
         time.sleep(5)
         assert self.is_displayed(self.PAYMENT_CONFIRM_LBL_TXT), "Payment confirmation not displayed"
@@ -129,27 +130,33 @@ class DeliveryAppPage(BasePage):
         # transferred total
         total_txt = self.get_text(self.TRANSFERRED_TOTAL_TXT)
         total_amount = int("".join(filter(str.isdigit, total_txt)))
-
-        # Iterate
-        rows = self.get_elements(self.ROW_AMOUNT_TXT)
+        # Scroll and collect all row amounts
         calculated_sum = 0
-
-        for row in rows:
-            amount_txt = row.text
-            amount = int("".join(filter(str.isdigit, amount_txt)))
-            calculated_sum += amount
-
+        seen_texts = set()
+        last_row_text = None
+        while True:
+            rows = self.get_elements(self.ROW_AMOUNT_TXT)
+            for row in rows:
+                row_txt = row.text.strip()
+                if row_txt and row_txt not in seen_texts:
+                    calculated_sum += int("".join(filter(str.isdigit, row_txt)))
+                    seen_texts.add(row_txt)
+            current_last = rows[-1].text.strip() if rows else None
+            if current_last == last_row_text:
+                break
+            last_row_text = current_last
+            self.scroll_down()
         assert calculated_sum == total_amount, (
             f"Transferred mismatch: UI={total_amount}, Calculated={calculated_sum}"
         )
 
     def confirm_pay_on_payment_tab(self, confirm):
-        self.click_element(self.RECEIVED_BTN)
+        self.click_element(self.REVERT_BTN)
         self.wait_for_element(self.CONFIRM_PAYMENT_POPUP_TXT)
         if confirm == "Yes":
             self.click_element(self.PAYMENT_YES_BTN)
             time.sleep(2)
-            assert self.wait_for_element(self.REVERT_BTN)
+            assert self.wait_for_element(self.RECEIVED_BTN)
         else:
             self.click_element(self.PAYMENT_NO_BTN)
 
