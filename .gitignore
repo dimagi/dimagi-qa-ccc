@@ -22,6 +22,8 @@ allure-report/
 
 # Claude Code memory
 .claude/
+!.claude/skills/
+!.claude/skills/**
 
 # Generated test reports
 report.html
