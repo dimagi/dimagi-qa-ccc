@@ -60,16 +60,16 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
 
 
     with allure.step("Sign in with existing demo user"):
-        if 'staging' in config.get("cchq_url"):
-            pid.signin_existing_user(data["country_code"],
-                                     data["phone_number_staging"],
-                                     data["username_staging"],
-                                     data["backup_code_staging"])
-        else:
-            pid.signin_existing_user(data["country_code"],
-                                     data["phone_number"],
-                                     data["username"],
-                                     data["backup_code"])# test number
+        # if 'staging' in config.get("cchq_url"):
+        #     pid.signin_existing_user(data["country_code"],
+        #                              data["phone_number_staging"],
+        #                              data["username_staging"],
+        #                              data["backup_code_staging"])
+        # else:
+        pid.signin_existing_user(data["country_code"],
+                                 data["phone_number"],
+                                 data["username"],
+                                 data["backup_code"])# test number
 
     with allure.step("Open the delivery app"):
         home.open_app_from_goto_connect()
