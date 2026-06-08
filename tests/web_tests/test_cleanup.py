@@ -28,6 +28,7 @@ def test_00_cleanup_applications(web_driver, test_data, config, settings):
     with allure.step("Login to CommCare HQ and SignIn Connect with CommCare HQ"):
         cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
+        cchq_login_page.dismiss_guide_popup()
 
     with allure.step("Delete all test generated applications"):
         app_names = cchq_home_page.get_all_application_name()
