@@ -60,16 +60,16 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
 
 
     with allure.step("Sign in with existing demo user"):
-        # if 'staging' in config.get("cchq_url"):
-        #     pid.signin_existing_user(data["country_code"],
-        #                              data["phone_number_staging"],
-        #                              data["username_staging"],
-        #                              data["backup_code_staging"])
-        # else:
-        pid.signin_existing_user(data["country_code"],
-                                 data["phone_number"],
-                                 data["username"],
-                                 data["backup_code"])# test number
+        if 'staging' in config.get("cchq_url"):
+            pid.signin_existing_user(data["country_code"],
+                                     data["phone_number_staging"],
+                                     data["username_staging"],
+                                     data["backup_code_staging"])
+        else:
+            pid.signin_existing_user(data["country_code"],
+                                     data["phone_number"],
+                                     data["username"],
+                                     data["backup_code"])# test number
 
     with allure.step("Open the delivery app"):
         home.open_app_from_goto_connect()
@@ -93,9 +93,18 @@ def test_06_payment_and_related_notifications(web_driver, config, test_data, set
     with allure.step("Make payment for the worker in the opportunity of Connect Dashboard Page"):
         #opp_dashboard_page.navigate_to_payments_earned(opp_name)
         opp_dashboard_page.navigate_to_payments_earned(data["opportunity_name"])
-        connect_workers_page.make_payment_with_date_for_worker(data["username"],
-                                                         data["country_code"],
-                                                         data["phone_number"])
+        if 'staging' in config.get("cchq_url"):
+            connect_workers_page.make_payment_with_date_for_worker(
+                data["username_staging"],
+                data["country_code"],
+                data["phone_number_staging"]
+            )
+        else:
+            connect_workers_page.make_payment_with_date_for_worker(
+                data["username"],
+                data["country_code"],
+                data["phone_number"]
+            )
 
     with allure.step("Verify push notification shown for the payment"):
         try:
