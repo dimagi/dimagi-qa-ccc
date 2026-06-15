@@ -17,6 +17,7 @@ cchq_login_page:
   iframe: "//iframe[contains(@src,'/embed/frame')]"
   iframe_guide_popup: "//iframe[contains(@class,'userflowjs-bubble__frame')]"
   guide_popup: "//div[contains(@class,'userflowjs-bubble-frame-root') and contains(@class,'appearance-modal')]"
+  rating_popup_close: "//button[@data-testid='close-button']"
   view_latest_updates: "//*[.='View latest updates']"
 
 cchq_messaging_page:

@@ -38,6 +38,7 @@ def add_opportunity(web_driver, test_data, config, settings):
         cchq_login_page.valid_login_cchq(config, settings)
         cchq_home_page.verify_home_page_title("Welcome")
         cchq_login_page.dismiss_guide_popup()
+        cchq_login_page.close_rating_popup()
 
     with allure.step("Create a copy of Learn App in CommCare HQ"):
         cchq_home_page.select_app_under_applications_tab("[08/12] Learn App")

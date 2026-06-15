@@ -23,6 +23,7 @@ class LoginPage(BaseWebPage):
     CLOSE_NOTIFICATION = locators.get("cchq_login_page", "close_notification")
     IFRAME = locators.get("cchq_login_page", "iframe")
     IFRAME_GUIDE_POPUP = locators.get("cchq_login_page","iframe_guide_popup")
+    RATING_POPUP_CLOSE = locators.get("cchq_login_page", "rating_popup_close")
     GUIDE_POPUP = locators.get("cchq_login_page","guide_popup")
     SKIP_ONBOARDING = locators.get("cchq_home_page", "skip_onboarding")
     VIEW_LATEST_UPDATES = locators.get("cchq_login_page", "view_latest_updates")
@@ -116,6 +117,27 @@ class LoginPage(BaseWebPage):
                 self.wait_for_element(self.SKIP_ONBOARDING)
                 self.click_element(self.SKIP_ONBOARDING)
                 print("Skipped onboarding popup")
+
+        except (TimeoutException, NoSuchElementException):
+            print("No onboarding popup occurred")
+
+        finally:
+            self.switch_to_default_content()
+
+    def close_rating_popup(self):
+        try:
+            # wait a few seconds for popup iframe to appear
+            self.wait_for_element(self.IFRAME_GUIDE_POPUP, timeout=8)
+
+            self.switch_to_frame(self.IFRAME_GUIDE_POPUP)
+
+            if self.is_present(self.GUIDE_POPUP):
+                self.wait_for_element(self.RATING_POPUP_CLOSE)
+                self.click_element(self.RATING_POPUP_CLOSE)
+                print("Rating popup closed")
+
+        except (TimeoutException, NoSuchElementException):
+            print("No onboarding popup occurred")
 
         except (TimeoutException, NoSuchElementException):
             print("No onboarding popup occurred")
