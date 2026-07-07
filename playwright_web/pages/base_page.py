@@ -10,41 +10,44 @@ class BasePage:
     def __init__(self, page):
         self.page = page
 
+    def _locator(self, selector):
+        return self.page.locator(selector).first
+
     def click(self, selector, force=False):
         try:
-            self.page.locator(selector).click(force=force)
+            self._locator(selector).click(force=force)
         except PlaywrightTimeoutError:
             if _AI_HEALING_ENABLED:
                 healed = self._ai_heal(selector)
-                self.page.locator(healed).click(force=force)
+                self._locator(healed).click(force=force)
             else:
                 raise
 
     def type(self, selector, text):
         try:
-            self.page.locator(selector).fill(text)
+            self._locator(selector).fill(text)
         except PlaywrightTimeoutError:
             if _AI_HEALING_ENABLED:
                 healed = self._ai_heal(selector)
-                self.page.locator(healed).fill(text)
+                self._locator(healed).fill(text)
             else:
                 raise
 
     def get_text(self, selector):
-        return self.page.locator(selector).inner_text()
+        return self._locator(selector).inner_text()
 
     def is_displayed(self, selector, timeout=5000):
         try:
-            self.page.locator(selector).wait_for(state="visible", timeout=timeout)
+            self._locator(selector).wait_for(state="visible", timeout=timeout)
             return True
         except PlaywrightTimeoutError:
             return False
 
     def select_by_visible_text(self, selector, text):
-        self.page.locator(selector).select_option(label=text)
+        self._locator(selector).select_option(label=text)
 
     def scroll_into_view(self, selector):
-        self.page.locator(selector).scroll_into_view_if_needed()
+        self._locator(selector).scroll_into_view_if_needed()
 
     def click_link_by_text(self, link_text):
         self.page.get_by_role("link", name=link_text, exact=False).first.click()
@@ -56,11 +59,11 @@ class BasePage:
         else:
             formatted = date_value
 
-        self.page.locator(selector).evaluate(
+        self._locator(selector).evaluate(
             "(el, value) => { el.value = value; el.dispatchEvent(new Event('change')); }",
             formatted,
         )
-        actual_value = self.page.locator(selector).input_value()
+        actual_value = self._locator(selector).input_value()
         assert actual_value == formatted, (
             f"Failed to set date. Expected '{formatted}', but got '{actual_value}'"
         )
