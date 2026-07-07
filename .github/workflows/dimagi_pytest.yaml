@@ -9,9 +9,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  schedule:
-    - cron: '0 2 * * 1-5'   # 9:00 AM IST (PROD)
-    - cron: '0 4 * * 1-5'
+  # schedule:
+  #   - cron: '0 2 * * 1-5'   # 9:00 AM IST (PROD)
+  #   - cron: '0 4 * * 1-5'
 
   workflow_dispatch:
     inputs:
@@ -59,13 +59,13 @@ jobs:
               echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
             fi
           else
-            if [ "${{ github.event.schedule }}" = "0 2 * * 1-5" ]; then
-              echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
-            elif [ "${{ github.event.schedule }}" = "0 4 * * 1-5" ]; then
-              echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
-            else
+            # if [ "${{ github.event.schedule }}" = "0 2 * * 1-5" ]; then
+            #   echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
+            # elif [ "${{ github.event.schedule }}" = "0 4 * * 1-5" ]; then
+            #   echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
+            # else
               echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
-            fi
+            # fi
           fi
 
 # --------------------------------------------------------
