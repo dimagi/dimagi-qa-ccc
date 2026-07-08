@@ -18,8 +18,8 @@ class LoginPage(BasePage):
         except Exception:
             print("No Cookies alert present")
         self.type(self.USERNAME_ELE, username)
-        self.page.locator(self.PASSWORD_ELE).fill(password)
-        self.page.locator(self.PASSWORD_ELE).press("Enter")
+        self.page.locator(self.PASSWORD_ELE).first.fill(password)
+        self.page.locator(self.PASSWORD_ELE).first.press("Enter")
         self.page.wait_for_timeout(3000)
 
     def valid_login_cchq(self, config, settings):

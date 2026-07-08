@@ -46,7 +46,7 @@ class ConnectOpportunitiesPage(BasePage):
     def enter_name_in_opportunity(self, value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
         self.opp_full_name = f"{value}_{timestamp}"
-        self.page.locator(self.OPP_NAME_INPUT).fill(self.opp_full_name)
+        self.page.locator(self.OPP_NAME_INPUT).first.fill(self.opp_full_name)
         return self.opp_full_name
 
     def select_currency_in_opportunity(self, value):
@@ -56,10 +56,10 @@ class ConnectOpportunitiesPage(BasePage):
         self.select_by_visible_text(self.OPP_COUNTRY_INPUT, value)
 
     def enter_short_description_in_opportunity(self, value):
-        self.page.locator(self.OPP_SHORT_DESCRIPTION_INPUT).fill(value)
+        self.page.locator(self.OPP_SHORT_DESCRIPTION_INPUT).first.fill(value)
 
     def enter_description_in_opportunity(self, value):
-        self.page.locator(self.OPP_DESCRIPTION_INPUT).fill(value)
+        self.page.locator(self.OPP_DESCRIPTION_INPUT).first.fill(value)
 
     def select_hq_server_in_opportunity(self, value):
         self.select_by_visible_text(self.OPP_HQ_SERVER_DROPDOWN, value)
@@ -89,11 +89,11 @@ class ConnectOpportunitiesPage(BasePage):
 
     def enter_learn_app_description_in_opportunity(self, value):
         self.scroll_into_view(self.OPP_LEARN_APP_DESCRIPTION_INPUT)
-        self.page.locator(self.OPP_LEARN_APP_DESCRIPTION_INPUT).fill(value)
+        self.page.locator(self.OPP_LEARN_APP_DESCRIPTION_INPUT).first.fill(value)
 
     def enter_passing_score_in_opportunity(self, value):
         self.scroll_into_view(self.OPP_LEARN_APP_PASSING_SCORE_INPUT)
-        self.page.locator(self.OPP_LEARN_APP_PASSING_SCORE_INPUT).fill(value)
+        self.page.locator(self.OPP_LEARN_APP_PASSING_SCORE_INPUT).first.fill(value)
 
     def click_submit_btn(self):
         self.scroll_into_view(self.SUBMIT_BUTTON)
@@ -104,13 +104,13 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_url("**/payment_units/create**")
 
     def enter_amount_in_payment_unit_of_opportunity(self, value):
-        self.page.locator(self.AMOUNT_INPUT).fill(value)
+        self.page.locator(self.AMOUNT_INPUT).first.fill(value)
 
     def enter_max_daily_in_payment_unit_of_opportunity(self, value):
-        self.page.locator(self.MAX_DAILY_INPUT).fill(value)
+        self.page.locator(self.MAX_DAILY_INPUT).first.fill(value)
 
     def enter_max_total_in_payment_unit_of_opportunity(self, value):
-        self.page.locator(self.MAX_TOTAL_INPUT).fill(value)
+        self.page.locator(self.MAX_TOTAL_INPUT).first.fill(value)
 
     def enter_start_date_in_payment_unit_of_opportunity(self, value):
         self.scroll_into_view(self.START_DATE_INPUT)
@@ -121,14 +121,14 @@ class ConnectOpportunitiesPage(BasePage):
         self.enter_date(self.END_DATE_INPUT, value)
 
     def select_required_deliver_units_checkbox(self, required_text):
-        section = self.page.locator(self.REQUIRED_DELIVER_UNITS_SECTION)
+        section = self.page.locator(self.REQUIRED_DELIVER_UNITS_SECTION).first
         label = section.locator(f"xpath=.//label[contains(normalize-space(.), '{required_text}')]")
         checkbox = label.locator("input")
         if not checkbox.is_checked():
             label.click()
 
     def verify_payment_unit_present(self, payment_unit_name):
-        table = self.page.locator(self.PAYMENT_UNITS_TABLE)
+        table = self.page.locator(self.PAYMENT_UNITS_TABLE).first
         rows = table.locator("xpath=.//tbody/tr[not(contains(@class,'detail-row'))]")
         for i in range(rows.count()):
             unit_name_cell = rows.nth(i).locator("xpath=./td[2]")
@@ -141,11 +141,11 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_url("**/finalize/**")
 
     def enter_max_connect_workers_in_budget(self, value):
-        self.page.locator(self.MAX_CONNECT_WORKERS_INPUT).fill(value)
+        self.page.locator(self.MAX_CONNECT_WORKERS_INPUT).first.fill(value)
 
     def verify_total_budget_value(self, value):
         self.page.wait_for_timeout(1000)
-        actual_value = self.page.locator(self.TOTAL_BUDGET_INPUT).input_value()
+        actual_value = self.page.locator(self.TOTAL_BUDGET_INPUT).first.input_value()
         assert actual_value == value, f"Expected total budget value to be '{value}', but got '{actual_value}'"
 
     def fill_opportunity_form(self, data, learn_app, delivery_app, env):

@@ -37,7 +37,7 @@ class ConnectHomePage(BasePage):
             print(f"{organization_name} organization is already selected")
             return
         self.click(self.ORGANIZATION_DROPDOWN)
-        container = self.page.locator(self.ORGANIZATION_CONTAINER)
+        container = self.page.locator(self.ORGANIZATION_CONTAINER).first
         item = container.locator(f"xpath=.//li[.//p[normalize-space()='{organization_name}']]")
         item.wait_for(state="visible")
         item.click()

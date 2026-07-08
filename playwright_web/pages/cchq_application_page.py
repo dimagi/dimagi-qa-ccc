@@ -23,7 +23,7 @@ class CCHQApplicationPage(BasePage):
     def click_tab_by_name_in_application_settings(self, tab_name):
         tab_selector = self.SETTINGS_TAB_BY_NAME.format(tab_name=tab_name)
         self.click(tab_selector)
-        tab = self.page.locator(tab_selector)
+        tab = self.page.locator(tab_selector).first
         assert "active" in (tab.get_attribute("class") or "")
 
     def select_copy_app_to_project_dropdown(self, value):
@@ -32,14 +32,14 @@ class CCHQApplicationPage(BasePage):
     def _enter_app_name(self, prefix):
         timestamp = datetime.now().strftime("[%d/%m/%Y : %H:%M]")
         full_name = f"{prefix} {timestamp}"
-        self.page.locator(self.NAME_INPUT).fill(full_name)
-        self.page.locator(self.NAME_INPUT).press("Tab")
+        self.page.locator(self.NAME_INPUT).first.fill(full_name)
+        self.page.locator(self.NAME_INPUT).first.press("Tab")
         self.page.wait_for_timeout(5000)
         return full_name
 
     def click_copy_button(self):
         self.scroll_into_view(self.COPY_BUTTON)
-        self.page.locator(self.COPY_BUTTON).click(force=True)
+        self.page.locator(self.COPY_BUTTON).first.click(force=True)
         self.page.wait_for_load_state("load")
         assert "/apps/view" in self.page.url
         self.page.wait_for_timeout(5000)

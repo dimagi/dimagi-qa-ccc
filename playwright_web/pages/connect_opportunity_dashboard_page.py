@@ -10,7 +10,7 @@ class OpportunityDashboardPage(BasePage):
     def verify_dashboard_card_details_present(self, title, subtitle, count_section=True):
         selector = self.DASHBOARD_CARD.format(title=title, subtitle=subtitle)
         self.scroll_into_view(selector)
-        card = self.page.locator(selector)
+        card = self.page.locator(selector).first
         card.wait_for(state="visible")
         if count_section:
             count = card.locator("xpath=.//h3[contains(@class,'text-2xl')]").inner_text().strip()
