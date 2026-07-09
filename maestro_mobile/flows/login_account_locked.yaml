@@ -1,0 +1,14 @@
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426005"
+  USERNAME: "Deb Test 161202"
+---
+- launchApp:
+    clearState: true
+- runFlow: shared_login_signup.yaml
+- assertVisible:
+    id: "org.commcare.dalvik:id/connect_message_message"
+    text: ".*Your account has been locked. Please contact support.*"
+- tapOn:
+    text: "OK"
