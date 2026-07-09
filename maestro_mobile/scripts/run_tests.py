@@ -1,4 +1,5 @@
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,8 +25,12 @@ def run_flow(case_key):
     data = load_test_data(case_key)
     flow_file = FLOWS_DIR / FLOW_BY_CASE[case_key]
 
+    maestro_path = shutil.which("maestro")
+    if not maestro_path:
+        sys.exit("maestro CLI not found on PATH. See maestro_mobile/README.md for install instructions.")
+
     cmd = [
-        "maestro", "test", str(flow_file),
+        maestro_path, "test", str(flow_file),
         "-e", f"COUNTRY_CODE={data['country_code']}",
         "-e", f"PHONE_NUMBER={data['phone_number']}",
         "-e", f"USERNAME={data['username']}",
