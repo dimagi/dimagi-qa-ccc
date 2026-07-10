@@ -16,6 +16,17 @@ maestro test flows/login_signup_success.yaml
 python scripts/run_tests.py TC_1
 python scripts/run_tests.py TC_2
 
+## Running on BrowserStack
+python scripts/run_on_browserstack.py
+
+Uploads `app/app-cccStaging-release.apk` and the `flows/` folder to BrowserStack App Automate via its REST API (no `browserstack-sdk` CLI wrapper exists for Maestro — this hits the API directly), triggers a build against `Google Pixel 7-13.0` (matching the existing Appium suite's device), polls until it finishes, and prints the result. Exits non-zero on failure.
+
+Credentials: reads `BROWSERSTACK_USERNAME`/`BROWSERSTACK_ACCESS_KEY` from the environment first, falling back to the `[browserstack]` section of `settings.cfg` (same convention as `drivers/appium_driver.py`).
+
+Only `login_signup_success.yaml` and `login_account_locked.yaml` are passed via the `execute` parameter — `shared_login_signup.yaml` is a sub-flow only (invoked via `runFlow`) and would fail if BrowserStack tried to run it standalone.
+
+**Zip structure matters**: BrowserStack requires every file to sit inside a single root folder within the uploaded zip (`flows/login_signup_success.yaml`, not flat at the zip root) — a flat zip fails with `BROWSERSTACK_TESTSUITE_PARSE_ERROR`. The `execute` paths themselves are relative to that root folder's *contents*, so they do **not** repeat the folder name (`login_signup_success.yaml`, not `flows/login_signup_success.yaml`).
+
 ## Debugging
 maestro studio   # interactive element inspector against the running emulator/device
 
