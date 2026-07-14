@@ -1,0 +1,70 @@
+name: CommCare-Connect Playwright Web Suite
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'playwright_web/**'
+      - 'test_data/web_test_data.yaml'
+      - 'config/env.yaml'
+      - '.github/workflows/playwright_web.yaml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - stage
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright-web:
+    name: Playwright Web Tests (${{ inputs.environment || 'stage' }})
+    runs-on: ubuntu-latest
+
+    env:
+      TEST_ENV: ${{ inputs.environment || 'stage' }}
+      hq_username: ${{ secrets.hq_username }}
+      hq_password: ${{ secrets.hq_password }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r playwright_web/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run Playwright Web Tests
+        working-directory: playwright_web
+        # pytest.ini forces --headed for local debugging, so give CI a virtual display.
+        run: |
+          xvfb-run --auto-servernum -- python -m pytest --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --tb=short
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-playwright-web-${{ env.TEST_ENV }}
+          path: playwright_web/reports/playwright-web-${{ env.TEST_ENV }}.xml
+          if-no-files-found: ignore
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-web-failure-artifacts-${{ env.TEST_ENV }}
+          path: playwright_web/test-results/
+          if-no-files-found: ignore
