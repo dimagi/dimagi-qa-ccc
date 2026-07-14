@@ -46,6 +46,29 @@ class BasePage:
     def select_by_visible_text(self, selector, text):
         self._locator(selector).select_option(label=text)
 
+    def select_by_visible_text_forced(self, selector, text):
+        # For selects enhanced by TomSelect the original element fails Playwright's
+        # actionability checks, so fall back to setting the value via JS.
+        try:
+            self._locator(selector).select_option(label=text, timeout=5000)
+        except Exception:
+            self._locator(selector).evaluate(
+                "(el, label) => {"
+                "  const opt = Array.from(el.options).find(o => o.textContent.trim() === label);"
+                "  if (!opt) throw new Error('Option not found: ' + label);"
+                "  el.value = opt.value;"
+                "  el.dispatchEvent(new Event('change', {bubbles: true}));"
+                "}",
+                text,
+            )
+
+    def wait_for_select_options_loaded(self, selector, timeout=30000):
+        self.page.wait_for_function(
+            "sel => { const el = document.querySelector(sel); return !!el && !el.disabled && el.options.length > 1; }",
+            arg=selector,
+            timeout=timeout,
+        )
+
     def scroll_into_view(self, selector):
         self._locator(selector).scroll_into_view_if_needed()
 

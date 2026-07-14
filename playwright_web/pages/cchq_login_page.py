@@ -38,7 +38,8 @@ class LoginPage(BasePage):
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")
         new_page = self.page.context.new_page()
-        new_page.goto(connect_url)
+        # The root URL now serves the public marketing site, not the app - go straight to login.
+        new_page.goto(f"{connect_url}/accounts/login/")
         assert connect_url in new_page.url
         return new_page
 

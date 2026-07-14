@@ -35,6 +35,7 @@ class ConnectOpportunitiesPage(BasePage):
     SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
     TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
     PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
+    ORGANIZATION_DROPDOWN = locators.get("connect_opportunities_page", "organization_dropdown")
 
     def __init__(self, page):
         super().__init__(page)
@@ -55,6 +56,10 @@ class ConnectOpportunitiesPage(BasePage):
     def select_country_in_opportunity(self, value):
         self.select_by_visible_text(self.OPP_COUNTRY_INPUT, value)
 
+    def select_network_manager_organization(self, value):
+        self.scroll_into_view(self.ORGANIZATION_DROPDOWN)
+        self.select_by_visible_text(self.ORGANIZATION_DROPDOWN, value)
+
     def enter_short_description_in_opportunity(self, value):
         self.page.locator(self.OPP_SHORT_DESCRIPTION_INPUT).first.fill(value)
 
@@ -66,7 +71,7 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(3000)
 
     def select_api_key_in_opportunity(self, value):
-        self.page.wait_for_timeout(8000)
+        self.wait_for_select_options_loaded(self.OPP_API_KEY_DROPDOWN)
         self.select_by_visible_text(self.OPP_API_KEY_DROPDOWN, value)
 
     def select_learn_app_domain_in_opportunity(self, value):
@@ -78,13 +83,13 @@ class ConnectOpportunitiesPage(BasePage):
         self.select_by_visible_text(self.OPP_DELIVER_APP_DOMAIN_DROPDOWN, value)
 
     def select_learn_app_in_opportunity(self, value):
-        self.page.wait_for_timeout(10000)
         self.scroll_into_view(self.OPP_LEARN_APP_DROPDOWN)
+        self.wait_for_select_options_loaded(self.OPP_LEARN_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
 
     def select_deliver_app_in_opportunity(self, value):
-        self.page.wait_for_timeout(10000)
         self.scroll_into_view(self.OPP_DELIVER_APP_DROPDOWN)
+        self.wait_for_select_options_loaded(self.OPP_DELIVER_APP_DROPDOWN)
         self.select_by_visible_text(self.OPP_DELIVER_APP_DROPDOWN, value)
 
     def enter_learn_app_description_in_opportunity(self, value):
@@ -122,7 +127,7 @@ class ConnectOpportunitiesPage(BasePage):
 
     def select_required_deliver_units_checkbox(self, required_text):
         section = self.page.locator(self.REQUIRED_DELIVER_UNITS_SECTION).first
-        label = section.locator(f"xpath=.//label[contains(normalize-space(.), '{required_text}')]")
+        label = section.locator(f"xpath=.//label[normalize-space(.) = '{required_text}']")
         checkbox = label.locator("input")
         if not checkbox.is_checked():
             label.click()
@@ -148,11 +153,15 @@ class ConnectOpportunitiesPage(BasePage):
         actual_value = self.page.locator(self.TOTAL_BUDGET_INPUT).first.input_value()
         assert actual_value == value, f"Expected total budget value to be '{value}', but got '{actual_value}'"
 
-    def fill_opportunity_form(self, data, learn_app, delivery_app, env):
+    def fill_opportunity_form(self, data, learn_app, delivery_app, env, network_manager=None):
         env_suffix = f"_{env}" if env == "staging" else ""
         opp_name = self.enter_name_in_opportunity(data["opportunity_name"])
-        self.select_currency_in_opportunity(data["currency"])
-        self.select_country_in_opportunity(data["country"])
+        if network_manager:
+            # Currency/country are inherited (read-only) from the Program for managed opportunities.
+            self.select_network_manager_organization(network_manager)
+        else:
+            self.select_currency_in_opportunity(data["currency"])
+            self.select_country_in_opportunity(data["country"])
         self.enter_short_description_in_opportunity(data["short_description"])
         self.enter_description_in_opportunity(data["description"])
         self.select_hq_server_in_opportunity(data[f"hq_server{env_suffix}"])
@@ -166,15 +175,14 @@ class ConnectOpportunitiesPage(BasePage):
         self.click_submit_btn()
         return opp_name
 
-    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env):
-        self.click_add_opportunity_btn()
+    def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env, network_manager=None):
         self.page.wait_for_timeout(5000)
         try:
-            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env)
+            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
         except Exception:
-            self.page.reload()
-            self.page.wait_for_timeout(30000)
-            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env)
+            self.page.reload(wait_until="domcontentloaded", timeout=60000)
+            self.page.wait_for_timeout(10000)
+            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
         self.page.wait_for_timeout(3000)
         return opp_name
 

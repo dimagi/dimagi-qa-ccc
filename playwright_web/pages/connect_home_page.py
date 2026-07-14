@@ -5,10 +5,10 @@ locators = LocatorLoader()
 
 
 class ConnectHomePage(BasePage):
-    LOGIN_LINK = locators.get("connect_home_page", "login_link")
     LOGIN_WITH_CC_HQ = locators.get("connect_home_page", "login_with_cc_hq")
     AUTHORIZE_BUTTON = locators.get("connect_home_page", "authorize_button")
     OPPORTUNITIES_NAVBAR_LINK = locators.get("connect_home_page", "opportunities_navbar_item")
+    PROGRAMS_NAVBAR_LINK = locators.get("connect_home_page", "programs_navbar_item")
     ORGANIZATION_CONTAINER = locators.get("connect_home_page", "organization_container")
     ORGANIZATION_DROPDOWN = locators.get("connect_home_page", "organization_dropdown")
     ORGANIZATION_NAME = locators.get("connect_home_page", "organization_name")
@@ -17,10 +17,12 @@ class ConnectHomePage(BasePage):
         self.click(self.OPPORTUNITIES_NAVBAR_LINK)
         self.page.wait_for_url("**/opportunity/**")
 
+    def click_programs_in_sidebar(self):
+        self.click(self.PROGRAMS_NAVBAR_LINK)
+        self.page.wait_for_url("**/program/**")
+
     def signin_to_connect_page_using_cchq(self):
         try:
-            self.click(self.LOGIN_LINK)
-            self.page.wait_for_timeout(2000)
             self.click(self.LOGIN_WITH_CC_HQ)
             self.click(self.AUTHORIZE_BUTTON)
         except Exception:
