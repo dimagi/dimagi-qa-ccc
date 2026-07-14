@@ -23,10 +23,17 @@ def test_locator_loader_preserves_format_placeholders():
 from utils.helpers import ConfigLoader, SettingsLoader, TestDataLoader
 
 
-def test_config_loader_defaults_to_prod():
+def test_config_loader_falls_back_to_yaml_default():
+    import yaml
+
+    from utils.helpers import REPO_ROOT
+
+    with open(REPO_ROOT / "config" / "env.yaml") as f:
+        data = yaml.safe_load(f)
+
     config = ConfigLoader(env=None)
-    assert config.env == "prod"
-    assert config.get("cchq_url") == "https://www.commcarehq.org/a/connectqa-automation-prod/login/"
+    assert config.env == data["default"]
+    assert config.get("cchq_url") == data[data["default"]]["cchq_url"]
 
 
 def test_config_loader_stage_env():
