@@ -52,9 +52,9 @@ TC_6:
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
   org_name_staging: "PM_Automation_01"
-  phone_number_staging: "7426134"
-  username_staging: "Automation User 44"
-  backup_code_staging: "742644"
+  phone_number_staging: "7426014"
+  username_staging: "Automation User 14"
+  backup_code_staging: "742614"
 
 TC_7:
   country_code: "+7426"

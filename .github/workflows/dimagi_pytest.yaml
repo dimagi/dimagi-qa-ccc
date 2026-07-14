@@ -4,13 +4,13 @@ env:
   SEND_SLACK: "true"
   SEND_EMAIL: "true"
 
-# Legacy Selenium/Appium suite. No longer runs on push/PR - the Playwright
-# (playwright_web.yaml) and Maestro (maestro_mobile.yaml) suites cover those.
-# Scheduled and manual runs stay until the migration reaches parity.
+# Legacy Selenium/Appium suite. Not triggered automatically anymore - the
+# Playwright (playwright_web.yaml) and Maestro (maestro_mobile.yaml) suites
+# run on PRs, and the schedule was already disabled. Run manually if needed.
 on:
-  schedule:
-    - cron: '0 2 * * 1-5'   # 9:00 AM IST (PROD)
-    - cron: '0 4 * * 1-5'
+  # schedule:
+  #   - cron: '0 2 * * 1-5'   # 9:00 AM IST (PROD)
+  #   - cron: '0 4 * * 1-5'
 
   workflow_dispatch:
     inputs:
@@ -58,13 +58,13 @@ jobs:
               echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
             fi
           else
-            if [ "${{ github.event.schedule }}" = "0 2 * * 1-5" ]; then
-              echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
-            elif [ "${{ github.event.schedule }}" = "0 4 * * 1-5" ]; then
-              echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
-            else
+            # if [ "${{ github.event.schedule }}" = "0 2 * * 1-5" ]; then
+            #   echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
+            # elif [ "${{ github.event.schedule }}" = "0 4 * * 1-5" ]; then
+            #   echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
+            # else
               echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
-            fi
+            # fi
           fi
 
 # --------------------------------------------------------
