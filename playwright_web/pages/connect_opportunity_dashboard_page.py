@@ -19,11 +19,11 @@ class OpportunityDashboardPage(BasePage):
 
     def navigate_to_opportunity_and_verify_all_fields_present_in_connect(self, data):
         self.click_link_by_text(data["opportunity_name"])
+        # Only the always-present cards are verified here. "Tasks Assigned to Connect
+        # Workers", "View Progress Map" and "Audit Opportunity" are feature-flagged
+        # (microplanning / task types / weekly report) and covered by separate tests.
         self.verify_dashboard_card_details_present("Connect Workers", "", count_section=False)
-        self.verify_dashboard_card_details_present("Tasks Assigned to Connect Workers", "")
         self.verify_dashboard_card_details_present("Connect Workers", "Inactive last 3 days")
         self.verify_dashboard_card_details_present("Services Delivered", "Total")
-        self.verify_dashboard_card_details_present("View Progress Map", "", count_section=False)
-        self.verify_dashboard_card_details_present("Audit Opportunity", "", count_section=False)
         self.verify_dashboard_card_details_present("Payments", "Earned")
         self.verify_dashboard_card_details_present("Payments", "Due")
