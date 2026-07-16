@@ -1,5 +1,8 @@
 name: CommCare-Connect Playwright Web Suite
 
+env:
+  SEND_EMAIL: "true"
+
 on:
   pull_request:
     branches: [ main ]
@@ -42,7 +45,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r playwright_web/requirements.txt
+        run: pip install -r playwright_web/requirements.txt pytest-html
 
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
@@ -51,7 +54,7 @@ jobs:
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
         run: |
-          xvfb-run --auto-servernum -- python -m pytest --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --tb=short
+          xvfb-run --auto-servernum -- python -m pytest --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload JUnit report
         if: always()
@@ -68,3 +71,63 @@ jobs:
           name: playwright-web-failure-artifacts-${{ env.TEST_ENV }}
           path: playwright_web/test-results/
           if-no-files-found: ignore
+
+      - name: Parse Results
+        id: aggregate
+        if: always()
+        shell: bash
+        run: |
+          file="playwright_web/reports/playwright-web-${TEST_ENV}.xml"
+          total=0; failed=0; errors=0; skipped=0
+          if [ -f "$file" ]; then
+            t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            total=${t:-0}; failed=${f:-0}; errors=${e:-0}; skipped=${s:-0}
+          fi
+          total_failed=$((failed + errors))
+          passed=$((total - total_failed - skipped))
+          if [ "$total_failed" -gt 0 ] || [ "$total" -eq 0 ]; then
+            status="FAILURE"
+          else
+            status="SUCCESS"
+          fi
+          {
+            echo "status=$status"
+            echo "passed=$passed"
+            echo "failed=$total_failed"
+            echo "errors=$errors"
+            echo "skipped=$skipped"
+          } >> $GITHUB_OUTPUT
+
+      - name: Send Email Report
+        if: ${{ always() && env.SEND_EMAIL == 'true' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: >
+            CommCare-Connect Playwright Web ${{ env.TEST_ENV }} -
+            ${{ steps.aggregate.outputs.status }} -
+            Run #${{ github.run_number }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+          html_body: |
+            <h2>CommCare-Connect Playwright Web Report - ${{ env.TEST_ENV }}</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
+            <h3>Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.failed }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.errors }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.skipped }}</li>
+            </ul>
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+          attachments: playwright_web/reports/report-playwright-web-${{ env.TEST_ENV }}.html
