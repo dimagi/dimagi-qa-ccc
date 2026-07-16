@@ -2,6 +2,7 @@ name: CommCare-Connect Maestro Mobile Suite
 
 env:
   SEND_EMAIL: "true"
+  SEND_SLACK: "true"
 
 on:
   pull_request:
@@ -82,3 +83,39 @@ jobs:
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
             </a>
+
+      - name: Slack Notify
+        if: ${{ always() && env.SEND_SLACK == 'true' }}
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          STATUS: ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }}
+          BS_URL: ${{ steps.build.outputs.url }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os
+          from slack_sdk import WebClient
+
+          token = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured - skipping")
+              raise SystemExit(0)
+
+          status = os.environ.get("STATUS", "FAILURE")
+          icon = "✅" if status == "SUCCESS" else "❌"
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          bs_url = os.environ.get("BS_URL", "https://app-automate.browserstack.com/")
+
+          message = (
+              f"{icon} 📊 CommCare-Connect Maestro Mobile Tests — Run #{run_number} — {status}\n"
+              f"📱 Device video, flow results and logs: <{bs_url}|BrowserStack build>\n"
+              f"🔗 Run: <{run_url}|View on GitHub>"
+          )
+          WebClient(token=token).chat_postMessage(channel=channel, text=message)
+          print("Slack notification sent")
+          PY
