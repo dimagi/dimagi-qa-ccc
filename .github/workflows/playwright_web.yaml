@@ -2,6 +2,7 @@ name: CommCare-Connect Playwright Web Suite
 
 env:
   SEND_EMAIL: "true"
+  SEND_SLACK: "true"
 
 on:
   pull_request:
@@ -131,3 +132,41 @@ jobs:
             View Full Run
             </a>
           attachments: playwright_web/reports/report-playwright-web-${{ env.TEST_ENV }}.html
+
+      - name: Slack Notify
+        if: ${{ always() && env.SEND_SLACK == 'true' }}
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          STATUS: ${{ steps.aggregate.outputs.status }}
+          PASSED: ${{ steps.aggregate.outputs.passed }}
+          FAILED: ${{ steps.aggregate.outputs.failed }}
+          SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os
+          from slack_sdk import WebClient
+
+          token = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured - skipping")
+              raise SystemExit(0)
+
+          env_name = os.environ.get("TEST_ENV", "stage").upper()
+          status = os.environ.get("STATUS", "FAILURE")
+          icon = "✅" if status == "SUCCESS" else "❌"
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+
+          message = (
+              f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
+              f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
+              f"🔗 Run: <{run_url}|View on GitHub>"
+          )
+          WebClient(token=token).chat_postMessage(channel=channel, text=message)
+          print("Slack notification sent")
+          PY
