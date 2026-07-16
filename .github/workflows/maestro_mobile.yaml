@@ -1,5 +1,8 @@
 name: CommCare-Connect Maestro Mobile Suite
 
+env:
+  SEND_EMAIL: "true"
+
 on:
   pull_request:
     branches: [ main ]
@@ -34,7 +37,48 @@ jobs:
         run: pip install requests
 
       - name: Run Maestro flows on BrowserStack
+        id: bs
         # Uploads the staging APK and maestro_mobile/flows, runs them on a real
         # device via App Automate, and polls until the build finishes. Exits
         # non-zero unless the build status is "passed".
-        run: python maestro_mobile/scripts/run_on_browserstack.py
+        run: |
+          set -o pipefail
+          python maestro_mobile/scripts/run_on_browserstack.py | tee bs_output.log
+
+      - name: Extract BrowserStack build link
+        id: build
+        if: always()
+        shell: bash
+        run: |
+          build_id=$(grep -o 'Build triggered: .*' bs_output.log | head -1 | cut -d' ' -f3)
+          if [ -n "$build_id" ]; then
+            echo "url=https://app-automate.browserstack.com/builds/${build_id}" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://app-automate.browserstack.com/" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Email Report
+        if: ${{ always() && env.SEND_EMAIL == 'true' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: >
+            CommCare-Connect Maestro Mobile -
+            ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }} -
+            Run #${{ github.run_number }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+          html_body: |
+            <h2>CommCare-Connect Maestro Mobile Report</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
+            <p><b>Status:</b> ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }}</p>
+            <p>Flow-level results, device video, and logs are on the
+            <a href="${{ steps.build.outputs.url }}">BrowserStack build dashboard</a>.</p>
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
