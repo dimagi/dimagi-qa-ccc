@@ -21,7 +21,7 @@ python scripts/run_on_browserstack.py
 
 Uploads `app/app-cccStaging-release.apk` and the `flows/` folder to BrowserStack App Automate via its REST API (no `browserstack-sdk` CLI wrapper exists for Maestro — this hits the API directly), triggers a build against `Google Pixel 7-13.0` (matching the existing Appium suite's device), polls until it finishes, and prints the result. Exits non-zero on failure.
 
-Credentials: reads `BROWSERSTACK_USERNAME`/`BROWSERSTACK_ACCESS_KEY` from the environment first, falling back to the `[browserstack]` section of `settings.cfg` (same convention as `drivers/appium_driver.py`).
+Credentials: reads `BROWSERSTACK_USERNAME`/`BROWSERSTACK_ACCESS_KEY` from the environment first, falling back to the `[browserstack]` section of `settings.cfg`. This is the **same `settings.cfg` at the repo root that the existing Appium/Selenium setup already uses** — no new file or location; if you already have it configured for the old suite, nothing extra is needed. On CI the values come from the repo's existing `BROWSERSTACK_*` secrets as environment variables, so `settings.cfg` is only needed for local runs.
 
 Only `login_signup_success.yaml` and `login_account_locked.yaml` are passed via the `execute` parameter — `shared_login_signup.yaml` is a sub-flow only (invoked via `runFlow`) and would fail if BrowserStack tried to run it standalone.
 

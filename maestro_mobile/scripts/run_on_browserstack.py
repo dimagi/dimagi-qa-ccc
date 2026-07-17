@@ -104,6 +104,69 @@ def poll_build(auth, build_id):
         time.sleep(POLL_INTERVAL_SECONDS)
 
 
+def summarize_build(result, build_id):
+    passed = failed = skipped = 0
+    session_rows = []
+    for device in result.get("devices", []):
+        device_name = f"{device.get('device', '?')} (Android {device.get('os_version', '?')})"
+        for session in device.get("sessions", []):
+            counts = session.get("testcases", {}).get("status", {})
+            s_passed = counts.get("passed", 0)
+            s_failed = counts.get("failed", 0) + counts.get("error", 0) + counts.get("timedout", 0)
+            s_skipped = counts.get("skipped", 0)
+            passed += s_passed
+            failed += s_failed
+            skipped += s_skipped
+            session_rows.append(
+                {
+                    "device": device_name,
+                    "status": session.get("status", "?"),
+                    "duration_seconds": session.get("duration", 0),
+                    "passed": s_passed,
+                    "failed": s_failed,
+                    "skipped": s_skipped,
+                }
+            )
+    return {
+        "status": "SUCCESS" if result.get("status") == "passed" else "FAILURE",
+        "build_id": build_id,
+        "build_url": f"https://app-automate.browserstack.com/builds/{build_id}",
+        "flows": TEST_FLOWS,
+        "passed": passed,
+        "failed": failed,
+        "skipped": skipped,
+        "sessions": session_rows,
+    }
+
+
+def write_reports(summary):
+    with open("maestro_report.json", "w") as f:
+        json.dump(summary, f, indent=2)
+
+    rows = "".join(
+        f"<tr><td>{s['device']}</td><td>{s['status']}</td><td>{s['duration_seconds']}s</td>"
+        f"<td>{s['passed']}</td><td>{s['failed']}</td><td>{s['skipped']}</td></tr>"
+        for s in summary["sessions"]
+    )
+    html = f"""<!DOCTYPE html>
+<html><head><title>Maestro Mobile Report</title>
+<style>body{{font-family:sans-serif;margin:2em}}table{{border-collapse:collapse}}
+td,th{{border:1px solid #ccc;padding:6px 12px}}th{{background:#eee}}</style></head>
+<body>
+<h2>CommCare-Connect Maestro Mobile Report</h2>
+<p><b>Status:</b> {summary['status']}</p>
+<p><b>Flows:</b> {', '.join(summary['flows'])}</p>
+<p><b>Totals:</b> {summary['passed']} passed, {summary['failed']} failed, {summary['skipped']} skipped</p>
+<table><tr><th>Device</th><th>Status</th><th>Duration</th><th>Passed</th><th>Failed</th><th>Skipped</th></tr>
+{rows}</table>
+<p>Device video, step logs and screenshots:
+<a href="{summary['build_url']}">{summary['build_url']}</a></p>
+</body></html>"""
+    with open("maestro_report.html", "w") as f:
+        f.write(html)
+    print("Reports written: maestro_report.json, maestro_report.html")
+
+
 def main():
     auth = get_credentials()
     app_url = upload_app(auth)
@@ -111,6 +174,8 @@ def main():
     build_id = trigger_build(auth, app_url, test_suite_url)
     result = poll_build(auth, build_id)
     print(json.dumps(result, indent=2))
+    summary = summarize_build(result, build_id)
+    write_reports(summary)
     sys.exit(0 if result.get("status") == "passed" else 1)
 
 

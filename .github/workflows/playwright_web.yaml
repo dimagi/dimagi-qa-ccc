@@ -65,6 +65,15 @@ jobs:
           path: playwright_web/reports/playwright-web-${{ env.TEST_ENV }}.xml
           if-no-files-found: ignore
 
+      - name: Upload HTML report
+        id: report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-playwright-web-${{ env.TEST_ENV }}
+          path: playwright_web/reports/report-playwright-web-${{ env.TEST_ENV }}.html
+          if-no-files-found: ignore
+
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -142,6 +151,7 @@ jobs:
           PASSED: ${{ steps.aggregate.outputs.passed }}
           FAILED: ${{ steps.aggregate.outputs.failed }}
           SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+          ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
         shell: bash
         run: |
           pip install --quiet slack_sdk
@@ -162,9 +172,11 @@ jobs:
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 
+          artifact_url = os.environ.get("ARTIFACT_URL") or run_url
           message = (
               f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
               f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
+              f"📎 Report: <{artifact_url}|Download here>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
           WebClient(token=token).chat_postMessage(channel=channel, text=message)

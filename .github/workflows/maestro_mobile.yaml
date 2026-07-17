@@ -46,17 +46,39 @@ jobs:
           set -o pipefail
           python maestro_mobile/scripts/run_on_browserstack.py | tee bs_output.log
 
-      - name: Extract BrowserStack build link
-        id: build
+      - name: Parse Results
+        id: aggregate
         if: always()
         shell: bash
         run: |
-          build_id=$(grep -o 'Build triggered: .*' bs_output.log | head -1 | cut -d' ' -f3)
-          if [ -n "$build_id" ]; then
-            echo "url=https://app-automate.browserstack.com/builds/${build_id}" >> $GITHUB_OUTPUT
+          if [ -f maestro_report.json ]; then
+            python - <<'PY' >> $GITHUB_OUTPUT
+          import json
+          d = json.load(open("maestro_report.json"))
+          print(f"status={d['status']}")
+          print(f"passed={d['passed']}")
+          print(f"failed={d['failed']}")
+          print(f"skipped={d['skipped']}")
+          print(f"url={d['build_url']}")
+          PY
           else
-            echo "url=https://app-automate.browserstack.com/" >> $GITHUB_OUTPUT
+            {
+              echo "status=FAILURE"
+              echo "passed=0"; echo "failed=0"; echo "skipped=0"
+              echo "url=https://app-automate.browserstack.com/"
+            } >> $GITHUB_OUTPUT
           fi
+
+      - name: Upload Report
+        id: report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-mobile-report
+          path: |
+            maestro_report.html
+            maestro_report.json
+          if-no-files-found: ignore
 
       - name: Send Email Report
         if: ${{ always() && env.SEND_EMAIL == 'true' }}
@@ -68,7 +90,7 @@ jobs:
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
             CommCare-Connect Maestro Mobile -
-            ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }} -
+            ${{ steps.aggregate.outputs.status }} -
             Run #${{ github.run_number }}
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
@@ -76,21 +98,31 @@ jobs:
             <h2>CommCare-Connect Maestro Mobile Report</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
-            <p><b>Status:</b> ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }}</p>
+            <h3>Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.failed }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.skipped }}</li>
+            </ul>
             <p>Flow-level results, device video, and logs are on the
-            <a href="${{ steps.build.outputs.url }}">BrowserStack build dashboard</a>.</p>
+            <a href="${{ steps.aggregate.outputs.url }}">BrowserStack build dashboard</a>.</p>
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
             </a>
+          attachments: maestro_report.html
 
       - name: Slack Notify
         if: ${{ always() && env.SEND_SLACK == 'true' }}
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
-          STATUS: ${{ steps.bs.outcome == 'success' && 'SUCCESS' || 'FAILURE' }}
-          BS_URL: ${{ steps.build.outputs.url }}
+          STATUS: ${{ steps.aggregate.outputs.status }}
+          PASSED: ${{ steps.aggregate.outputs.passed }}
+          FAILED: ${{ steps.aggregate.outputs.failed }}
+          SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+          BS_URL: ${{ steps.aggregate.outputs.url }}
+          ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
         shell: bash
         run: |
           pip install --quiet slack_sdk
@@ -110,10 +142,13 @@ jobs:
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
           bs_url = os.environ.get("BS_URL", "https://app-automate.browserstack.com/")
+          artifact_url = os.environ.get("ARTIFACT_URL") or run_url
 
           message = (
-              f"{icon} 📊 CommCare-Connect Maestro Mobile Tests — Run #{run_number} — {status}\n"
-              f"📱 Device video, flow results and logs: <{bs_url}|BrowserStack build>\n"
+              f"{icon} 📊 CommCare-Connect Maestro Mobile Tests — Run #{run_number}\n"
+              f"📱 Mobile → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
+              f"📎 Report: <{artifact_url}|Download here>\n"
+              f"🎥 Device video and logs: <{bs_url}|BrowserStack build>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
           WebClient(token=token).chat_postMessage(channel=channel, text=message)
