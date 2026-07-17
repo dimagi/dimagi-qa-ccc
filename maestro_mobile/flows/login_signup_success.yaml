@@ -1,0 +1,75 @@
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426000"
+  USERNAME: "Deb Test 8/12"
+  BACKUP_CODE: "742600"
+---
+- launchApp:
+    clearState: true
+- runFlow: shared_login_signup.yaml
+- assertVisible:
+    id: "org.commcare.dalvik:id/welcome_back"
+    text: "Welcome back ${USERNAME}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_input"
+- inputText: "123456"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "CONTINUE"
+- assertVisible:
+    text: ".*You have entered the wrong Backup Code.*"
+- tapOn:
+    text: "OK"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_input"
+- inputText: "${BACKUP_CODE}"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "CONTINUE"
+- tapOn:
+    text: "OK"
+- assertVisible:
+    id: "org.commcare.dalvik:id/header_user_name"
+    text: "${USERNAME}"
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- assertVisible:
+    text: "Opportunities"
+- assertVisible:
+    text: "CommCare Apps"
+- assertVisible:
+    text: "Messaging"
+- assertVisible:
+    text: "Work History"
+- assertVisible:
+    text: "Notifications"
+- assertVisible:
+    text: "About CommCare"
+- assertVisible:
+    text: "GO TO CONNECT MENU"
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Forget PersonalID user"
+- tapOn:
+    text: "Open navigation drawer"
+- assertVisible:
+    id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"

@@ -1,0 +1,11 @@
+TC_1:
+  country_code: "+7426"
+  phone_number: "7426000"
+  username: "Deb Test 8/12"
+  backup_code: "742600"
+
+TC_2:
+  country_code: "+7426"
+  phone_number: "7426005"
+  username: "Deb Test 161202"
+  backup_code: "742605"
