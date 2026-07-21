@@ -7,7 +7,6 @@ locators = LocatorLoader()
 
 
 class ConnectProgramsPage(BasePage):
-    VIEW_STATUS_BTN = locators.get("connect_programs_page", "view_status_btn")
     CREATE_OPPORTUNITY_LINK_BY_NETWORK_MANAGER = locators.get(
         "connect_programs_page", "create_opportunity_link_by_network_manager"
     )

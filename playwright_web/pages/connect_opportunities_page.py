@@ -7,7 +7,6 @@ locators = LocatorLoader()
 
 
 class ConnectOpportunitiesPage(BasePage):
-    ADD_OPPORTUNITY_BUTTON = locators.get("connect_opportunities_page", "add_opportunity_btn")
     OPP_NAME_INPUT = locators.get("connect_opportunities_page", "name_input")
     OPP_CURRENCY_INPUT = locators.get("connect_opportunities_page", "currency_input")
     OPP_COUNTRY_INPUT = locators.get("connect_opportunities_page", "country_input")
@@ -40,9 +39,6 @@ class ConnectOpportunitiesPage(BasePage):
     def __init__(self, page):
         super().__init__(page)
         self.opp_full_name = None
-
-    def click_add_opportunity_btn(self):
-        self.click(self.ADD_OPPORTUNITY_BUTTON)
 
     def enter_name_in_opportunity(self, value):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
