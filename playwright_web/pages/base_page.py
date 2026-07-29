@@ -13,7 +13,13 @@ class BasePage:
     def _locator(self, selector):
         return self.page.locator(selector).first
 
+    def _step(self, message):
+        # Captured stdout ends up per-test in the pytest-html report, giving a
+        # trail of executed steps for passed and failed tests alike.
+        print(f"STEP [{self.__class__.__name__}] {message}")
+
     def click(self, selector, force=False):
+        self._step(f"click {selector}")
         try:
             self._locator(selector).click(force=force)
         except PlaywrightTimeoutError:
@@ -24,6 +30,7 @@ class BasePage:
                 raise
 
     def type(self, selector, text):
+        self._step(f"fill {selector} with '{text}'")
         try:
             self._locator(selector).fill(text)
         except PlaywrightTimeoutError:
@@ -44,11 +51,13 @@ class BasePage:
             return False
 
     def select_by_visible_text(self, selector, text):
+        self._step(f"select '{text}' in {selector}")
         self._locator(selector).select_option(label=text)
 
     def select_by_visible_text_forced(self, selector, text):
         # For selects enhanced by TomSelect the original element fails Playwright's
         # actionability checks, so fall back to setting the value via JS.
+        self._step(f"select '{text}' in {selector}")
         try:
             self._locator(selector).select_option(label=text, timeout=5000)
         except Exception:
@@ -73,9 +82,11 @@ class BasePage:
         self._locator(selector).scroll_into_view_if_needed()
 
     def click_link_by_text(self, link_text):
+        self._step(f"click link '{link_text}'")
         self.page.get_by_role("link", name=link_text, exact=False).first.click()
 
     def enter_date(self, selector, date_value):
+        self._step(f"enter date '{date_value}' in {selector}")
         parts = date_value.split("-")
         if len(parts) == 3 and len(parts[2]) == 4:
             formatted = f"{parts[2]}-{parts[1]}-{parts[0]}"

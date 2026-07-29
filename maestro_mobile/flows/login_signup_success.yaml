@@ -71,5 +71,10 @@ env:
     text: "Forget PersonalID user"
 - tapOn:
     text: "Open navigation drawer"
+- tapOn:
+    # The drawer sometimes shows a "Logged out of PersonalID" card after the
+    # forget action - dismiss it so the sign-in button is visible again.
+    text: "Dismiss"
+    optional: true
 - assertVisible:
     id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
