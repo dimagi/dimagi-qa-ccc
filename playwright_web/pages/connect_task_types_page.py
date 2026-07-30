@@ -1,3 +1,5 @@
+from datetime import date
+
 from utils.helpers import LocatorLoader, parse_org_and_opp
 
 from pages.base_page import BasePage
@@ -77,11 +79,18 @@ class ConnectTaskTypesPage(BasePage):
         assert unit_name in row.inner_text(), f"Row for '{name}' does not show linked task unit '{unit_name}'"
         self._step(f"Row '{name}' shows linked task unit '{unit_name}'")
 
-    def verify_type_absent(self, name):
-        # Archiving removes the task type from the config table entirely
-        # (verified on staging 30-Jul-2026), it does not show an archived date.
-        self.page.locator(self.ROW_BY_NAME.format(name=name)).first.wait_for(state="hidden", timeout=15000)
-        self._step(f"Task type '{name}' no longer listed (archived)")
+    def verify_row_archived(self, name):
+        # Archived rows stay listed, with the archive date (MM/DD/YYYY on
+        # staging) in the Archived column - verified via network-instrumented
+        # run on 30-Jul-2026.
+        row = self.page.locator(self.ROW_BY_NAME.format(name=name)).first
+        row.wait_for(state="visible")
+        expected_date = date.today().strftime("%m/%d/%Y")
+        text = row.inner_text()
+        assert expected_date in text, (
+            f"Row '{name}' does not show today's archive date {expected_date}: {text!r}"
+        )
+        self._step(f"Task type '{name}' shows archived date {expected_date}")
 
     # -- actions --------------------------------------------------------------
 

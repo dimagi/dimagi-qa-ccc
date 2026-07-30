@@ -66,10 +66,10 @@ def test_task_type_config_journey(page, test_data, config, settings):
         connect_page.wait_for_timeout(3000)  # stats tile arrives via htmx
         assert task_types.is_tasks_tile_visible(), "Tasks tile missing with an active task type"
 
-    # TC-TTC-006: archive - archived types vanish from the config table
+    # TC-TTC-006: archive - row stays listed with the archive date
     task_types.goto_task_types(base_url, org_slug, opp_id)
     task_types.archive_task_type(edited_name)
-    task_types.verify_type_absent(edited_name)
+    task_types.verify_row_archived(edited_name)
 
     # Negative half of TC-TAS-005: archived type no longer offered
     task_list.goto_task_list(base_url, org_slug, opp_id)
