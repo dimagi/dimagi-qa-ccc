@@ -1,5 +1,6 @@
 import configparser
 import os
+import re
 from pathlib import Path
 
 import yaml
@@ -53,6 +54,19 @@ class SettingsLoader:
         if required:
             raise RuntimeError(f"Missing setting: env_var={env_var} or [{section}].{key}")
         return None
+
+
+def parse_org_and_opp(url):
+    """Extract (org_slug, opp_id) from any Connect opportunity URL.
+
+    Connect URLs look like https://<host>/a/<org_slug>/opportunity/<opp_id>/...
+    The assigned-tasks page has no navigation entry, so tasking tests build its
+    URL from these parts.
+    """
+    match = re.search(r"/a/([^/]+)/opportunity/(\d+)", url)
+    if not match:
+        raise ValueError(f"Not an opportunity URL: {url}")
+    return match.group(1), match.group(2)
 
 
 class TestDataLoader:

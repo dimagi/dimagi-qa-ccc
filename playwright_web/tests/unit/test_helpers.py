@@ -56,3 +56,23 @@ def test_test_data_loader_loads_olp_1():
     data = TestDataLoader()
     olp1 = data.get("OLP_1")
     assert olp1["opportunity_name"] == "Demo Opportunity"
+
+
+from utils.helpers import parse_org_and_opp
+
+
+def test_parse_org_and_opp_from_dashboard_url():
+    url = "https://connect-staging.dimagi.com/a/pm-automation-01/opportunity/612/"
+    assert parse_org_and_opp(url) == ("pm-automation-01", "612")
+
+
+def test_parse_org_and_opp_from_nested_page_url():
+    url = "https://connect-staging.dimagi.com/a/my-org/opportunity/45/workers/tasks/?x=1"
+    assert parse_org_and_opp(url) == ("my-org", "45")
+
+
+def test_parse_org_and_opp_raises_on_non_opportunity_url():
+    import pytest
+
+    with pytest.raises(ValueError):
+        parse_org_and_opp("https://connect-staging.dimagi.com/a/my-org/program/")
