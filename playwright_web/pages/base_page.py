@@ -71,6 +71,19 @@ class BasePage:
                 text,
             )
 
+    def select_tomselect_by_label(self, select_id, label, scope=None):
+        """Pick an option in a TomSelect-enhanced <select> by driving its UI.
+
+        TomSelect hides the native select and renders a .ts-wrapper sibling;
+        plain select_option() would set the value without updating the widget.
+        scope: optional container selector to disambiguate duplicated ids.
+        """
+        self._step(f"Select '{label}' in TomSelect #{select_id}")
+        root = self.page.locator(scope) if scope else self.page
+        root.locator(f"#{select_id} ~ .ts-wrapper .ts-control").first.click()
+        self.page.locator(f".ts-dropdown .option:has-text('{label}')").first.click()
+        self.page.wait_for_timeout(300)
+
     def wait_for_select_options_loaded(self, selector, timeout=30000):
         self.page.wait_for_function(
             "sel => { const el = document.querySelector(sel); return !!el && !el.disabled && el.options.length > 1; }",
