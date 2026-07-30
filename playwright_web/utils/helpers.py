@@ -63,7 +63,8 @@ def parse_org_and_opp(url):
     The assigned-tasks page has no navigation entry, so tasking tests build its
     URL from these parts.
     """
-    match = re.search(r"/a/([^/]+)/opportunity/(\d+)", url)
+    # opp ids are numeric on some deployments and UUIDs on others (staging)
+    match = re.search(r"/a/([^/]+)/opportunity/([0-9a-fA-F-]+)(?:/|$|\?)", url)
     if not match:
         raise ValueError(f"Not an opportunity URL: {url}")
     return match.group(1), match.group(2)

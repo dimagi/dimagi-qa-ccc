@@ -70,20 +70,18 @@ class ConnectTaskTypesPage(BasePage):
         self.page.locator(self.ROW_BY_NAME.format(name=name)).first.wait_for(state="visible")
         self._step(f"Task type row '{name}' present")
 
-    def verify_row_shows_slug(self, name, slug):
+    def verify_row_shows_unit(self, name, unit_name):
+        # The Linked Task Unit column renders the unit's display name (unit_name),
+        # not the slug - the slug never appears in the table.
         row = self.page.locator(self.ROW_BY_NAME.format(name=name)).first
-        assert slug in row.inner_text(), f"Row for '{name}' does not show linked task unit '{slug}'"
-        self._step(f"Row '{name}' shows linked task unit '{slug}'")
+        assert unit_name in row.inner_text(), f"Row for '{name}' does not show linked task unit '{unit_name}'"
+        self._step(f"Row '{name}' shows linked task unit '{unit_name}'")
 
-    def verify_row_archived(self, name):
-        row = self.page.locator(self.ROW_BY_NAME.format(name=name)).first
-        row.wait_for(state="visible")
-        text = row.inner_text()
-        after_name = text.split(name)[-1]
-        assert any(ch.isdigit() for ch in after_name), (
-            f"Row '{name}' shows no archived date after archiving: {text!r}"
-        )
-        self._step(f"Task type '{name}' shows archived date")
+    def verify_type_absent(self, name):
+        # Archiving removes the task type from the config table entirely
+        # (verified on staging 30-Jul-2026), it does not show an archived date.
+        self.page.locator(self.ROW_BY_NAME.format(name=name)).first.wait_for(state="hidden", timeout=15000)
+        self._step(f"Task type '{name}' no longer listed (archived)")
 
     # -- actions --------------------------------------------------------------
 
@@ -91,11 +89,22 @@ class ConnectTaskTypesPage(BasePage):
         self.click(self.ADD_TASK_TYPE_BTN)
         self.page.locator(self.CREATE_MODAL).first.wait_for(state="visible")
 
-    def add_task_type(self, unit_label, case_property):
-        """Create a task type from a task unit; returns the auto-filled name."""
+    def add_task_type(self, unit_label, case_property, expected_slug=None):
+        """Create a task type from a task unit; returns the auto-filled name.
+
+        expected_slug: the option VALUE of the selected task unit becomes the
+        TaskType slug, so asserting it here is the slug-integrity check
+        (TC-TTC-003) - the slug is not rendered anywhere on the page.
+        """
         self.open_add_modal()
         self._step(f"Select task unit '{unit_label}'")
         self.select_by_visible_text(self.TASK_UNIT_SELECT, unit_label)
+        if expected_slug:
+            selected_value = self.page.locator(self.TASK_UNIT_SELECT).first.input_value()
+            assert selected_value == expected_slug, (
+                f"Task unit '{unit_label}' has slug {selected_value!r}, expected {expected_slug!r}"
+            )
+            self._step(f"Selected task unit slug verified: '{selected_value}'")
         name_value = self.page.locator(self.CREATE_NAME_INPUT).first.input_value()
         assert name_value, "Name was not auto-filled after selecting the task unit"
         self._step(f"Name auto-filled: '{name_value}'")
@@ -119,13 +128,19 @@ class ConnectTaskTypesPage(BasePage):
         self.page.locator(self.EDIT_FORM).wait_for(state="attached", timeout=15000)
         self.page.locator(self.EDIT_NAME_INPUT).first.wait_for(state="visible")
 
+    def _save_edit_modal(self):
+        # The form posts via htmx and the server answers with HX-Redirect;
+        # wait for that navigation, or row assertions read the stale DOM.
+        with self.page.expect_navigation(timeout=15000):
+            self.click(self.EDIT_SAVE_BTN)
+        self.page.wait_for_load_state("load")
+
     def edit_task_type_name(self, name, new_name, new_description):
         self._open_edit_modal(name)
         self.page.locator(self.EDIT_NAME_INPUT).first.fill(new_name)
         self.page.locator(self.EDIT_DESCRIPTION_INPUT).first.fill(new_description)
         self._step(f"Save task type rename to '{new_name}'")
-        self.click(self.EDIT_SAVE_BTN)
-        self.page.wait_for_load_state("load")
+        self._save_edit_modal()
 
     def archive_task_type(self, name):
         self._open_edit_modal(name)
@@ -133,8 +148,7 @@ class ConnectTaskTypesPage(BasePage):
         checkbox = self.page.locator(self.ARCHIVE_CHECKBOX).first
         if not checkbox.is_checked():
             checkbox.check()
-        self.click(self.EDIT_SAVE_BTN)
-        self.page.wait_for_load_state("load")
+        self._save_edit_modal()
 
     # -- dashboard tile ---------------------------------------------------------
 

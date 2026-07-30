@@ -38,10 +38,12 @@ def test_task_type_config_journey(page, test_data, config, settings):
     task_types.verify_no_task_types_yet()
 
     # TC-TTC-002 + TC-TTC-003: create from the registered task unit, slug intact
-    created_name = task_types.add_task_type(tasking["task_unit_name"], tasking["case_property"])
+    created_name = task_types.add_task_type(
+        tasking["task_unit_name"], tasking["case_property"], expected_slug=tasking["task_unit_slug"]
+    )
     assert created_name == tasking["task_unit_name"]
     task_types.verify_row_present(created_name)
-    task_types.verify_row_shows_slug(created_name, tasking["task_unit_slug"])
+    task_types.verify_row_shows_unit(created_name, tasking["task_unit_name"])
 
     # TC-TTC-004: used task unit no longer offered
     labels = task_types.available_task_unit_labels()
@@ -64,10 +66,10 @@ def test_task_type_config_journey(page, test_data, config, settings):
         connect_page.wait_for_timeout(3000)  # stats tile arrives via htmx
         assert task_types.is_tasks_tile_visible(), "Tasks tile missing with an active task type"
 
-    # TC-TTC-006: archive
+    # TC-TTC-006: archive - archived types vanish from the config table
     task_types.goto_task_types(base_url, org_slug, opp_id)
     task_types.archive_task_type(edited_name)
-    task_types.verify_row_archived(edited_name)
+    task_types.verify_type_absent(edited_name)
 
     # Negative half of TC-TAS-005: archived type no longer offered
     task_list.goto_task_list(base_url, org_slug, opp_id)

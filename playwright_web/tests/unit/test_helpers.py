@@ -71,6 +71,11 @@ def test_parse_org_and_opp_from_nested_page_url():
     assert parse_org_and_opp(url) == ("my-org", "45")
 
 
+def test_parse_org_and_opp_with_uuid_opp_id():
+    url = "https://connect-staging.dimagi.com/a/pm_automation_01/opportunity/f808912b-00e9-40eb-aad4-4a938df6e3d3/"
+    assert parse_org_and_opp(url) == ("pm_automation_01", "f808912b-00e9-40eb-aad4-4a938df6e3d3")
+
+
 def test_parse_org_and_opp_raises_on_non_opportunity_url():
     import pytest
 
