@@ -197,49 +197,212 @@ def write_reports(summary):
     with open("maestro_report.json", "w") as f:
         json.dump(json_summary, f, indent=2)
 
+    def pill(status):
+        ok = status in ("passed", "SUCCESS")
+        cls = "pill--pass" if ok else "pill--fail"
+        icon = "&#10003;" if ok else "&#10007;"
+        return f'<span class="pill {cls}">{icon} {status.lower()}</span>'
+
     rows = "".join(
-        f"<tr><td>{s['device']}</td><td>{s['status']}</td><td>{s['duration_seconds']}s</td>"
-        f"<td>{s['passed']}</td><td>{s['failed']}</td><td>{s['skipped']}</td></tr>"
+        f"<tr><td>{s['device']}</td><td>{pill(s['status'])}</td><td class='num'>{s['duration_seconds']}s</td>"
+        f"<td class='num'>{s['passed']}</td><td class='num'>{s['failed']}</td><td class='num'>{s['skipped']}</td></tr>"
         for s in summary["sessions"]
     )
 
     flow_sections = ""
     for session in summary["sessions"]:
         for flow in session.get("flows", []):
-            badge = "#2e7d32" if flow["status"] == "passed" else "#c62828"
             shots = "".join(
-                f"<figure><img src='data:image/png;base64,{shot['base64']}' alt='{shot['name']}'>"
+                f"<figure><img src='data:image/png;base64,{shot['base64']}' alt='{shot['name']}' loading='lazy'>"
                 f"<figcaption>{shot['name']}</figcaption></figure>"
                 for shot in flow.get("screenshots", [])
             )
-            log_text = (flow.get("log") or "").replace("<", "&lt;").replace(">", "&gt;")
+            log_text = (flow.get("log") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             flow_sections += f"""
-<h3>{flow['name']} <span style="color:{badge}">[{flow['status']}]</span>
-<small>({flow['duration_seconds']}s on {session['device']})</small></h3>
-<details><summary>Maestro step log</summary><pre>{log_text}</pre></details>
-<details><summary>Screenshots ({len(flow.get('screenshots', []))})</summary>
-<div class="shots">{shots}</div></details>"""
+<section class="card flow">
+  <div class="flow__head">
+    <h3>{flow['name']}</h3>
+    {pill(flow['status'])}
+    <span class="meta">{flow['duration_seconds']}s &middot; {session['device']}</span>
+  </div>
+  <details>
+    <summary>Maestro step log</summary>
+    <pre>{log_text}</pre>
+  </details>
+  <details>
+    <summary>Screenshots ({len(flow.get('screenshots', []))})</summary>
+    <div class="shots">{shots}</div>
+  </details>
+</section>"""
 
+    total = summary["passed"] + summary["failed"] + summary["skipped"]
+    if total:
+        segments = "".join(
+            f'<div class="comp__seg comp__seg--{name}" style="width:{count / total * 100:.1f}%" '
+            f'title="{count} {name}"></div>'
+            for name, count in (("passed", summary["passed"]), ("failed", summary["failed"]),
+                                ("skipped", summary["skipped"])) if count
+        )
+        legend = "".join(
+            f'<span class="legend__item"><span class="dot dot--{name}"></span>{name.capitalize()} '
+            f'<b>{count}</b></span>'
+            for name, count in (("passed", summary["passed"]), ("failed", summary["failed"]),
+                                ("skipped", summary["skipped"]))
+        )
+        composition = f"""
+  <section class="card">
+    <h2 class="card__title">Results</h2>
+    <div class="comp">{segments}</div>
+    <div class="legend">{legend}</div>
+  </section>"""
+    else:
+        composition = ""
+
+    all_flows = [(f, s) for s in summary["sessions"] for f in s.get("flows", [])]
+    durations = [f for f, _ in all_flows if isinstance(f.get("duration_seconds"), (int, float))]
+    if durations:
+        max_duration = max(f["duration_seconds"] for f in durations) or 1
+        duration_rows = "".join(
+            f"""<div class="dur__row" title="{f['name']}: {f['duration_seconds']}s">
+      <span class="dur__name">{f['name']}</span>
+      <span class="dur__track"><span class="dur__bar dur__bar--{'passed' if f['status'] == 'passed' else 'failed'}"
+        style="width:{max(f['duration_seconds'] / max_duration * 100, 2):.1f}%"></span></span>
+      <span class="dur__value">{f['duration_seconds']}s</span>
+    </div>"""
+            for f in durations
+        )
+        duration_chart = f"""
+  <section class="card">
+    <h2 class="card__title">Flow duration</h2>
+    {duration_rows}
+  </section>"""
+    else:
+        duration_chart = ""
+
+    status_pill = pill(summary["status"])
     html = f"""<!DOCTYPE html>
-<html><head><title>Maestro Mobile Report</title>
-<style>body{{font-family:sans-serif;margin:2em;max-width:70em}}table{{border-collapse:collapse}}
-td,th{{border:1px solid #ccc;padding:6px 12px}}th{{background:#eee}}
-pre{{background:#f6f6f6;padding:1em;overflow-x:auto;max-height:30em}}
-.shots{{display:flex;flex-wrap:wrap;gap:1em}}
-.shots img{{max-width:280px;border:1px solid #ccc}}
-figure{{margin:0}}figcaption{{font-size:0.8em;color:#666;text-align:center}}</style></head>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maestro Mobile Report</title>
+<style>
+:root {{
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+  --muted: #898781; --line: #e1e0d9; --border: rgba(11,11,11,0.10);
+  --good: #0ca30c; --good-text: #006300; --critical: #d03b3b;
+  --good-bg: rgba(12,163,12,0.10); --critical-bg: rgba(208,59,59,0.10);
+  --series: #2a78d6;
+}}
+@media (prefers-color-scheme: dark) {{
+  :root {{
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --line: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --good-text: #0ca30c;
+    --good-bg: rgba(12,163,12,0.16); --critical-bg: rgba(208,59,59,0.16);
+    --series: #3987e5;
+  }}
+}}
+* {{ box-sizing: border-box; }}
+body {{
+  margin: 0; padding: 32px 16px; background: var(--page); color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}}
+main {{ max-width: 62em; margin: 0 auto; display: grid; gap: 16px; }}
+header.card {{ display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }}
+h1 {{ font-size: 18px; margin: 0; flex: 1 1 auto; }}
+h3 {{ font-size: 14px; margin: 0; }}
+.card {{
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 20px;
+}}
+.meta {{ color: var(--muted); font-size: 12px; }}
+.pill {{
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+}}
+.pill--pass {{ color: var(--good-text); background: var(--good-bg); }}
+.pill--fail {{ color: var(--critical); background: var(--critical-bg); }}
+.tiles {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }}
+.tile {{ padding: 14px 20px; }}
+.tile .label {{ color: var(--ink-2); font-size: 12px; }}
+.tile .value {{ font-size: 28px; font-weight: 650; margin-top: 2px; }}
+.tile .value.zero {{ color: var(--muted); font-weight: 500; }}
+table {{ border-collapse: collapse; width: 100%; }}
+th, td {{ text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); }}
+th {{ color: var(--ink-2); font-size: 12px; font-weight: 600; }}
+tr:last-child td {{ border-bottom: none; }}
+td.num {{ font-variant-numeric: tabular-nums; }}
+.flow__head {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }}
+details {{ border-top: 1px solid var(--line); }}
+summary {{
+  cursor: pointer; padding: 10px 0; color: var(--ink-2); font-weight: 600; font-size: 13px;
+}}
+summary:hover {{ color: var(--ink); }}
+pre {{
+  background: var(--page); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; overflow: auto; max-height: 28em; font-size: 12px; margin: 0 0 12px;
+}}
+.shots {{ display: flex; flex-wrap: wrap; gap: 16px; padding-bottom: 12px; }}
+.shots figure {{ margin: 0; }}
+.shots img {{ max-width: 260px; border: 1px solid var(--border); border-radius: 8px; display: block; }}
+.shots figcaption {{ font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }}
+a {{ color: inherit; }}
+footer {{ color: var(--muted); font-size: 12px; text-align: center; }}
+.card__title {{ font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 0 0 12px; }}
+.comp {{ display: flex; gap: 2px; height: 16px; border-radius: 4px; overflow: hidden; }}
+.comp__seg {{ min-width: 4px; }}
+.comp__seg--passed {{ background: var(--good); }}
+.comp__seg--failed {{ background: var(--critical); }}
+.comp__seg--skipped {{ background: var(--muted); }}
+.legend {{ display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }}
+.legend__item {{ display: inline-flex; align-items: center; gap: 6px; }}
+.legend__item b {{ color: var(--ink); font-variant-numeric: tabular-nums; }}
+.dot {{ width: 8px; height: 8px; border-radius: 2px; display: inline-block; }}
+.dot--passed {{ background: var(--good); }}
+.dot--failed {{ background: var(--critical); }}
+.dot--skipped {{ background: var(--muted); }}
+.dur__row {{ display: grid; grid-template-columns: minmax(120px, 220px) 1fr 48px; gap: 12px;
+  align-items: center; padding: 4px 0; }}
+.dur__name {{ font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }}
+.dur__track {{ height: 8px; }}
+.dur__bar {{ display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--series); }}
+.dur__bar--failed {{ background: var(--critical); }}
+.dur__value {{ font-size: 12px; color: var(--ink); text-align: right;
+  font-variant-numeric: tabular-nums; }}
+</style></head>
 <body>
-<h2>CommCare-Connect Maestro Mobile Report</h2>
-<p><b>Status:</b> {summary['status']}</p>
-<p><b>Flows:</b> {', '.join(summary['flows'])}</p>
-<p><b>Totals:</b> {summary['passed']} passed, {summary['failed']} failed, {summary['skipped']} skipped</p>
-<table><tr><th>Device</th><th>Status</th><th>Duration</th><th>Passed</th><th>Failed</th><th>Skipped</th></tr>
-{rows}</table>
-{flow_sections}
-<p>Device video (requires BrowserStack access):
-<a href="{summary['build_url']}">{summary['build_url']}</a></p>
+<main>
+  <header class="card">
+    <h1>CommCare-Connect &middot; Maestro Mobile Report</h1>
+    {status_pill}
+    <span class="meta">{len(summary['flows'])} flows &middot; build {summary['build_id'][:12]}&hellip;</span>
+  </header>
+  <div class="tiles">
+    <div class="card tile"><div class="label">Tests run</div>
+      <div class="value">{total}</div></div>
+    <div class="card tile"><div class="label">&#10003; Passed</div>
+      <div class="value">{summary['passed']}</div></div>
+    <div class="card tile"><div class="label">&#10007; Failed</div>
+      <div class="value{' zero' if not summary['failed'] else ''}">{summary['failed']}</div></div>
+    <div class="card tile"><div class="label">&#8618; Skipped</div>
+      <div class="value{' zero' if not summary['skipped'] else ''}">{summary['skipped']}</div></div>
+  </div>
+  {composition}
+  {duration_chart}
+  <section class="card">
+    <table>
+      <tr><th>Device</th><th>Status</th><th>Duration</th><th>Passed</th><th>Failed</th><th>Skipped</th></tr>
+      {rows}
+    </table>
+  </section>
+  {flow_sections}
+  <footer>Device video requires BrowserStack access:
+    <a href="{summary['build_url']}">{summary['build_url']}</a></footer>
+</main>
 </body></html>"""
-    with open("maestro_report.html", "w") as f:
+    with open("maestro_report.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("Reports written: maestro_report.json, maestro_report.html")
 

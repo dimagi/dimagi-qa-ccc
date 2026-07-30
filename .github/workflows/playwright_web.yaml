@@ -51,11 +51,17 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 
+      - name: Run Framework Unit Tests
+        working-directory: playwright_web
+        # Fast sanity gate on the framework itself. Deliberately kept out of the
+        # HTML report / notifications - those cover the browser tests only.
+        run: python -m pytest tests/unit --tb=short
+
       - name: Run Playwright Web Tests
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
         run: |
-          xvfb-run --auto-servernum -- python -m pytest --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload JUnit report
         if: always()
