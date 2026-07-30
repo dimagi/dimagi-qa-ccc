@@ -18,8 +18,9 @@ OLP_1:
   learn_app_domain_staging: "connectqa-automation"
   deliver_app_domain: "connectqa-automation-prod"
   deliver_app_domain_staging: "connectqa-automation"
-  learn_app: "Learn App [Job 1]"
-  deliver_app: "Delivey App [Job 2]"
+  # Master app names are hardcoded in playwright_web/flows/olp_setup.py
+  # ("[08/12] Learn App" / "[08/12] Delivey App") - the old learn_app/deliver_app
+  # keys here were stale and unread, so they were removed.
   learn_app_description: "This is Learn App"
   passing_score: "40"
 
@@ -120,3 +121,19 @@ Make_Payment:
   worker_name: "Automation User 10"
   country_code: "+7426"
   phone_number: "7426006"
+# --- Tasking workflow automation (CCCT-2658) ---
+TASKING:
+  task_unit_name: "Relearn Task Unit"       # visible label in the Task Unit dropdown
+  task_unit_slug: "relearn_task"            # must match HQ Task Unit ID exactly (case-sensitive)
+  case_property: "relearn_complete"
+  edited_type_name: "Relearn Task Unit (edited)"
+  switch_enabled: false        # set true once waffle switch worker_visits_tasks is confirmed ON
+  # --- Static opportunity for J2/J3/J4 (fill in to un-skip those tests) ---
+  static_opp: ""               # opportunity name as shown in the list
+  static_opp_id: ""            # numeric id from the opportunity URL
+  static_org: ""               # PM org slug in URLs, e.g. "pm-automation-01"
+  static_nm_org: ""            # NM org slug for permission tests
+  static_nm_org_name: ""       # NM org display name for the org switcher
+  static_worker: ""            # enrolled worker display name
+  static_task_type: "Relearn Task Unit"     # pre-created task type on the static opp
+  static_task_type_2: ""       # optional second type - enables the bulk-delete path
