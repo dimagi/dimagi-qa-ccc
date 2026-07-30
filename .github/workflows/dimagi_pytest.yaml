@@ -4,11 +4,10 @@ env:
   SEND_SLACK: "true"
   SEND_EMAIL: "true"
 
+# Legacy Selenium/Appium suite. Not triggered automatically anymore - the
+# Playwright (playwright_web.yaml) and Maestro (maestro_mobile.yaml) suites
+# run on PRs, and the schedule was already disabled. Run manually if needed.
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   # schedule:
   #   - cron: '0 2 * * 1-5'   # 9:00 AM IST (PROD)
   #   - cron: '0 4 * * 1-5'

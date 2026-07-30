@@ -1,0 +1,48 @@
+appId: org.commcare.dalvik
+---
+- tapOn:
+    text: "Open navigation drawer"
+- assertVisible:
+    text: "About CommCare"
+- tapOn:
+    id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+- assertVisible:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- inputText: "${PHONE_NUMBER}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_consent_check"
+- tapOn:
+    text: "CONTINUE"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 15000
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- inputText: "${USERNAME}"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "CONTINUE"

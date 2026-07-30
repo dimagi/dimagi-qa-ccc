@@ -1,4 +1,10 @@
 OLP_1:
+  program_name: "Demo Program"
+  program_description: "Demo Program created by automation"
+  delivery_type: "Wellme"
+  program_budget: "1000000000"
+  network_manager: "Network Manager"
+  network_manager_slug: "network-manager"
   opportunity_name: "Demo Opportunity"
   currency: "INR (Indian Rupee)"
   country: "India"

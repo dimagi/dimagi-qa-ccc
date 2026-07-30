@@ -1,0 +1,190 @@
+name: CommCare-Connect Playwright Web Suite
+
+env:
+  SEND_EMAIL: "true"
+  SEND_SLACK: "true"
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'playwright_web/**'
+      - 'test_data/web_test_data.yaml'
+      - 'config/env.yaml'
+      - '.github/workflows/playwright_web.yaml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - stage
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright-web:
+    name: Playwright Web Tests (${{ inputs.environment || 'stage' }})
+    runs-on: ubuntu-latest
+
+    env:
+      TEST_ENV: ${{ inputs.environment || 'stage' }}
+      hq_username: ${{ secrets.hq_username }}
+      hq_password: ${{ secrets.hq_password }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r playwright_web/requirements.txt pytest-html
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run Framework Unit Tests
+        working-directory: playwright_web
+        # Fast sanity gate on the framework itself. Deliberately kept out of the
+        # HTML report / notifications - those cover the browser tests only.
+        run: python -m pytest tests/unit --tb=short
+
+      - name: Run Playwright Web Tests
+        working-directory: playwright_web
+        # pytest.ini forces --headed for local debugging, so give CI a virtual display.
+        run: |
+          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-playwright-web-${{ env.TEST_ENV }}
+          path: playwright_web/reports/playwright-web-${{ env.TEST_ENV }}.xml
+          if-no-files-found: ignore
+
+      - name: Upload HTML report
+        id: report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-playwright-web-${{ env.TEST_ENV }}
+          path: playwright_web/reports/report-playwright-web-${{ env.TEST_ENV }}.html
+          if-no-files-found: ignore
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-web-failure-artifacts-${{ env.TEST_ENV }}
+          path: playwright_web/test-results/
+          if-no-files-found: ignore
+
+      - name: Parse Results
+        id: aggregate
+        if: always()
+        shell: bash
+        run: |
+          file="playwright_web/reports/playwright-web-${TEST_ENV}.xml"
+          total=0; failed=0; errors=0; skipped=0
+          if [ -f "$file" ]; then
+            t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
+            total=${t:-0}; failed=${f:-0}; errors=${e:-0}; skipped=${s:-0}
+          fi
+          total_failed=$((failed + errors))
+          passed=$((total - total_failed - skipped))
+          if [ "$total_failed" -gt 0 ] || [ "$total" -eq 0 ]; then
+            status="FAILURE"
+          else
+            status="SUCCESS"
+          fi
+          {
+            echo "status=$status"
+            echo "passed=$passed"
+            echo "failed=$total_failed"
+            echo "errors=$errors"
+            echo "skipped=$skipped"
+          } >> $GITHUB_OUTPUT
+
+      - name: Send Email Report
+        if: ${{ always() && env.SEND_EMAIL == 'true' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.FROM_EMAIL_USERNAME }}
+          password: ${{ secrets.FROM_EMAIL_PASSWORD }}
+          subject: >
+            CommCare-Connect Playwright Web ${{ env.TEST_ENV }} -
+            ${{ steps.aggregate.outputs.status }} -
+            Run #${{ github.run_number }}
+          to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
+          from: ${{ secrets.FROM_EMAIL_USERNAME }}
+          html_body: |
+            <h2>CommCare-Connect Playwright Web Report - ${{ env.TEST_ENV }}</h2>
+            <p><b>Run:</b> #${{ github.run_number }}</p>
+            <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
+            <h3>Results</h3>
+            <ul>
+              <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
+              <li><b>Failed:</b> ${{ steps.aggregate.outputs.failed }}</li>
+              <li><b>Errors:</b> ${{ steps.aggregate.outputs.errors }}</li>
+              <li><b>Skipped:</b> ${{ steps.aggregate.outputs.skipped }}</li>
+            </ul>
+            <br>
+            <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
+            View Full Run
+            </a>
+          attachments: playwright_web/reports/report-playwright-web-${{ env.TEST_ENV }}.html
+
+      - name: Slack Notify
+        if: ${{ always() && env.SEND_SLACK == 'true' }}
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+          STATUS: ${{ steps.aggregate.outputs.status }}
+          PASSED: ${{ steps.aggregate.outputs.passed }}
+          FAILED: ${{ steps.aggregate.outputs.failed }}
+          SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+          ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os
+          from slack_sdk import WebClient
+
+          token = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured - skipping")
+              raise SystemExit(0)
+
+          env_name = os.environ.get("TEST_ENV", "stage").upper()
+          status = os.environ.get("STATUS", "FAILURE")
+          icon = "✅" if status == "SUCCESS" else "❌"
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+
+          artifact_url = os.environ.get("ARTIFACT_URL") or run_url
+          message = (
+              f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
+              f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
+              f"📎 Report: <{artifact_url}|Download here>\n"
+              f"🔗 Run: <{run_url}|View on GitHub>"
+          )
+          WebClient(token=token).chat_postMessage(channel=channel, text=message)
+          print("Slack notification sent")
+          PY

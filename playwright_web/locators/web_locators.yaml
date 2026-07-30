@@ -1,0 +1,92 @@
+# Locators for the Playwright web suite. Only sections/keys that the page
+# objects in playwright_web/pages actually use live here - locators for pages
+# that have not been ported yet stay in the legacy locators/web_locators.yaml
+# and get (re)worked when their page objects are ported.
+#
+# Conventions: bare strings are element ids (LocatorLoader prefixes '#'),
+# strings starting with '//' or '(' are XPath. Prefer ids and semantic
+# anchors (text, aria-label, stable classes) over positional paths.
+
+cchq_home_page:
+  welcome_title: "//h1[@class='mb-3 mt-5']"
+  skip_onboarding: "//button[contains(@class, 'userflowjs-bubble-button--default')]"
+  applications_tab: "ApplicationsTab"
+  app_link: "(//li/a[contains(., '{name}')])[1]"
+
+cchq_login_page:
+  username_field: "id_auth-username"
+  password_field: "id_auth-password"
+  cookie_accept_button: "hs-eu-confirmation-button"
+  iframe_guide_popup: "//iframe[contains(@class,'userflowjs-bubble__frame')]"
+  guide_popup: "//div[contains(@class,'userflowjs-bubble-frame-root') and contains(@class,'appearance-modal')]"
+
+cchq_application_page:
+  sidebar_settings_icon: "//a[.//i[@aria-label='Application Settings']]"
+  settings_tab_by_name: "//ul[contains(@class,'nav-tabs')]//a[normalize-space()='{tab_name}']"
+  copy_app_to_project_dropdown: "id_domain"
+  name_input: "id_name"
+  copy_button: "//*[@id='copy-app-form']//button[normalize-space()='Copy']"
+  make_new_version_button: "//button[contains(@data-bind,'Make New Version')]"
+  released_button: "(//button[contains(text(),'Released')])[1]"
+
+connect_home_page:
+  login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
+  authorize_button: "//input[@type='submit' and @name='allow']"
+  opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
+  programs_navbar_item: "//a[contains(@href, '/program/')]"
+  organization_container: "//ul[contains(@class,'overflow-y-auto')]"
+  organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
+  organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
+
+connect_opportunities_page:
+  name_input: "id_name"
+  currency_input: "id_currency"
+  country_input: "id_country"
+  short_description_input: "id_short_description"
+  hq_server_dropdown: "id_hq_server"
+  description_input: "id_description"
+  api_key_dropdown: "id_api_key"
+  learn_app_domain_dropdown: "id_learn_app_domain"
+  deliver_app_domain_dropdown: "id_deliver_app_domain"
+  learn_app_dropdown: "id_learn_app"
+  deliver_app_dropdown: "id_deliver_app"
+  learn_app_description: "id_learn_app_description"
+  learn_app_passing_score_input: "id_learn_app_passing_score"
+  organization_dropdown: "id_organization"
+  submit_button: "submit-id-submit"
+  add_payment_btn: "//button[@type='button']"
+  amount_input: "id_amount"
+  max_total_input: "id_max_total"
+  max_daily_input: "id_max_daily"
+  start_date_input: "id_start_date"
+  end_date_input: "id_end_date"
+  required_delivery_section: "div_id_required_deliver_units"
+  max_connect_workers: "id_max_users"
+  setup_budget_btn: "//a[normalize-space(.)='Setup Budget']"
+  payment_units_table: "//table[contains(@class,'base-table')][.//th[normalize-space()='Payment Unit Name']]"
+  total_budget_input: "id_total_budget"
+  page_size: "page-size"
+
+opportunity_dashboard_page:
+  dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+
+connect_programs_page:
+  add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
+  program_add_form: "program-add-form"
+  program_name_input: "id_name"
+  program_description_input: "id_description"
+  program_delivery_type_dropdown: "id_delivery_type"
+  program_budget_input: "id_budget"
+  program_currency_dropdown: "id_currency"
+  program_country_dropdown: "id_country"
+  program_start_date_input: "id_start_date"
+  program_end_date_input: "id_end_date"
+  program_submit_btn: "//div[@id='program-add-form']//*[@type='submit']"
+  program_card_by_name: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]"
+  view_status_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[.//span[contains(text(), 'View Status')]]"
+  invite_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[contains(text(), 'Invite')]"
+  invite_org_select_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//select[@id='organization']"
+  invite_submit_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[@type='submit'][contains(text(), 'Invite')]"
+  apply_to_program_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[contains(., 'Apply to Program')]"
+  accept_application_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[@value='accept']"
+  create_opportunity_link_by_network_manager: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')][.//p[contains(text(), \"{network_manager}\")]]//a[.//p[contains(text(), 'Create Opportunity')]]"

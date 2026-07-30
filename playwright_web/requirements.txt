@@ -1,0 +1,4 @@
+playwright
+pytest-playwright
+PyYAML>=6.0
+openai>=1.0.0
