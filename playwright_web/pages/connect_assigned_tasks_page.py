@@ -1,3 +1,4 @@
+import time
 from datetime import date, timedelta
 
 from utils.helpers import LocatorLoader
@@ -146,6 +147,34 @@ class ConnectAssignedTasksPage(BasePage):
 
     def row_exists(self, worker):
         return self.page.locator(self.ROW_BY_WORKER.format(worker=worker)).count() > 0
+
+    def status_badge(self, worker):
+        locator = self.page.locator(self.STATUS_BADGE_BY_WORKER.format(worker=worker)).first
+        return locator.inner_text().strip() if locator.count() else ""
+
+    def wait_for_task_status(self, worker, status="Complete", timeout_seconds=300, poll_seconds=15):
+        """Reload the task list until the worker's task reaches `status`.
+
+        Completion is driven from the mobile side: the worker submits the task
+        form, CommCare HQ forwards it to Connect and the form receiver matches
+        it to the assigned task. That round trip is asynchronous, so the web
+        assertion has to poll rather than read once.
+        """
+        deadline = time.monotonic() + timeout_seconds
+        attempt = 0
+        while True:
+            attempt += 1
+            self.page.reload(wait_until="load")
+            current = self.status_badge(worker)
+            self._step(f"Status check {attempt} for '{worker}': {current or '(no row)'}")
+            if current == status:
+                return current
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Task for '{worker}' was '{current or 'missing'}', not '{status}', "
+                    f"after {timeout_seconds}s of polling"
+                )
+            self.page.wait_for_timeout(poll_seconds * 1000)
 
     # -- edit ---------------------------------------------------------------------
 

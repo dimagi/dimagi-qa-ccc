@@ -167,3 +167,10 @@ connect_workers_page:
   drilldown_tasks_tab: "//a[contains(@class,'tab') and normalize-space()='Tasks']"
   task_details_panel: "task-details"
   drilldown_task_row: "//table//tr[@hx-get or contains(@class,'group')][td]"
+
+# --- Worker invite + hybrid (Phase 2) ---
+connect_worker_invite_page:
+  users_textarea: "id_users"
+  submit_btn: "submit-id-submit"
+  form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
+  error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
