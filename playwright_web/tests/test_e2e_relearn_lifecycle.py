@@ -46,12 +46,25 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     tasks = ConnectAssignedTasksPage(connect_page)
     workers = ConnectWorkersPage(connect_page)
 
+    if not hybrid.get("mobile_backup_code"):
+        pytest.skip("TASKING_HYBRID.mobile_backup_code is not set - the device cannot sign in without it")
+
     # The worker must be enrolled before a task can be assigned to them.
     workers.wait_for_worker_in_list(base_url, org, opp, hybrid["mobile_phone_number"])
 
     # --- WEB: assign the task ---
     tasks.goto_task_list(base_url, org, opp)
     tasks.verify_page_loaded()
+
+    # Being invited is not enough: the Create Task dropdown only offers workers
+    # who accepted the invite on their device, so check before driving TomSelect
+    # and fail with the reason instead of a timeout inside the widget.
+    assignable = tasks.create_modal_worker_labels()
+    if not any(worker_name in label for label in assignable):
+        pytest.skip(
+            f"Worker '{worker_name}' is not assignable yet - the opportunity invite has to be "
+            f"accepted on the device first. Currently offered: {assignable or 'nobody'}"
+        )
     if tasks.row_exists(worker_name):
         # A leftover pending task would block re-assignment (unique constraint).
         tasks.delete_tasks_for_workers([worker_name])

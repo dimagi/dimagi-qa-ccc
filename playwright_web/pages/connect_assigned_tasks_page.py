@@ -87,6 +87,19 @@ class ConnectAssignedTasksPage(BasePage):
         self.cancel_create_modal()
         return labels
 
+    def create_modal_worker_labels(self):
+        """Worker options offered by the Create Task modal.
+
+        Only workers who have accepted the opportunity invite (and are not
+        suspended) are listed, so this doubles as an enrolment check.
+        """
+        self.open_create_modal()
+        options = self.page.locator(f"{self.WORKER_SELECT} option").all_inner_texts()
+        labels = [o.strip() for o in options if o.strip() and not o.strip().startswith("Select")]
+        self._step(f"Create Task modal worker options: {labels}")
+        self.cancel_create_modal()
+        return labels
+
     def _fill_create_form(self, task_type, worker, due_in_days):
         self.open_create_modal()
         self.select_tomselect_by_label("id_task", task_type, scope=self.CREATE_TASK_FORM)
