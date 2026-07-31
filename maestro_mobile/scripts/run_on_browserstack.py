@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import json
 import os
@@ -17,6 +18,67 @@ DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
 TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml"]
 POLL_INTERVAL_SECONDS = 15
+
+
+def _yaml_quote(value):
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def apply_env_overrides(flow_text, env):
+    """Return flow_text with its Maestro `env:` header values replaced by env.
+
+    Maestro flows are YAML: a header (appId, env, ...), a `---` separator, then
+    steps. BrowserStack's Maestro API accepts no per-build env values, so
+    runtime parameters have to be baked into the flow files before upload.
+    Values are always quoted - opportunity names contain colons.
+    """
+    if not env:
+        return flow_text
+
+    newline = "\r\n" if "\r\n" in flow_text else "\n"
+    lines = flow_text.splitlines()
+    try:
+        separator = next(i for i, line in enumerate(lines) if line.strip() == "---")
+    except StopIteration:
+        raise ValueError("Flow has no '---' separator - not a Maestro flow")
+
+    header, body = lines[:separator], lines[separator:]
+    pending = dict(env)
+    out = []
+    in_env_block = False
+
+    for line in header:
+        stripped = line.strip()
+        if stripped == "env:":
+            in_env_block = True
+            out.append(line)
+            continue
+        if in_env_block:
+            is_entry = line[:1].isspace() and ":" in stripped
+            if is_entry:
+                key = stripped.split(":", 1)[0].strip()
+                if key in pending:
+                    indent = line[: len(line) - len(line.lstrip())]
+                    out.append(f"{indent}{key}: {_yaml_quote(pending.pop(key))}")
+                else:
+                    out.append(line)
+                continue
+            # a non-indented line ends the env block - add any new keys first
+            for key, value in pending.items():
+                out.append(f"  {key}: {_yaml_quote(value)}")
+            pending.clear()
+            in_env_block = False
+        out.append(line)
+
+    if pending:
+        if not in_env_block:
+            out.append("env:")
+        for key, value in pending.items():
+            out.append(f"  {key}: {_yaml_quote(value)}")
+
+    result = newline.join(out + body)
+    return result + newline if flow_text.endswith(("\n", "\r")) else result
 
 
 def get_credentials():
@@ -51,12 +113,18 @@ def upload_app(auth):
     return app_url
 
 
-def upload_test_suite(auth):
+def upload_test_suite(auth, env=None):
     zip_path = FLOWS_DIR.parent / "flows.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for file in FLOWS_DIR.iterdir():
-            if file.is_file():
-                # BrowserStack requires every file to sit inside a single root folder within the zip.
+            if not file.is_file():
+                continue
+            # BrowserStack requires every file to sit inside a single root folder within the zip.
+            if env and file.suffix in (".yaml", ".yml"):
+                # Bake runtime parameters in - the API takes no env values, and
+                # Maestro passes a flow's env down into its runFlow subflows.
+                zf.writestr(f"flows/{file.name}", apply_env_overrides(file.read_text(), env))
+            else:
                 zf.write(file, arcname=f"flows/{file.name}")
 
     try:
@@ -77,13 +145,13 @@ def upload_test_suite(auth):
     return test_suite_url
 
 
-def trigger_build(auth, app_url, test_suite_url):
+def trigger_build(auth, app_url, test_suite_url, flows=None):
     body = {
         "app": app_url,
         "testSuite": test_suite_url,
         "project": PROJECT_NAME,
         "devices": [DEVICE],
-        "execute": TEST_FLOWS,
+        "execute": flows or TEST_FLOWS,
     }
     response = requests.post(f"{BASE_URL}/android/build", auth=auth, json=body)
     response.raise_for_status()
@@ -151,7 +219,7 @@ def fetch_flow_details(auth, build_id, session_id):
     return flows
 
 
-def summarize_build(result, build_id, auth=None):
+def summarize_build(result, build_id, auth=None, flows=None):
     passed = failed = skipped = 0
     session_rows = []
     for device in result.get("devices", []):
@@ -179,7 +247,7 @@ def summarize_build(result, build_id, auth=None):
         "status": "SUCCESS" if result.get("status") == "passed" else "FAILURE",
         "build_id": build_id,
         "build_url": f"https://app-automate.browserstack.com/builds/{build_id}",
-        "flows": TEST_FLOWS,
+        "flows": flows or TEST_FLOWS,
         "passed": passed,
         "failed": failed,
         "skipped": skipped,
@@ -407,16 +475,49 @@ footer {{ color: var(--muted); font-size: 12px; text-align: center; }}
     print("Reports written: maestro_report.json, maestro_report.html")
 
 
-def main():
+def run_flows(flows=None, env=None, reports=True):
+    """Run flows on a BrowserStack device and return the result summary.
+
+    Importable entry point for hybrid web+mobile tests, which need a device run
+    mid-test with runtime parameters (opportunity name, worker phone, ...).
+    flows: flow filenames to execute (defaults to TEST_FLOWS).
+    env:   Maestro env values baked into the uploaded flows.
+    reports: write maestro_report.{json,html} (skip for mid-test runs so the
+             suite's own report is not overwritten).
+    """
+    flows = flows or TEST_FLOWS
     auth = get_credentials()
     app_url = upload_app(auth)
-    test_suite_url = upload_test_suite(auth)
-    build_id = trigger_build(auth, app_url, test_suite_url)
+    test_suite_url = upload_test_suite(auth, env=env)
+    build_id = trigger_build(auth, app_url, test_suite_url, flows=flows)
     result = poll_build(auth, build_id)
-    print(json.dumps(result, indent=2))
-    summary = summarize_build(result, build_id, auth=auth)
-    write_reports(summary)
-    sys.exit(0 if result.get("status") == "passed" else 1)
+    summary = summarize_build(result, build_id, auth=auth, flows=flows)
+    if reports:
+        write_reports(summary)
+    return summary
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Maestro flows on BrowserStack")
+    parser.add_argument("--flows", nargs="+", help=f"flow files to run (default: {' '.join(TEST_FLOWS)})")
+    parser.add_argument(
+        "--env",
+        action="append",
+        metavar="KEY=VALUE",
+        help="Maestro env value baked into the uploaded flows (repeatable)",
+    )
+    args = parser.parse_args()
+
+    env = {}
+    for item in args.env or []:
+        if "=" not in item:
+            parser.error(f"--env expects KEY=VALUE, got {item!r}")
+        key, value = item.split("=", 1)
+        env[key] = value
+
+    summary = run_flows(flows=args.flows, env=env)
+    print(json.dumps(summary["sessions"], indent=2, default=str)[:2000])
+    sys.exit(0 if summary["status"] == "SUCCESS" else 1)
 
 
 if __name__ == "__main__":
