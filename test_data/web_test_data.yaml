@@ -153,6 +153,8 @@ TASKING_HYBRID:
   mobile_country_code: "+7426"
   mobile_phone_number: "3119728"
   mobile_username: "Relearn Task User"
-  mobile_backup_code: ""      # TODO: 6-digit backup code set for this user
+  mobile_backup_code: "123456"
   flow: "worker_relearn_task.yaml"
-  completion_timeout_seconds: 300
+  # Form submission travels device -> CommCare HQ -> Connect's form receiver,
+  # which is far from instant on staging, so poll generously.
+  completion_timeout_seconds: 900

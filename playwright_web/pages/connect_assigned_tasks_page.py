@@ -111,10 +111,26 @@ class ConnectAssignedTasksPage(BasePage):
 
     def create_task(self, task_type, worker, due_in_days=7):
         due = self._fill_create_form(task_type, worker, due_in_days)
-        self._step(f"Save task '{task_type}' for '{worker}'")
-        self.click(self.CREATE_TASK_SAVE_BTN)
-        self.page.wait_for_load_state("load")
+        save = self.page.locator(self.CREATE_TASK_SAVE_BTN).first
+        self._step(f"Save task '{task_type}' for '{worker}' via button {save.inner_text().strip()!r}")
+        self.click_and_await_redirect(self.CREATE_TASK_SAVE_BTN)
+        self._raise_if_create_form_still_open()
         return due
+
+    def _raise_if_create_form_still_open(self):
+        """Surface a rejected submission.
+
+        A valid submission answers with HX-Redirect and the modal goes away; a
+        rejected one is swapped back into #create-task-form-wrapper, which
+        otherwise looks like silence.
+        """
+        wrapper = self.page.locator("#create-task-form-wrapper")
+        if not wrapper.count():
+            return
+        raise AssertionError(
+            "Create Task form was not accepted - it is still open showing: "
+            f"{' | '.join(t.strip() for t in wrapper.all_inner_texts())!r}"
+        )
 
     def attempt_duplicate_task(self, task_type, worker, due_in_days=7):
         """Submit a duplicate assignment; returns the validation error text."""
@@ -131,11 +147,18 @@ class ConnectAssignedTasksPage(BasePage):
     # -- row assertions -------------------------------------------------------------
 
     def verify_success_message(self, fragment):
-        banner = self.page.locator(self.SUCCESS_MESSAGE).first
-        banner.wait_for(state="visible", timeout=15000)
-        text = banner.inner_text()
-        assert fragment in text, f"Expected success message containing {fragment!r}, got {text!r}"
-        self._step(f"Success message shown: {text.strip()}")
+        # Filter on the text rather than reading the first banner: several
+        # actions can leave messages behind (a delete before a create), and the
+        # HX-Redirect that carries the new one may not have landed yet.
+        banner = self.page.locator(self.SUCCESS_MESSAGE).filter(has_text=fragment).first
+        try:
+            banner.wait_for(state="visible", timeout=15000)
+        except Exception:
+            shown = self.page.locator(self.SUCCESS_MESSAGE).all_inner_texts()
+            raise AssertionError(
+                f"No success message containing {fragment!r}; messages on page: {shown or 'none'}"
+            ) from None
+        self._step(f"Success message shown: {banner.inner_text().strip()}")
 
     def verify_task_row(self, worker, task_type, due_date_iso=None, status="To Do"):
         row = self.page.locator(self.ROW_BY_WORKER.format(worker=worker)).first
@@ -165,7 +188,7 @@ class ConnectAssignedTasksPage(BasePage):
         locator = self.page.locator(self.STATUS_BADGE_BY_WORKER.format(worker=worker)).first
         return locator.inner_text().strip() if locator.count() else ""
 
-    def wait_for_task_status(self, worker, status="Complete", timeout_seconds=300, poll_seconds=15):
+    def wait_for_task_status(self, worker, status="Complete", timeout_seconds=900, poll_seconds=20):
         """Reload the task list until the worker's task reaches `status`.
 
         Completion is driven from the mobile side: the worker submits the task
@@ -198,8 +221,7 @@ class ConnectAssignedTasksPage(BasePage):
         due = (date.today() + timedelta(days=due_in_days)).isoformat()
         self.page.locator(self.EDIT_DUE_DATE_INPUT).first.fill(due)
         self.page.locator(self.EDIT_REASON_INPUT).first.fill(reason)
-        self.click(self.EDIT_ASSIGNED_SAVE_BTN)
-        self.page.wait_for_load_state("load")
+        self.click_and_await_redirect(self.EDIT_ASSIGNED_SAVE_BTN)
         return due
 
     # -- delete ---------------------------------------------------------------------
@@ -214,8 +236,7 @@ class ConnectAssignedTasksPage(BasePage):
         self.click(self.DELETE_TASKS_BTN)
         self.page.locator(self.CONFIRM_MODAL_TITLE).first.wait_for(state="visible")
         self._step("Confirm deletion")
-        self.click(self.CONFIRM_DELETE_BTN)
-        self.page.wait_for_load_state("load")
+        self.click_and_await_redirect(self.CONFIRM_DELETE_BTN)
 
     # -- filters ------------------------------------------------------------------------
 

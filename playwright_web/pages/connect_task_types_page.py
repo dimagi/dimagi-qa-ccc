@@ -138,11 +138,7 @@ class ConnectTaskTypesPage(BasePage):
         self.page.locator(self.EDIT_NAME_INPUT).first.wait_for(state="visible")
 
     def _save_edit_modal(self):
-        # The form posts via htmx and the server answers with HX-Redirect;
-        # wait for that navigation, or row assertions read the stale DOM.
-        with self.page.expect_navigation(timeout=15000):
-            self.click(self.EDIT_SAVE_BTN)
-        self.page.wait_for_load_state("load")
+        self.click_and_await_redirect(self.EDIT_SAVE_BTN)
 
     def edit_task_type_name(self, name, new_name, new_description):
         self._open_edit_modal(name)

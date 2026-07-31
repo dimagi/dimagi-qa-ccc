@@ -142,7 +142,10 @@ connect_assigned_tasks_page:
   task_select: "id_task"
   worker_select: "id_access"
   due_date_input: "id_due_date"
-  create_task_save_btn: "//form[@id='create-task-form']//button[@type='submit']"
+  # The modal also holds a hidden "Connect OCS account" submit button that sits
+  # inside this form but belongs to ocs-connect-form via its form attribute, so
+  # exclude buttons that target another form.
+  create_task_save_btn: "//form[@id='create-task-form']//button[@type='submit' and not(@form)]"
   create_task_cancel_btn: "//div[@id='create-task-form-wrapper']/ancestor::div[contains(@class,'modal-backdrop')]//button[normalize-space()='Cancel']"
   form_error_text: "//div[@id='create-task-form-wrapper']//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist') or contains(@class,'alert')]"
   # Edit Assigned Task modal (htmx-loaded form)

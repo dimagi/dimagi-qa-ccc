@@ -71,6 +71,23 @@ class BasePage:
                 text,
             )
 
+    def click_and_await_redirect(self, selector, timeout=20000):
+        """Click a control whose response is an HX-Redirect, then let it land.
+
+        Connect answers task create/edit/delete with an HX-Redirect header rather
+        than a normal form post, so the reload arrives slightly after the click.
+        Without waiting for it, the next action runs against a page that is about
+        to be replaced. A submission the server rejects is re-rendered in place
+        and never navigates, which is not an error here.
+        """
+        self._step(f"click {selector} and wait for redirect")
+        try:
+            with self.page.expect_navigation(timeout=timeout, wait_until="load"):
+                self._locator(selector).click()
+        except PlaywrightTimeoutError:
+            self._step("no redirect followed - response was re-rendered in place")
+        self.page.wait_for_load_state("load")
+
     def select_tomselect_by_label(self, select_id, label, scope=None):
         """Pick an option in a TomSelect-enhanced <select> by driving its UI.
 
