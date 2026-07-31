@@ -140,15 +140,19 @@ TASKING:
 
 # --- Phase 2 hybrid web -> mobile -> web (TC-E2E-001/003/006) ---
 TASKING_HYBRID:
-  # Reuse an opportunity that already has the relearn task type configured
-  # (e.g. one created by the J1 journey) - fill in to un-skip the hybrid test.
-  org: ""                   # PM org slug from the opportunity URL
-  opp_id: ""                # opportunity id from the opportunity URL
+  # Long-lived tasking opportunity created 31-Jul-2026 by
+  # tests/test_setup_tasking_opportunity.py: 365-day delivery window, active
+  # "Relearn Task Unit" task type, worker +74263119728 invited.
+  # Opportunity name: Demo Opportunity_31-Jul-2026 : 18:39
+  org: "pm_automation_01"
+  opp_id: "9d533d0d-b835-488a-8726-7d2aac52df95"
   task_type: "Relearn Task Unit"
-  # Mobile worker on the +7426 demo range: no OTP, backup code is the credential
+  opportunity_name: "Demo Opportunity_31-Jul-2026 : 18:39"
+  # Mobile worker on the +7426 demo range: no OTP, backup code is the credential.
+  # Dedicated to tasking so the login/lockout flows cannot interfere with it.
   mobile_country_code: "+7426"
-  mobile_phone_number: "7426000"
-  mobile_username: "Deb Test 8/12"
-  mobile_backup_code: "742600"
+  mobile_phone_number: "3119728"
+  mobile_username: "Relearn Task User"
+  mobile_backup_code: ""      # TODO: 6-digit backup code set for this user
   flow: "worker_relearn_task.yaml"
   completion_timeout_seconds: 300

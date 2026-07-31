@@ -72,8 +72,16 @@ def create_program_with_nm_handshake(connect_page, olp1_data):
     return program_name
 
 
-def create_opportunity_with_budget(connect_page, config, test_data, program_name, learn_app_name, delivery_app_name):
-    """Create opportunity under the program, add payment unit, set budget."""
+def create_opportunity_with_budget(
+    connect_page, config, test_data, program_name, learn_app_name, delivery_app_name, days=7
+):
+    """Create opportunity under the program, add payment unit, set budget.
+
+    days sets the delivery window length; the default 7 gives the short-lived
+    opportunity the regression tests expect. Pass something long (e.g. 365) for
+    an opportunity that has to stay usable, since Connect refuses new invites
+    and blocks delivery once an opportunity has ended.
+    """
     olp1_data = test_data.get("OLP_1")
     olp2_data = test_data.get("OLP_2")
     olp3_data = test_data.get("OLP_3")
@@ -85,18 +93,18 @@ def create_opportunity_with_budget(connect_page, config, test_data, program_name
     opportunity_name = connect_opp_page.create_opportunity_in_connect_page(
         olp1_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
     )
-    connect_opp_page.create_payment_unit_in_connect_page(olp2_data)
-    connect_opp_page.setup_budget_in_connect_page(olp3_data)
+    connect_opp_page.create_payment_unit_in_connect_page(olp2_data, days=days)
+    connect_opp_page.setup_budget_in_connect_page(olp3_data, days=days)
     return opportunity_name
 
 
-def full_olp_setup(page, config, settings, test_data):
+def full_olp_setup(page, config, settings, test_data, days=7):
     """Complete OLP flow: apps copied, program handshake done, opportunity ready."""
     learn_app_name, delivery_app_name = login_cchq_and_copy_master_apps(page, config, settings)
     connect_page = open_connect_as_org(page, config)
     olp1_data = test_data.get("OLP_1")
     program_name = create_program_with_nm_handshake(connect_page, olp1_data)
     opportunity_name = create_opportunity_with_budget(
-        connect_page, config, test_data, program_name, learn_app_name, delivery_app_name
+        connect_page, config, test_data, program_name, learn_app_name, delivery_app_name, days=days
     )
     return OlpSetup(connect_page, program_name, opportunity_name, learn_app_name, delivery_app_name)
