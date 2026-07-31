@@ -20,12 +20,11 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     as stages of the LDVP journey where a delivery visit already happens.
 
     TC-E2E-006 (the in-app "Complete assigned tasks to continue delivering
-    services." warning appearing and then clearing) is deliberately not asserted
-    here: on commcare-android master isRelearnTaskPending() is still a stub that
-    returns false, and the staging APK in app/ predates the feature entirely, so
-    the warning can never render. Add those assertions to
-    maestro_mobile/flows/worker_relearn_task.yaml once a build carrying
-    CCCT-2294 is in place.
+    services." warning appearing and then clearing) is not asserted yet only
+    because app/app-cccStaging-release.apk is stale: it was committed 3 Apr 2026,
+    while the feature landed with CCCT-2294 on 29 Apr 2026, so that particular
+    build cannot render the warning. Refresh the APK and the assertions can be
+    added to maestro_mobile/flows/worker_relearn_task.yaml.
     """
     hybrid = test_data.get("TASKING_HYBRID")
     required = ["org", "opp_id"]
