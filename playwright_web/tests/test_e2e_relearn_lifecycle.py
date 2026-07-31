@@ -7,11 +7,17 @@ from pages.connect_workers_page import ConnectWorkersPage
 
 
 def test_e2e_relearn_lifecycle(page, test_data, config, settings):
-    """P2-A - TC-E2E-001/003: assign on web, complete on a real device, verify on web.
+    """P2-A - TC-E2E-001: assign on web, complete on a real device, verify on web.
 
     Web assigns the re-learn task, a Maestro flow on a BrowserStack device has
     the worker sync and submit the task form, then web polls the task list until
     the status flips from To Do to Complete.
+
+    Scope: TC-E2E-001 only. TC-E2E-002 (delivery visit auto-rejected with the
+    "Pending Task" flag while a task is pending) and TC-E2E-003 (visit accepted
+    once it is complete) both need a delivery visit submitted from the device,
+    which this flow does not do yet; they are the natural next addition, ideally
+    as stages of the LDVP journey where a delivery visit already happens.
 
     TC-E2E-006 (the in-app "Complete assigned tasks to continue delivering
     services." warning appearing and then clearing) is deliberately not asserted
