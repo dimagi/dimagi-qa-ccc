@@ -137,3 +137,18 @@ TASKING:
   static_worker: ""            # enrolled worker display name
   static_task_type: "Relearn Task Unit"     # pre-created task type on the static opp
   static_task_type_2: ""       # optional second type - enables the bulk-delete path
+
+# --- Phase 2 hybrid web -> mobile -> web (TC-E2E-001/003/006) ---
+TASKING_HYBRID:
+  # Reuse an opportunity that already has the relearn task type configured
+  # (e.g. one created by the J1 journey) - fill in to un-skip the hybrid test.
+  org: ""                   # PM org slug from the opportunity URL
+  opp_id: ""                # opportunity id from the opportunity URL
+  task_type: "Relearn Task Unit"
+  # Mobile worker on the +7426 demo range: no OTP, backup code is the credential
+  mobile_country_code: "+7426"
+  mobile_phone_number: "7426000"
+  mobile_username: "Deb Test 8/12"
+  mobile_backup_code: "742600"
+  flow: "worker_relearn_task.yaml"
+  completion_timeout_seconds: 300

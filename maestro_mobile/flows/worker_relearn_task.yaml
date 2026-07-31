@@ -1,0 +1,133 @@
+# Worker side of the hybrid re-learn tasking test (TC-E2E-001).
+#
+# Web assigns a re-learn task, this flow has the worker complete it on a real
+# device, then web polls until the task flips to Complete.
+#
+# Every id and string below was taken from the commcare-android source and the
+# deliver app's CCZ, not guessed:
+#   - login/backup-code ids: same as flows/login_signup_success.yaml
+#   - rvJobList / btn_view_opportunity / btn_start: fragment_connect_jobs_list.xml,
+#     connect_job_list_item.xml, fragment_connect_job_intro.xml ("Start" = the
+#     accept action; there is no "Accept"/"Apply" button in the app)
+#   - "Sync with Server" / "Form successfully completed" / FINISH:
+#     assets/locales/android_translatable_strings.txt
+#   - TASK_MODULE / TASK_FORM: en/app_strings.txt of the deliver app
+#     (modules.m0="Case List", forms.m0f5="Re-Learn Tasks")
+# Ids are written bare (no org.commcare.dalvik prefix) so the flow also matches
+# debug builds, which carry an .debug applicationId suffix.
+#
+# PREREQUISITE: the worker must already be in the delivering state for this
+# opportunity. Reaching delivery cold requires the whole learn + assessment
+# journey, which is out of scope here.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426000"
+  USERNAME: "Deb Test 8/12"
+  BACKUP_CODE: "742600"
+  OPPORTUNITY: "Demo Opportunity"
+  TASK_MODULE: "Case List"
+  TASK_FORM: "Re-Learn Tasks"
+---
+- launchApp:
+    clearState: true
+- runFlow: shared_login_signup.yaml
+
+# An existing PersonalID user lands on "Welcome back" and authenticates with a
+# backup code; a brand new number skips straight past this.
+- runFlow:
+    when:
+      visible:
+        id: "connect_backup_code_input"
+    commands:
+      - tapOn:
+          id: "connect_backup_code_input"
+      - tapOn:
+          text: "Cancel"
+          optional: true
+      - tapOn:
+          id: "connect_backup_code_input"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          text: "Cancel"
+          optional: true
+      - tapOn:
+          text: "CONTINUE"
+      - tapOn:
+          text: "OK"
+          optional: true
+
+# --- Connect: find the opportunity, accepting it first if it is still new ---
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- tapOn: "Opportunities"
+- assertVisible:
+    id: "rvJobList"
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 20000
+# Only a not-yet-accepted opportunity shows "View Opportunity"; accepting it is
+# btn_start, labelled "Start".
+- runFlow:
+    when:
+      visible:
+        id: "btn_view_opportunity"
+    commands:
+      - tapOn:
+          id: "btn_view_opportunity"
+      - assertVisible:
+          id: "btn_start"
+      - tapOn:
+          id: "btn_start"
+      - tapOn:
+          text: "OK"
+          optional: true
+
+# --- Into the deliver app ---
+# acb_resume is the job card's primary action and opens the deliver app home.
+- tapOn:
+    id: "acb_resume"
+    optional: true
+- tapOn:
+    text: "View Job Status"
+    optional: true
+
+# Sync first: assignment sets a case property on the worker's user case, and the
+# re-learn form stays hidden until that arrives on the device.
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*"
+    timeout: 120000
+
+# --- Complete the re-learn task form ---
+- tapOn: "Start"
+- tapOn:
+    text: "${TASK_MODULE}"
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: "${TASK_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${TASK_FORM}"
+# The form holds a single label-only question, so FINISH is available at once.
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_finish"
+    timeout: 30000
+- tapOn:
+    id: "nav_btn_finish"
+- assertVisible:
+    text: ".*Form successfully completed.*"
+
+# Send the submission to the server so Connect's form receiver can match it to
+# the assigned task and mark it completed.
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 120000
