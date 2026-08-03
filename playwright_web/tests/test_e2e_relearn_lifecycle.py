@@ -13,11 +13,14 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     the worker sync and submit the task form, then web polls the task list until
     the status flips from To Do to Complete.
 
-    Covers TC-E2E-001, TC-E2E-006 (the in-app "Complete assigned tasks to
-    continue delivering services." warning showing and then being replaced by the
-    completion message - asserted inside worker_relearn_task.yaml, which needs
-    APK 2.63.4 or newer), TC-TAS-001, and - because a completed task only exists
-    at the end of this chain - TC-TAS-009 and TC-TDL-003.
+    Covers TC-E2E-001; TC-E2E-005 (Connect's task-completion push reaching the
+    device, which the flow waits on rather than guessing at a delay); TC-E2E-006
+    (the in-app "Complete assigned tasks to continue delivering services."
+    warning showing and then being replaced by the completion message, checked on
+    both the delivery-progress card and the app home tile - asserted inside
+    worker_relearn_task.yaml, which needs APK 2.63.4 or newer); TC-TAS-001; and -
+    because a completed task only exists at the end of this chain - TC-TAS-009 and
+    TC-TDL-003.
 
     Still to add: TC-E2E-002 (delivery visit auto-rejected with the "Pending Task"
     flag while a task is pending) and TC-E2E-003 (visit accepted once it is
@@ -83,6 +86,10 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
             "USERNAME": hybrid["mobile_username"],
             "BACKUP_CODE": hybrid["mobile_backup_code"],
             "OPPORTUNITY": hybrid.get("opportunity_name") or "",
+            # Connect builds this body from the task type's name
+            # (send_task_completion_notification), so derive it from the same
+            # value the task was assigned with rather than restating it.
+            "COMPLETION_NOTIFICATION_BODY": f"You have completed the task '{task_type}'.",
         },
         reports=False,
     )

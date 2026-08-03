@@ -48,9 +48,21 @@ env:
   PENDING_WARNING: "Complete assigned tasks to continue delivering services"
   # connect_progress_relearn_tasks_completed - only shown for 6h after completion
   COMPLETED_MESSAGE: "All required tasks have been completed"
+  # Connect's task-completion push (send_task_completion_notification): fired from
+  # transaction.on_commit once the task is marked complete server side, so its
+  # arrival is proof that Connect has processed the submission. The body carries
+  # the task type name, so the runner injects it to keep it in step with
+  # TASKING_HYBRID.task_type.
+  COMPLETION_NOTIFICATION_TITLE: "Task Completed"
+  COMPLETION_NOTIFICATION_BODY: "You have completed the task 'Relearn Task Unit'."
 ---
+# permissions/all: Android 13 gates POST_NOTIFICATIONS behind a runtime grant, and
+# a cleared state re-asks for it. Without it the task-completion push never
+# reaches the shade and the wait below could not work.
 - launchApp:
     clearState: true
+    permissions:
+      all: allow
 - runFlow: shared_login_signup.yaml
 
 # An existing PersonalID user lands on "Welcome back <name>" and authenticates
@@ -212,16 +224,50 @@ env:
       text: ".*Sync Successful.*|.*form sent to server.*"
     timeout: 180000
 
-# --- The warning must be gone, replaced by the success message (TC-E2E-006) ---
-# The pending flag lives in local prefs and only clears when the app refetches
-# delivery progress from Connect. Opening the screen is not enough - the card
-# carries its own "Click to sync progress" button (btnSync) and that is what
-# pulls the updated task state down.
+# --- Wait for Connect's task-completion push (TC-E2E-005) ---
+# The submission travels device -> CommCare HQ -> Connect's form receiver, which
+# is far from instant on staging. Connect fires the task-completion push only
+# once it has marked the task complete, so the notification arriving IS the
+# signal that the server state is ready to be fetched.
 #
-# Staging is slow to process a submission - on production this is close to
-# instant, but here it can take minutes before Connect reports the task as
-# complete. A single sync would just fetch stale state, so keep syncing while
-# the warning is still up (bounded, so a genuine failure still ends the run).
+# Waiting on the notification replaces the old fixed wait, which was unsound:
+# it synced ~10s after submitting - far too early on staging - and then waited
+# 5 minutes without ever re-fetching, so the stale "pending" state could never
+# clear. It passed once by timing luck. This is also a single passive wait, so
+# it sidesteps the retry problem entirely: a failing command inside a Maestro
+# repeat aborts the whole loop, so a sync-then-wait loop cannot be used here.
+#
+# The shade is opened first and left open: notifications land in it live, so one
+# extendedWaitUntil resolves the moment the push arrives.
+- swipe:
+    start: "50%,1%"
+    end: "50%,80%"
+- extendedWaitUntil:
+    visible:
+      text: ".*${COMPLETION_NOTIFICATION_TITLE}.*"
+    timeout: 600000
+- assertVisible:
+    text: ".*${COMPLETION_NOTIFICATION_BODY}.*"
+- swipe:
+    start: "50%,80%"
+    end: "50%,1%"
+
+# --- The warning must be gone, replaced by the success message (TC-E2E-006) ---
+# Now that Connect has confirmed completion, a sync actually fetches fresh state.
+# Sync from the app home screen first.
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 60000
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# The delivery-progress card is checked first because its own "Click to sync
+# progress" button (btnSync) is what definitively refetches delivery progress -
+# neither a CommCare sync nor merely opening the screen is guaranteed to.
 - tapOn: "View Job Status"
 - extendedWaitUntil:
     visible:
@@ -229,19 +275,26 @@ env:
     timeout: 90000
 - tapOn:
     id: "btnSync"
-# One sync then a long wait, deliberately - NOT a retry loop. Inside a Maestro
-# repeat, a failed command aborts the whole loop, so a loop of
-# sync-then-short-wait fails on the first round instead of syncing again, which
-# is strictly worse than simply waiting. This 5 minute wait is the version that
-# passed end to end on 2026-08-03; revisit only with a construct that can
-# swallow the intermediate failure.
 - extendedWaitUntil:
     notVisible:
       text: ".*${PENDING_WARNING}.*"
-    timeout: 300000
+    timeout: 180000
 # Checked straight after completion, while inside the six-hour window in which
 # ConnectJobRecord surfaces this message.
 - extendedWaitUntil:
     visible:
       text: ".*${COMPLETED_MESSAGE}.*"
     timeout: 120000
+
+# ...and the same pair on the app home screen's job tile. Both surfaces render
+# cv_relearn_tasks_pending - view_progress_job_card.xml for the card above and
+# view_job_card.xml here - so both are worth asserting.
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 60000
+- assertNotVisible:
+    text: ".*${PENDING_WARNING}.*"
+- assertVisible:
+    text: ".*${COMPLETED_MESSAGE}.*"
