@@ -11,8 +11,11 @@ from pages.connect_opportunities_page import ConnectOpportunitiesPage
 from pages.connect_programs_page import ConnectProgramsPage
 
 PM_ORG = "PM_Automation_01"
-LEARN_APP_MASTER = "[08/12] Learn App"
-DELIVER_APP_MASTER = "[08/12] Delivey App"
+# Masters are picked by partial name match on the Applications tab. Renamed from
+# "[08/12] ..." on 2026-08-03; the brackets are part of the real names, so a
+# search string must not span them.
+LEARN_APP_MASTER = "[Master] Learn App"
+DELIVER_APP_MASTER = "[Master] Delivery App"
 
 
 @dataclass

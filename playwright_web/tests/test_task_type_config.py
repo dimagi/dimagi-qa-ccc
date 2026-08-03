@@ -1,77 +1,96 @@
-from flows.olp_setup import full_olp_setup
+from flows.olp_setup import PM_ORG
+from flows.tasking_static import login_to_connect, require_static_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
-from pages.connect_home_page import ConnectHomePage
-from pages.connect_opportunities_page import ConnectOpportunitiesPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 
 
 def test_task_type_config_journey(page, test_data, config, settings):
-    """J1 - TC-TTC-001..006, TC-TAS-005, TC-IMP-003(light) from the tasking test plan.
+    """J1 - TC-TTC-001/004/005/006 and TC-TAS-005 on the long-lived opportunity.
 
-    Runs against a FRESH opportunity so the relearn task unit slug is always
-    available (slugs are unique per app; the per-run app copy resets that).
+    Consumes nothing. A task-type slug is permanently taken per deliver app, so
+    this test owns a single sandbox type, created once from the second task unit
+    and thereafter only renamed, archived and unarchived. It must never touch the
+    live "Relearn Task Unit" type - J2, J3, J4 and the hybrid test all assign it,
+    and archiving it would break every one of them.
+
+    Deliberately not here:
+      TC-TTC-002 (create) runs in test_olp_01_02_03, on the app copy that test
+        discards, which is the only place a slug can be spent for free.
+      TC-TTC-003 (slug integrity) is dropped - the hybrid test proves the same
+        contract more strongly, since a slug that stopped matching the HQ task
+        unit id would make task completion impossible, which it asserts.
+
+    Run this first in the tasking sequence: it ends by proving the sandbox type is
+    assignable again, so a broken unarchive fails here instead of silently
+    poisoning J2-J4.
     """
-    tasking = test_data.get("TASKING")
-    setup = full_olp_setup(page, config, settings, test_data)
-    connect_page = setup.connect_page
-
-    connect_home = ConnectHomePage(connect_page)
-    opp_list = ConnectOpportunitiesPage(connect_page)
+    tasking = require_static_opp(test_data)
+    connect_page = login_to_connect(page, config, settings, PM_ORG)
     task_types = ConnectTaskTypesPage(connect_page)
     task_list = ConnectAssignedTasksPage(connect_page)
 
-    # Land on the new opportunity's dashboard
-    connect_home.click_organizations_in_sidebar()
-    opp_list.click_opportunity_in_opportunity(setup.opportunity_name)
-    connect_page.wait_for_url("**/opportunity/**")
-
-    # TC-IMP-003 (part A): no task types yet -> dashboard tile absent
-    if tasking.get("switch_enabled"):
-        assert not task_types.is_tasks_tile_visible(), "Tasks tile visible before any task type exists"
-
-    org_slug, opp_id = task_types.opportunity_ids_from_current_url()
     base_url = config.get("connect_url")
+    org, opp = tasking["static_org"], tasking["static_opp_id"]
+    name_a, name_b = tasking["sandbox_name_a"], tasking["sandbox_name_b"]
+    sandbox_slug = tasking["sandbox_unit_slug"]
 
-    # TC-TTC-001: reach config page via the dashboard menu
+    # TC-TTC-001: the config page opens from the opportunity dashboard's menu.
+    connect_page.goto(f"{base_url}/a/{org}/opportunity/{opp}/")
+    connect_page.wait_for_load_state("load")
     task_types.open_from_dashboard_menu()
-    task_types.verify_page_loaded(expected_app_name=setup.delivery_app_name)
-    task_types.verify_no_task_types_yet()
+    task_types.verify_page_loaded()
 
-    # TC-TTC-002 + TC-TTC-003: create from the registered task unit, slug intact
-    created_name = task_types.add_task_type(
-        tasking["task_unit_name"], tasking["case_property"], expected_slug=tasking["task_unit_slug"]
-    )
-    assert created_name == tasking["task_unit_name"]
-    task_types.verify_row_present(created_name)
-    task_types.verify_row_shows_unit(created_name, tasking["task_unit_name"])
+    # --- J1's own sandbox type: created once, then reused forever ---
+    sandbox = task_types.find_existing_row([name_a, name_b])
+    if sandbox is None:
+        offered = task_types.available_task_unit_values()
+        assert sandbox_slug in offered, (
+            f"No sandbox task type named {name_a!r} or {name_b!r} exists, and task unit "
+            f"{sandbox_slug!r} is no longer available (offered: {offered or 'nothing'}). Its "
+            "slug has been spent on a type under some other name - rename that type back to "
+            f"{name_a!r}, or register a fresh task unit in the deliver app for this test to own."
+        )
+        created = task_types.add_task_type_by_unit_value(sandbox_slug, tasking["case_property"])
+        task_types.verify_row_present(created)
+        task_types.verify_row_shows_unit(created, tasking["sandbox_unit_name"])
+        task_types.edit_task_type_name(created, name_a, "J1 sandbox - safe to rename and archive")
+        task_types.verify_row_present(name_a)
+        sandbox = name_a
 
-    # TC-TTC-004: used task unit no longer offered
-    labels = task_types.available_task_unit_labels()
-    assert tasking["task_unit_name"] not in labels, f"Used task unit still offered: {labels}"
+    # TC-TTC-004: both units are in use, so neither is offered. Archiving never
+    # releases a slug, so this holds however the previous run left things.
+    offered = task_types.available_task_unit_values()
+    assert tasking["task_unit_slug"] not in offered, f"Live task unit still offered: {offered}"
+    assert sandbox_slug not in offered, f"Sandbox task unit still offered: {offered}"
 
-    # TC-TTC-005: edit name/description
-    edited_name = tasking["edited_type_name"]
-    task_types.edit_task_type_name(created_name, edited_name, "Edited by automation")
-    task_types.verify_row_present(edited_name)
+    # TC-TTC-005: rename. The two names are toggled rather than a fresh name being
+    # invented, so the row is still findable next run without carrying any state
+    # between runs - the slug, which would be the natural key, is never rendered.
+    renamed = name_b if sandbox == name_a else name_a
+    task_types.edit_task_type_name(sandbox, renamed, f"Edited by automation -> {renamed}")
+    task_types.verify_row_present(renamed)
+    assert not task_types.row_exists(sandbox), f"Old name {sandbox!r} still listed after the rename"
 
-    # Positive half of TC-TAS-005: active type IS offered in the Create Task modal
-    task_list.goto_task_list(base_url, org_slug, opp_id)
+    # TC-TAS-005 (positive): an active type is offered in the Create Task modal.
+    task_list.goto_task_list(base_url, org, opp)
     task_list.verify_page_loaded()
-    assert edited_name in task_list.create_modal_task_type_labels()
+    assert renamed in task_list.create_modal_task_type_labels()
 
-    # TC-IMP-003 (part B): active type exists -> dashboard tile present
-    if tasking.get("switch_enabled"):
-        connect_page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/")
-        connect_page.wait_for_load_state("load")
-        connect_page.wait_for_timeout(3000)  # stats tile arrives via htmx
-        assert task_types.is_tasks_tile_visible(), "Tasks tile missing with an active task type"
+    # TC-TTC-006: archive - the row stays listed, with today's date filled in.
+    task_types.goto_task_types(base_url, org, opp)
+    task_types.archive_task_type(renamed)
+    task_types.verify_row_archived(renamed)
 
-    # TC-TTC-006: archive - row stays listed with the archive date
-    task_types.goto_task_types(base_url, org_slug, opp_id)
-    task_types.archive_task_type(edited_name)
-    task_types.verify_row_archived(edited_name)
+    # TC-TAS-005 (negative): an archived type is no longer assignable.
+    task_list.goto_task_list(base_url, org, opp)
+    assert renamed not in task_list.create_modal_task_type_labels(), "Archived type still assignable"
 
-    # Negative half of TC-TAS-005: archived type no longer offered
-    task_list.goto_task_list(base_url, org_slug, opp_id)
-    labels_after_archive = task_list.create_modal_task_type_labels()
-    assert edited_name not in labels_after_archive, "Archived type still assignable"
+    # Put it back, and prove it, before finishing.
+    task_types.goto_task_types(base_url, org, opp)
+    task_types.unarchive_task_type(renamed)
+    task_types.verify_row_not_archived(renamed)
+    task_list.goto_task_list(base_url, org, opp)
+    assert renamed in task_list.create_modal_task_type_labels(), (
+        f"Sandbox type {renamed!r} is not assignable again after unarchive - later tasking "
+        "tests would run against an archived type"
+    )

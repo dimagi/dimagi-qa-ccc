@@ -280,3 +280,27 @@ class ConnectAssignedTasksPage(BasePage):
         visible = self.page.locator(self.ALL_EDIT_BUTTONS).count() > 0
         self._step(f"Edit buttons visible: {visible}")
         return visible
+
+    # -- completed rows -----------------------------------------------------------------------
+
+    def row_edit_button_count(self, worker):
+        """Edit buttons on this worker's row(s).
+
+        assigned_task_edit_button.html renders the button only for
+        status == "assigned", so a completed row has none (TC-TAS-009).
+        """
+        count = self.page.locator(self.ROW_EDIT_BTN_BY_WORKER.format(worker=worker)).count()
+        self._step(f"Edit buttons on '{worker}' row(s): {count}")
+        return count
+
+    def row_checkbox_states(self, worker):
+        """[(present, enabled)] for this worker's select checkboxes.
+
+        Completed rows still render the checkbox but with the disabled attribute
+        set (AssignedTaskListTable._task_select_td_extra), which is what makes
+        them undeletable (TC-TDL-003).
+        """
+        boxes = self.page.locator(self.ROW_CHECKBOX_BY_WORKER.format(worker=worker)).all()
+        states = [box.is_enabled() for box in boxes]
+        self._step(f"Select checkboxes for '{worker}' - enabled states: {states or 'no checkbox'}")
+        return states

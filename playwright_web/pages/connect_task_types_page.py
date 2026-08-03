@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from utils.helpers import LocatorLoader, parse_org_and_opp
@@ -5,6 +6,10 @@ from utils.helpers import LocatorLoader, parse_org_and_opp
 from pages.base_page import BasePage
 
 locators = LocatorLoader()
+
+# TaskTable renders exactly one date column - "Archived" - so the presence of a
+# date in a row is equivalent to that task type being archived.
+ROW_DATE = re.compile(r"\d{2}/\d{2}/\d{4}")
 
 
 class ConnectTaskTypesPage(BasePage):
@@ -79,6 +84,23 @@ class ConnectTaskTypesPage(BasePage):
         assert unit_name in row.inner_text(), f"Row for '{name}' does not show linked task unit '{unit_name}'"
         self._step(f"Row '{name}' shows linked task unit '{unit_name}'")
 
+    def row_exists(self, name):
+        return self.page.locator(self.ROW_BY_NAME.format(name=name)).count() > 0
+
+    def find_existing_row(self, names):
+        """First of `names` that has a row, or None.
+
+        J1's sandbox type is renamed on every run (TC-TTC-005) and the slug is
+        never rendered in the table, so the row has to be found by whichever of
+        its two canonical names is currently in use.
+        """
+        for name in names:
+            if self.row_exists(name):
+                self._step(f"Found existing task type row '{name}'")
+                return name
+        self._step(f"No task type row named any of {names}")
+        return None
+
     def verify_row_archived(self, name):
         # Archived rows stay listed, with the archive date (MM/DD/YYYY on
         # staging) in the Archived column - verified via network-instrumented
@@ -91,6 +113,15 @@ class ConnectTaskTypesPage(BasePage):
             f"Row '{name}' does not show today's archive date {expected_date}: {text!r}"
         )
         self._step(f"Task type '{name}' shows archived date {expected_date}")
+
+    def verify_row_not_archived(self, name):
+        """Archived column empty again - EditTaskTypeForm.save() clears `archived`
+        and restores is_active when the box is unticked."""
+        row = self.page.locator(self.ROW_BY_NAME.format(name=name)).first
+        row.wait_for(state="visible")
+        text = row.inner_text()
+        assert not ROW_DATE.search(text), f"Row '{name}' still shows an archived date: {text!r}"
+        self._step(f"Task type '{name}' is no longer archived")
 
     # -- actions --------------------------------------------------------------
 
@@ -123,13 +154,50 @@ class ConnectTaskTypesPage(BasePage):
         self.page.wait_for_load_state("load")
         return name_value
 
+    def add_task_type_by_unit_value(self, unit_slug, case_property):
+        """Create a task type from the task unit whose option VALUE is unit_slug.
+
+        Selected by value rather than label because the two registered units have
+        near-identical labels ("Relearn Task Unit" / "Relearn Task Unit 2"), and
+        the value IS the slug the TaskType is saved with (AddTaskTypeForm.save).
+        Returns the auto-filled name.
+        """
+        self.open_add_modal()
+        self._step(f"Select task unit with slug '{unit_slug}'")
+        self.page.locator(self.TASK_UNIT_SELECT).first.select_option(value=unit_slug)
+        name_value = self.page.locator(self.CREATE_NAME_INPUT).first.input_value()
+        assert name_value, "Name was not auto-filled after selecting the task unit"
+        self._step(f"Name auto-filled: '{name_value}'")
+        self.type(self.CASE_PROPERTY_INPUT, case_property)
+        self._step("Save new task type")
+        self.click_and_await_redirect(self.CREATE_SAVE_BTN)
+        return name_value
+
+    def available_task_unit_options(self):
+        """(value, label) pairs currently offered by the Task Unit dropdown.
+
+        AddTaskTypeForm excludes every slug already used on the deliver app, and
+        that exclusion is unconditional - archiving a task type does NOT put its
+        unit back. When nothing is left the select is disabled and carries only a
+        "No available task units" placeholder, which has an empty value and so is
+        filtered out here.
+        """
+        self.open_add_modal()
+        options = self.page.locator(f"{self.TASK_UNIT_SELECT} option").evaluate_all(
+            "els => els.map(e => [e.value, e.textContent.trim()])"
+        )
+        offered = [(value, label) for value, label in options if value]
+        self._step(f"Task unit dropdown offers: {offered or 'nothing'}")
+        self.click(self.CREATE_CANCEL_BTN)
+        return offered
+
     def available_task_unit_labels(self):
         """Option labels currently offered by the Task Unit dropdown."""
-        self.open_add_modal()
-        options = self.page.locator(f"{self.TASK_UNIT_SELECT} option").all_inner_texts()
-        self._step(f"Task unit dropdown options: {options}")
-        self.click(self.CREATE_CANCEL_BTN)
-        return [option.strip() for option in options]
+        return [label for _value, label in self.available_task_unit_options()]
+
+    def available_task_unit_values(self):
+        """Option values (= task unit slugs) currently offered."""
+        return [value for value, _label in self.available_task_unit_options()]
 
     def _open_edit_modal(self, name):
         self._step(f"Open edit modal for task type '{name}'")
@@ -153,6 +221,19 @@ class ConnectTaskTypesPage(BasePage):
         checkbox = self.page.locator(self.ARCHIVE_CHECKBOX).first
         if not checkbox.is_checked():
             checkbox.check()
+        self._save_edit_modal()
+
+    def unarchive_task_type(self, name):
+        """Untick "Archive this task type" - the reverse of archive_task_type.
+
+        Keeps J1 repeatable: it archives only its own sandbox type and must put
+        it back, or every later run (and J2-J4) loses an assignable type.
+        """
+        self._open_edit_modal(name)
+        self._step(f"Unarchive task type '{name}'")
+        checkbox = self.page.locator(self.ARCHIVE_CHECKBOX).first
+        if checkbox.is_checked():
+            checkbox.uncheck()
         self._save_edit_modal()
 
     # -- dashboard tile ---------------------------------------------------------

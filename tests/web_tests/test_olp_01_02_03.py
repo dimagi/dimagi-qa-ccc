@@ -40,12 +40,12 @@ def add_opportunity(web_driver, test_data, config, settings):
         cchq_login_page.dismiss_guide_popup()
 
     with allure.step("Create a copy of Learn App in CommCare HQ"):
-        cchq_home_page.select_app_under_applications_tab("[08/12] Learn App")
+        cchq_home_page.select_app_under_applications_tab("[Master] Learn App")
         learn_app_name = cchq_application_page.create_copy_of_learn_app()
         cchq_home_page.verify_app_present_under_applications_tab(learn_app_name)
 
     with allure.step("Create a copy of Delivery App in CommCare HQ"):
-        cchq_home_page.select_app_under_applications_tab("[08/12] Delivey App")
+        cchq_home_page.select_app_under_applications_tab("[Master] Delivery App")
         delivery_app_name = cchq_application_page.create_copy_of_delivery_app()
         cchq_home_page.verify_app_present_under_applications_tab(delivery_app_name)
 

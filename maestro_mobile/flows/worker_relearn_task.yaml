@@ -35,8 +35,15 @@ env:
   # From the CCZ of the opportunity's OWN deliver app copy (app_id
   # 6b7240a9db5741f49c5e91bd224b3140), not the master: modules.m1 holds the
   # re-learn form, whose task block id is relearn_task - the TaskType slug.
-  TASK_MODULE: "Re-learn Task"
-  TASK_FORM: "Re-learn Form"
+  #
+  # The master and the copy disagree on capitalisation ("Re-Learn Task" vs
+  # "Re-learn Task", "Re-learn form" vs "Re-learn Form"), and Maestro matches
+  # text case-sensitively, so these carry character classes to cover both. Plain
+  # classes rather than an inline (?i) flag, which is unproven on 1.39.13.
+  # Note "Re-learn [Ff]orm" cannot match "Second Relearn Form" - that one has no
+  # hyphen - so the two forms stay distinguishable.
+  TASK_MODULE: "Re-[Ll]earn Task"
+  TASK_FORM: "Re-learn [Ff]orm"
   TASK_NAME_ANSWER: "Relearn Automation"
   PENDING_WARNING: "Complete assigned tasks to continue delivering services"
   # connect_progress_relearn_tasks_completed - only shown for 6h after completion

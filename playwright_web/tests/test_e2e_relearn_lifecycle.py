@@ -7,24 +7,24 @@ from pages.connect_workers_page import ConnectWorkersPage
 
 
 def test_e2e_relearn_lifecycle(page, test_data, config, settings):
-    """P2-A - TC-E2E-001: assign on web, complete on a real device, verify on web.
+    """P2-A - assign on web, complete on a real device, verify on web.
 
     Web assigns the re-learn task, a Maestro flow on a BrowserStack device has
     the worker sync and submit the task form, then web polls the task list until
     the status flips from To Do to Complete.
 
-    Scope: TC-E2E-001 only. TC-E2E-002 (delivery visit auto-rejected with the
-    "Pending Task" flag while a task is pending) and TC-E2E-003 (visit accepted
-    once it is complete) both need a delivery visit submitted from the device,
-    which this flow does not do yet; they are the natural next addition, ideally
-    as stages of the LDVP journey where a delivery visit already happens.
+    Covers TC-E2E-001, TC-E2E-006 (the in-app "Complete assigned tasks to
+    continue delivering services." warning showing and then being replaced by the
+    completion message - asserted inside worker_relearn_task.yaml, which needs
+    APK 2.63.4 or newer), TC-TAS-001, and - because a completed task only exists
+    at the end of this chain - TC-TAS-009 and TC-TDL-003.
 
-    TC-E2E-006 (the in-app "Complete assigned tasks to continue delivering
-    services." warning appearing and then clearing) is not asserted yet only
-    because app/app-cccStaging-release.apk is stale: it was committed 3 Apr 2026,
-    while the feature landed with CCCT-2294 on 29 Apr 2026, so that particular
-    build cannot render the warning. Refresh the APK and the assertions can be
-    added to maestro_mobile/flows/worker_relearn_task.yaml.
+    Still to add: TC-E2E-002 (delivery visit auto-rejected with the "Pending Task"
+    flag while a task is pending) and TC-E2E-003 (visit accepted once it is
+    complete). Both need a delivery visit submitted from the device, and they have
+    to land as a pair - 002 alone would still pass if delivery were blocked
+    permanently. Best done as extra stages of this one device session rather than
+    a second cold start.
     """
     hybrid = test_data.get("TASKING_HYBRID")
     required = ["org", "opp_id"]
@@ -100,3 +100,38 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
         timeout_seconds=int(hybrid.get("completion_timeout_seconds", 300)),
     )
     print(f"STEP [Hybrid] Task for {full_number} verified Complete on web")
+
+    # --- WEB: what a completed task allows and forbids ---
+    # These belong here rather than in J2: they need a genuinely completed task,
+    # and in J2 they would depend on leftovers from a previous run and fail on a
+    # clean environment. The rows are ordered newest first, so the completed task
+    # just verified above is the one being read.
+
+    # TC-TAS-009: no Edit control - assigned_task_edit_button.html renders it only
+    # while status is "assigned".
+    assert tasks.row_edit_button_count(worker_name) == 0, "Completed task row still offers Edit"
+
+    # TC-TDL-003: the select checkbox is still rendered but disabled, so a
+    # completed task cannot be picked for deletion.
+    checkbox_states = tasks.row_checkbox_states(worker_name)
+    assert checkbox_states, "Completed task row has no select checkbox at all"
+    assert not any(checkbox_states), (
+        f"Completed task row is still selectable for deletion: {checkbox_states}"
+    )
+
+    # Re-assignment is allowed once the previous task completed - the duplicate
+    # constraint only applies while one is still assigned. This is the property
+    # that makes the whole tasking suite re-runnable against a single worker, so
+    # it is worth asserting rather than assuming.
+    tasks.create_task(task_type, worker_name, due_in_days=7)
+    tasks.verify_success_message("Task created successfully")
+    tasks.verify_task_row(worker_name, task_type, status="To Do")
+    print("STEP [Hybrid] Same task type re-assigned after completion")
+
+    # Leave nothing pending: J2, J3 and J4 assign this same type to this same
+    # worker and would hit the duplicate constraint on the next run. The completed
+    # rows stay - they are not deletable, which is the point of TC-TDL-003.
+    tasks.delete_tasks_for_workers([worker_name])
+    assert tasks.status_badge(worker_name) != "To Do", (
+        "A pending task was left behind - the next J2 run would fail on the duplicate constraint"
+    )

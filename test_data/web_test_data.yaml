@@ -19,7 +19,7 @@ OLP_1:
   deliver_app_domain: "connectqa-automation-prod"
   deliver_app_domain_staging: "connectqa-automation"
   # Master app names are hardcoded in playwright_web/flows/olp_setup.py
-  # ("[08/12] Learn App" / "[08/12] Delivey App") - the old learn_app/deliver_app
+  # ("[Master] Learn App" / "[Master] Delivery App") - the old learn_app/deliver_app
   # keys here were stale and unread, so they were removed.
   learn_app_description: "This is Learn App"
   passing_score: "40"
@@ -123,19 +123,37 @@ Make_Payment:
   phone_number: "7426006"
 # --- Tasking workflow automation (CCCT-2658) ---
 TASKING:
+  # The live task unit. Its slug is already consumed on both apps by the task
+  # type J2-J4 and the hybrid test assign, so it is only creatable on a fresh
+  # app copy - which is why TC-TTC-002 rides on the per-run OLP opportunity.
   task_unit_name: "Relearn Task Unit"       # visible label in the Task Unit dropdown
   task_unit_slug: "relearn_task"            # must match HQ Task Unit ID exactly (case-sensitive)
   case_property: "relearn_complete"
-  edited_type_name: "Relearn Task Unit (edited)"
+  # J1's sandbox type, created once from the second task unit on the static
+  # opportunity and reused forever: a task-type slug is permanently consumed per
+  # app, so J1 must never create a type from task_unit_slug there, and must
+  # never archive the live type either.
+  sandbox_unit_slug: "relearn_task_2"
+  sandbox_unit_name: "Relearn Task Unit 2"
+  # TC-TTC-005 renames the sandbox type on every run. The slug is never rendered
+  # in the table, so the row cannot be found by slug - instead the rename toggles
+  # between these two names, which makes the test stateless and repeatable.
+  sandbox_name_a: "Relearn Sandbox A"
+  sandbox_name_b: "Relearn Sandbox B"
   switch_enabled: false        # set true once waffle switch worker_visits_tasks is confirmed ON
-  # --- Static opportunity for J2/J3/J4 (fill in to un-skip those tests) ---
-  static_opp: ""               # opportunity name as shown in the list
-  static_opp_id: ""            # numeric id from the opportunity URL
-  static_org: ""               # PM org slug in URLs, e.g. "pm-automation-01"
-  static_nm_org: ""            # NM org slug for permission tests
-  static_nm_org_name: ""       # NM org display name for the org switcher
-  static_worker: ""            # enrolled worker display name
-  static_task_type: "Relearn Task Unit"     # pre-created task type on the static opp
+  # --- Static opportunity for J1/J2/J3/J4 ---
+  # The deliberately long-lived opportunity (365-day window) created 31-Jul-2026;
+  # reused until the LDVP journey exists, because automation-created
+  # opportunities only get a 7-day window and Connect blocks delivery after it.
+  static_opp: "Demo Opportunity_31-Jul-2026 : 18:39"   # opportunity name as shown in the list
+  static_opp_id: "9d533d0d-b835-488a-8726-7d2aac52df95"  # UUID from the opportunity URL
+  static_org: "pm_automation_01"     # PM org slug as it appears in Connect URLs
+  static_nm_org: "network-manager"   # NM org slug for permission tests
+  static_nm_org_name: "Network Manager"   # NM org display name for the org switcher
+  static_worker: "Relearn Task User"      # enrolled worker (+74263119728)
+  static_task_type: "Relearn Task Unit"   # pre-created task type on the static opp
+  # Left empty on purpose: the only other unit is J1's sandbox, and J2 must not
+  # assign or delete a type J1 archives and renames.
   static_task_type_2: ""       # optional second type - enables the bulk-delete path
 
 # --- Phase 2 hybrid web -> mobile -> web (TC-E2E-001/003/006) ---
