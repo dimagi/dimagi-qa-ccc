@@ -39,6 +39,7 @@ class ConnectAssignedTasksPage(BasePage):
     CONFIRM_MODAL_TITLE = locators.get("connect_assigned_tasks_page", "confirm_modal_title")
     CONFIRM_DELETE_BTN = locators.get("connect_assigned_tasks_page", "confirm_delete_btn")
     SUCCESS_MESSAGE = locators.get("connect_assigned_tasks_page", "success_message")
+    ERROR_MESSAGE = locators.get("connect_assigned_tasks_page", "error_message")
     FILTER_STATUS_SELECT = locators.get("connect_assigned_tasks_page", "filter_status_select")
     FILTER_TASK_TYPE_SELECT = locators.get("connect_assigned_tasks_page", "filter_task_type_select")
     FILTER_APPLY_BTN = locators.get("connect_assigned_tasks_page", "filter_apply_btn")
@@ -133,15 +134,30 @@ class ConnectAssignedTasksPage(BasePage):
         )
 
     def attempt_duplicate_task(self, task_type, worker, due_in_days=7):
-        """Submit a duplicate assignment; returns the validation error text."""
+        """Submit a duplicate assignment; returns the rejection message text.
+
+        The rejection is NOT an inline form error. CreateTaskForm validates fine -
+        it only excludes already-assigned types from the dropdown when the view
+        knows the worker up front, which it does not for a freshly opened modal.
+        AssignedTask.assign then raises TaskAlreadyAssignedError, and the view
+        catches it, flashes a Django error message and still answers with
+        HX-Redirect. So the modal closes, the list reloads, and the reason is in an
+        error banner.
+        """
         self._fill_create_form(task_type, worker, due_in_days)
         self._step("Submit expected-duplicate assignment")
-        self.click(self.CREATE_TASK_SAVE_BTN)
-        error = self.page.locator(self.FORM_ERROR_TEXT).first
-        error.wait_for(state="visible", timeout=15000)
-        text = error.inner_text().strip()
+        self.click_and_await_redirect(self.CREATE_TASK_SAVE_BTN)
+        banner = self.page.locator(self.ERROR_MESSAGE).first
+        try:
+            banner.wait_for(state="visible", timeout=15000)
+        except Exception:
+            shown = self.page.locator(self.SUCCESS_MESSAGE).all_inner_texts()
+            raise AssertionError(
+                "Duplicate assignment produced no error banner - it looks like it was accepted. "
+                f"Success messages on the page: {shown or 'none'}"
+            ) from None
+        text = banner.inner_text().strip()
         self._step(f"Duplicate assignment rejected with: {text}")
-        self.cancel_create_modal()
         return text
 
     # -- row assertions -------------------------------------------------------------
@@ -169,15 +185,14 @@ class ConnectAssignedTasksPage(BasePage):
         assert badge == status, f"Expected status {status!r}, got {badge!r}"
         if due_date_iso:
             due = date.fromisoformat(due_date_iso)
-            candidates = {
-                due.strftime("%b %d, %Y"),
-                due.strftime("%d %b %Y"),
-                due.strftime("%m/%d/%Y"),
-                due.strftime("%Y-%m-%d"),
-                due.strftime("%b. %d, %Y"),
-            }
-            assert any(fmt in text for fmt in candidates), (
-                f"Row does not show due date {due_date_iso} in any known format: {text!r}"
+            # Both date columns are DMYTColumn, which renders a plain date with
+            # utils.tables.DATE_FORMAT ("%d-%b-%Y") and a tz-aware datetime with
+            # DATE_TIME_FORMAT ("%d-%b-%Y %H:%M"). due_date is a date, so no time
+            # part - e.g. "10-Aug-2026" next to an assigned date of
+            # "03-Aug-2026 12:38".
+            expected = due.strftime("%d-%b-%Y")
+            assert expected in text, (
+                f"Row does not show due date {expected} (from {due_date_iso}): {text!r}"
             )
         self._step(f"Task row verified for '{worker}': {status}, {task_type}")
 

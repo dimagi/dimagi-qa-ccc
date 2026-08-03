@@ -157,6 +157,10 @@ connect_assigned_tasks_page:
   confirm_modal_title: "confirm-modal-title"
   confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
   success_message: "//div[contains(@class,'bg-message-success')]"
+  # base.html renders Django messages tagged error/danger with bg-message-error.
+  # A rejected task assignment lands here, not in the form: the view flashes the
+  # message and still answers with HX-Redirect.
+  error_message: "//div[contains(@class,'bg-message-error')]"
   # Filter modal
   filter_form: "assignedTaskFilterForm"
   filter_status_select: "id_task_status"
