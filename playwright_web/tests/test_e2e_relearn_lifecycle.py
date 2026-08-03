@@ -176,13 +176,19 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
         f"rejected. Row reads: {blocked_row!r}"
     )
 
-    # TC-E2E-003: submitted after the task completed. Asserted as "not rejected"
-    # rather than a specific status, because what it lands on depends on the
-    # opportunity's auto_approve_visits / automatic_visit_verification settings.
+    # TC-E2E-003: submitted after the task completed, so the flag is never added and
+    # the visit is processed normally. On this opportunity that means **Approved**
+    # (auto_approve_visits is on); Pending is also accepted here so that turning
+    # auto-approve off does not fail a test about task blocking. Rejected is the
+    # regression this guards against.
     allowed_row = workers.wait_for_visit(allowed_visit_name)
-    assert "reject" not in allowed_row.lower(), (
+    assert "Rejected" not in allowed_row, (
         f"Visit '{allowed_visit_name}' was submitted with no task outstanding, so it should "
         f"not be rejected. Row reads: {allowed_row!r}"
+    )
+    assert "Approved" in allowed_row or "Pending" in allowed_row, (
+        f"Visit '{allowed_visit_name}' should have been processed normally; expected Approved "
+        f"(or Pending if auto-approve is off). Row reads: {allowed_row!r}"
     )
     print(f"STEP [Hybrid] Blocked visit: {blocked_row!r}")
     print(f"STEP [Hybrid] Allowed visit: {allowed_row!r}")

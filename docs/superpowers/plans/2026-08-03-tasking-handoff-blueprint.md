@@ -28,7 +28,8 @@ Every row below passed on staging on 2026-08-03. Nothing in the suite is
 | `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001 | 71s, after 3 fixes |
 | `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic) | 76s, after 2 fixes |
 | `test_task_permissions.py` (J4) | PRM-001, 002, 003 | 72s, first try |
-| `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, E2E-005, E2E-006**, TAS-001, TAS-009, TDL-003 | 7m05s |
+| `test_task_assign_from_worker_page.py` | **TAS-008** | 65s, first try |
+| `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, 002, 003, 005, 006**, TAS-001, TAS-009, TDL-003 | 8m17s |
 
 The hybrid pass covers the whole chain: web assigns → device signs in (2.63.4) →
 Connect access granted on a clean install → deliver app downloaded → **blocking
@@ -38,12 +39,22 @@ arrives** → warning gone, replaced by "All required tasks have been completed"
 → no Edit control and a disabled checkbox on the completed row → the same type is
 re-assignable, and that leftover is deleted.
 
-**26 of the workbook's 43 case ids now pass**, checked case by case against the
+**29 of the workbook's 43 case ids now pass**, checked case by case against the
 `Automation Target` column.
 
-Three of those the workbook had marked **"Phase 2 - deferred"** and are now
-automated: **TAS-009**, **TDL-003** and **E2E-005** — the last because waiting on
-the task-completion push asserts the notification as a side effect.
+Five of those the workbook had marked **deferred** and are now automated:
+**TAS-008**, **TAS-009**, **TDL-003**, **E2E-005** (waiting on the task-completion
+push asserts the notification as a side effect) and **E2E-002** (which the plan put
+in a separate `e2e_visit_blocking` test; running it in the existing device session
+saves a second cold start for no loss of coverage).
+
+Observed visit statuses, for reference — this opportunity has
+`auto_approve_visits` on:
+
+| Entity | Submitted | Status |
+|---|---|---|
+| `Blocked <stamp>` | while the task was pending | **Rejected** |
+| `Allowed <stamp>` | after the task completed | **Approved** |
 
 ### Not covered — every remaining gap, with the reason
 
@@ -53,9 +64,7 @@ the task-completion push asserts the notification as a side effect.
 | TDL-002 bulk delete | J2 | **Skipped, not passing.** J2's bulk branch is `if second_type:` and `static_task_type_2` is deliberately empty: the only other unit is J1's sandbox, which J1 renames and archives, so J2 must not assign it. Needs a **third task unit** in both deliver apps to cover honestly. Do not count this as green. |
 | TLV-006, IMP-003 | J3 / J1 | Gated behind `TASKING.switch_enabled: false` — no access to the `worker_visits_tasks` waffle switch. |
 | TLV-005 | J3 | Passes only in its **basic** form (panel loads); the Name/Description assertions wait on the IMP-002 template question. |
-| E2E-002 | P2-B `e2e_visit_blocking` | Not written. Needs a delivery visit on the device. |
-| E2E-003 | P2-A | The plan maps it here, but this flow submits **no delivery visit**, so it is not covered. Must land paired with E2E-002. |
-| TAS-003, TAS-008, E2E-004 | Deferred in the plan | Unchanged. |
+| TAS-003, E2E-004 | Deferred in the plan | Unchanged. |
 | TTC-007, TDL-004, PRM-004, PRM-005, IMP-001, IMP-002, IMP-005, IMP-006 | Manual only | Unchanged. **OCS** (IMP-006) also needs an OCS account for the automation user. |
 
 ### Bugs found and fixed in our own code
@@ -275,14 +284,16 @@ unit → OLP(+TTC-002) → J1 → J2 → J3 → J4 → mobile chain. Run it in t
 parallel runs collide on the duplicate-assignment constraint. Each self-cleans.
 Web journeys are ~70–90s each, the OLP test ~3min, the mobile chain ~7min.
 
-### Next — extend the mobile chain to E2E-002 + E2E-003
+### Next
 
-One device session doing: assign → **submit Registration Form visit (rejected,
-"Pending Task" flag)** → complete the re-learn form → **submit another visit
-(accepted)**. They must land as a pair, since 002 alone would still pass if
-delivery were blocked permanently. Registration Form fields: name, picture
-(skippable), id (unique numeric), GPS (skippable), Finish. One cold start instead
-of three saves ~20 min/run.
+- **The dashboard "Tasks Assigned to Connect Workers" card → Task List → + route**
+  is not automated. Creating from the Task List page is already covered by J2, so
+  the only new coverage is the tile navigation itself — which is TLV-006 / IMP-003,
+  currently skipped behind `switch_enabled: false`. **Check whether the card
+  actually renders on staging**: if it does, flip `TASKING.switch_enabled` to true
+  and those two cases stop being blocked.
+- **Tighten E2E-003 if wanted.** It currently accepts Approved *or* Pending so that
+  turning `auto_approve_visits` off would not fail a test about task blocking.
 
 ### Then
 
