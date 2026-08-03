@@ -39,8 +39,11 @@ def test_task_views_and_filters_journey(page, test_data, config, settings):
         workers.goto_workers_tasks_tab(base_url, org, opp)
         workers.verify_worker_has_task(worker, task_type)
 
-        # TC-TLV-004/005 (basic): drill-down task list + details panel loads
-        workers.goto_worker_tasks_page(base_url, org, opp)
+        # TC-TLV-004/005 (basic): drill-down task list + details panel loads.
+        # The page is per-worker and 404s without ?user=<ConnectUser.user_id>,
+        # which the Tasks tab does not expose - hence the hop via the Delivery tab.
+        user_id = workers.worker_user_id(base_url, org, opp, worker)
+        workers.goto_worker_tasks_page(base_url, org, opp, user_id)
         details_text = workers.open_first_task_details()
         assert "Due" in details_text or "Status" in details_text
 
