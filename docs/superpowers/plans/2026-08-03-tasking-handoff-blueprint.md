@@ -2,11 +2,11 @@
 
 Ticket: **CCCT-2658** — automate the Connect web tasking / re-learn workflow.
 
-Plan workbook: `Tasking_Workflow_Automation_Test_Plan.xlsx`. **It is not in the
-repo** — never committed, not ignored, not present anywhere in the tree. Earlier
-revisions of this document said it was at the repo root; it is not, so the "43
-cases" denominator used below cannot be checked against anything. Treat totals as
-unverified until the workbook is committed.
+Plan workbook: **`Tasking_Workflow_Automation_Test_Plan.xlsx`, now committed at the
+repo root.** It had been written into the *microplanning* worktree (that session's
+cwd) and so was never in this repo; Nitin supplied it. 8 sheets, **43 TC ids** (53
+rows once the section-header rows are excluded), with an `Automation Target` column
+mapping each case to a test or marking it manual/deferred.
 
 **Updated 2026-08-03 (later session).** Everything in §4 of the previous revision
 is done, and J2/J3/J4 plus the mobile chain have now run green on staging.
@@ -25,7 +25,7 @@ Every row below passed on staging on 2026-08-03. Nothing in the suite is
 | `tests/unit/` (20 tests) | — | Local, <1s |
 | `test_olp_01_02_03.py` (+ `flows/tasking_config.py`) | **TTC-002**, TTC-004, IMP-004 | 185s |
 | `test_task_type_config.py` (J1) | TTC-001, 004, 005, 006, TAS-005 | 81s, first try |
-| `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001, 002 | 71s, after 3 fixes |
+| `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001 | 71s, after 3 fixes |
 | `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic) | 76s, after 2 fixes |
 | `test_task_permissions.py` (J4) | PRM-001, 002, 003 | 72s, first try |
 | `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, E2E-005, E2E-006**, TAS-001, TAS-009, TDL-003 | 7m05s |
@@ -38,17 +38,25 @@ arrives** → warning gone, replaced by "All required tasks have been completed"
 → no Edit control and a disabled checkbox on the completed row → the same type is
 re-assignable, and that leftover is deleted.
 
-**27 distinct case ids now pass.** The denominator is unverified (see the missing
-workbook above), so quote the 27, not a fraction.
+**26 of the workbook's 43 case ids now pass**, checked case by case against the
+`Automation Target` column.
 
-### Not covered, by decision or still to do
+Three of those the workbook had marked **"Phase 2 - deferred"** and are now
+automated: **TAS-009**, **TDL-003** and **E2E-005** — the last because waiting on
+the task-completion push asserts the notification as a side effect.
 
-- **TTC-003** dropped: the hybrid test proves slug integrity more strongly, since a
-  slug that stopped matching the HQ task unit id makes completion impossible.
-- **TLV-006 and IMP-003** stay skipped behind `TASKING.switch_enabled: false` (no
-  access to the `worker_visits_tasks` waffle switch). **IMP-002** dropped.
-- **E2E-002 / E2E-003** still to add, as a pair, to the mobile chain.
-- **OCS/chatbot task types** deferred: the automation user needs an OCS account.
+### Not covered — every remaining gap, with the reason
+
+| Case | Plan's target | Why not covered |
+|---|---|---|
+| TTC-003 | J1 | **Dropped by decision** — the hybrid test proves slug integrity more strongly, since a slug that stopped matching the HQ task unit id makes completion impossible. |
+| TDL-002 bulk delete | J2 | **Skipped, not passing.** J2's bulk branch is `if second_type:` and `static_task_type_2` is deliberately empty: the only other unit is J1's sandbox, which J1 renames and archives, so J2 must not assign it. Needs a **third task unit** in both deliver apps to cover honestly. Do not count this as green. |
+| TLV-006, IMP-003 | J3 / J1 | Gated behind `TASKING.switch_enabled: false` — no access to the `worker_visits_tasks` waffle switch. |
+| TLV-005 | J3 | Passes only in its **basic** form (panel loads); the Name/Description assertions wait on the IMP-002 template question. |
+| E2E-002 | P2-B `e2e_visit_blocking` | Not written. Needs a delivery visit on the device. |
+| E2E-003 | P2-A | The plan maps it here, but this flow submits **no delivery visit**, so it is not covered. Must land paired with E2E-002. |
+| TAS-003, TAS-008, E2E-004 | Deferred in the plan | Unchanged. |
+| TTC-007, TDL-004, PRM-004, PRM-005, IMP-001, IMP-002, IMP-005, IMP-006 | Manual only | Unchanged. **OCS** (IMP-006) also needs an OCS account for the automation user. |
 
 ### Bugs found and fixed in our own code
 
@@ -278,10 +286,10 @@ of three saves ~20 min/run.
 
 ### Then
 
-- **Commit the plan workbook.** `Tasking_Workflow_Automation_Test_Plan.xlsx` is not
-  in the repo, so the case list and the `Automation Target` mapping exist nowhere in
-  version control and no total can be checked.
-- Decide on **pushing**: the branch is 12 commits ahead and draft PR #23 is far
+- **TDL-002 needs a third task unit** in both deliver apps (Nitin), after which set
+  `TASKING.static_task_type_2` and J2's bulk-delete branch starts running. Until
+  then that case is skipped, not passing.
+- Decide on **pushing**: the branch is 14 commits ahead and draft PR #23 is far
   behind local.
 - Consider retrying the BrowserStack **uploads**, not just session start: a
   transient `ConnectionResetError` on the test-suite upload cost a whole run.
