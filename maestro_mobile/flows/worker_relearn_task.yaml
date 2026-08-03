@@ -248,9 +248,18 @@ env:
     timeout: 600000
 - assertVisible:
     text: ".*${COMPLETION_NOTIFICATION_BODY}.*"
-- swipe:
-    start: "50%,80%"
-    end: "50%,1%"
+# Back closes the shade. An upward swipe does not - inside an open shade a
+# vertical drag scrolls the notification list, so the panel stayed up and every
+# assertion after it failed against system UI instead of the app.
+- back
+# The shade is a system window, so what Back reveals is not guaranteed. Bring
+# CommCare forward if the app home screen is not the thing behind it.
+- runFlow:
+    when:
+      notVisible:
+        text: "Sync with Server"
+    commands:
+      - launchApp
 
 # --- The warning must be gone, replaced by the success message (TC-E2E-006) ---
 # Now that Connect has confirmed completion, a sync actually fetches fresh state.
