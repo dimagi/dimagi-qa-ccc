@@ -183,6 +183,22 @@ connect_workers_page:
   # user_visits_list?user=<ConnectUser.user_id>. The Delivery tab uses that mixin;
   # the Tasks tab does not, so this is where the id can be read from.
   worker_name_link_by_worker: "//a[contains(@href,'user=')][.//p[normalize-space()='{worker}']]"
+  # Per-worker Tasks drill-down (user_tasks.html). Its Create Task / Delete Task(s)
+  # buttons sit outside #task-list-table, so the assigned-task-list locators do not
+  # reach them. WorkerCompletedTaskTable.render_task_type prints "Name (slug)", so a
+  # row is addressable by slug - which survives J1 renaming its sandbox type.
+  worker_tasks_create_btn: "//button[@aria-label='Create Task']"
+  worker_tasks_delete_btn: "//button[@aria-label='Delete Task(s)']"
+  worker_task_row_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]"
+  worker_task_row_checkbox_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//input[@name='row_select']"
+  worker_task_status_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Visits tab of the same worker page. WorkerVisitTable gives every row an hx-get
+  # for its details panel, which is a stable way to pick out data rows without
+  # depending on the column layout (Date, Entity Name, Deliver Unit, Payment Unit,
+  # Last Activity, Status).
+  worker_visit_rows: "//table//tr[@hx-get]"
+  confirm_modal_title: "confirm-modal-title"
+  confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
 
 # --- Worker invite + hybrid (Phase 2) ---
 connect_worker_invite_page:

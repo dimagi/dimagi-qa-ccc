@@ -1,5 +1,6 @@
 import re
 import time
+from datetime import date, timedelta
 
 from utils.helpers import LocatorLoader
 
@@ -16,6 +17,17 @@ class ConnectWorkersPage(BasePage):
     DRILLDOWN_TASK_ROW = locators.get("connect_workers_page", "drilldown_task_row")
     WORKER_TASK_GROUP = locators.get("connect_workers_page", "worker_task_group_by_worker")
     WORKER_NAME_LINK = locators.get("connect_workers_page", "worker_name_link_by_worker")
+    WORKER_TASKS_CREATE_BTN = locators.get("connect_workers_page", "worker_tasks_create_btn")
+    WORKER_TASKS_DELETE_BTN = locators.get("connect_workers_page", "worker_tasks_delete_btn")
+    WORKER_TASK_ROW_BY_SLUG = locators.get("connect_workers_page", "worker_task_row_by_slug")
+    WORKER_TASK_ROW_CHECKBOX_BY_SLUG = locators.get("connect_workers_page", "worker_task_row_checkbox_by_slug")
+    WORKER_TASK_STATUS_BY_SLUG = locators.get("connect_workers_page", "worker_task_status_by_slug")
+    WORKER_VISIT_ROWS = locators.get("connect_workers_page", "worker_visit_rows")
+    CONFIRM_MODAL_TITLE = locators.get("connect_workers_page", "confirm_modal_title")
+    CONFIRM_DELETE_BTN = locators.get("connect_workers_page", "confirm_delete_btn")
+    CREATE_TASK_FORM = locators.get("connect_assigned_tasks_page", "create_task_form")
+    CREATE_TASK_SAVE_BTN = locators.get("connect_assigned_tasks_page", "create_task_save_btn")
+    TASK_SELECT = locators.get("connect_assigned_tasks_page", "task_select")
     INVITE_USERS_TEXTAREA = locators.get("connect_worker_invite_page", "users_textarea")
     INVITE_SUBMIT_BTN = locators.get("connect_worker_invite_page", "submit_btn")
 
@@ -122,6 +134,103 @@ class ConnectWorkersPage(BasePage):
         self._step("Navigate to worker drill-down Tasks page")
         self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_tasks/?user={user_id}")
         self.page.wait_for_load_state("load")
+
+    # -- Visits tab of the worker page (TC-E2E-002 / TC-E2E-003) -----------------
+
+    def goto_worker_visits_page(self, base_url, org_slug, opp_id, user_id):
+        """The Visits tab of the per-worker page. Needs ?user= like the Tasks tab."""
+        self._step("Navigate to the worker's Visits tab")
+        self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_visits/?user={user_id}")
+        self.page.wait_for_load_state("load")
+
+    def visit_rows(self):
+        rows = [r.strip() for r in self.page.locator(self.WORKER_VISIT_ROWS).all_inner_texts()]
+        return [r for r in rows if r]
+
+    def wait_for_visit(self, entity_name, timeout_seconds=900, poll_seconds=20):
+        """Reload the Visits tab until a row mentions `entity_name`; return its text.
+
+        A submission travels device -> CommCare HQ -> Connect's form receiver, which
+        takes minutes on staging, so this polls rather than reading once. On timeout
+        it prints every row it did see, since the alternative - a bare "not found" -
+        gives no way to tell "not processed yet" from "entity name renders
+        differently than expected".
+        """
+        deadline = time.monotonic() + timeout_seconds
+        attempt = 0
+        while True:
+            attempt += 1
+            self.page.reload(wait_until="load")
+            self.page.wait_for_timeout(2500)  # the table arrives via htmx
+            rows = self.visit_rows()
+            match = next((r for r in rows if entity_name in r), None)
+            self._step(f"Visit check {attempt} for '{entity_name}': {len(rows)} row(s)")
+            if match:
+                self._step(f"Visit row found: {match!r}")
+                return match
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"No visit row mentioning '{entity_name}' after {timeout_seconds}s. "
+                    f"Rows on the page: {rows or 'none'}"
+                )
+            self.page.wait_for_timeout(poll_seconds * 1000)
+
+    # -- assigning and deleting from the worker's own Tasks page (TC-TAS-008) ----
+
+    def worker_page_task_type_labels(self):
+        """Task types offered by the Create Task modal on the worker Tasks page.
+
+        The view passes the worker's access into CreateTaskForm, so this list
+        already excludes types currently assigned to them.
+        """
+        self._step("Open Create Task modal on the worker Tasks page")
+        self.click(self.WORKER_TASKS_CREATE_BTN)
+        self.page.locator(self.CREATE_TASK_FORM).first.wait_for(state="visible", timeout=15000)
+        options = self.page.locator(f"{self.TASK_SELECT} option").all_inner_texts()
+        labels = [o.strip() for o in options if o.strip() and not o.strip().startswith("Select")]
+        self._step(f"Worker-page task options: {labels}")
+        return labels
+
+    def create_task_from_worker_page(self, task_label, due_in_days=7):
+        """Assign a task from the worker's own Tasks page.
+
+        The modal here is NOT the same as the task list's: because the view knows
+        the worker, CreateTaskForm sets access.initial and swaps that field for a
+        HiddenInput, so only the task and due date are selectable. Driving a worker
+        picker here would fail - there isn't one.
+
+        Call worker_page_task_type_labels() first; it leaves the modal open.
+        """
+        self.select_tomselect_by_label("id_task", task_label, scope=self.CREATE_TASK_FORM)
+        due = (date.today() + timedelta(days=due_in_days)).isoformat()
+        self._step(f"Set due date {due}")
+        self.page.locator(self.CREATE_TASK_FORM).locator("#id_due_date").fill(due)
+        self._step(f"Save task '{task_label}' from the worker Tasks page")
+        self.click_and_await_redirect(self.CREATE_TASK_SAVE_BTN)
+        return due
+
+    def verify_worker_task_row(self, slug, status="To Do"):
+        row = self.page.locator(self.WORKER_TASK_ROW_BY_SLUG.format(slug=slug)).first
+        row.wait_for(state="visible", timeout=20000)
+        badge = self.page.locator(self.WORKER_TASK_STATUS_BY_SLUG.format(slug=slug)).first.inner_text().strip()
+        assert badge == status, f"Task row for slug '{slug}' shows {badge!r}, expected {status!r}"
+        self._step(f"Worker Tasks page row for '({slug})' is {status}")
+
+    def worker_task_row_exists(self, slug):
+        return self.page.locator(self.WORKER_TASK_ROW_BY_SLUG.format(slug=slug)).count() > 0
+
+    def delete_worker_task_by_slug(self, slug):
+        """Select the row for this task type and delete it from the worker page."""
+        checkbox = self.page.locator(self.WORKER_TASK_ROW_CHECKBOX_BY_SLUG.format(slug=slug)).first
+        checkbox.wait_for(state="visible", timeout=15000)
+        assert checkbox.is_enabled(), f"Checkbox for '({slug})' is disabled - the task is completed, not pending"
+        self._step(f"Select the task row for '({slug})'")
+        checkbox.check()
+        self._step("Click Delete Task(s) on the worker Tasks page")
+        self.click(self.WORKER_TASKS_DELETE_BTN)
+        self.page.locator(self.CONFIRM_MODAL_TITLE).first.wait_for(state="visible")
+        self._step("Confirm deletion")
+        self.click_and_await_redirect(self.CONFIRM_DELETE_BTN)
 
     def open_first_task_details(self):
         self._step("Open first task row's details panel")

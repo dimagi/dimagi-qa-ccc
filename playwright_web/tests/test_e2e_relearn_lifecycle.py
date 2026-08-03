@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from flows.olp_setup import PM_ORG
@@ -22,12 +24,13 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     because a completed task only exists at the end of this chain - TC-TAS-009 and
     TC-TDL-003.
 
-    Still to add: TC-E2E-002 (delivery visit auto-rejected with the "Pending Task"
-    flag while a task is pending) and TC-E2E-003 (visit accepted once it is
-    complete). Both need a delivery visit submitted from the device, and they have
-    to land as a pair - 002 alone would still pass if delivery were blocked
-    permanently. Best done as extra stages of this one device session rather than
-    a second cold start.
+    Also covers **TC-E2E-002 and TC-E2E-003**: a Registration Form visit is
+    submitted before the re-learn form (task pending -> rejected with the
+    "pending_task" flag) and another after it completes (no task outstanding -> not
+    rejected). They are asserted as a pair, since 002 alone would still pass if
+    delivery were blocked permanently. Both ride this one device session; the plan
+    puts 002 in a separate "P2-B e2e_visit_blocking" test, but a second flow means a
+    second cold start for no extra coverage.
     """
     hybrid = test_data.get("TASKING_HYBRID")
     required = ["org", "opp_id"]
@@ -44,6 +47,14 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     task_type = hybrid["task_type"]
     worker_name = hybrid["mobile_username"]
     full_number = f"{hybrid['mobile_country_code']}{hybrid['mobile_phone_number']}"
+
+    # Unique numeric ids and entity names per run. The Registration Form needs a
+    # unique numeric id, and unique names are what let the two visits be told apart
+    # on web - and stop a re-run matching last run's rows.
+    stamp = str(int(time.time()))[-6:]
+    blocked_visit_id, allowed_visit_id = f"{stamp}1", f"{stamp}2"
+    blocked_visit_name = f"Blocked {stamp}"
+    allowed_visit_name = f"Allowed {stamp}"
 
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     tasks = ConnectAssignedTasksPage(connect_page)
@@ -90,6 +101,12 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
             # (send_task_completion_notification), so derive it from the same
             # value the task was assigned with rather than restating it.
             "COMPLETION_NOTIFICATION_BODY": f"You have completed the task '{task_type}'.",
+            # Unique per run so each visit is findable by entity name on web, and
+            # so a re-run cannot match a previous run's rows.
+            "VISIT_NAME_BLOCKED": blocked_visit_name,
+            "VISIT_ID_BLOCKED": blocked_visit_id,
+            "VISIT_NAME_ALLOWED": allowed_visit_name,
+            "VISIT_ID_ALLOWED": allowed_visit_id,
         },
         reports=False,
     )
@@ -142,3 +159,30 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     assert tasks.status_badge(worker_name) != "To Do", (
         "A pending task was left behind - the next J2 run would fail on the duplicate constraint"
     )
+
+    # --- WEB: the two delivery visits (TC-E2E-002 / TC-E2E-003) ---
+    # Checked on the Visits tab of the same worker page. They have to be asserted as
+    # a pair: the rejected one alone would still pass if delivery were blocked
+    # permanently, which is the bug this guards against.
+    user_id = workers.worker_user_id(base_url, org, opp, worker_name)
+    workers.goto_worker_visits_page(base_url, org, opp, user_id)
+
+    # TC-E2E-002: submitted while the task was pending. The form receiver sets
+    # status=rejected outright and adds the "pending_task" flag - it is not merely
+    # left flagged for review.
+    blocked_row = workers.wait_for_visit(blocked_visit_name)
+    assert "reject" in blocked_row.lower(), (
+        f"Visit '{blocked_visit_name}' was submitted with a task pending, so it should be "
+        f"rejected. Row reads: {blocked_row!r}"
+    )
+
+    # TC-E2E-003: submitted after the task completed. Asserted as "not rejected"
+    # rather than a specific status, because what it lands on depends on the
+    # opportunity's auto_approve_visits / automatic_visit_verification settings.
+    allowed_row = workers.wait_for_visit(allowed_visit_name)
+    assert "reject" not in allowed_row.lower(), (
+        f"Visit '{allowed_visit_name}' was submitted with no task outstanding, so it should "
+        f"not be rejected. Row reads: {allowed_row!r}"
+    )
+    print(f"STEP [Hybrid] Blocked visit: {blocked_row!r}")
+    print(f"STEP [Hybrid] Allowed visit: {allowed_row!r}")
