@@ -199,6 +199,14 @@ class ConnectAssignedTasksPage(BasePage):
     def row_exists(self, worker):
         return self.page.locator(self.ROW_BY_WORKER.format(worker=worker)).count() > 0
 
+    def worker_row_texts(self, worker):
+        """Every task row for this worker. The static opportunity accumulates
+        completed rows, so callers usually need to look for a specific task type
+        rather than assume there is one row."""
+        rows = [r.strip() for r in self.page.locator(self.ROW_BY_WORKER.format(worker=worker)).all_inner_texts()]
+        self._step(f"{len(rows)} task row(s) for '{worker}'")
+        return rows
+
     def status_badge(self, worker):
         locator = self.page.locator(self.STATUS_BADGE_BY_WORKER.format(worker=worker)).first
         return locator.inner_text().strip() if locator.count() else ""

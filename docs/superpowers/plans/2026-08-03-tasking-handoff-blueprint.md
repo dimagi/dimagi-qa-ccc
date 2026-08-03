@@ -23,12 +23,12 @@ Every row below passed on staging on 2026-08-03. Nothing in the suite is
 | Test | Cases | Evidence |
 |---|---|---|
 | `tests/unit/` (20 tests) | — | Local, <1s |
-| `test_olp_01_02_03.py` (+ `flows/tasking_config.py`) | **TTC-002**, TTC-004, IMP-004 | 185s |
+| `test_olp_01_02_03.py` (+ `flows/tasking_config.py`) | **TTC-002**, TTC-004, **IMP-003**, IMP-004 | 178s |
 | `test_task_type_config.py` (J1) | TTC-001, 004, 005, 006, TAS-005 | 81s, first try |
 | `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001 | 71s, after 3 fixes |
-| `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic) | 76s, after 2 fixes |
+| `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic), **TLV-006** | 75s |
 | `test_task_permissions.py` (J4) | PRM-001, 002, 003 | 72s, first try |
-| `test_task_assign_from_worker_page.py` | **TAS-008** | 65s, first try |
+| `test_task_assign_from_worker_page.py` | **TAS-008** (+ dashboard card → Task List) | 69s |
 | `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, 002, 003, 005, 006**, TAS-001, TAS-009, TDL-003 | 8m17s |
 
 The hybrid pass covers the whole chain: web assigns → device signs in (2.63.4) →
@@ -39,7 +39,7 @@ arrives** → warning gone, replaced by "All required tasks have been completed"
 → no Edit control and a disabled checkbox on the completed row → the same type is
 re-assignable, and that leftover is deleted.
 
-**29 of the workbook's 43 case ids now pass**, checked case by case against the
+**31 of the workbook's 43 case ids now pass**, checked case by case against the
 `Automation Target` column.
 
 Five of those the workbook had marked **deferred** and are now automated:
@@ -47,6 +47,13 @@ Five of those the workbook had marked **deferred** and are now automated:
 push asserts the notification as a side effect) and **E2E-002** (which the plan put
 in a separate `e2e_visit_blocking` test; running it in the existing device session
 saves a second cold start for no loss of coverage).
+
+**The waffle-switch assumption was wrong.** The "Tasks Assigned to Connect Workers"
+dashboard card *does* render on staging and links to `.../assigned_tasks/`, so
+`TASKING.switch_enabled` is now **true** and the tile assertions run: **TLV-006**
+and **IMP-003** both pass, including IMP-003's harder half — the card really is
+absent on a fresh opportunity with no task types, so the gating is correct.
+Only `flows/tasking_config.py` and J3 read that flag.
 
 Observed visit statuses, for reference — this opportunity has
 `auto_approve_visits` on:
@@ -62,7 +69,6 @@ Observed visit statuses, for reference — this opportunity has
 |---|---|---|
 | TTC-003 | J1 | **Dropped by decision** — the hybrid test proves slug integrity more strongly, since a slug that stopped matching the HQ task unit id makes completion impossible. |
 | TDL-002 bulk delete | J2 | **Skipped, not passing.** J2's bulk branch is `if second_type:` and `static_task_type_2` is deliberately empty: the only other unit is J1's sandbox, which J1 renames and archives, so J2 must not assign it. Needs a **third task unit** in both deliver apps to cover honestly. Do not count this as green. |
-| TLV-006, IMP-003 | J3 / J1 | Gated behind `TASKING.switch_enabled: false` — no access to the `worker_visits_tasks` waffle switch. |
 | TLV-005 | J3 | Passes only in its **basic** form (panel loads); the Name/Description assertions wait on the IMP-002 template question. |
 | TAS-003, E2E-004 | Deferred in the plan | Unchanged. |
 | TTC-007, TDL-004, PRM-004, PRM-005, IMP-001, IMP-002, IMP-005, IMP-006 | Manual only | Unchanged. **OCS** (IMP-006) also needs an OCS account for the automation user. |
@@ -286,21 +292,18 @@ Web journeys are ~70–90s each, the OLP test ~3min, the mobile chain ~7min.
 
 ### Next
 
-- **The dashboard "Tasks Assigned to Connect Workers" card → Task List → + route**
-  is not automated. Creating from the Task List page is already covered by J2, so
-  the only new coverage is the tile navigation itself — which is TLV-006 / IMP-003,
-  currently skipped behind `switch_enabled: false`. **Check whether the card
-  actually renders on staging**: if it does, flip `TASKING.switch_enabled` to true
-  and those two cases stop being blocked.
-- **Tighten E2E-003 if wanted.** It currently accepts Approved *or* Pending so that
-  turning `auto_approve_visits` off would not fail a test about task blocking.
+- **TDL-002 is the only remaining case anyone can unblock**: it needs a **third task
+  unit** in both deliver apps (Nitin), after which set `TASKING.static_task_type_2`
+  and J2's bulk-delete branch starts running.
+- **Tighten E2E-003 if wanted.** It accepts Approved *or* Pending so that turning
+  `auto_approve_visits` off would not fail a test about task blocking. On this
+  opportunity it lands on Approved.
+- Everything else outstanding is either manual-only in the plan, deferred there
+  (TAS-003, E2E-004), or dropped by decision (TTC-003).
 
 ### Then
 
-- **TDL-002 needs a third task unit** in both deliver apps (Nitin), after which set
-  `TASKING.static_task_type_2` and J2's bulk-delete branch starts running. Until
-  then that case is skipped, not passing.
-- Decide on **pushing**: the branch is 14 commits ahead and draft PR #23 is far
+- Decide on **pushing**: the branch is well ahead of origin and draft PR #23 is far
   behind local.
 - Consider retrying the BrowserStack **uploads**, not just session start: a
   transient `ConnectionResetError` on the test-suite upload cost a whole run.

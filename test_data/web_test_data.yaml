@@ -140,7 +140,10 @@ TASKING:
   # between these two names, which makes the test stateless and repeatable.
   sandbox_name_a: "Relearn Sandbox A"
   sandbox_name_b: "Relearn Sandbox B"
-  switch_enabled: false        # set true once waffle switch worker_visits_tasks is confirmed ON
+  # Confirmed on staging: the "Tasks Assigned to Connect Workers" dashboard card
+  # renders and links to .../assigned_tasks/, so the tile assertions (TLV-006 and
+  # IMP-003) can run. Set back to false if the card disappears on an environment.
+  switch_enabled: true
   # --- Static opportunity for J1/J2/J3/J4 ---
   # The deliberately long-lived opportunity (365-day window) created 31-Jul-2026;
   # reused until the LDVP journey exists, because automation-created

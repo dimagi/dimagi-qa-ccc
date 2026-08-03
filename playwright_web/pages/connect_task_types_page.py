@@ -242,3 +242,16 @@ class ConnectTaskTypesPage(BasePage):
         visible = self.page.locator(self.TASKS_ASSIGNED_TILE).count() > 0
         self._step(f"'Tasks Assigned to Connect Workers' tile visible: {visible}")
         return visible
+
+    def open_task_list_from_dashboard_tile(self):
+        """Click the 'Tasks Assigned to Connect Workers' card on the dashboard.
+
+        The card is an anchor straight to .../assigned_tasks/, so this covers the
+        navigation a PM actually uses to reach the Task List - the tests otherwise
+        only ever go there by URL.
+        """
+        tile = self.page.locator(self.TASKS_ASSIGNED_TILE).first
+        tile.wait_for(state="visible", timeout=20000)
+        self._step("Click the 'Tasks Assigned to Connect Workers' dashboard card")
+        tile.click()
+        self.page.wait_for_url("**/assigned_tasks/**")
