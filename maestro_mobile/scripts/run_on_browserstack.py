@@ -55,6 +55,15 @@ def apply_env_overrides(flow_text, env):
             out.append(line)
             continue
         if in_env_block:
+            # Comments and blank lines are part of the block, not its end. Ending
+            # it on them stranded every key declared after a comment: the key was
+            # appended here AND left in place further down, so the env mapping
+            # carried it twice. Python's YAML quietly keeps the last duplicate,
+            # but BrowserStack rejects the whole test suite with
+            # "[BROWSERSTACK_INVALID_TESTSUITE] Invalid YAML syntax".
+            if not stripped or stripped.startswith("#"):
+                out.append(line)
+                continue
             is_entry = line[:1].isspace() and ":" in stripped
             if is_entry:
                 key = stripped.split(":", 1)[0].strip()
@@ -79,6 +88,18 @@ def apply_env_overrides(flow_text, env):
 
     result = newline.join(out + body)
     return result + newline if flow_text.endswith(("\n", "\r")) else result
+
+
+def _raise_for_status_with_body(response, what):
+    """raise_for_status(), but keep BrowserStack's explanation.
+
+    Their upload errors carry the only useful detail in the body - e.g. a 422
+    "[BROWSERSTACK_INVALID_TESTSUITE] Invalid YAML syntax" - and a bare status
+    code sends you looking in the wrong place.
+    """
+    if response.ok:
+        return
+    raise requests.HTTPError(f"{what} failed with HTTP {response.status_code}: {response.text[:500]}")
 
 
 def get_credentials():
@@ -107,7 +128,7 @@ def upload_app(auth):
             files={"file": f},
             data={"custom_id": "CCC_Staging"},
         )
-    response.raise_for_status()
+    _raise_for_status_with_body(response, f"App upload ({APK_PATH.name})")
     app_url = response.json()["app_url"]
     print(f"App uploaded: {app_url}")
     return app_url
@@ -139,7 +160,7 @@ def upload_test_suite(auth, env=None):
     finally:
         zip_path.unlink()
 
-    response.raise_for_status()
+    _raise_for_status_with_body(response, "Test suite upload")
     test_suite_url = response.json()["test_suite_url"]
     print(f"Test suite uploaded: {test_suite_url}")
     return test_suite_url
