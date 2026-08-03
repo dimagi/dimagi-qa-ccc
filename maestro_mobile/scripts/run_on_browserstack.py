@@ -475,7 +475,7 @@ footer {{ color: var(--muted); font-size: 12px; text-align: center; }}
     print("Reports written: maestro_report.json, maestro_report.html")
 
 
-def run_flows(flows=None, env=None, reports=True):
+def run_flows(flows=None, env=None, reports=True, session_retries=1):
     """Run flows on a BrowserStack device and return the result summary.
 
     Importable entry point for hybrid web+mobile tests, which need a device run
@@ -489,8 +489,21 @@ def run_flows(flows=None, env=None, reports=True):
     auth = get_credentials()
     app_url = upload_app(auth)
     test_suite_url = upload_test_suite(auth, env=env)
-    build_id = trigger_build(auth, app_url, test_suite_url, flows=flows)
-    result = poll_build(auth, build_id)
+
+    # BrowserStack intermittently answers with build status "error" and
+    # "Could not start a session" before running a single step. That is
+    # infrastructure, not a test result, so retry it - the uploaded app and test
+    # suite are reused. A genuine test failure comes back as "failed" and is
+    # never retried.
+    attempt = 0
+    while True:
+        build_id = trigger_build(auth, app_url, test_suite_url, flows=flows)
+        result = poll_build(auth, build_id)
+        if result.get("status") != "error" or attempt >= session_retries:
+            break
+        attempt += 1
+        print(f"Build errored before running (session could not start) - retry {attempt}/{session_retries}")
+
     summary = summarize_build(result, build_id, auth=auth, flows=flows)
     if reports:
         write_reports(summary)

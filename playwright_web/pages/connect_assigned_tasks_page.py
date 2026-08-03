@@ -227,11 +227,17 @@ class ConnectAssignedTasksPage(BasePage):
     # -- delete ---------------------------------------------------------------------
 
     def delete_tasks_for_workers(self, workers):
+        selected = 0
         for worker in set(workers):
             self._step(f"Select task row(s) for '{worker}'")
             for box in self.page.locator(self.ROW_CHECKBOX_BY_WORKER.format(worker=worker)).all():
+                # Completed rows render their checkbox disabled - they cannot be deleted.
                 if box.is_enabled():
                     box.check()
+                    selected += 1
+        if not selected:
+            self._step("No deletable (pending) task rows found - nothing to delete")
+            return
         self._step("Click Delete Task(s)")
         self.click(self.DELETE_TASKS_BTN)
         self.page.locator(self.CONFIRM_MODAL_TITLE).first.wait_for(state="visible")

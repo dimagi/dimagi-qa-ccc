@@ -32,9 +32,15 @@ env:
   USERNAME: "Relearn Task User"
   BACKUP_CODE: "123456"
   OPPORTUNITY: "Demo Opportunity"
-  TASK_MODULE: "Case List"
-  TASK_FORM: "Re-Learn Tasks"
+  # From the CCZ of the opportunity's OWN deliver app copy (app_id
+  # 6b7240a9db5741f49c5e91bd224b3140), not the master: modules.m1 holds the
+  # re-learn form, whose task block id is relearn_task - the TaskType slug.
+  TASK_MODULE: "Re-learn Task"
+  TASK_FORM: "Re-learn Form"
+  TASK_NAME_ANSWER: "Relearn Automation"
   PENDING_WARNING: "Complete assigned tasks to continue delivering services"
+  # connect_progress_relearn_tasks_completed - only shown for 6h after completion
+  COMPLETED_MESSAGE: "All required tasks have been completed"
 ---
 - launchApp:
     clearState: true
@@ -149,38 +155,86 @@ env:
 
 # --- Complete the re-learn task form ---
 - tapOn: "Start"
-- tapOn:
-    text: "${TASK_MODULE}"
-    optional: true
+- tapOn: "${TASK_MODULE}"
 - scrollUntilVisible:
     element:
       text: "${TASK_FORM}"
     direction: DOWN
     timeout: 20000
 - tapOn: "${TASK_FORM}"
-# The form holds a single label-only question, so FINISH is available at once.
+
+# First question is a "Name" text input, the second is a label-only note.
 - extendedWaitUntil:
     visible:
-      id: "nav_btn_finish"
+      text: "Name"
     timeout: 60000
+# Form widgets are built at runtime and carry no resource ids, so the answer
+# field is reached by tapping just under the question label. A relative "below"
+# selector would read better but is not proven on this Maestro version.
+- tapOn:
+    point: "50%,32%"
+- inputText: "${TASK_NAME_ANSWER}"
+# Advance with the next arrow (nav_btn_next, top right) until the end-of-form
+# screen appears - FINISH is not offered while a question is still showing. The
+# taps are optional so this copes with however many pages the form has.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+# The last next arrow completes the form outright, so FINISH is usually never
+# shown as a step of its own - hence optional rather than awaited.
 - tapOn:
     id: "nav_btn_finish"
-- assertVisible:
-    text: ".*Form successfully completed.*"
+    optional: true
 
-# Send the submission so Connect's form receiver can match it to the task.
+# Back on the app home screen means the form closed, and CommCare submits it
+# immediately when online - the Sync tile reports that.
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+
+# Sync again so nothing stays queued.
 - tapOn: "Sync with Server"
 - extendedWaitUntil:
     visible:
       text: ".*Sync Successful.*|.*form sent to server.*"
     timeout: 180000
 
-# --- The warning must be gone (TC-E2E-006, second half) ---
-# Asserting its absence rather than the success banner on purpose: the "All
-# required tasks have been completed" message only shows for six hours.
-# The flag clears when the app refetches delivery progress from Connect, so give
-# it time on the deliver app's home tile after the submission has gone up.
+# --- The warning must be gone, replaced by the success message (TC-E2E-006) ---
+# The pending flag lives in local prefs and only clears when the app refetches
+# delivery progress from Connect. Opening the screen is not enough - the card
+# carries its own "Click to sync progress" button (btnSync) and that is what
+# pulls the updated task state down.
+#
+# Staging is slow to process a submission - on production this is close to
+# instant, but here it can take minutes before Connect reports the task as
+# complete. A single sync would just fetch stale state, so keep syncing while
+# the warning is still up (bounded, so a genuine failure still ends the run).
+- tapOn: "View Job Status"
+- extendedWaitUntil:
+    visible:
+      id: "btnSync"
+    timeout: 90000
+- tapOn:
+    id: "btnSync"
+# One sync then a long wait, deliberately - NOT a retry loop. Inside a Maestro
+# repeat, a failed command aborts the whole loop, so a loop of
+# sync-then-short-wait fails on the first round instead of syncing again, which
+# is strictly worse than simply waiting. This 5 minute wait is the version that
+# passed end to end on 2026-08-03; revisit only with a construct that can
+# swallow the intermediate failure.
 - extendedWaitUntil:
     notVisible:
       text: ".*${PENDING_WARNING}.*"
-    timeout: 180000
+    timeout: 300000
+# Checked straight after completion, while inside the six-hour window in which
+# ConnectJobRecord surfaces this message.
+- extendedWaitUntil:
+    visible:
+      text: ".*${COMPLETED_MESSAGE}.*"
+    timeout: 120000
