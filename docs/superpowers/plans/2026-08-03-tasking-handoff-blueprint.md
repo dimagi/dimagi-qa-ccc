@@ -1,8 +1,15 @@
 # Tasking Automation — Handoff Blueprint (2026-08-03)
 
 Ticket: **CCCT-2658** — automate the Connect web tasking / re-learn workflow.
-Plan workbook: `Tasking_Workflow_Automation_Test_Plan.xlsx` (43 cases; the
-`Automation Target` column maps each case to a test or marks it deferred/manual).
+
+Plan workbook: `Tasking_Workflow_Automation_Test_Plan.xlsx`. **It is not in the
+repo** — never committed, not ignored, not present anywhere in the tree. Earlier
+revisions of this document said it was at the repo root; it is not, so the "43
+cases" denominator used below cannot be checked against anything. Treat totals as
+unverified until the workbook is committed.
+
+**Updated 2026-08-03 (later session).** Everything in §4 of the previous revision
+is done, and J2/J3/J4 plus the mobile chain have now run green on staging.
 
 ---
 
@@ -10,26 +17,38 @@ Plan workbook: `Tasking_Workflow_Automation_Test_Plan.xlsx` (43 cases; the
 
 ### Verified green (assertions passed in a real run)
 
+Every row below passed on staging on 2026-08-03. Nothing in the suite is
+"written but unrun" any more.
+
 | Test | Cases | Evidence |
 |---|---|---|
-| `test_task_type_config.py` (J1) | TTC-001…006, TAS-005 | CI green on PR #23 |
-| `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, E2E-006**, TAS-001 | Passed end to end 2026-08-03, 5m54s |
-| `test_olp_01_02_03.py`, `test_olp_04.py` | IMP-004 | CI green + local |
-| `tests/unit/` (19 tests) | — | Local, <1s |
+| `tests/unit/` (20 tests) | — | Local, <1s |
+| `test_olp_01_02_03.py` (+ `flows/tasking_config.py`) | **TTC-002**, TTC-004, IMP-004 | 185s |
+| `test_task_type_config.py` (J1) | TTC-001, 004, 005, 006, TAS-005 | 81s, first try |
+| `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001, 002 | 71s, after 3 fixes |
+| `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic) | 76s, after 2 fixes |
+| `test_task_permissions.py` (J4) | PRM-001, 002, 003 | 72s, first try |
+| `test_e2e_relearn_lifecycle.py` + `worker_relearn_task.yaml` | **E2E-001, E2E-005, E2E-006**, TAS-001, TAS-009, TDL-003 | 7m05s |
 
 The hybrid pass covers the whole chain: web assigns → device signs in (2.63.4) →
 Connect access granted on a clean install → deliver app downloaded → **blocking
-warning visible** → re-learn form completed → **warning gone, replaced by "All
-required tasks have been completed"** → web reads **Complete** (Open 0, Complete 1).
+warning visible** → re-learn form completed → **Connect's task-completion push
+arrives** → warning gone, replaced by "All required tasks have been completed" on
+**both** the delivery-progress card and the app home tile → web reads **Complete**
+→ no Edit control and a disabled checkbox on the completed row → the same type is
+re-assignable, and that leftover is deleted.
 
-**Verified total: 11 of 43 cases.** Do not claim more.
+**27 distinct case ids now pass.** The denominator is unverified (see the missing
+workbook above), so quote the 27, not a fraction.
 
-### Written but NEVER executed — treat as unproven
+### Not covered, by decision or still to do
 
-`test_task_assignment_lifecycle.py` (J2), `test_task_views_filters.py` (J3),
-`test_task_permissions.py` (J4) — 16 cases. They self-skip because
-`TASKING.static_*` is unset. J2 shares code paths where two real bugs were found
-via the hybrid test, so expect failures on first run.
+- **TTC-003** dropped: the hybrid test proves slug integrity more strongly, since a
+  slug that stopped matching the HQ task unit id makes completion impossible.
+- **TLV-006 and IMP-003** stay skipped behind `TASKING.switch_enabled: false` (no
+  access to the `worker_visits_tasks` waffle switch). **IMP-002** dropped.
+- **E2E-002 / E2E-003** still to add, as a pair, to the mobile chain.
+- **OCS/chatbot task types** deferred: the automation user needs an OCS account.
 
 ### Bugs found and fixed in our own code
 
@@ -48,14 +67,49 @@ via the hybrid test, so expect failures on first run.
 - Runner now retries once when BrowserStack returns build status `error`
   ("Could not start a session") — seen twice in ~12 runs. `failed` is never retried.
 
+Found by finally running J2–J4 and the mobile chain (all test-side, **no product
+bugs**):
+
+- Due dates render via `DMYTColumn` → `utils.tables.DATE_FORMAT` (`"%d-%b-%Y"`,
+  e.g. `10-Aug-2026`), or `DATE_TIME_FORMAT` for an aware datetime. The assertion
+  had guessed five other formats and matched none of them.
+- **Duplicate assignment is not an inline form error.** `CreateTaskForm` validates
+  fine — it only excludes already-assigned types from the dropdown when the view
+  knows the worker up front, which it does not for a freshly opened modal.
+  `AssignedTask.assign` raises `TaskAlreadyAssignedError`, the view flashes a
+  Django error and **still answers with HX-Redirect**, so the modal closes and the
+  reason appears in a `bg-message-error` banner on the reloaded list. Assert the
+  counts too: a banner only proves a message was shown.
+- J2 had **no cleanup at all** (J3/J4 both have `finally` blocks), so its own
+  failure left a pending task that blocked every later run on the duplicate
+  constraint. It now pre-cleans before taking the metric baseline.
+- J2's closing check assumed a clean opportunity: "no row for this worker" can
+  never hold on the static one, which accumulates undeletable completed rows.
+- The **Workers > Tasks tab is a `GroupedTable`**: `header_columns` are only index,
+  status and name, and each task is a sibling `<tr x-show="open" x-cloak>`. The
+  header row must be clicked or the task columns are simply not in the visible text.
+- The **per-worker Tasks drill-down 404s** without `?user=<ConnectUser.user_id>`
+  (`WorkerPageView`: "A valid worker must be specified."), and the test never
+  passed one, so it waited on rows on a 404 page. The Tasks tab cannot supply the
+  id either — its name column is a plain `UserInfoColumn`; every `?user=` link in
+  the product points at `user_visits_list`. Read it from the **Delivery tab**,
+  which uses `GroupedByWorkerMixin` and does wrap the name in a link.
+- `apply_env_overrides` treated any line without a colon as the end of the `env:`
+  block, and a bare `#` comment qualifies — so a key declared below a comment was
+  appended *and* left in place. Python's YAML keeps the last duplicate silently;
+  BrowserStack rejects the suite with 422
+  `[BROWSERSTACK_INVALID_TESTSUITE] Invalid YAML syntax`. Fixed, with a regression
+  test. Upload failures now surface BrowserStack's response body, which is the only
+  place that reason appears.
+
 ---
 
 ## 2. Project structure
 
 Worktree: **`C:\dqccc-tasking`**, branch **`feature/tasking-web-automation`**,
-**5 commits ahead of origin** (plus whatever is committed at handoff).
-Draft **PR #23** is open against `main` but its head is behind local. **Nothing
-may be pushed without Nitin saying so at that moment.**
+**12 commits ahead of origin** as of this revision. Draft **PR #23** is open
+against `main` but its head is far behind local. **Nothing may be pushed without
+Nitin saying so at that moment.**
 
 ```
 dimagi-qa-ccc/
@@ -83,9 +137,9 @@ dimagi-qa-ccc/
 │   └── tests/
 │       ├── unit/                         # 19 tests incl. maestro env injection
 │       ├── test_task_type_config.py              # J1  GREEN
-│       ├── test_task_assignment_lifecycle.py     # J2  unrun
-│       ├── test_task_views_filters.py            # J3  unrun
-│       ├── test_task_permissions.py              # J4  unrun
+│       ├── test_task_assignment_lifecycle.py     # J2  GREEN
+│       ├── test_task_views_filters.py            # J3  GREEN
+│       ├── test_task_permissions.py              # J4  GREEN
 │       ├── test_e2e_relearn_lifecycle.py         # hybrid GREEN
 │       └── test_setup_tasking_opportunity.py     # SETUP_TASKING=1 only
 └── test_data/web_test_data.yaml          # TASKING + TASKING_HYBRID blocks
@@ -107,6 +161,15 @@ dimagi-qa-ccc/
 - Task units in both apps: `relearn_task` ("Relearn Task Unit") and
   `relearn_task_2` ("Relearn Task Unit 2"), each with a Name question plus a
   label-only note.
+- **J1 owns a sandbox task type** on the static opportunity, created once from
+  `relearn_task_2` and thereafter only renamed / archived / unarchived. Its name
+  toggles between `Relearn Sandbox A` and `Relearn Sandbox B` every run — the slug
+  is never rendered in the table, so toggling two known names is what keeps the row
+  findable without carrying state between runs. J1 must never touch the live
+  `relearn_task` type.
+- Module and form labels differ in **capitalisation** between master and copy
+  (`Re-Learn Task` vs `Re-learn Task`), and Maestro matches case-sensitively, so
+  the flow uses character classes (`Re-[Ll]earn Task`), not `(?i)`.
 
 ---
 
@@ -162,10 +225,32 @@ dimagi-qa-ccc/
 - Clearing it needs the Connect card's own **"Click to sync progress"**
   (`btnSync`) — neither a CommCare sync nor merely opening the screen suffices.
   **Staging takes minutes** to reflect a submission; prod is near-instant.
-  Current flow: one sync then a **300s** wait (this is what passed).
+- **Wait for Connect's task-completion push, do not wait a fixed time.** Connect
+  fires it from `transaction.on_commit` once the task is marked complete, so its
+  arrival is proof the server state is ready to fetch. Title **"Task Completed"**,
+  body **"You have completed the task '<task type name>'."**
+  (`send_task_completion_notification`). The earlier flow synced ~10s after
+  submitting and then waited 300s without re-fetching, so the stale pending state
+  could never clear; it passed once on timing luck. Waiting on the push resolved in
+  **~28s** and also earns E2E-005.
+  - Open the shade **first**, then wait: notifications land in an open shade live,
+    so one `extendedWaitUntil` suffices and no retry loop is needed.
+  - **Back closes the shade. An upward swipe does not** — a vertical drag inside an
+    open shade scrolls the notification list, leaving the panel up so every later
+    assertion runs against system UI.
+  - `launchApp` needs `permissions: all: allow`: Android 13 gates
+    POST_NOTIFICATIONS behind a runtime prompt and `clearState` re-asks each run.
+  - Unexplained: the notification was gone from the shade ~1 minute after being
+    asserted. Catching it live is what makes this reliable.
 - **A failed command inside a Maestro `repeat` aborts the whole loop**, so
   sync-then-short-wait retry loops fail on the first round. Do not reintroduce
-  one without a construct that swallows the intermediate failure.
+  one without a construct that swallows the intermediate failure. There is no
+  tolerant sleep in Maestro either — an `optional: true` tap on an absent element
+  burns its ~7s element timeout and is WARNED rather than failed, which is the only
+  delay that is safe inside a `repeat`.
+- The warning and the completion message both render on **two** surfaces:
+  `view_job_card.xml` (app home job tile) and `view_progress_job_card.xml`
+  (Connect delivery-progress card). Both are asserted.
 - The re-learn form completes via the **next arrow** (`nav_btn_next`); FINISH is
   often never shown, so treat `nav_btn_finish` as optional and assert
   `.*form sent to server.*` on the home screen instead.
@@ -176,59 +261,30 @@ dimagi-qa-ccc/
 
 ## 4. Exact next steps
 
-### Step 1 — five code changes (all agreed, none started)
-
-1. `flows/olp_setup.py`: `LEARN_APP_MASTER = "[Master] Learn App"`,
-   `DELIVER_APP_MASTER = "[Master] Delivery App"`. **Required** — the old
-   `[08/12] …` names are stale and `test_olp_01_02_03` will fail without this.
-2. `worker_relearn_task.yaml` env → case-tolerant patterns, because master and
-   copy differ in casing (`Re-Learn Task` vs `Re-learn Task`;
-   `Re-learn form` vs `Re-learn Form`; `Second Relearn form` vs `… Form`):
-   `TASK_MODULE: "Re-[Ll]earn Task"`, `TASK_FORM: "Re-learn [Ff]orm"`.
-   Use character classes, not `(?i)`. Note `Re-learn [Ff]orm` does not match
-   "Second Relearn Form" (no hyphen), so the two stay distinguishable.
-3. Restructure **J1** to run on the year-long opportunity without consuming slugs:
-   - create its **sandbox type from `relearn_task_2`** if absent, selecting by
-     option **value** (both labels are similar), and identify it by **slug**
-     afterwards because TTC-005 renames it;
-   - drop the "task type table is empty" and copied-app-name assertions;
-   - archive **and unarchive** only its own sandbox type — never the live
-     `relearn_task`, or J2–J4 and the hybrid test break;
-   - keep **TTC-002 (create)** on the fresh opportunity that
-     `test_olp_01_02_03` builds, where consuming a slug is free;
-   - **drop TTC-003** as a standalone check — the hybrid test proves slug
-     integrity more strongly (a mismatch makes completion impossible).
-   - Run J1 first in the sequence and assert the type is assignable again before
-     finishing, so a broken unarchive fails fast instead of poisoning later tests.
-4. `test_data/web_test_data.yaml` → fill `TASKING.static_*` from the year-long
-   opportunity (`static_org: pm_automation_01`,
-   `static_opp_id: 9d533d0d-b835-488a-8726-7d2aac52df95`,
-   `static_worker: Relearn Task User`, `static_task_type: Relearn Task Unit`,
-   plus `network-manager` / `Network Manager` for J4). This activates J2–J4.
-5. Move the completed-task assertions (**TAS-009** no Edit on completed rows,
-   **TDL-003** completed not deletable, plus re-assign-after-completion) to the
-   **end of the mobile chain**, where a completed task is guaranteed — not into
-   J2, where they would depend on leftovers and fail on a clean environment.
-
-### Step 2 — run in this order, fixing what reality disagrees with
-
-Unit tests → **J1** → **J2** → **J3** → **J4** → mobile chain.
-Strictly sequential: J2–J4 all assign the same type to the same worker, so
+Steps 1 and 2 of the previous revision are **done**. The whole suite is green:
+unit → OLP(+TTC-002) → J1 → J2 → J3 → J4 → mobile chain. Run it in that order and
+**strictly sequentially** — J2–J4 all assign the same type to the same worker, so
 parallel runs collide on the duplicate-assignment constraint. Each self-cleans.
-Expect several rounds per test (J1 took 4, the mobile flow ~8).
+Web journeys are ~70–90s each, the OLP test ~3min, the mobile chain ~7min.
 
-### Step 3 — then extend the mobile chain
+### Next — extend the mobile chain to E2E-002 + E2E-003
 
 One device session doing: assign → **submit Registration Form visit (rejected,
 "Pending Task" flag)** → complete the re-learn form → **submit another visit
-(accepted)**. Covers **E2E-002 + E2E-003**; must be a pair, since 002 alone would
-still pass if delivery were blocked permanently. Registration Form fields:
-name, picture (skippable), id (unique numeric), GPS (skippable), Finish.
-One cold start instead of three saves ~20 min/run.
+(accepted)**. They must land as a pair, since 002 alone would still pass if
+delivery were blocked permanently. Registration Form fields: name, picture
+(skippable), id (unique numeric), GPS (skippable), Finish. One cold start instead
+of three saves ~20 min/run.
 
-**E2E-005 (push notifications)** — recommended **manual**. Depends on FCM
-reaching a cloud device and reading the notification shade; if automated at all,
-assert the app's own Notifications screen.
+### Then
+
+- **Commit the plan workbook.** `Tasking_Workflow_Automation_Test_Plan.xlsx` is not
+  in the repo, so the case list and the `Automation Target` mapping exist nowhere in
+  version control and no total can be checked.
+- Decide on **pushing**: the branch is 12 commits ahead and draft PR #23 is far
+  behind local.
+- Consider retrying the BrowserStack **uploads**, not just session start: a
+  transient `ConnectionResetError` on the test-suite upload cost a whole run.
 
 ### Also outstanding
 
