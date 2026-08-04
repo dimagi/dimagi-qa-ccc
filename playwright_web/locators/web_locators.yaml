@@ -134,6 +134,12 @@ connect_assigned_tasks_page:
   row_checkbox_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//input[@name='row_select']"
   row_edit_btn_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
   status_badge_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Scoped to one status as well, because a worker can hold several rows at once -
+  # e.g. a completed task plus a pending one - and assertions about completed rows
+  # must not be satisfied or broken by the others.
+  row_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]"
+  row_edit_btn_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  row_checkbox_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//input[@name='row_select']"
   all_status_badges: "//div[@id='task-list-table']//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
   all_row_checkboxes: "//div[@id='task-list-table']//input[@name='row_select']"
   all_edit_buttons: "//div[@id='task-list-table']//button[.//i[contains(@class,'fa-pen-to-square')]]"

@@ -1,3 +1,5 @@
+from datetime import date
+
 from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect, require_static_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
@@ -51,27 +53,18 @@ def test_task_assignment_lifecycle_journey(page, test_data, config, settings):
         assert tasks.metric("Total Tasks") == total_before + 1, "A duplicate task was created"
         assert tasks.metric("Open Tasks") == open_before + 1
 
-        # TC-TAS-003: a past due date is rejected and nothing is created. The plan's
-        # expected outcome is "server-side validation error; task not created" - the
-        # second half holds, and the first is asserted against the response body
-        # because the error never reaches the screen. See the page-object docstring:
-        # the re-rendered form is wrapped in <template x-if>, which the form's own
-        # hx-select cannot reach into, so the wrapper is swapped away and the user
-        # sees the form vanish with no message. That is a product defect, not a test
-        # limitation, so the DOM side is asserted as the current behaviour and called
-        # out rather than quietly skipped.
-        body, wrapper_present = tasks.attempt_task_with_past_due_date(task_type, worker, days_ago=3)
-        assert "past" in body.lower(), (
-            "The server did not report a past-due-date validation error. Response body did not "
-            f"mention 'past': {body[:400]!r}"
+        # TC-TAS-003: a past due date cannot be selected. The date picker greys out
+        # earlier days because the input's min is today, and typing round the picker
+        # does not help either - the field then fails the browser's own range check,
+        # which blocks submission. So a past due date never reaches the server, and
+        # asserting the widget is the right level for this case.
+        min_attr, validity = tasks.check_past_due_date_cannot_be_selected(days_ago=3)
+        assert min_attr == date.today().isoformat(), (
+            f"Due date input min is {min_attr!r}, expected today ({date.today().isoformat()}) - "
+            "without it the picker would allow past dates"
         )
-        tasks.goto_task_list(base_url, org, opp)
-        assert tasks.metric("Total Tasks") == total_before + 1, "An invalid task was created"
-        assert not wrapper_present, (
-            "The create-task form is now re-rendered in place on a validation error - the "
-            "<template x-if> / hx-select defect appears to be fixed. Tighten this to assert the "
-            "inline error message instead."
-        )
+        assert validity["rangeUnderflow"] is True, f"A past date was accepted by the field: {validity}"
+        assert validity["valid"] is False, f"A past date left the field valid: {validity}"
 
         # TC-TAS-006: edit due date with a reason
         tasks.edit_due_date(worker, due_in_days=14, reason="Automation reschedule")

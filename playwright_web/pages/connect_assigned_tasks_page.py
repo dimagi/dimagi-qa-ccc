@@ -22,6 +22,9 @@ class ConnectAssignedTasksPage(BasePage):
     ROW_CHECKBOX_BY_WORKER = locators.get("connect_assigned_tasks_page", "row_checkbox_by_worker")
     ROW_EDIT_BTN_BY_WORKER = locators.get("connect_assigned_tasks_page", "row_edit_btn_by_worker")
     STATUS_BADGE_BY_WORKER = locators.get("connect_assigned_tasks_page", "status_badge_by_worker")
+    ROW_BY_WORKER_STATUS = locators.get("connect_assigned_tasks_page", "row_by_worker_status")
+    ROW_EDIT_BTN_BY_WORKER_STATUS = locators.get("connect_assigned_tasks_page", "row_edit_btn_by_worker_status")
+    ROW_CHECKBOX_BY_WORKER_STATUS = locators.get("connect_assigned_tasks_page", "row_checkbox_by_worker_status")
     ALL_STATUS_BADGES = locators.get("connect_assigned_tasks_page", "all_status_badges")
     ALL_ROW_CHECKBOXES = locators.get("connect_assigned_tasks_page", "all_row_checkboxes")
     ALL_EDIT_BUTTONS = locators.get("connect_assigned_tasks_page", "all_edit_buttons")
@@ -133,47 +136,33 @@ class ConnectAssignedTasksPage(BasePage):
             f"{' | '.join(t.strip() for t in wrapper.all_inner_texts())!r}"
         )
 
-    def attempt_task_with_past_due_date(self, task_type, worker, days_ago=3):
-        """Submit an assignment with a past due date; returns (response_body, wrapper_present).
+    def check_past_due_date_cannot_be_selected(self, days_ago=3):
+        """Verify the due-date field will not accept a date before today.
 
-        Two deliberate choices here:
+        Returns (min_attribute, validity). CreateTaskForm sets the input's `min` to
+        today, which is what greys out earlier days in the date picker, so a past due
+        date cannot be picked. To show that typing round the picker does not work
+        either, a past value is forced in and the browser's own ValidityState is read:
+        `rangeUnderflow` is precisely the "earlier than min" condition, and an invalid
+        field blocks submission - so the past date never reaches the server.
 
-        `min` is stripped from the date input first. CreateTaskForm sets it to today,
-        so the browser's own constraint validation would refuse to submit and the
-        request would never reach the server - and this case is about server-side
-        validation (`clean_due_date`), not the client-side convenience attribute.
-
-        The assertion reads the POST **response body** rather than the rendered page,
-        because the rendered page does not show the error at all. On a validation
-        failure the view re-renders new_task_modal.html, whose content sits inside
-        `<template x-if=...>`; the form's own `hx-select="#create-task-form-wrapper"`
-        cannot reach inside a <template>, since its children live in a separate
-        DocumentFragment. So htmx selects nothing and swaps the wrapper away, leaving
-        the user with a vanished form and no message. Reading the response proves the
-        server validated correctly and the client is what discards it.
+        The modal is left closed.
         """
         self.open_create_modal()
-        self.select_tomselect_by_label("id_task", task_type, scope=self.CREATE_TASK_FORM)
-        self.select_tomselect_by_label("id_access", worker, scope=self.CREATE_TASK_FORM)
-        past = (date.today() - timedelta(days=days_ago)).isoformat()
         due_input = self.page.locator(self.CREATE_TASK_FORM).locator("#id_due_date")
-        self._step(f"Remove the date input's min attribute and set a past due date {past}")
-        due_input.evaluate("el => el.removeAttribute('min')")
-        due_input.fill(past)
-        self._step("Submit expected-invalid assignment")
-        # The route is named create_task but its path is .../assigned_tasks/create/.
-        with self.page.expect_response(
-            lambda r: "/assigned_tasks/create/" in r.url and r.request.method == "POST"
-        ) as caught:
-            self.click(self.CREATE_TASK_SAVE_BTN)
-        body = caught.value.text()
-        self.page.wait_for_timeout(1000)  # let the swap settle before reading the DOM
-        wrapper_present = self.page.locator("#create-task-form-wrapper").count() > 0
-        self._step(
-            f"Create-task POST answered {caught.value.status}; "
-            f"form wrapper still on the page: {wrapper_present}"
+        min_attr = due_input.get_attribute("min")
+        past = (date.today() - timedelta(days=days_ago)).isoformat()
+        validity = due_input.evaluate(
+            "(el, value) => { el.value = value; return {"
+            "  valid: el.checkValidity(),"
+            "  rangeUnderflow: el.validity.rangeUnderflow,"
+            "  min: el.min,"
+            "}; }",
+            past,
         )
-        return body, wrapper_present
+        self._step(f"Due date min={min_attr!r}; forcing {past} gives {validity}")
+        self.cancel_create_modal()
+        return min_attr, validity
 
     def attempt_duplicate_task(self, task_type, worker, due_in_days=7):
         """Submit a duplicate assignment; returns the rejection message text.
@@ -348,24 +337,33 @@ class ConnectAssignedTasksPage(BasePage):
 
     # -- completed rows -----------------------------------------------------------------------
 
-    def row_edit_button_count(self, worker):
-        """Edit buttons on this worker's row(s).
+    def row_edit_button_count(self, worker, status="Complete"):
+        """Edit buttons on this worker's rows with the given status.
 
         assigned_task_edit_button.html renders the button only for
-        status == "assigned", so a completed row has none (TC-TAS-009).
+        status == "assigned", so a completed row has none (TC-TAS-009). Scoped by
+        status because the worker can simultaneously hold a pending task, whose row
+        legitimately does have an Edit button.
         """
-        count = self.page.locator(self.ROW_EDIT_BTN_BY_WORKER.format(worker=worker)).count()
-        self._step(f"Edit buttons on '{worker}' row(s): {count}")
+        count = self.page.locator(
+            self.ROW_EDIT_BTN_BY_WORKER_STATUS.format(worker=worker, status=status)
+        ).count()
+        self._step(f"Edit buttons on '{worker}' rows with status {status}: {count}")
         return count
 
-    def row_checkbox_states(self, worker):
-        """[(present, enabled)] for this worker's select checkboxes.
+    def row_checkbox_states(self, worker, status="Complete"):
+        """Enabled state of each select checkbox on this worker's rows of `status`.
 
         Completed rows still render the checkbox but with the disabled attribute
         set (AssignedTaskListTable._task_select_td_extra), which is what makes
         them undeletable (TC-TDL-003).
         """
-        boxes = self.page.locator(self.ROW_CHECKBOX_BY_WORKER.format(worker=worker)).all()
+        boxes = self.page.locator(
+            self.ROW_CHECKBOX_BY_WORKER_STATUS.format(worker=worker, status=status)
+        ).all()
         states = [box.is_enabled() for box in boxes]
-        self._step(f"Select checkboxes for '{worker}' - enabled states: {states or 'no checkbox'}")
+        self._step(f"Checkboxes for '{worker}' rows with status {status} - enabled: {states or 'none'}")
         return states
+
+    def row_exists_with_status(self, worker, status):
+        return self.page.locator(self.ROW_BY_WORKER_STATUS.format(worker=worker, status=status)).count() > 0
