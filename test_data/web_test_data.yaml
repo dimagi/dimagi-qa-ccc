@@ -145,12 +145,18 @@ TASKING:
   # IMP-003) can run. Set back to false if the card disappears on an environment.
   switch_enabled: true
   # --- Static opportunity for J1/J2/J3/J4 ---
-  # The deliberately long-lived opportunity (365-day window) created 31-Jul-2026;
-  # reused until the LDVP journey exists, because automation-created
-  # opportunities only get a 7-day window and Connect blocks delivery after it.
-  static_opp: "Demo Opportunity_31-Jul-2026 : 18:39"   # opportunity name as shown in the list
-  static_opp_id: "9d533d0d-b835-488a-8726-7d2aac52df95"  # UUID from the opportunity URL
-  static_org: "pm_automation_01"     # PM org slug as it appears in Connect URLs
+  # Deliberately long-lived (365-day window) and reused until the LDVP journey
+  # exists, because automation-created opportunities only get a short window and
+  # Connect blocks delivery once it ends.
+  #
+  # Environment-specific values follow the convention OLP_1 already uses for
+  # domains and api keys: the **unsuffixed key is prod**, "<key>_staging" is
+  # staging. Keys that are the same on both environments are given once.
+  static_opp: "Demo Opportunity_04-Aug-2026 : 15:37"           # prod, created 04-Aug-2026
+  static_opp_staging: "Demo Opportunity_31-Jul-2026 : 18:39"   # staging, created 31-Jul-2026
+  static_opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
+  static_opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
+  static_org: "pm_automation_01"     # PM org slug - the same on both environments
   static_nm_org: "network-manager"   # NM org slug for permission tests
   static_nm_org_name: "Network Manager"   # NM org display name for the org switcher
   static_worker: "Relearn Task User"      # enrolled worker (+74263119728)
@@ -162,10 +168,15 @@ TASKING_HYBRID:
   # tests/test_setup_tasking_opportunity.py: 365-day delivery window, active
   # "Relearn Task Unit" task type, worker +74263119728 invited.
   # Opportunity name: Demo Opportunity_31-Jul-2026 : 18:39
+  # Same suffix convention as TASKING: unsuffixed is prod, "_staging" is staging.
+  # The worker, its backup code and the task type are identical on both, so they are
+  # given once below.
   org: "pm_automation_01"
-  opp_id: "9d533d0d-b835-488a-8726-7d2aac52df95"
+  opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
+  opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
   task_type: "Relearn Task Unit"
-  opportunity_name: "Demo Opportunity_31-Jul-2026 : 18:39"
+  opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
+  opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
   # Mobile worker on the +7426 demo range: no OTP, backup code is the credential.
   # Dedicated to tasking so the login/lockout flows cannot interfere with it.
   mobile_country_code: "+7426"

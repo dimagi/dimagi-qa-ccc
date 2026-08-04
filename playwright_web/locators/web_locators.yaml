@@ -112,8 +112,12 @@ connect_task_types_page:
   create_save_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[@type='submit'][normalize-space()='Save']"
   create_cancel_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[normalize-space()='Cancel']"
   # Table
-  row_by_name: "//table[contains(@class,'base-table')]//tr[.//td[normalize-space()='{name}']]"
-  row_edit_btn_by_name: "//table[contains(@class,'base-table')]//tr[.//td[normalize-space()='{name}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  # Match the Name column only (td[2]; TaskTable order is index, name, description,
+  # linked_task_unit, archived, actions). Matching any cell also matched the Linked
+  # Task Unit column, so a type whose name equals some type's unit name resolved to
+  # two rows - which is precisely the state prod was in.
+  row_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]"
+  row_edit_btn_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
   empty_table_text: "//td[contains(normalize-space(),'No task types configured for this opportunity')]"
   # Edit Task Type modal (htmx-loaded form)
   edit_form: "edit-task-form-el"

@@ -54,6 +54,23 @@ class BasePage:
         self._step(f"select '{text}' in {selector}")
         self._locator(selector).select_option(label=text)
 
+    def select_by_visible_text_ci(self, selector, text):
+        """select_option by label, ignoring case.
+
+        Environments capitalise the same list entry differently - the delivery type
+        is "Wellme" on staging and "WellMe" on prod - and select_option's label match
+        is exact, so a case-sensitive select works on one environment and fails on the
+        other. Resolving the real label first keeps one value in test data. On no
+        match it reports what was actually offered, since "did not find some options"
+        alone gives no way to tell a casing difference from a missing entry.
+        """
+        locator = self._locator(selector)
+        labels = [label.strip() for label in locator.locator("option").all_inner_texts()]
+        match = next((label for label in labels if label.lower() == text.strip().lower()), None)
+        assert match, f"No option matching {text!r} (case-insensitive) in {selector}. Offered: {labels}"
+        self._step(f"select '{match}' in {selector} (asked for '{text}')")
+        locator.select_option(label=match)
+
     def select_by_visible_text_forced(self, selector, text):
         # For selects enhanced by TomSelect the original element fails Playwright's
         # actionability checks, so fall back to setting the value via JS.

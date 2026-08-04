@@ -28,7 +28,7 @@ def test_assign_and_delete_task_from_worker_page(page, test_data, config, settin
         (WorkerCompletedTaskTable.render_task_type), so they can be matched on the
         slug and survive J1 renaming the sandbox between Sandbox A and Sandbox B.
     """
-    tasking = require_static_opp(test_data)
+    tasking = require_static_opp(test_data, config)
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     workers = ConnectWorkersPage(connect_page)
     task_types = ConnectTaskTypesPage(connect_page)

@@ -24,7 +24,7 @@ def test_task_type_config_journey(page, test_data, config, settings):
     assignable again, so a broken unarchive fails here instead of silently
     poisoning J2-J4.
     """
-    tasking = require_static_opp(test_data)
+    tasking = require_static_opp(test_data, config)
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     task_types = ConnectTaskTypesPage(connect_page)
     task_list = ConnectAssignedTasksPage(connect_page)

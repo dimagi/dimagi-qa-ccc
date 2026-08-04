@@ -118,6 +118,8 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
             "VISIT_ID_ALLOWED": allowed_visit_id,
         },
         reports=False,
+        # Each build targets one Connect server, so the APK follows the env.
+        app_env=config.env,
     )
     print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
     assert summary["status"] == "SUCCESS", (

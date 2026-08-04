@@ -12,7 +12,7 @@ def test_task_permissions_journey(page, test_data, config, settings):
     Covers TC-PRM-001/002/003 from the tasking test plan (permission split from
     commcare-connect PR #1381). Needs the static opportunity + NM org data.
     """
-    tasking = require_static_opp(test_data)
+    tasking = require_static_opp(test_data, config)
     if not tasking.get("static_nm_org") or not tasking.get("static_nm_org_name"):
         pytest.skip("TASKING.static_nm_org / static_nm_org_name not configured")
     connect_page = login_to_connect(page, config, settings, PM_ORG)

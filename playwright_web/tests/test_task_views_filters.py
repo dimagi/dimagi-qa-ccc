@@ -12,7 +12,7 @@ def test_task_views_and_filters_journey(page, test_data, config, settings):
     plan. TC-TLV-005 Name/Description assertions are deferred pending the
     TC-IMP-002 template bug verification. Needs the static opportunity.
     """
-    tasking = require_static_opp(test_data)
+    tasking = require_static_opp(test_data, config)
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     tasks = ConnectAssignedTasksPage(connect_page)
     workers = ConnectWorkersPage(connect_page)

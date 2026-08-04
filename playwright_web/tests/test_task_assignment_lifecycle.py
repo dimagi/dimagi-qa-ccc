@@ -11,7 +11,7 @@ def test_task_assignment_lifecycle_journey(page, test_data, config, settings):
     Covers TC-TAS-001/002/004(positive)/006/007, TC-TLV-001, TC-TDL-001/002
     from the tasking test plan. Needs the designated static opportunity.
     """
-    tasking = require_static_opp(test_data)
+    tasking = require_static_opp(test_data, config)
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     tasks = ConnectAssignedTasksPage(connect_page)
 

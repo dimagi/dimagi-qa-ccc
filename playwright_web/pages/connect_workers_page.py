@@ -134,6 +134,22 @@ class ConnectWorkersPage(BasePage):
         self._step("Navigate to worker drill-down Tasks page")
         self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_tasks/?user={user_id}")
         self.page.wait_for_load_state("load")
+        self._await_real_table()
+
+    def _await_real_table(self):
+        """Wait for the htmx table to replace its loading skeleton.
+
+        The page ships a placeholder `<table class="base-table animate-pulse">` and
+        swaps the real one in on load, so reading rows straight after the navigation
+        can see an empty table and conclude there is nothing there - which silently
+        skipped a leftover cleanup and left a task assigned.
+        """
+        try:
+            self.page.locator("//table[not(contains(@class,'animate-pulse'))]").first.wait_for(
+                state="visible", timeout=20000
+            )
+        except Exception:
+            self._step("Table did not settle within 20s - continuing, assertions will report")
 
     # -- Visits tab of the worker page (TC-E2E-002 / TC-E2E-003) -----------------
 
@@ -142,6 +158,7 @@ class ConnectWorkersPage(BasePage):
         self._step("Navigate to the worker's Visits tab")
         self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_visits/?user={user_id}")
         self.page.wait_for_load_state("load")
+        self._await_real_table()  # same htmx skeleton as the Tasks tab
 
     def visit_rows(self):
         rows = [r.strip() for r in self.page.locator(self.WORKER_VISIT_ROWS).all_inner_texts()]

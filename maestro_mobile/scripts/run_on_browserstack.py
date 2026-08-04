@@ -13,7 +13,14 @@ from requests.auth import HTTPBasicAuth
 BASE_URL = "https://api-cloud.browserstack.com/app-automate/maestro/v2"
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 FLOWS_DIR = Path(__file__).parent.parent / "flows"
-APK_PATH = PROJECT_ROOT / "app" / "app-cccStaging-release.apk"
+# The app is built against one Connect server, so the environment picks the build -
+# there is no runtime switch. Keys match config/env.yaml so a caller can hand its
+# own env name straight through.
+APK_BY_ENV = {
+    "stage": "app-cccStaging-release.apk",
+    "prod": "app-commcare-release.apk",
+}
+DEFAULT_APP_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
 TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml"]
@@ -90,6 +97,22 @@ def apply_env_overrides(flow_text, env):
     return result + newline if flow_text.endswith(("\n", "\r")) else result
 
 
+def resolve_apk(app_env=None):
+    """The APK for this environment, checked to exist before anything is uploaded.
+
+    Failing here beats failing on a 42 MB upload, or worse, running the wrong build
+    against the wrong server and reading the result as a test failure.
+    """
+    app_env = app_env or DEFAULT_APP_ENV
+    name = APK_BY_ENV.get(app_env)
+    if name is None:
+        sys.exit(f"Unknown app environment {app_env!r} - expected one of {sorted(APK_BY_ENV)}")
+    path = PROJECT_ROOT / "app" / name
+    if not path.exists():
+        sys.exit(f"No APK for environment {app_env!r} at {path}")
+    return path
+
+
 def _raise_for_status_with_body(response, what):
     """raise_for_status(), but keep BrowserStack's explanation.
 
@@ -119,16 +142,20 @@ def get_credentials():
     return HTTPBasicAuth(username, access_key)
 
 
-def upload_app(auth):
-    print(f"Uploading {APK_PATH.name}...")
-    with open(APK_PATH, "rb") as f:
+def upload_app(auth, app_env=None):
+    apk_path = resolve_apk(app_env)
+    app_env = app_env or DEFAULT_APP_ENV
+    print(f"Uploading {apk_path.name} for env '{app_env}'...")
+    with open(apk_path, "rb") as f:
         response = requests.post(
             f"{BASE_URL}/app",
             auth=auth,
             files={"file": f},
-            data={"custom_id": "CCC_Staging"},
+            # Distinct per environment so a prod upload cannot overwrite the staging
+            # build under a shared custom_id.
+            data={"custom_id": f"CCC_{app_env}"},
         )
-    _raise_for_status_with_body(response, f"App upload ({APK_PATH.name})")
+    _raise_for_status_with_body(response, f"App upload ({apk_path.name})")
     app_url = response.json()["app_url"]
     print(f"App uploaded: {app_url}")
     return app_url
@@ -496,7 +523,7 @@ footer {{ color: var(--muted); font-size: 12px; text-align: center; }}
     print("Reports written: maestro_report.json, maestro_report.html")
 
 
-def run_flows(flows=None, env=None, reports=True, session_retries=1):
+def run_flows(flows=None, env=None, reports=True, session_retries=1, app_env=None):
     """Run flows on a BrowserStack device and return the result summary.
 
     Importable entry point for hybrid web+mobile tests, which need a device run
@@ -508,7 +535,7 @@ def run_flows(flows=None, env=None, reports=True, session_retries=1):
     """
     flows = flows or TEST_FLOWS
     auth = get_credentials()
-    app_url = upload_app(auth)
+    app_url = upload_app(auth, app_env=app_env)
     test_suite_url = upload_test_suite(auth, env=env)
 
     # BrowserStack intermittently answers with build status "error" and
@@ -540,6 +567,14 @@ def main():
         metavar="KEY=VALUE",
         help="Maestro env value baked into the uploaded flows (repeatable)",
     )
+    # Named --app-env rather than --env, which is already taken by the Maestro
+    # KEY=VALUE pairs above. It selects the APK, since each build targets one server.
+    parser.add_argument(
+        "--app-env",
+        choices=sorted(APK_BY_ENV),
+        default=DEFAULT_APP_ENV,
+        help=f"environment whose APK to run (default: {DEFAULT_APP_ENV})",
+    )
     args = parser.parse_args()
 
     env = {}
@@ -549,7 +584,7 @@ def main():
         key, value = item.split("=", 1)
         env[key] = value
 
-    summary = run_flows(flows=args.flows, env=env)
+    summary = run_flows(flows=args.flows, env=env, app_env=args.app_env)
     print(json.dumps(summary["sessions"], indent=2, default=str)[:2000])
     sys.exit(0 if summary["status"] == "SUCCESS" else 1)
 
