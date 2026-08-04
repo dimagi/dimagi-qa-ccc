@@ -155,9 +155,6 @@ TASKING:
   static_nm_org_name: "Network Manager"   # NM org display name for the org switcher
   static_worker: "Relearn Task User"      # enrolled worker (+74263119728)
   static_task_type: "Relearn Task Unit"   # pre-created task type on the static opp
-  # Left empty on purpose: the only other unit is J1's sandbox, and J2 must not
-  # assign or delete a type J1 archives and renames.
-  static_task_type_2: ""       # optional second type - enables the bulk-delete path
 
 # --- Phase 2 hybrid web -> mobile -> web (TC-E2E-001/003/006) ---
 TASKING_HYBRID:

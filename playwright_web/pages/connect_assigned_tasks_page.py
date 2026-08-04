@@ -133,6 +133,48 @@ class ConnectAssignedTasksPage(BasePage):
             f"{' | '.join(t.strip() for t in wrapper.all_inner_texts())!r}"
         )
 
+    def attempt_task_with_past_due_date(self, task_type, worker, days_ago=3):
+        """Submit an assignment with a past due date; returns (response_body, wrapper_present).
+
+        Two deliberate choices here:
+
+        `min` is stripped from the date input first. CreateTaskForm sets it to today,
+        so the browser's own constraint validation would refuse to submit and the
+        request would never reach the server - and this case is about server-side
+        validation (`clean_due_date`), not the client-side convenience attribute.
+
+        The assertion reads the POST **response body** rather than the rendered page,
+        because the rendered page does not show the error at all. On a validation
+        failure the view re-renders new_task_modal.html, whose content sits inside
+        `<template x-if=...>`; the form's own `hx-select="#create-task-form-wrapper"`
+        cannot reach inside a <template>, since its children live in a separate
+        DocumentFragment. So htmx selects nothing and swaps the wrapper away, leaving
+        the user with a vanished form and no message. Reading the response proves the
+        server validated correctly and the client is what discards it.
+        """
+        self.open_create_modal()
+        self.select_tomselect_by_label("id_task", task_type, scope=self.CREATE_TASK_FORM)
+        self.select_tomselect_by_label("id_access", worker, scope=self.CREATE_TASK_FORM)
+        past = (date.today() - timedelta(days=days_ago)).isoformat()
+        due_input = self.page.locator(self.CREATE_TASK_FORM).locator("#id_due_date")
+        self._step(f"Remove the date input's min attribute and set a past due date {past}")
+        due_input.evaluate("el => el.removeAttribute('min')")
+        due_input.fill(past)
+        self._step("Submit expected-invalid assignment")
+        # The route is named create_task but its path is .../assigned_tasks/create/.
+        with self.page.expect_response(
+            lambda r: "/assigned_tasks/create/" in r.url and r.request.method == "POST"
+        ) as caught:
+            self.click(self.CREATE_TASK_SAVE_BTN)
+        body = caught.value.text()
+        self.page.wait_for_timeout(1000)  # let the swap settle before reading the DOM
+        wrapper_present = self.page.locator("#create-task-form-wrapper").count() > 0
+        self._step(
+            f"Create-task POST answered {caught.value.status}; "
+            f"form wrapper still on the page: {wrapper_present}"
+        )
+        return body, wrapper_present
+
     def attempt_duplicate_task(self, task_type, worker, due_in_days=7):
         """Submit a duplicate assignment; returns the rejection message text.
 
