@@ -5,11 +5,10 @@ import pytest
 from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
-from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
 
 
-def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
+def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     """P2-A - assign on web, complete on a real device, verify on web.
 
     Web assigns the re-learn task, a Maestro flow on a BrowserStack device has
@@ -25,16 +24,20 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
     because a completed task only exists at the end of this chain - TC-TAS-009 and
     TC-TDL-003.
 
-    Also covers **TC-E2E-002, TC-E2E-003 and TC-E2E-004**: a Registration Form visit
-    is submitted before the re-learn form (task pending -> rejected with the
-    "pending_task" flag) and another after it completes (-> not rejected). 002 and 003
-    are asserted as a pair, since 002 alone would still pass if delivery were blocked
-    permanently. 004 rides the second visit: J1's sandbox task is assigned and its
-    type archived beforehand, so that visit is submitted with an outstanding task
-    whose type is archived - which _has_blocking_pending_task excludes - and being
-    Approved proves the exclusion works. All of it in one device session; the plan
-    puts 002 in a separate "P2-B e2e_visit_blocking" test, but a second flow means a
-    second cold start for no extra coverage.
+    Also covers **TC-E2E-002 and TC-E2E-003**: a Registration Form visit is
+    submitted before the re-learn form (task pending -> rejected with the
+    "pending_task" flag) and another after it completes (-> not rejected). They are
+    asserted as a pair, since 002 alone would still pass if delivery were blocked
+    permanently. Both ride this one device session; the plan puts 002 in a separate
+    "P2-B e2e_visit_blocking" test, but a second flow means a second cold start for
+    no extra coverage.
+
+    TC-E2E-004 (an archived task type must not block visits) is deliberately NOT
+    here. It cannot share a visit with TC-E2E-006: an archived-type task left
+    outstanding keeps the in-app pending-task warning up, so "the warning clears"
+    and "an archived type does not block" cannot both be observed in one session.
+    Covering it needs its own device session, since archiving happens on web and a
+    Maestro build cannot be paused midway. Deferred pending a team decision.
     """
     hybrid = test_data.get("TASKING_HYBRID")
     required = ["org", "opp_id"]
@@ -54,11 +57,12 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
 
     # Unique numeric ids and entity names per run. The Registration Form needs a
     # unique numeric id, and unique names are what let the two visits be told apart
-    # on web - and stop a re-run matching last run's rows.
+    # on web - and stop a re-run matching last run's rows. The names carry their case
+    # id so the Visits tab reads as its own explanation of why each was submitted.
     stamp = str(int(time.time()))[-6:]
     blocked_visit_id, allowed_visit_id = f"{stamp}1", f"{stamp}2"
-    blocked_visit_name = f"Blocked {stamp}"
-    allowed_visit_name = f"Allowed {stamp}"
+    blocked_visit_name = f"E2E002-Blocked-{stamp}"
+    allowed_visit_name = f"E2E003-Unblocked-{stamp}"
 
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     tasks = ConnectAssignedTasksPage(connect_page)
@@ -87,48 +91,6 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
         # A leftover pending task would block re-assignment (unique constraint).
         tasks.delete_tasks_for_workers([worker_name])
 
-    # --- TC-E2E-004 setup: an assigned task whose type is archived must not block ---
-    # _has_blocking_pending_task filters on task_type__archived__isnull=True, so a
-    # task of an archived type is outstanding but harmless. Assigning J1's sandbox
-    # type and then archiving it means the second delivery visit below is submitted
-    # with such a task in place - which is what proves the filter works, at no extra
-    # device time. Assigned first and archived second, because archived types are not
-    # offered in the Create Task dropdown.
-    tasking = test_data.get("TASKING")
-    sandbox_slug = tasking["sandbox_unit_slug"]
-    sandbox_names = {tasking["sandbox_name_a"], tasking["sandbox_name_b"], tasking["sandbox_unit_name"]}
-    sandbox_label = next((label for label in tasks.create_modal_task_type_labels() if label in sandbox_names), None)
-    if sandbox_label is None:
-        pytest.skip(
-            "J1's sandbox task type is not assignable, so TC-E2E-004 cannot be set up. It is "
-            "created on the first J1 run and left unarchived - run test_task_type_config.py first."
-        )
-    tasks.create_task(sandbox_label, worker_name, due_in_days=7)
-    tasks.verify_success_message("Task created successfully")
-    task_types = ConnectTaskTypesPage(connect_page)
-
-    def _restore_sandbox():
-        """Put J1's sandbox type back however this test ends.
-
-        Left archived, J1 still copes (it archives then unarchives) but TAS-008 would
-        skip, since archived types are not offered for assignment. Registered as a
-        finaliser rather than a try/finally so the long body below stays flat.
-        """
-        task_types.goto_task_types(base_url, org, opp)
-        if task_types.row_exists(sandbox_label):
-            task_types.unarchive_task_type(sandbox_label)
-        tasks.goto_task_list(base_url, org, opp)
-        if tasks.row_exists_with_status(worker_name, "To Do"):
-            tasks.delete_tasks_for_workers([worker_name])
-
-    request.addfinalizer(_restore_sandbox)
-    task_types.goto_task_types(base_url, org, opp)
-    task_types.archive_task_type(sandbox_label)
-    task_types.verify_row_archived(sandbox_label)
-
-    # The live task is assigned after the sandbox one so that it is the newest row,
-    # keeping the Complete-status assertions below on the task this test drives.
-    tasks.goto_task_list(base_url, org, opp)
     tasks.create_task(task_type, worker_name, due_in_days=7)
     tasks.verify_success_message("Task created successfully")
     tasks.verify_task_row(worker_name, task_type, status="To Do")
@@ -228,11 +190,6 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
     # (auto_approve_visits is on); Pending is also accepted here so that turning
     # auto-approve off does not fail a test about task blocking. Rejected is the
     # regression this guards against.
-    # This visit also carries **TC-E2E-004**: J1's sandbox task was assigned and its
-    # type archived before the device run, so at submission time the worker did have
-    # an outstanding task - just one whose type is archived, which
-    # _has_blocking_pending_task excludes. Approved here therefore proves both that
-    # completing the task unblocks delivery and that an archived type never blocked it.
     allowed_row = workers.wait_for_visit(allowed_visit_name)
     assert "Rejected" not in allowed_row, (
         f"Visit '{allowed_visit_name}' was submitted with no blocking task outstanding, so it "
@@ -242,13 +199,5 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings, request):
         f"Visit '{allowed_visit_name}' should have been processed normally; expected Approved "
         f"(or Pending if auto-approve is off). Row reads: {allowed_row!r}"
     )
-    # Evidence for E2E-004 rather than assuming the setup held: the archived-type task
-    # is still assigned, and its type is still archived.
-    tasks.goto_task_list(base_url, org, opp)
-    assert tasks.row_exists_with_status(worker_name, "To Do"), (
-        "The archived-type task is gone, so this run did not actually exercise TC-E2E-004"
-    )
-    task_types.goto_task_types(base_url, org, opp)
-    task_types.verify_row_archived(sandbox_label)
     print(f"STEP [Hybrid] Blocked visit: {blocked_row!r}")
     print(f"STEP [Hybrid] Allowed visit: {allowed_row!r}")

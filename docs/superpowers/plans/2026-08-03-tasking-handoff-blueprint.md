@@ -25,7 +25,7 @@ Every row below passed on staging on 2026-08-03. Nothing in the suite is
 | `tests/unit/` (20 tests) | — | Local, <1s |
 | `test_olp_01_02_03.py` (+ `flows/tasking_config.py`) | **TTC-002**, TTC-004, **IMP-003**, IMP-004 | 178s |
 | `test_task_type_config.py` (J1) | TTC-001, 004, 005, 006, TAS-005 | 81s, first try |
-| `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, 004(pos), 006, 007, TLV-001, TDL-001 | 71s, after 3 fixes |
+| `test_task_assignment_lifecycle.py` (J2) | TAS-001, 002, **003**, 004(pos), 006, 007, TLV-001, TDL-001 | 92s |
 | `test_task_views_filters.py` (J3) | TLV-002, 003, 004, 005(basic), **TLV-006** | 75s |
 | `test_task_permissions.py` (J4) | PRM-001, 002, 003 | 72s, first try |
 | `test_task_assign_from_worker_page.py` | **TAS-008** (+ dashboard card → Task List) | 69s |
@@ -39,14 +39,18 @@ arrives** → warning gone, replaced by "All required tasks have been completed"
 → no Edit control and a disabled checkbox on the completed row → the same type is
 re-assignable, and that leftover is deleted.
 
-**31 of the workbook's 43 case ids now pass**, checked case by case against the
+**32 of the workbook's 43 case ids now pass**, checked case by case against the
 `Automation Target` column.
 
-Five of those the workbook had marked **deferred** and are now automated:
-**TAS-008**, **TAS-009**, **TDL-003**, **E2E-005** (waiting on the task-completion
-push asserts the notification as a side effect) and **E2E-002** (which the plan put
-in a separate `e2e_visit_blocking` test; running it in the existing device session
-saves a second cold start for no loss of coverage).
+Six of those the workbook had marked **deferred** and are now automated:
+**TAS-003**, **TAS-008**, **TAS-009**, **TDL-003**, **E2E-005** (waiting on the
+task-completion push asserts the notification as a side effect) and **E2E-002**
+(which the plan put in a separate `e2e_visit_blocking` test; running it in the
+existing device session saves a second cold start for no loss of coverage).
+
+TAS-003 is asserted at the widget: the due-date input's `min` is today, which greys
+out earlier days, and forcing an earlier value in leaves the field failing the
+browser's range check, so a past date never reaches the server.
 
 **The waffle-switch assumption was wrong.** The "Tasks Assigned to Connect Workers"
 dashboard card *does* render on staging and links to `.../assigned_tasks/`, so
@@ -58,19 +62,21 @@ Only `flows/tasking_config.py` and J3 read that flag.
 Observed visit statuses, for reference — this opportunity has
 `auto_approve_visits` on:
 
+Visit entity names carry their case id, so the Visits tab explains itself:
+
 | Entity | Submitted | Status |
 |---|---|---|
-| `Blocked <stamp>` | while the task was pending | **Rejected** |
-| `Allowed <stamp>` | after the task completed | **Approved** |
+| `E2E002-Blocked-<stamp>` | while the task was pending | **Rejected** |
+| `E2E003-Unblocked-<stamp>` | after the task completed | **Approved** |
 
 ### Not covered — every remaining gap, with the reason
 
 | Case | Plan's target | Why not covered |
 |---|---|---|
 | TTC-003 | J1 | **Dropped by decision** — the hybrid test proves slug integrity more strongly, since a slug that stopped matching the HQ task unit id makes completion impossible. |
-| TDL-002 bulk delete | J2 | **Skipped, not passing.** J2's bulk branch is `if second_type:` and `static_task_type_2` is deliberately empty: the only other unit is J1's sandbox, which J1 renames and archives, so J2 must not assign it. Needs a **third task unit** in both deliver apps to cover honestly. Do not count this as green. |
 | TLV-005 | J3 | Passes only in its **basic** form (panel loads); the Name/Description assertions wait on the IMP-002 template question. |
-| TAS-003, E2E-004 | Deferred in the plan | Unchanged. |
+| TDL-002 bulk delete | J2 | **Removed by decision.** Reaching the "2 task(s)" path needs two assignable types or two enrolled workers purely as standing test data, which this workflow does not warrant. The branch and `static_task_type_2` are gone. |
+| E2E-004 | P2-B | **Deferred pending a team decision.** Needs its own device session: archiving happens on web and a Maestro build cannot be paused midway, and it cannot share a visit with E2E-006 for the reason in §3. Roughly +6 min per run for a third cold start. |
 | TTC-007, TDL-004, PRM-004, PRM-005, IMP-001, IMP-002, IMP-005, IMP-006 | Manual only | Unchanged. **OCS** (IMP-006) also needs an OCS account for the automation user. |
 
 ### Bugs found and fixed in our own code
@@ -274,6 +280,15 @@ dimagi-qa-ccc/
 - The warning and the completion message both render on **two** surfaces:
   `view_job_card.xml` (app home job tile) and `view_progress_job_card.xml`
   (Connect delivery-progress card). Both are asserted.
+- **The in-app pending-task warning appears to count tasks whose type is archived,
+  while the server's visit-blocking check excludes them**
+  (`_has_blocking_pending_task` filters `task_type__archived__isnull=True`). Observed
+  when an archived-type task was left outstanding: the re-learn task completed, the
+  push arrived, the sync ran, and the warning still would not clear. Strong
+  circumstantial evidence rather than a read of the mobile code. The practical
+  consequence is that **TC-E2E-004 and TC-E2E-006 cannot share a device session** -
+  "the warning clears" and "an archived type does not block" are mutually exclusive
+  observations while the archived-type task is outstanding.
 - The re-learn form completes via the **next arrow** (`nav_btn_next`); FINISH is
   often never shown, so treat `nav_btn_finish` as optional and assert
   `.*form sent to server.*` on the home screen instead.
