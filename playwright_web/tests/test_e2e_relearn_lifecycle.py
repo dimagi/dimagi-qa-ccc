@@ -3,7 +3,7 @@ import time
 import pytest
 
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect
+from flows.tasking_static import login_to_connect, require_hybrid_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_workers_page import ConnectWorkersPage
 
@@ -39,15 +39,10 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     Covering it needs its own device session, since archiving happens on web and a
     Maestro build cannot be paused midway. Deferred pending a team decision.
     """
-    hybrid = test_data.get("TASKING_HYBRID")
-    required = ["org", "opp_id"]
-    missing = [key for key in required if not hybrid.get(key)]
-    if missing:
-        pytest.skip(
-            "Hybrid tasking opportunity not configured in test_data TASKING_HYBRID "
-            f"(missing: {', '.join(missing)}). It needs an opportunity with the "
-            "re-learn task type configured and the mobile worker already delivering."
-        )
+    # Resolve per environment rather than reading TASKING_HYBRID raw: the unsuffixed
+    # keys are prod, so a staging run reading them straight would drive the prod
+    # opportunity id against connect-staging and find no worker there.
+    hybrid = require_hybrid_opp(test_data, config)
 
     base_url = config.get("connect_url")
     org, opp = hybrid["org"], hybrid["opp_id"]
