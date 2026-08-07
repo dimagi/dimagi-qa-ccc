@@ -13,17 +13,29 @@ on:
       - '.github/workflows/maestro_mobile.yaml'
 
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - stage
+          - prod
 
+# Keyed on the environment as well, so a stage run and a prod run of the same
+# branch do not cancel one another.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.environment || 'stage' }}
   cancel-in-progress: true
 
 jobs:
   maestro-mobile:
-    name: Maestro Mobile Tests (BrowserStack)
+    name: Maestro Mobile Tests (${{ inputs.environment || 'stage' }})
     runs-on: ubuntu-latest
 
     env:
+      APP_ENV: ${{ inputs.environment || 'stage' }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
@@ -35,16 +47,18 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        # pyyaml: the runner reads test_data/mobile_workers.yaml to resolve each
+        # flow's worker for this environment.
+        run: pip install requests pyyaml
 
       - name: Run Maestro flows on BrowserStack
         id: bs
-        # Uploads the staging APK and maestro_mobile/flows, runs them on a real
-        # device via App Automate, and polls until the build finishes. Exits
+        # Uploads the environment's APK and maestro_mobile/flows, runs them on a
+        # real device via App Automate, and polls until the build finishes. Exits
         # non-zero unless the build status is "passed".
         run: |
           set -o pipefail
-          python maestro_mobile/scripts/run_on_browserstack.py | tee bs_output.log
+          python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee bs_output.log
 
       - name: Parse Results
         id: aggregate

@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import requests
+import yaml
 from requests.auth import HTTPBasicAuth
 
 BASE_URL = "https://api-cloud.browserstack.com/app-automate/maestro/v2"
@@ -25,6 +26,72 @@ DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
 TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml"]
 POLL_INTERVAL_SECONDS = 15
+
+# Single source of truth for mobile identities, shared with the hybrid web test -
+# a worker defined in two files drifts, and the symptom is a device signing in as
+# the wrong worker on one environment only.
+WORKERS_FILE = PROJECT_ROOT / "test_data" / "mobile_workers.yaml"
+WORKER_BY_FLOW = {
+    "login_signup_success.yaml": "MAESTRO_LOGIN_SIGNUP_SUCCESS",
+    "login_account_locked.yaml": "MAESTRO_LOGIN_ACCOUNT_LOCKED",
+    "worker_relearn_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+}
+# workers-file key -> the Maestro env key the flows read.
+WORKER_ENV_KEYS = {
+    "country_code": "COUNTRY_CODE",
+    "phone_number": "PHONE_NUMBER",
+    "username": "USERNAME",
+    "backup_code": "BACKUP_CODE",
+}
+STAGING_SUFFIX = "_staging"
+STAGING_ENV = "stage"
+
+
+def load_workers():
+    with open(WORKERS_FILE, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def resolve_worker(entry, app_env=None):
+    """The environment's values from one mobile_workers.yaml entry.
+
+    Same convention as the rest of that file and web_test_data.yaml: unsuffixed
+    keys are prod and a "_staging" key overrides its base key on staging, so a
+    value that is identical on both environments is written once.
+    """
+    app_env = app_env or DEFAULT_APP_ENV
+    resolved = {}
+    for data_key, env_key in WORKER_ENV_KEYS.items():
+        value = entry.get(f"{data_key}{STAGING_SUFFIX}") if app_env == STAGING_ENV else None
+        if value is None:
+            value = entry.get(data_key)
+        if value is not None:
+            resolved[env_key] = str(value)
+    return resolved
+
+
+def env_by_flow(flows, app_env=None):
+    """Maestro env per flow, keyed by flow filename.
+
+    Per flow rather than one dict for the whole zip because the flows use
+    deliberately different accounts - login_account_locked needs the locked one -
+    and a single shared env would hand every flow the same identity. Flows with no
+    entry (subflows like shared_login_signup.yaml) get nothing and inherit from
+    their caller, which is how Maestro already passes env into runFlow.
+    """
+    workers = None
+    resolved = {}
+    for flow in flows:
+        key = WORKER_BY_FLOW.get(flow)
+        if not key:
+            continue
+        if workers is None:
+            workers = load_workers()
+        entry = workers.get(key)
+        if entry is None:
+            sys.exit(f"No '{key}' entry in {WORKERS_FILE.name}, needed by flow {flow}")
+        resolved[flow] = resolve_worker(entry, app_env)
+    return resolved
 
 
 def _yaml_quote(value):
@@ -161,17 +228,25 @@ def upload_app(auth, app_env=None):
     return app_url
 
 
-def upload_test_suite(auth, env=None):
+def upload_test_suite(auth, env=None, flow_env=None):
+    """Zip the flows, baking in runtime parameters.
+
+    flow_env: {flow filename: env} - the per-environment worker for that flow.
+    env:      values applied to every flow, and they win over flow_env, so an
+              explicit caller override beats the resolved worker.
+    """
     zip_path = FLOWS_DIR.parent / "flows.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for file in FLOWS_DIR.iterdir():
             if not file.is_file():
                 continue
+            file_env = dict((flow_env or {}).get(file.name, {}))
+            file_env.update(env or {})
             # BrowserStack requires every file to sit inside a single root folder within the zip.
-            if env and file.suffix in (".yaml", ".yml"):
+            if file_env and file.suffix in (".yaml", ".yml"):
                 # Bake runtime parameters in - the API takes no env values, and
                 # Maestro passes a flow's env down into its runFlow subflows.
-                zf.writestr(f"flows/{file.name}", apply_env_overrides(file.read_text(), env))
+                zf.writestr(f"flows/{file.name}", apply_env_overrides(file.read_text(), file_env))
             else:
                 zf.write(file, arcname=f"flows/{file.name}")
 
@@ -536,7 +611,9 @@ def run_flows(flows=None, env=None, reports=True, session_retries=1, app_env=Non
     flows = flows or TEST_FLOWS
     auth = get_credentials()
     app_url = upload_app(auth, app_env=app_env)
-    test_suite_url = upload_test_suite(auth, env=env)
+    # Each flow signs in as its own worker for this environment; anything the
+    # caller passed in env overrides that.
+    test_suite_url = upload_test_suite(auth, env=env, flow_env=env_by_flow(flows, app_env=app_env))
 
     # BrowserStack intermittently answers with build status "error" and
     # "Could not start a session" before running a single step. That is

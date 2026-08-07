@@ -14,6 +14,11 @@ SCRIPTS_DIR = REPO_ROOT / "maestro_mobile" / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from run_on_browserstack import apply_env_overrides, run_flows  # noqa: E402
+from run_on_browserstack import (  # noqa: E402
+    apply_env_overrides,
+    env_by_flow,
+    resolve_worker,
+    run_flows,
+)
 
-__all__ = ["apply_env_overrides", "run_flows"]
+__all__ = ["apply_env_overrides", "env_by_flow", "resolve_worker", "run_flows"]
