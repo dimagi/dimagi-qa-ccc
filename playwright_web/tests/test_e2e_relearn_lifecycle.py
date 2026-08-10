@@ -47,8 +47,17 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     base_url = config.get("connect_url")
     org, opp = hybrid["org"], hybrid["opp_id"]
     task_type = hybrid["task_type"]
-    worker_name = hybrid["mobile_username"]
-    full_number = f"{hybrid['mobile_country_code']}{hybrid['mobile_phone_number']}"
+
+    # The worker comes from mobile_workers.yaml, the single source the Maestro suite
+    # also resolves from, so the number is this environment's. It has to be: a
+    # PersonalID number cannot hold a session on two environments at once, and with
+    # both environments running on every push a shared number means the two device
+    # sessions evict each other mid-flow.
+    from flows.mobile_runner import env_by_flow
+
+    worker = env_by_flow([hybrid["flow"]], config.env)[hybrid["flow"]]
+    worker_name = worker["USERNAME"]
+    full_number = f"{worker['COUNTRY_CODE']}{worker['PHONE_NUMBER']}"
 
     # Unique numeric ids and entity names per run. The Registration Form needs a
     # unique numeric id, and unique names are what let the two visits be told apart
@@ -63,11 +72,8 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     tasks = ConnectAssignedTasksPage(connect_page)
     workers = ConnectWorkersPage(connect_page)
 
-    if not hybrid.get("mobile_backup_code"):
-        pytest.skip("TASKING_HYBRID.mobile_backup_code is not set - the device cannot sign in without it")
-
     # The worker must be enrolled before a task can be assigned to them.
-    workers.wait_for_worker_in_list(base_url, org, opp, hybrid["mobile_phone_number"])
+    workers.wait_for_worker_in_list(base_url, org, opp, worker["PHONE_NUMBER"])
 
     # --- WEB: assign the task ---
     tasks.goto_task_list(base_url, org, opp)
@@ -96,10 +102,10 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     summary = run_flows(
         flows=[hybrid["flow"]],
         env={
-            "COUNTRY_CODE": hybrid["mobile_country_code"],
-            "PHONE_NUMBER": hybrid["mobile_phone_number"],
-            "USERNAME": hybrid["mobile_username"],
-            "BACKUP_CODE": hybrid["mobile_backup_code"],
+            # The runner resolves the worker for this environment itself; passing it
+            # back keeps the values the web half asserted on and the values the
+            # device signs in with provably the same.
+            **worker,
             "OPPORTUNITY": hybrid.get("opportunity_name") or "",
             # Connect builds this body from the task type's name
             # (send_task_completion_notification), so derive it from the same

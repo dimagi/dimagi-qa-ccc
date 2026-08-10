@@ -49,10 +49,11 @@ def require_static_opp(test_data, config):
 
 
 HYBRID_REQUIRED_KEYS = ["org", "opp_id"]
-# Only the opportunity itself differs between environments. The worker, its backup
-# code and the task type are the same on both, so they are written once and
-# env_value falls through to them.
-HYBRID_ENV_SPECIFIC_KEYS = ["org", "opp_id", "opportunity_name", "task_type", "mobile_backup_code"]
+# Only the opportunity and its task type differ between environments; anything
+# identical on both is written once and env_value falls through to it. The mobile
+# worker is deliberately absent - it lives in mobile_workers.yaml, resolved by the
+# Maestro runner, so web and device cannot disagree about who signs in.
+HYBRID_ENV_SPECIFIC_KEYS = ["org", "opp_id", "opportunity_name", "task_type"]
 
 
 def require_hybrid_opp(test_data, config):

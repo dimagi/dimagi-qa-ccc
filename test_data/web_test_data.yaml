@@ -177,12 +177,11 @@ TASKING_HYBRID:
   task_type: "Relearn Task Unit"
   opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
   opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
-  # Mobile worker on the +7426 demo range: no OTP, backup code is the credential.
-  # Dedicated to tasking so the login/lockout flows cannot interfere with it.
-  mobile_country_code: "+7426"
-  mobile_phone_number: "3119728"
-  mobile_username: "Relearn Task User"
-  mobile_backup_code: "123456"
+  # The mobile worker lives in test_data/mobile_workers.yaml under
+  # MAESTRO_WORKER_RELEARN_TASK - one source shared with the Maestro suite, resolved
+  # per environment. It is deliberately not repeated here: the number differs
+  # between environments, and a copy in two files drifts into a device signing in as
+  # the wrong worker on one of them.
   flow: "worker_relearn_task.yaml"
   # Form submission travels device -> CommCare HQ -> Connect's form receiver,
   # which is far from instant on staging, so poll generously.

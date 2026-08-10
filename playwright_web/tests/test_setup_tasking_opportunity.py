@@ -32,7 +32,12 @@ def test_setup_tasking_opportunity(page, test_data, config, settings):
 
     tasking = test_data.get("TASKING")
     hybrid = test_data.get("TASKING_HYBRID")
-    full_number = f"{hybrid['mobile_country_code']}{hybrid['mobile_phone_number']}"
+    # Worker from mobile_workers.yaml, resolved for this environment - the same
+    # single source the hybrid test and the Maestro suite use.
+    from flows.mobile_runner import env_by_flow
+
+    worker = env_by_flow([hybrid["flow"]], config.env)[hybrid["flow"]]
+    full_number = f"{worker['COUNTRY_CODE']}{worker['PHONE_NUMBER']}"
 
     setup = full_olp_setup(page, config, settings, test_data, days=DELIVERY_WINDOW_DAYS)
     connect_page = setup.connect_page
@@ -65,7 +70,7 @@ def test_setup_tasking_opportunity(page, test_data, config, settings):
     )
 
     workers.invite_workers(base_url, org_slug, opp_id, [full_number])
-    workers.wait_for_worker_in_list(base_url, org_slug, opp_id, hybrid["mobile_phone_number"])
+    workers.wait_for_worker_in_list(base_url, org_slug, opp_id, worker["PHONE_NUMBER"])
 
     print("\n" + "=" * 72)
     print("TASKING OPPORTUNITY READY - paste into test_data TASKING_HYBRID:")
