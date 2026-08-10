@@ -78,6 +78,17 @@ jobs:
         # flow's worker for this environment.
         run: pip install requests pyyaml
 
+      # The report's trend line needs the previous runs' pass rates, and reports are
+      # artifacts rather than committed files. Cached per environment: stage and prod
+      # are different systems, so one shared history would average two unrelated pass
+      # rates into a number describing neither.
+      - name: Restore report history
+        uses: actions/cache/restore@v4
+        with:
+          path: maestro_history_${{ matrix.environment }}.json
+          key: maestro-history-${{ matrix.environment }}-${{ github.run_id }}
+          restore-keys: maestro-history-${{ matrix.environment }}-
+
       - name: Run Maestro flows on BrowserStack
         id: bs
         # Uploads the environment's APK and maestro_mobile/flows, runs them on a
@@ -109,6 +120,13 @@ jobs:
               echo "url=https://app-automate.browserstack.com/"
             } >> $GITHUB_OUTPUT
           fi
+
+      - name: Save report history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: maestro_history_${{ matrix.environment }}.json
+          key: maestro-history-${{ matrix.environment }}-${{ github.run_id }}
 
       - name: Upload Report
         id: report
