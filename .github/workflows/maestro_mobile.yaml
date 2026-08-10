@@ -22,20 +22,47 @@ on:
         options:
           - stage
           - prod
+          - both
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.environment || 'stage' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'push' }}
   cancel-in-progress: true
 
 jobs:
-  maestro-mobile:
-    name: Maestro Mobile Tests (${{ inputs.environment || 'stage' }})
+  resolve-matrix:
+    name: Resolve Environment Matrix
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.environment }}" = "both" ]; then
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            else
+              echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+          fi
+
+  maestro-mobile:
+    name: Maestro Mobile Tests (${{ matrix.environment }})
+    needs: resolve-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
+      # One device build at a time. The web suite's hybrid test also takes a
+      # BrowserStack session, so a push can want several at once; serialising the
+      # cheap half (a mobile run is ~5 minutes) keeps us under the parallel limit.
+      max-parallel: 1
 
     env:
-      APP_ENV: ${{ inputs.environment || 'stage' }}
+      APP_ENV: ${{ matrix.environment }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
@@ -88,7 +115,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-mobile-report
+          # Per environment: upload-artifact@v4 rejects two uploads sharing a name,
+          # so the stage and prod legs of one run would collide.
+          name: maestro-mobile-report-${{ matrix.environment }}
           path: |
             maestro_report.html
             maestro_report.json
