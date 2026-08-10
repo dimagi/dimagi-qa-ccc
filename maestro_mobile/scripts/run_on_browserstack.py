@@ -45,6 +45,11 @@ WORKER_ENV_KEYS = {
 }
 STAGING_SUFFIX = "_staging"
 STAGING_ENV = "stage"
+# login_signup_success checks the wrong-code error path, so it needs a code that is
+# guaranteed *not* to be the account's. Derived rather than hardcoded: prod's signup
+# account really does use "123456", so a literal wrong code logged it straight in and
+# the expected error never appeared.
+WRONG_BACKUP_CODES = ("000000", "111111")
 
 
 def load_workers():
@@ -67,6 +72,9 @@ def resolve_worker(entry, app_env=None):
             value = entry.get(data_key)
         if value is not None:
             resolved[env_key] = str(value)
+
+    first, second = WRONG_BACKUP_CODES
+    resolved["WRONG_BACKUP_CODE"] = second if resolved.get("BACKUP_CODE") == first else first
     return resolved
 
 

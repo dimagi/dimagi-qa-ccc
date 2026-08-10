@@ -78,6 +78,7 @@ def test_empty_env_returns_flow_unchanged():
 # --- per-environment worker resolution ---------------------------------------
 
 from flows.mobile_runner import env_by_flow, resolve_worker  # noqa: E402
+from run_on_browserstack import WORKER_BY_FLOW  # noqa: E402
 
 ENTRY = {
     "country_code": "+7426",
@@ -91,7 +92,8 @@ ENTRY = {
 
 
 def test_prod_uses_the_unsuffixed_keys():
-    assert resolve_worker(ENTRY, "prod") == {
+    resolved = resolve_worker(ENTRY, "prod")
+    assert {k: resolved[k] for k in ("COUNTRY_CODE", "PHONE_NUMBER", "USERNAME", "BACKUP_CODE")} == {
         "COUNTRY_CODE": "+7426",
         "PHONE_NUMBER": "7426426",
         "USERNAME": "Automation User 26",
@@ -133,3 +135,17 @@ def test_real_data_resolves_per_environment():
     assert stage["PHONE_NUMBER"] != prod["PHONE_NUMBER"], (
         "a shared number would evict one environment's session mid-run"
     )
+
+
+def test_wrong_backup_code_never_equals_the_real_one():
+    # Prod's signup account really does use "123456", which is why this is derived.
+    assert resolve_worker({"backup_code": "123456"}, "prod")["WRONG_BACKUP_CODE"] != "123456"
+    assert resolve_worker({"backup_code": "000000"}, "prod")["WRONG_BACKUP_CODE"] != "000000"
+
+
+def test_wrong_backup_code_differs_from_every_real_account():
+    for env in ("stage", "prod"):
+        for flow, resolved in env_by_flow(list(WORKER_BY_FLOW), env).items():
+            assert resolved["WRONG_BACKUP_CODE"] != resolved.get("BACKUP_CODE"), (
+                f"{flow} on {env} would log in with its 'wrong' code"
+            )

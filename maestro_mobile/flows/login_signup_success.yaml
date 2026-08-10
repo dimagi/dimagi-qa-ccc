@@ -4,6 +4,9 @@ env:
   PHONE_NUMBER: "7426000"
   USERNAME: "Deb Test 8/12"
   BACKUP_CODE: "742600"
+  # Deliberately not this account's code - the flow checks the wrong-code error
+  # path first. The runner overrides it with a value that cannot equal BACKUP_CODE.
+  WRONG_BACKUP_CODE: "000000"
 ---
 - launchApp:
     clearState: true
@@ -20,7 +23,7 @@ env:
 # matches debug builds, which add a .debug suffix to the applicationId.
 - tapOn:
     id: "backup_code_view"
-- inputText: "123456"
+- inputText: "${WRONG_BACKUP_CODE}"
 - tapOn:
     id: "connect_backup_code_button"
 - assertVisible:
