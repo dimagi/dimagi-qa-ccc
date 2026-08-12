@@ -93,6 +93,25 @@ class CCHQMessagingPage(BasePage):
     def _stamped(name):
         return f"{name} {int(time.time() * 1000)}"
 
+    def _wait_for_url(self, predicate, description, timeout=180):
+        """Poll page.url until `predicate(url)` holds.
+
+        Deliberately not page.wait_for_url(): that waits for a *navigation
+        event* to reach a load state, so when HQ's save posts and lands on the
+        list before the wait registers, it blocks for the whole timeout waiting
+        for an event that has already happened - observed as a 180s timeout on a
+        save that had plainly succeeded. Polling the URL asks the only question
+        that actually matters.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if predicate(self.page.url):
+                return
+            self.page.wait_for_timeout(250)
+        raise AssertionError(
+            f"Timed out after {timeout}s waiting for {description}; URL is still {self.page.url!r}"
+        )
+
     def _type_keys(self, selector, text):
         """Type into a Knockout-bound field with real key events.
 
@@ -239,10 +258,11 @@ class CCHQMessagingPage(BasePage):
         save = self._locator(self.SAVE_BTN)
         expect(save).to_be_enabled(timeout=60_000)
         save.click()
-        # Saving leaves the wizard and returns to the list. Waiting for the URL to
-        # stop being an /add page is what the original's sleep(50) was standing in
-        # for, and it fails fast when a validation error keeps us on the form.
-        self.page.wait_for_url(lambda url: "/add" not in url, timeout=180_000)
+        # Saving leaves the wizard and returns to the list. Watching for the URL
+        # to stop being an /add page is what the original's sleep(50) was
+        # standing in for, and it still surfaces a validation error that keeps
+        # us on the form - as a timeout naming the URL we are stuck on.
+        self._wait_for_url(lambda url: "/add" not in url, "the wizard to leave /add")
         self._wait_loaded()
 
     def verify_alert_in_list(self, name):
@@ -386,7 +406,12 @@ class CCHQMessagingPage(BasePage):
 
     def click_send_broadcast_btn(self):
         self.click(self.SEND_BROADCAST_BTN)
-        self.page.wait_for_url("**/broadcasts/**", timeout=180_000)
+        # Same reason as click_save_btn: poll rather than wait on a navigation
+        # event that may already have fired.
+        self._wait_for_url(
+            lambda url: "/broadcasts/" in url and "/add" not in url,
+            "the broadcast form to return to the list",
+        )
         self._wait_loaded()
 
     def verify_broadcast_in_list(self, name):
