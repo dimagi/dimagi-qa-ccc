@@ -82,6 +82,25 @@ class CCHQMessagingPage(BasePage):
     def _stamped(name):
         return f"{name} {int(time.time() * 1000)}"
 
+    def _type_keys(self, selector, text):
+        """Type into a Knockout-bound field with real key events.
+
+        These forms bind with `valueUpdate: 'afterkeydown'`, e.g.
+
+            <input data-bind="value: name, valueUpdate: 'afterkeydown'">
+            <button data-bind="enable: basicTabValid">Continue</button>
+
+        Playwright's fill() sets the value without producing keydowns, so the
+        observable never updates and Continue stays disabled with the field
+        visibly populated - which reads like a product bug and is not one. The
+        Selenium original only worked because send_keys fires real keys.
+        """
+        field = self._locator(selector)
+        field.wait_for(state="visible")
+        field.click()
+        field.clear()
+        field.press_sequentially(str(text), delay=20)
+
     def _fill_token_field(self, selector, values):
         """Type each value into a select2-style token field and commit it.
 
@@ -116,21 +135,29 @@ class CCHQMessagingPage(BasePage):
         self.click(self.NEW_CONDITIONAL_ALERT)
         self.page.wait_for_url("**/conditional/add**")
 
-    def click_continue_btn(self):
-        """Click the one visible, enabled Continue button on the current step.
+    def click_continue_btn(self, timeout=30):
+        """Click the live Continue button, waiting for it to become enabled.
 
-        The wizard renders a Continue button per step and hides the others, so
-        the first match is not reliably the live one.
+        Two reasons this polls rather than clicking the first match: the wizard
+        renders a Continue per step and hides the others, and the live one stays
+        disabled until its step's Knockout validity observable turns true, which
+        happens after the field bindings fire.
         """
-        for button in self.page.locator(self.CONTINUE_BTN).all():
-            if button.is_visible() and button.is_enabled():
-                button.click()
-                return
-        raise AssertionError("No enabled 'Continue' button on this step")
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            for button in self.page.locator(self.CONTINUE_BTN).all():
+                if button.is_visible() and button.is_enabled():
+                    button.click()
+                    return
+            self.page.wait_for_timeout(250)
+        raise AssertionError(
+            f"No enabled 'Continue' button after {timeout}s - the step's required fields are "
+            "either unfilled or were populated without firing key events"
+        )
 
     def enter_name_in_conditional_alert(self, name):
         self.cond_alert_full_name = self._stamped(name)
-        self.type(self.CONDITIONAL_ALERT_NAME_INPUT, self.cond_alert_full_name)
+        self._type_keys(self.CONDITIONAL_ALERT_NAME_INPUT, self.cond_alert_full_name)
         return self.cond_alert_full_name
 
     def select_case_type(self, value):
@@ -146,7 +173,7 @@ class CCHQMessagingPage(BasePage):
         self.click(self.CASE_PROPERTY_FILTER_OPTION)
         self.select_by_visible_text(self.CASE_PROPERTY_ENTITY_DROPDOWN, "entity_id")
         self.select_by_visible_text(self.CASE_PROPERTY_EQUALS_DROPDOWN, "equals")
-        self.type(self.CASE_PROPERTY_NAME_INPUT, str(entity_id_value))
+        self._type_keys(self.CASE_PROPERTY_NAME_INPUT, entity_id_value)
 
     def select_recipients(self, recipient_types):
         self._fill_token_field(self.RECIPIENT_INPUT, recipient_types)
@@ -172,7 +199,7 @@ class CCHQMessagingPage(BasePage):
 
     def enter_message(self, message):
         self.scroll_into_view(self.MESSAGE_INPUT)
-        self.type(self.MESSAGE_INPUT, message)
+        self._type_keys(self.MESSAGE_INPUT, message)
 
     def select_survey_form(self, value):
         self.scroll_into_view(self.SURVEY_FORM_INPUT)
@@ -180,7 +207,7 @@ class CCHQMessagingPage(BasePage):
 
     def enter_expire_after(self, hours):
         self.scroll_into_view(self.EXPIRE_AFTER_INPUT)
-        self.type(self.EXPIRE_AFTER_INPUT, str(hours))
+        self._type_keys(self.EXPIRE_AFTER_INPUT, hours)
 
     def click_save_btn(self):
         self.scroll_into_view(self.SAVE_BTN)
@@ -199,7 +226,7 @@ class CCHQMessagingPage(BasePage):
         """
         self.page.reload()
         self._wait_loaded()
-        self.type(self.SEARCH_BOX, name)
+        self._type_keys(self.SEARCH_BOX, name)
         self.click(self.SEARCH_BTN)
         self._wait_loaded()
         row = self.page.locator(f"//table//td//a[contains(normalize-space(), \"{name}\")]").first
@@ -301,7 +328,7 @@ class CCHQMessagingPage(BasePage):
 
     def enter_broadcast_name(self, name):
         self.broadcast_full_name = self._stamped(name)
-        self.type(self.BROADCAST_NAME_INPUT, self.broadcast_full_name)
+        self._type_keys(self.BROADCAST_NAME_INPUT, self.broadcast_full_name)
         return self.broadcast_full_name
 
     def click_send_broadcast_btn(self):

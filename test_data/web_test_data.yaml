@@ -121,6 +121,7 @@ Make_Payment:
   worker_name: "Automation User 10"
   country_code: "+7426"
   phone_number: "7426006"
+
 # --- Tasking workflow automation (CCCT-2658) ---
 TASKING:
   # The live task unit. Its slug is already consumed on both apps by the task
@@ -191,3 +192,17 @@ TASKING_HYBRID:
   # Form submission travels device -> CommCare HQ -> Connect's form receiver,
   # which is far from instant on staging, so poll generously.
   completion_timeout_seconds: 900
+
+# Connect messaging (CCCT-2671). Unsuffixed keys are prod, `_staging` overrides
+# them - the same convention the rest of this file uses.
+MESSAGING:
+  # Survey form the Connect Survey content type points at. Both values are
+  # carried over from the legacy page object, which hardcoded them per env.
+  survey_form: "Delivery App - ETE > Surveys > Survey"
+  survey_form_staging: "SMS Tests [DO NOT DELETE] > Surveys > Survey"
+  # HQ user id of the mobile worker that alerts and broadcasts are addressed to.
+  # Prod values only: they come from mobile_workers.yaml TC_9 (alerts) and this
+  # file's MESSAGING_4_5_6 block (broadcasts), both of which are prod-only. The
+  # staging ids still have to be discovered from HQ's recipient picker.
+  alert_recipient_id: "049b54d12e564f418397"
+  broadcast_recipient_id: "001b8edd7bc3d3c58a70"
