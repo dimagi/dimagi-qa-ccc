@@ -115,6 +115,42 @@ def test_create_connect_message_conditional_alert(messaging, messaging_data):
         messaging.delete_existing_alerts(messaging.MESSAGE_ALERT_NAME)
 
 
+def test_keyword_offers_connect_content_types(messaging):
+    """Both Connect options are offered as keyword content types.
+
+    The keyword counterpart of TC-CAL-001 / TC-BRD-001. Nothing is saved, so no
+    keyword is left behind.
+    """
+    messaging.open_keywords()
+    messaging.click_add_keyword_btn()
+    options = messaging.keyword_content_type_options()
+    missing = [option for option in CONNECT_CONTENT_OPTIONS if option not in options]
+    assert not missing, f"Keyword content type is missing {missing}. Offered: {options}"
+
+
+def test_create_keyword_with_connect_message(messaging):
+    """TC-KWD-001 - a keyword replying with a Connect Message can be created."""
+    messaging.delete_existing_keywords()
+    try:
+        keyword, message = messaging.create_keyword_with_connect_message()
+        assert keyword.startswith(messaging.KEYWORD_PREFIX)
+        assert message, "No reply message was generated for the keyword"
+    finally:
+        messaging.delete_existing_keywords()
+
+
+def test_create_keyword_with_connect_survey(messaging, messaging_data):
+    """TC-KWD-003 - a keyword replying with a Connect Survey can be created."""
+    messaging.delete_existing_keywords()
+    try:
+        keyword = messaging.create_keyword_with_connect_survey(
+            survey_form=messaging_data["survey_form"]
+        )
+        assert keyword.startswith(messaging.KEYWORD_PREFIX)
+    finally:
+        messaging.delete_existing_keywords()
+
+
 def test_create_connect_survey_conditional_alert(messaging, messaging_data):
     """TC-CAL-004 - a Connect Survey alert saves and appears in the list."""
     entity_id = str(int(time.time() * 1000) % 1_000_000)

@@ -57,6 +57,17 @@ class CCHQMessagingPage(BasePage):
     EXPIRE_AFTER_INPUT = locators.get("cchq_messaging_page", "expire_after_input")
     SAVE_BTN = locators.get("cchq_messaging_page", "save_btn")
 
+    SIDEBAR_LINK = locators.get("cchq_messaging_page", "sidebar_link")
+    ADD_KEYWORD_BTN = locators.get("cchq_messaging_page", "add_keyword_btn")
+    KEYWORD_INPUT = locators.get("cchq_messaging_page", "keyword_input")
+    KEYWORD_DESCRIPTION_INPUT = locators.get("cchq_messaging_page", "keyword_description_input")
+    KEYWORD_SENDER_CONTENT_TYPE = locators.get("cchq_messaging_page", "keyword_sender_content_type")
+    KEYWORD_SENDER_MESSAGE = locators.get("cchq_messaging_page", "keyword_sender_message")
+    KEYWORD_SURVEY_FORM = locators.get("cchq_messaging_page", "keyword_survey_form")
+    KEYWORDS_TABLE = locators.get("cchq_messaging_page", "keywords_table")
+    KEYWORDS_ROW_BY_NAME = locators.get("cchq_messaging_page", "keywords_row_by_name")
+    KEYWORDS_EMPTY_MSG = locators.get("cchq_messaging_page", "keywords_empty_msg")
+
     ADD_BROADCAST_BTN = locators.get("cchq_messaging_page", "add_broadcast_btn")
     BROADCAST_NAME_INPUT = locators.get("cchq_messaging_page", "broadcast_name_input")
     SEND_BROADCAST_BTN = locators.get("cchq_messaging_page", "send_broadcast_btn")
@@ -401,6 +412,143 @@ class CCHQMessagingPage(BasePage):
         self.click_send_broadcast_btn()
         self.verify_broadcast_in_list(self.broadcast_full_name)
         return message
+
+    # ------------------------------------------------------------------ keywords
+
+    KEYWORD_PREFIX = "AUTOKW"
+
+    def open_keywords(self):
+        """Messaging sidebar -> Keywords.
+
+        Keywords is not in the Messaging top-nav dropdown and is served from
+        /reminders/keywords/ rather than /messaging/, so it is reached from the
+        left sidebar - which only renders once a Messaging page is open.
+        """
+        if "/messaging/" not in self.page.url and "/reminders/" not in self.page.url:
+            self.open_messaging_option("Conditional Alerts")
+        self.click(self.SIDEBAR_LINK.format(option="Keywords"))
+        self.page.wait_for_url("**/reminders/keywords/**")
+        self._wait_loaded()
+
+    def wait_for_keyword_list(self, timeout=60_000):
+        """Wait for the keyword table to finish binding.
+
+        Same async-render problem as the alert list: rows come from a Knockout
+        `foreach: paginatedList`, and the empty-state row is bound on
+        `visible: isPaginatedListEmpty`. Either the empty message showing or a
+        row carrying its Action controls means binding has run.
+        """
+        self.page.wait_for_function(
+            """() => {
+                const tbody = document.querySelector("table[class*='table-striped'] tbody");
+                if (!tbody) return false;
+                const rows = Array.from(tbody.rows);
+                const empty = rows.find(r => r.textContent.includes('You have no keywords'));
+                if (empty && empty.offsetParent !== null) return true;
+                return rows.some(r => r.offsetParent !== null && r.querySelector('a, button'));
+            }""",
+            timeout=timeout,
+        )
+
+    def click_add_keyword_btn(self):
+        self.click(self.ADD_KEYWORD_BTN)
+        self.page.wait_for_url("**/keywords/normal/add**")
+
+    def new_keyword_name(self):
+        """A short unique token. Keywords are single words, so no spaces."""
+        return f"{self.KEYWORD_PREFIX}{int(time.time() * 1000) % 1_000_000}"
+
+    def keyword_content_type_options(self):
+        dropdown = self._locator(self.KEYWORD_SENDER_CONTENT_TYPE)
+        dropdown.wait_for(state="visible")
+        return [text.strip() for text in dropdown.locator("option").all_inner_texts()]
+
+    def verify_keyword_in_list(self, keyword):
+        self.wait_for_keyword_list()
+        row = self._locator(self.KEYWORDS_ROW_BY_NAME.format(keyword=keyword))
+        expect(row).to_be_visible(timeout=60_000)
+        self._step(f"keyword '{keyword}' present in the list")
+
+    def create_keyword_with_connect_message(self, keyword=None, message=None):
+        """Create a keyword whose reply is a Connect Message.
+
+        Returns (keyword, message) so a later mobile step can send the keyword
+        and assert on the exact reply text.
+        """
+        keyword = keyword or self.new_keyword_name()
+        message = message or f"Automation keyword reply {int(time.time() * 1000)}"
+        self.click_add_keyword_btn()
+        self._type_keys(self.KEYWORD_INPUT, keyword)
+        self._type_keys(self.KEYWORD_DESCRIPTION_INPUT, f"Automation keyword {keyword}")
+        self.select_by_visible_text(self.KEYWORD_SENDER_CONTENT_TYPE, "Connect Message")
+        self._type_keys(self.KEYWORD_SENDER_MESSAGE, message)
+        self.click_save_btn()
+        self.verify_keyword_in_list(keyword)
+        return keyword, message
+
+    def create_keyword_with_connect_survey(self, survey_form, keyword=None):
+        """Create a keyword whose reply is a Connect Survey."""
+        keyword = keyword or self.new_keyword_name()
+        self.click_add_keyword_btn()
+        self._type_keys(self.KEYWORD_INPUT, keyword)
+        self._type_keys(self.KEYWORD_DESCRIPTION_INPUT, f"Automation keyword {keyword}")
+        self.select_by_visible_text(self.KEYWORD_SENDER_CONTENT_TYPE, "Connect Survey")
+        # Choosing Connect Survey reveals the form dropdown and fills it
+        # asynchronously - same re-render race as the conditional alert.
+        self.wait_for_select_options_loaded(self.KEYWORD_SURVEY_FORM)
+        self.select_by_visible_text(self.KEYWORD_SURVEY_FORM, survey_form)
+        self.click_save_btn()
+        self.verify_keyword_in_list(keyword)
+        return keyword
+
+    def _first_visible(self, selector):
+        """First genuinely visible match, or None.
+
+        The keyword table carries hidden Knockout template rows ("New Items",
+        "Deleted Items") that contain the same text as the real row, so taking
+        .first silently picks a template whose controls can never be clicked.
+        """
+        candidates = self.page.locator(selector)
+        for index in range(candidates.count()):
+            candidate = candidates.nth(index)
+            try:
+                if candidate.is_visible():
+                    return candidate
+            except Exception:
+                continue
+        return None
+
+    def delete_existing_keywords(self, name_prefix=None):
+        """Delete every keyword whose name starts with `name_prefix`.
+
+        Two steps, not one: the row's Delete button only opens a Bootstrap modal
+        (`data-bs-toggle="modal"`). The link that actually deletes is
+        `a.delete-item-confirm` *inside* that modal, so clicking it straight off
+        the row fails with "element is not visible" - the modal is still closed.
+        """
+        name_prefix = name_prefix or self.KEYWORD_PREFIX
+        self.open_keywords()
+        deleted = 0
+        while True:
+            self.wait_for_keyword_list()
+            row = self._first_visible(
+                "//table[contains(@class,'table-striped')]/tbody/tr"
+                f"[.//a[starts-with(normalize-space(), \"{name_prefix}\")]]"
+                "[.//button[contains(@class,'btn-outline-danger')]]"
+            )
+            if row is None:
+                break
+            row.locator("button.btn-outline-danger").first.click()
+            confirm = row.locator("a.delete-item-confirm").first
+            expect(confirm).to_be_visible(timeout=15_000)
+            confirm.click()
+            self._wait_loaded()
+            # The list re-renders in place after the delete; give the binding a
+            # beat before re-reading, or the same row is found again.
+            self.page.wait_for_timeout(1500)
+            deleted += 1
+        self._step(f"removed {deleted} existing '{name_prefix}' keyword(s)")
+        return deleted
 
     def create_broadcast_with_connect_survey(self, user_recipients, survey_form, expire_after_hours=1):
         self.click_add_broadcast_btn()
