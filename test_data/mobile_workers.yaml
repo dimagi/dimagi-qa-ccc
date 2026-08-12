@@ -91,3 +91,49 @@ TC_10:
   org_name: "PM_Automation_01"
   org_name_staging: "PM_Automation_01"
   user_id: "5bbf8b4664d2cd1b6537"
+
+# --- Maestro mobile suite ----------------------------------------------------
+# Keyed by flow, because the Maestro flows are named rather than numbered.
+# Convention is this file's existing one, shared with web_test_data.yaml:
+# unsuffixed keys are prod, *_staging overrides them when running on staging.
+#
+# The number differs per environment on purpose. One PersonalID number cannot
+# hold a session on two environments at once - signing in on one logs the other
+# out - so a shared number would break any run that exercises both environments
+# concurrently, and it would fail intermittently on whichever run logged in
+# first. Prod accounts provisioned 04-Aug-2026.
+MAESTRO_LOGIN_SIGNUP_SUCCESS:
+  country_code: "+7426"
+  phone_number: "7426426"
+  username: "Automation User 26"
+  backup_code: "123456"
+  phone_number_staging: "7426000"
+  username_staging: "Deb Test 8/12"
+  backup_code_staging: "742600"
+
+# The account is locked on purpose - the flow asserts the locked message - so it
+# is not interchangeable with the other two.
+MAESTRO_LOGIN_ACCOUNT_LOCKED:
+  country_code: "+7426"
+  phone_number: "7426055"
+  username: "Automation User 55"
+  backup_code: "742655"
+  phone_number_staging: "7426005"
+  username_staging: "Deb Test 161202"
+  backup_code_staging: "742605"
+
+# Needs more than a login: the worker must be enrolled on the opportunity, past
+# learn, and delivering, with a re-learn task assignable to it.
+MAESTRO_WORKER_RELEARN_TASK:
+  # Prod worker replaced 2026-08-11: Automation User 17 sits on several prod
+  # opportunities, and the flow taps the first btn_start/btn_resume on screen rather
+  # than the one inside the matched card, so it opened test_opp_01042026's learn app
+  # instead. This one is dedicated to tasking, with its assessment already complete
+  # so it can deliver straight away - the same shape as the staging worker.
+  country_code: "+7426"
+  phone_number: "6540852"
+  username: "Relearn User 2"
+  backup_code: "123456"
+  phone_number_staging: "3119728"
+  username_staging: "Relearn Task User"
+  backup_code_staging: "123456"

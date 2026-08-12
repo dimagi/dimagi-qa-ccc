@@ -106,3 +106,129 @@ connect_programs_page:
   apply_to_program_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[contains(., 'Apply to Program')]"
   accept_application_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[@value='accept']"
   create_opportunity_link_by_network_manager: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')][.//p[contains(text(), \"{network_manager}\")]]//a[.//p[contains(text(), 'Create Opportunity')]]"
+
+# --- Tasking (CCCT-2658) ---
+
+opportunity_dashboard_page_menu:
+  menu_toggle: "//i[contains(@class,'fa-solid') and contains(@class,'cursor-pointer') and (contains(@class,'fa-bars') or contains(@class,'fa-xmark'))]"
+  configure_task_types_link: "//a[normalize-space()='Configure Task Types']"
+  tasks_assigned_tile: "//a[.//h3[normalize-space()='Tasks Assigned to Connect Workers']]"
+  tasks_assigned_tile_count: "//a[.//h3[normalize-space()='Tasks Assigned to Connect Workers']]//h3[contains(@class,'text-2xl')]"
+
+connect_task_types_page:
+  page_heading: "//h2[contains(@class,'title') and normalize-space()='Configure Task Types']"
+  connected_app_name: "//span[normalize-space()='Connected Delivery App:']/following-sibling::span[1]"
+  add_task_type_btn: "//button[normalize-space()='Add New Task Type']"
+  # New Task Type modal (x-show; scope everything to the backdrop containing its title)
+  create_modal: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]"
+  task_unit_select: "id_task_unit_id"
+  create_name_input: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//input[@id='id_name']"
+  create_description_input: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//textarea[@id='id_description']"
+  case_property_input: "id_case_property"
+  create_save_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[@type='submit'][normalize-space()='Save']"
+  create_cancel_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[normalize-space()='Cancel']"
+  # Table
+  # Match the Name column only (td[2]; TaskTable order is index, name, description,
+  # linked_task_unit, archived, actions). Matching any cell also matched the Linked
+  # Task Unit column, so a type whose name equals some type's unit name resolved to
+  # two rows - which is precisely the state prod was in.
+  row_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]"
+  row_edit_btn_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  empty_table_text: "//td[contains(normalize-space(),'No task types configured for this opportunity')]"
+  # Edit Task Type modal (htmx-loaded form)
+  edit_form: "edit-task-form-el"
+  edit_name_input: "//form[@id='edit-task-form-el']//input[@id='id_name']"
+  edit_description_input: "//form[@id='edit-task-form-el']//textarea[@id='id_description']"
+  archive_checkbox: "id_is_archived"
+  edit_save_btn: "//button[@form='edit-task-form-el'][normalize-space()='Save']"
+
+connect_assigned_tasks_page:
+  page_heading: "//h1[normalize-space()='Task List']"
+  metric_value_by_label: "//div[contains(@class,'metric-card')][.//span[normalize-space()='{label}']]//span[contains(@class,'text-2xl')]"
+  table_wrapper: "task-list-table"
+  create_task_btn: "//div[@id='task-list-table']//button[@x-tooltip.raw='Create Task' or @aria-label='Create Task']"
+  delete_tasks_btn: "//button[@x-tooltip.raw='Delete Task(s)' or @aria-label='Delete Task(s)']"
+  filter_btn: "//div[@id='task-list-table']//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-sliders')]]"
+  column_headers: "//div[@id='task-list-table']//table//th"
+  row_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]"
+  row_checkbox_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//input[@name='row_select']"
+  row_edit_btn_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  status_badge_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Scoped to one status as well, because a worker can hold several rows at once -
+  # e.g. a completed task plus a pending one - and assertions about completed rows
+  # must not be satisfied or broken by the others.
+  row_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]"
+  row_edit_btn_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  row_checkbox_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//input[@name='row_select']"
+  all_status_badges: "//div[@id='task-list-table']//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  all_row_checkboxes: "//div[@id='task-list-table']//input[@name='row_select']"
+  all_edit_buttons: "//div[@id='task-list-table']//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  # Create Task modal (template x-if - absent from DOM until + clicked)
+  create_task_form: "create-task-form"
+  task_select: "id_task"
+  worker_select: "id_access"
+  due_date_input: "id_due_date"
+  # The modal also holds a hidden "Connect OCS account" submit button that sits
+  # inside this form but belongs to ocs-connect-form via its form attribute, so
+  # exclude buttons that target another form.
+  create_task_save_btn: "//form[@id='create-task-form']//button[@type='submit' and not(@form)]"
+  create_task_cancel_btn: "//div[@id='create-task-form-wrapper']/ancestor::div[contains(@class,'modal-backdrop')]//button[normalize-space()='Cancel']"
+  form_error_text: "//div[@id='create-task-form-wrapper']//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist') or contains(@class,'alert')]"
+  # Edit Assigned Task modal (htmx-loaded form)
+  edit_assigned_form: "edit-assigned-task-form-el"
+  edit_due_date_input: "//form[@id='edit-assigned-task-form-el']//input[@id='id_due_date']"
+  edit_reason_input: "id_reason"
+  edit_assigned_save_btn: "//button[@form='edit-assigned-task-form-el']"
+  # Confirm modal + messages
+  confirm_modal_title: "confirm-modal-title"
+  confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
+  success_message: "//div[contains(@class,'bg-message-success')]"
+  # base.html renders Django messages tagged error/danger with bg-message-error.
+  # A rejected task assignment lands here, not in the form: the view flashes the
+  # message and still answers with HX-Redirect.
+  error_message: "//div[contains(@class,'bg-message-error')]"
+  # Filter modal
+  filter_form: "assignedTaskFilterForm"
+  filter_status_select: "id_task_status"
+  filter_task_type_select: "id_task_type"
+  filter_apply_btn: "//button[@form='assignedTaskFilterForm'][@type='submit']"
+
+connect_workers_page:
+  tasks_tab: "tasks-tab"
+  tab_content: "table"
+  loading_indicator: "loadingIndicator"
+  drilldown_tasks_tab: "//a[contains(@class,'tab') and normalize-space()='Tasks']"
+  task_details_panel: "task-details"
+  drilldown_task_row: "//table//tr[@hx-get or contains(@class,'group')][td]"
+  # grouped_table.html renders one <tbody x-data="{open:false}"> per worker: a
+  # clickable header row carrying only the header_columns, then one
+  # <tr x-show="open" x-cloak> per task. The task columns are therefore invisible
+  # until the header row is clicked.
+  worker_task_group_by_worker: "//tbody[.//td[contains(., '{worker}')]]"
+  # GroupedByWorkerMixin.render_user wraps the worker's name in a link to
+  # user_visits_list?user=<ConnectUser.user_id>. The Delivery tab uses that mixin;
+  # the Tasks tab does not, so this is where the id can be read from.
+  worker_name_link_by_worker: "//a[contains(@href,'user=')][.//p[normalize-space()='{worker}']]"
+  # Per-worker Tasks drill-down (user_tasks.html). Its Create Task / Delete Task(s)
+  # buttons sit outside #task-list-table, so the assigned-task-list locators do not
+  # reach them. WorkerCompletedTaskTable.render_task_type prints "Name (slug)", so a
+  # row is addressable by slug - which survives J1 renaming its sandbox type.
+  worker_tasks_create_btn: "//button[@aria-label='Create Task']"
+  worker_tasks_delete_btn: "//button[@aria-label='Delete Task(s)']"
+  worker_task_row_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]"
+  worker_task_row_checkbox_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//input[@name='row_select']"
+  worker_task_status_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Visits tab of the same worker page. WorkerVisitTable gives every row an hx-get
+  # for its details panel, which is a stable way to pick out data rows without
+  # depending on the column layout (Date, Entity Name, Deliver Unit, Payment Unit,
+  # Last Activity, Status).
+  worker_visit_rows: "//table//tr[@hx-get]"
+  confirm_modal_title: "confirm-modal-title"
+  confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
+
+# --- Worker invite + hybrid (Phase 2) ---
+connect_worker_invite_page:
+  users_textarea: "id_users"
+  submit_btn: "submit-id-submit"
+  form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
+  error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"

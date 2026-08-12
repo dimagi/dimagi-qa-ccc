@@ -29,6 +29,28 @@ def test_data():
     return TestDataLoader()
 
 
+def pytest_html_results_summary(prefix):
+    """Drop the report's sticky view state so every open starts failures-first.
+
+    pytest-html remembers the sort direction in sessionStorage and mirrors sort
+    and collapse choices into the URL, so a reader who clicked around once can
+    reopen the report with failures sorted last and rows collapsed. Clearing
+    those keys before the report's own script runs makes the ordering from
+    pytest.ini (initial_sort / render_collapsed) win every time.
+    """
+    prefix.append(
+        "<script>try {"
+        " sessionStorage.removeItem('sortAsc');"
+        " sessionStorage.removeItem('collapsedIds');"
+        " const url = new URL(window.location.href);"
+        " if (url.searchParams.has('sort') || url.searchParams.has('collapsed')) {"
+        "   url.searchParams.delete('sort'); url.searchParams.delete('collapsed');"
+        "   window.history.replaceState({}, '', url.href);"
+        " }"
+        "} catch (e) {}</script>"
+    )
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Embed screenshots of every open page into the pytest-html report on failure."""

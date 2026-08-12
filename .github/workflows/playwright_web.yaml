@@ -23,20 +23,56 @@ on:
         options:
           - stage
           - prod
+          - both
 
+# A push cancels the previous push's run - newest commit wins - but a manual
+# dispatch is its own group, so dispatching one environment does not kill a run
+# covering the other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'push' }}
   cancel-in-progress: true
 
 jobs:
-  playwright-web:
-    name: Playwright Web Tests (${{ inputs.environment || 'stage' }})
+  resolve-matrix:
+    name: Resolve Environment Matrix
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        # Manual dispatch runs whatever was asked for; anything else - a push to a
+        # PR - runs both environments, so a change is never merged having only been
+        # proven against staging.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.environment }}" = "both" ]; then
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            else
+              echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+          fi
+
+  playwright-web:
+    name: Playwright Web Tests (${{ matrix.environment }})
+    needs: resolve-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      # Report both environments even when one fails - a prod-only failure is the
+      # interesting case and cancelling it would hide it.
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
 
     env:
-      TEST_ENV: ${{ inputs.environment || 'stage' }}
+      TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
+      # The hybrid tasking test drives a real device mid-test, so this job needs the
+      # same BrowserStack credentials the Maestro workflow uses. It used to
+      # self-skip while TASKING_HYBRID was unset, which is why they were not here.
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
     steps:
       - uses: actions/checkout@v4
