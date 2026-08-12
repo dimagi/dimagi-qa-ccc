@@ -232,3 +232,41 @@ connect_worker_invite_page:
   submit_btn: "submit-id-submit"
   form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
   error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
+
+# CCCT-2671. Carried over from the legacy Selenium locators (locators/web_locators.yaml)
+# because they are proven against these HQ pages; the positional XPaths marked BRITTLE
+# want replacing with semantic anchors once the DOM has been inspected directly.
+cchq_messaging_page:
+  messaging_tab: "MessagingTab"
+  messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
+
+  # --- Conditional alerts ---
+  new_conditional_alert: "//*[@id='conditional-alert-list']/div[1]/div[1]/div/a[1]"  # BRITTLE
+  conditional_alert_name_input: "id_conditional-alert-name"
+  continue_btn: "//button[contains(text(), 'Continue')]"
+  case_type_input: "id_criteria-case_type"
+  select_a_filter_btn: "//button[.//i[contains(@class,'fa-plus')]]"
+  case_property_filter_option: "//button[.//i[contains(@class,'fa-plus')]]/..//a[normalize-space()='Case property']"
+  case_property_entity_dropdown: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[2]/case-property-input/div/select"  # BRITTLE
+  case_property_equals_dropdown: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[3]/select"  # BRITTLE
+  case_property_name_input: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[4]/input"  # BRITTLE
+  alerts_list_table: "conditional-alert-list"
+  alert_row: "//table[contains(@class,'table')]/tbody/tr"
+  search_box: "//form[@class='input-group']/input[@class='form-control']"
+  search_btn: "//button/i[contains(@class,'search')]"
+
+  # --- Shared by alerts and broadcasts ---
+  recipient_input: "//*[@id='div_id_schedule-recipient_types']//textarea"
+  user_recipients_input: "//*[@id='div_id_schedule-user_recipients']//textarea"
+  what_to_send_input: "id_schedule-content"
+  message_input: "(//div[./input[@id='id_content-message']]//textarea)[1]"
+  survey_form_input: "id_content-app_and_form_unique_id"
+  expire_after_input: "id_content-survey_expiration_in_hours"
+  save_btn: "//button[text()='Save']"
+
+  # --- Broadcasts ---
+  add_broadcast_btn: "//*[@id='hq-content']/div[2]/a"  # BRITTLE
+  broadcast_name_input: "id_schedule-schedule_name"
+  send_broadcast_btn: "//*[@id='create-schedule-form']/div[2]/div/button"  # BRITTLE
+  broadcasts_table: "//div[@id='immediate-broadcasts']//table"
+  page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
