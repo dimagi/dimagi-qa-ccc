@@ -137,3 +137,62 @@ MAESTRO_WORKER_RELEARN_TASK:
   phone_number_staging: "3119728"
   username_staging: "Relearn Task User"
   backup_code_staging: "123456"
+
+# --- Connect messaging (CCCT-2671) ---
+#
+# Which worker serves which case, so the mapping is not folklore:
+#
+#   MAESTRO_MESSAGING_HYBRID  -> the hybrid tests that need a channel and a
+#                                delivery form. Used by:
+#                                  TC-CAL-003 / TC-CAL-005  conditional alert
+#                                    message + survey arriving in the channel
+#                                    (ports legacy test_tc_09 / Messaging_2,3)
+#                                  TC-BRD-002 / TC-BRD-003  broadcast message +
+#                                    survey (ports legacy test_tc_10 /
+#                                    Messaging_5,6)
+#                                  TC-KWD-002 / TC-KWD-004  keyword-triggered
+#                                    message + survey, sent from the channel
+#                                  TC-MSG-003..006  unread counts, drawer badge,
+#                                    push deep-link
+#
+# The worker must be enrolled and already delivering on an opportunity whose
+# deliver app has a Registration Form - the conditional alert fires on that
+# submission. It does NOT need a channel seeded: the first Connect Message
+# creates one, and ConnectID's CreateChannelView is get_or_create, so the
+# channel then persists and is reused by every later run.
+#
+# Environments deliberately use different numbers. A PersonalID number cannot
+# hold a session on two environments at once, and stage and prod run on the same
+# push, so a shared number means the two device sessions evict each other
+# mid-flow.
+MAESTRO_MESSAGING_HYBRID:
+  # Prod: the worker legacy test_tc_09 already used (mobile_workers.yaml TC_9),
+  # enrolled on opportunity "test_09". Its HQ user id is the alert recipient,
+  # recorded as MESSAGING.alert_recipient_id in web_test_data.yaml.
+  country_code: "+7426"
+  phone_number: "7426121"
+  username: "CCC- Automationuser1"
+  backup_code: "123123"
+  # Staging: created 2026-08-12 specifically for the messaging tests. Full number
+  # is +74264678161 - "+7426" is the country code, so the subscriber part is
+  # 4678161, matching the 7-digit shape of every other worker here.
+  # Still to confirm on staging: which opportunity it is enrolled on, and its HQ
+  # user id for MESSAGING.alert_recipient_id_staging.
+  phone_number_staging: "4678161"
+  username_staging: "Message Automation User"
+  backup_code_staging: "123456"
+
+# Deliberately subscribed to NO channels - the empty-state case asserts
+# "You're not subscribed to any messaging channels".
+#   MAESTRO_MESSAGING_EMPTY_STATE -> TC-CHN-003
+# Left pointing at the login worker until confirmed on a device: that account has
+# most likely never been added to a channel, in which case no new account is
+# needed at all.
+MAESTRO_MESSAGING_EMPTY_STATE:
+  country_code: "+7426"
+  phone_number: "7426426"
+  username: "Automation User 26"
+  backup_code: "123456"
+  phone_number_staging: "7426000"
+  username_staging: "Deb Test 8/12"
+  backup_code_staging: "742600"
