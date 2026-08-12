@@ -198,20 +198,36 @@ class CCHQMessagingPage(BasePage):
         self._step(f"'What to Send' offers {expected}")
 
     def enter_message(self, message):
-        self.scroll_into_view(self.MESSAGE_INPUT)
+        # See enter_expire_after: no explicit scroll, for the same reason.
         self._type_keys(self.MESSAGE_INPUT, message)
 
     def select_survey_form(self, value):
-        self.scroll_into_view(self.SURVEY_FORM_INPUT)
+        """Pick the survey form, e.g. 'Delivery App - ETE > Surveys > Survey'.
+
+        Selecting "Connect Survey" re-renders the content panel and then fills
+        this dropdown asynchronously, so the element is briefly present but
+        detached - scrolling to it raced the re-render and failed with "Element
+        is not attached to the DOM". Waiting for it to hold real options is the
+        reliable signal, and Playwright scrolls to it on select anyway.
+        """
+        self.wait_for_select_options_loaded(self.SURVEY_FORM_INPUT)
         self.select_by_visible_text(self.SURVEY_FORM_INPUT, value)
 
     def enter_expire_after(self, hours):
-        self.scroll_into_view(self.EXPIRE_AFTER_INPUT)
+        # No explicit scroll: _type_keys waits for visibility and clicking
+        # scrolls the field into view, whereas a scroll issued during the
+        # content panel's re-render hits a detached element.
         self._type_keys(self.EXPIRE_AFTER_INPUT, hours)
 
     def click_save_btn(self):
-        self.scroll_into_view(self.SAVE_BTN)
-        self.click(self.SAVE_BTN)
+        # No explicit scroll: the content panel is still settling when Save
+        # first appears, so scrolling to it raced the re-render and failed with
+        # "Element is not attached to the DOM" - intermittently, which is worse
+        # than always. Waiting for it to be enabled and letting click() scroll
+        # is both simpler and stable.
+        save = self._locator(self.SAVE_BTN)
+        expect(save).to_be_enabled(timeout=60_000)
+        save.click()
         # Saving leaves the wizard and returns to the list. Waiting for the URL to
         # stop being an /add page is what the original's sleep(50) was standing in
         # for, and it fails fast when a validation error keeps us on the form.
@@ -289,34 +305,60 @@ class CCHQMessagingPage(BasePage):
         self.click_continue_btn()
         return self.what_to_send_options()
 
-    def delete_existing_alerts(self, name_prefix):
-        """Delete every active alert whose name contains `name_prefix`.
+    def wait_for_alert_list(self, timeout=60_000):
+        """Wait until the alert list has actually finished rendering.
+
+        The table body is filled by JS after the load event, so enumerating rows
+        straight away sees either nothing or half-rendered rows whose buttons
+        detach mid-click - which is what made the delete intermittently time out
+        with "element is not enabled ... detached from the DOM". Either a row or
+        the explicit "There are no alerts to display" panel means it has settled.
+        """
+        self.page.wait_for_function(
+            """() => {
+                if (document.querySelectorAll("table[class*='table'] tbody tr").length > 0) return true;
+                return Array.from(document.querySelectorAll('div,p,td'))
+                    .some(el => el.textContent.trim().startsWith('There are no alerts to display'));
+            }""",
+            timeout=timeout,
+        )
+
+    def delete_existing_alerts(self, name_prefix, per_alert_timeout=60_000):
+        """Delete every alert whose name contains `name_prefix`.
 
         Deletion is confirmed by a native JS confirm(), so a dialog handler is
-        registered for the duration. Rows are re-read after each delete: the
-        table re-renders and previously captured handles go stale.
+        registered for the duration. The row is re-resolved by name on each pass
+        rather than held across deletes, because the table re-renders and any
+        captured handle goes stale.
+
+        A freshly saved alert spends a while in a non-active state with its
+        delete control disabled. Rather than blocking on that, this gives up on
+        it after `per_alert_timeout` and leaves it: the next run's pre-test
+        cleanup removes it once it has settled, so cleanup is self-healing
+        instead of slow.
         """
         self.page.on("dialog", lambda dialog: dialog.accept())
         deleted = 0
         while True:
-            deleted_any = False
-            for row in self.page.locator(self.ALERT_ROW).all():
-                try:
-                    name = row.locator("td").nth(1).inner_text().strip()
-                    status = row.locator("td").nth(3).inner_text().strip().lower()
-                except Exception:
-                    continue
-                if name_prefix not in name or status != "active":
-                    continue
-                delete_btn = row.locator("td").nth(0).locator("button").first
-                delete_btn.scroll_into_view_if_needed()
-                delete_btn.click()
-                self._wait_loaded()
-                deleted += 1
-                deleted_any = True
+            self.wait_for_alert_list()
+            rows = self.page.locator(
+                "//table[contains(@class,'table')]/tbody/tr"
+                f"[td[contains(normalize-space(), \"{name_prefix}\")]]"
+            )
+            if rows.count() == 0:
                 break
-            if not deleted_any:
+            delete_btn = rows.first.locator("td").first.locator("button").first
+            try:
+                expect(delete_btn).to_be_enabled(timeout=per_alert_timeout)
+            except AssertionError:
+                self._step(
+                    f"'{name_prefix}' alert is not deletable yet (still processing) - "
+                    "leaving it for the next run's cleanup"
+                )
                 break
+            delete_btn.click()
+            self._wait_loaded()
+            deleted += 1
         self._step(f"removed {deleted} existing '{name_prefix}' alert(s)")
         return deleted
 
