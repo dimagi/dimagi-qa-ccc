@@ -1,0 +1,112 @@
+# Worker side of the hybrid broadcast test (TC-BRD-002, and TC-CHN-002 in passing).
+#
+# Web sends a Connect Message broadcast, this flow has the worker open the
+# channel on a real device and assert the exact body arrives.
+#
+# A BrowserStack session always starts from a fresh install, so this runs the
+# whole cold start: PersonalID sign-in, then straight to Messaging. Unlike the
+# tasking flow it never touches Opportunities or the deliver app - a broadcast
+# needs no delivery, only a PersonalID user with a channel.
+#
+# Ids come from commcare-android:
+#   backup_code_view / welcome_back / connect_backup_code_button
+#       fragment_recovery_code.xml - 2.63 replaced the single backup-code field
+#       with a six-box NumericCodeView, so the code is typed into the focused view.
+#   nav_drawer_recycler   the drawer PersonalIdManager.completeSignin() opens
+#   "Messaging"           connect_messaging_title, always present once PersonalID
+#                         is signed in (no feature flag)
+#   "Channels"            connect_messaging_channel_list_title
+#   tvChannelName         item_channel.xml. The click handler is on itemRootLayout,
+#                         not the label, but a tap on the label bubbles to it.
+#   etMessage / rvChat / tvChatMessage   fragment_connect_message.xml
+# Ids are bare so the flow also matches debug builds, which suffix the applicationId.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  # The channel is named after the HQ domain (channel_source / META_CHANNEL_NAME),
+  # so it differs per environment. Injected by the runner.
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # The exact broadcast body the web half generated. Injected per run so this
+  # asserts on the message this run sent, not on "some message arrived".
+  EXPECTED_MESSAGE: "Test Connect Message Broadcast"
+---
+# permissions/all: Android 13 gates POST_NOTIFICATIONS behind a runtime grant and
+# a cleared state re-asks for it. Messages arrive by FCM, so without it the
+# delivery path under test is disabled.
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# An existing PersonalID user lands on "Welcome back <name>" and authenticates
+# with a backup code; a brand new number skips straight past this.
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+# completeSignin() opens the drawer itself, so it is usually already showing.
+# Open it only if it is not - tapping the hamburger while it is open closes it.
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open Messaging ---
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+
+# The channel is created server-side by HQ's consent request and synced on first
+# launch, so a missing channel here means the sync failed rather than the test
+# being wrong - assert it explicitly before tapping.
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+
+# The thread is open once the composer is there. etMessage doubles as the
+# "not subscribed" banner, so its presence also proves the channel is consented.
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- The broadcast must arrive ---
+# It travels HQ -> ConnectID -> FCM -> device, and the open thread also re-polls
+# every 30s (ConnectMessageFragment INTERVAL), so allow well past one poll.
+# Substring match: Maestro's text selector is a full match unless wrapped.
+- extendedWaitUntil:
+    visible:
+      text: ".*${EXPECTED_MESSAGE}.*"
+    timeout: 420000
+# A message with no timestamp would mean a half-rendered bubble.
+- assertVisible:
+    id: "tvChatDate"

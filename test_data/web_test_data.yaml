@@ -200,9 +200,26 @@ MESSAGING:
   # carried over from the legacy page object, which hardcoded them per env.
   survey_form: "Delivery App - ETE > Surveys > Survey"
   survey_form_staging: "SMS Tests [DO NOT DELETE] > Surveys > Survey"
-  # HQ user id of the mobile worker that alerts and broadcasts are addressed to.
-  # Prod values only: they come from mobile_workers.yaml TC_9 (alerts) and this
-  # file's MESSAGING_4_5_6 block (broadcasts), both of which are prod-only. The
-  # staging ids still have to be discovered from HQ's recipient picker.
-  alert_recipient_id: "049b54d12e564f418397"
-  broadcast_recipient_id: "001b8edd7bc3d3c58a70"
+  # HQ user id of the mobile worker every alert and broadcast is addressed to.
+  # It MUST be the user that MAESTRO_MESSAGING_HYBRID signs in as on the device
+  # (prod: CCC- Automationuser1, +74267426121), or the message is delivered to
+  # somebody else's channel and the device waits for something that was never
+  # sent to it.
+  #
+  # One id, not one per content type. Legacy used a second id for broadcasts
+  # (MESSAGING_4_5_6 -> 001b8edd7bc3d3c58a70), which belongs to a different
+  # account entirely - harmless when nothing checked the phone, wrong the moment
+  # a device does.
+  #
+  # Prod value only. The staging id still has to be read off HQ's recipient
+  # picker once "Message Automation User" is enrolled.
+  worker_user_id: "049b54d12e564f418397"
+  # The mobile channel is named after the HQ domain - ConnectID stores it as
+  # channel_source and the app renders that as the channel name.
+  channel_name: "connectqa-automation-prod"
+  channel_name_staging: "connectqa-automation"
+  # Maestro flow driving the device half of the broadcast test. The worker is
+  # deliberately not repeated here: it lives in mobile_workers.yaml under
+  # MAESTRO_MESSAGING_HYBRID, the single source the Maestro runner resolves per
+  # environment, so web and device cannot disagree about who signs in.
+  broadcast_flow: "messaging_broadcast.yaml"

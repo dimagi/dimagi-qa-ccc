@@ -267,7 +267,7 @@ cchq_messaging_page:
   # --- Broadcasts ---
   add_broadcast_btn: "//*[@id='hq-content']/div[2]/a"  # BRITTLE
   broadcast_name_input: "id_schedule-schedule_name"
-  send_broadcast_btn: "//*[@id='create-schedule-form']/div[2]/div/button"  # BRITTLE
+  send_broadcast_btn: "//button[normalize-space()='Send Broadcast']"
   broadcasts_table: "//div[@id='immediate-broadcasts']//table"
   page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
 

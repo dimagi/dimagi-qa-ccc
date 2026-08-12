@@ -40,6 +40,7 @@ WORKER_BY_FLOW = {
     # Connect evaluated the blocked visit before the task completion is submitted.
     "worker_blocked_visit.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     "worker_relearn_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    "messaging_broadcast.yaml": "MAESTRO_MESSAGING_HYBRID",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

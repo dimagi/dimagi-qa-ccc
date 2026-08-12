@@ -1,19 +1,20 @@
 """HQ-side Connect messaging tests that need no device (CCCT-2671).
 
-Covers the cases from Messaging_Workflow_Automation_Test_Plan.xlsx that are
-web-only, so they run today without the hybrid runner from PR #23:
+Covers the cases from Messaging_Workflow_Automation_Test_Plan.xlsx that need no
+device at all - configuring the HQ side and asserting it saved:
 
   TC-CAL-001  'What to Send' offers Connect Message and Connect Survey (alerts)
   TC-BRD-001  the same two options on Broadcasts
   TC-CAL-002  a Connect Message conditional alert can be created
   TC-CAL-004  a Connect Survey conditional alert can be created
+  TC-KWD-001  a keyword replying with a Connect Message can be created
+  TC-KWD-003  a keyword replying with a Connect Survey can be created
+              (plus the keyword counterpart of the two dropdown checks)
 
-TC-CAL-003 and TC-CAL-005 - the alert actually firing and reaching the channel -
-are the hybrid half and land once the device runner is available.
-
-Keyword cases (TC-KWD-001/003) are not here: the Keywords pages have no legacy
-locators to carry over, so their page methods are still to be written against
-the real DOM.
+The cases where a message has to actually reach a worker - TC-CAL-003/005,
+TC-BRD-002/003, TC-KWD-002/004 - live in test_messaging_hybrid.py, because the
+assertion can only be made on the device: message bodies are encrypted with a
+per-channel key that never leaves it.
 
 Run with:  pytest playwright_web/tests/test_messaging_web.py --env prod
 """
@@ -64,7 +65,7 @@ def messaging(page, config, settings):
 @pytest.fixture
 def messaging_data(test_data, config):
     data = dict(test_data.get("MESSAGING"))
-    for key in ("survey_form", "alert_recipient_id", "broadcast_recipient_id"):
+    for key in ("survey_form", "worker_user_id"):
         data[key] = _env_value(data, key, config)
     missing = [key for key, value in data.items() if not value]
     if missing:
@@ -107,7 +108,7 @@ def test_create_connect_message_conditional_alert(messaging, messaging_data):
     try:
         message = messaging.create_connect_message_conditional_alert(
             entity_id_value=entity_id,
-            user_recipients=[messaging_data["alert_recipient_id"]],
+            user_recipients=[messaging_data["worker_user_id"]],
         )
         assert message, "No message body was generated for the alert"
     finally:
@@ -158,7 +159,7 @@ def test_create_connect_survey_conditional_alert(messaging, messaging_data):
     try:
         messaging.create_connect_survey_conditional_alert(
             entity_id_value=entity_id,
-            user_recipients=[messaging_data["alert_recipient_id"]],
+            user_recipients=[messaging_data["worker_user_id"]],
             survey_form=messaging_data["survey_form"],
         )
     finally:

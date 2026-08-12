@@ -140,14 +140,26 @@ class CCHQMessagingPage(BasePage):
         """
         field = self._locator(selector)
         field.wait_for(state="visible")
+        # The wrapper holds the committed tokens, so it is what proves the value
+        # actually took.
+        container = field.locator("xpath=ancestor::div[starts-with(@id,'div_id_schedule')][1]")
         for value in values:
             field.click()
             field.type(str(value))
-            # The dropdown has to resolve the typed text to a real option before
-            # Enter will take it - without this the keystroke lands on an empty
-            # result list and the token is silently dropped.
-            self.page.wait_for_timeout(500)
+            # The dropdown resolves the typed text against an asynchronously
+            # loaded option list; Enter pressed before the option exists is
+            # silently dropped and the field stays empty.
+            self.page.wait_for_timeout(1500)
             field.press("Enter")
+            # Verify rather than assume. An uncommitted token leaves a required
+            # field blank, and the only symptom is that the form refuses to
+            # submit with no visible error - which cost a BrowserStack build to
+            # diagnose. A value that never resolves is usually an id that does
+            # not exist on this environment.
+            expect(container).to_contain_text(
+                str(value),
+                timeout=15_000,
+            )
 
     # --------------------------------------------------------------- navigation
 
