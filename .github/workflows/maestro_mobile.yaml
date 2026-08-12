@@ -13,17 +13,56 @@ on:
       - '.github/workflows/maestro_mobile.yaml'
 
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - stage
+          - prod
+          - both
 
+# Keyed on the environment as well, so a stage run and a prod run of the same
+# branch do not cancel one another.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'push' }}
   cancel-in-progress: true
 
 jobs:
-  maestro-mobile:
-    name: Maestro Mobile Tests (BrowserStack)
+  resolve-matrix:
+    name: Resolve Environment Matrix
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.environment }}" = "both" ]; then
+              echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+            else
+              echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
+          fi
+
+  maestro-mobile:
+    name: Maestro Mobile Tests (${{ matrix.environment }})
+    needs: resolve-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
+      # One device build at a time. The web suite's hybrid test also takes a
+      # BrowserStack session, so a push can want several at once; serialising the
+      # cheap half (a mobile run is ~5 minutes) keeps us under the parallel limit.
+      max-parallel: 1
 
     env:
+      APP_ENV: ${{ matrix.environment }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
@@ -35,16 +74,29 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        # pyyaml: the runner reads test_data/mobile_workers.yaml to resolve each
+        # flow's worker for this environment.
+        run: pip install requests pyyaml
+
+      # The report's trend line needs the previous runs' pass rates, and reports are
+      # artifacts rather than committed files. Cached per environment: stage and prod
+      # are different systems, so one shared history would average two unrelated pass
+      # rates into a number describing neither.
+      - name: Restore report history
+        uses: actions/cache/restore@v4
+        with:
+          path: maestro_history_${{ matrix.environment }}.json
+          key: maestro-history-${{ matrix.environment }}-${{ github.run_id }}
+          restore-keys: maestro-history-${{ matrix.environment }}-
 
       - name: Run Maestro flows on BrowserStack
         id: bs
-        # Uploads the staging APK and maestro_mobile/flows, runs them on a real
-        # device via App Automate, and polls until the build finishes. Exits
+        # Uploads the environment's APK and maestro_mobile/flows, runs them on a
+        # real device via App Automate, and polls until the build finishes. Exits
         # non-zero unless the build status is "passed".
         run: |
           set -o pipefail
-          python maestro_mobile/scripts/run_on_browserstack.py | tee bs_output.log
+          python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee bs_output.log
 
       - name: Parse Results
         id: aggregate
@@ -69,12 +121,21 @@ jobs:
             } >> $GITHUB_OUTPUT
           fi
 
+      - name: Save report history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: maestro_history_${{ matrix.environment }}.json
+          key: maestro-history-${{ matrix.environment }}-${{ github.run_id }}
+
       - name: Upload Report
         id: report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-mobile-report
+          # Per environment: upload-artifact@v4 rejects two uploads sharing a name,
+          # so the stage and prod legs of one run would collide.
+          name: maestro-mobile-report-${{ matrix.environment }}
           path: |
             maestro_report.html
             maestro_report.json

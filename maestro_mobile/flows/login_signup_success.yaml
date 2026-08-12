@@ -4,6 +4,9 @@ env:
   PHONE_NUMBER: "7426000"
   USERNAME: "Deb Test 8/12"
   BACKUP_CODE: "742600"
+  # Deliberately not this account's code - the flow checks the wrong-code error
+  # path first. The runner overrides it with a value that cannot equal BACKUP_CODE.
+  WRONG_BACKUP_CODE: "000000"
 ---
 - launchApp:
     clearState: true
@@ -11,36 +14,29 @@ env:
 - assertVisible:
     id: "org.commcare.dalvik:id/welcome_back"
     text: "Welcome back ${USERNAME}"
+# 2.63 replaced the single connect_backup_code_input field with a six-box
+# NumericCodeView, backup_code_view (fragment_recovery_code.xml). Tapping the
+# view focuses the first empty box - NumericCodeView.onFocusChange redirects
+# focus there - and each typed digit advances to the next box by itself. The
+# numeric keypad raises no autofill dialog, so the optional "Cancel" taps that
+# guarded the old text field are gone with it. Ids are bare so the flow also
+# matches debug builds, which add a .debug suffix to the applicationId.
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "backup_code_view"
+- inputText: "${WRONG_BACKUP_CODE}"
 - tapOn:
-    text: "Cancel"
-    optional: true
-- tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
-- inputText: "123456"
-- tapOn:
-    text: "Cancel"
-    optional: true
-- tapOn:
-    text: "CONTINUE"
+    id: "connect_backup_code_button"
 - assertVisible:
     text: ".*You have entered the wrong Backup Code.*"
 - tapOn:
     text: "OK"
+# handleFailedBackupCodeAttempt() calls clearBackupCodeFields() before it
+# navigates to that message, so the boxes are already empty on the way back.
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
-- tapOn:
-    text: "Cancel"
-    optional: true
-- tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "backup_code_view"
 - inputText: "${BACKUP_CODE}"
 - tapOn:
-    text: "Cancel"
-    optional: true
-- tapOn:
-    text: "CONTINUE"
+    id: "connect_backup_code_button"
 - tapOn:
     text: "OK"
 - assertVisible:

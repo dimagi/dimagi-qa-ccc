@@ -37,7 +37,9 @@ class ConnectProgramsPage(BasePage):
         self.page.locator(self.PROGRAM_NAME_INPUT).first.wait_for(state="visible")
         self.page.locator(self.PROGRAM_NAME_INPUT).first.fill(program_name)
         self.page.locator(self.PROGRAM_DESCRIPTION_INPUT).first.fill(data["program_description"])
-        self.select_by_visible_text(self.PROGRAM_DELIVERY_TYPE_DROPDOWN, data["delivery_type"])
+        # Case-insensitive: staging lists this delivery type as "Wellme", prod as
+        # "WellMe", and one test-data value has to satisfy both.
+        self.select_by_visible_text_ci(self.PROGRAM_DELIVERY_TYPE_DROPDOWN, data["delivery_type"])
         self.page.locator(self.PROGRAM_BUDGET_INPUT).first.fill(data["program_budget"])
         self.select_by_visible_text_forced(self.PROGRAM_CURRENCY_DROPDOWN, data["currency"])
         self.select_by_visible_text_forced(self.PROGRAM_COUNTRY_DROPDOWN, data["country"])
@@ -50,8 +52,28 @@ class ConnectProgramsPage(BasePage):
         return program_name
 
     def verify_program_present(self, program_name):
+        """Find a program's card, reporting what was on the page if it is not there.
+
+        Known failing on staging as of 04-Aug-2026: the program IS created, but its
+        card never appears. Programs cannot be deleted, so the list only grows, and
+        the likely cause is that the newest one is no longer on the first page -
+        unlike the opportunities list, this page offers no page-size control to
+        widen, so it needs a different fix (pagination or a filter). Until then the
+        failure at least says what it did see, instead of a bare 30s timeout.
+        """
         card = self.page.locator(self.PROGRAM_CARD_BY_NAME.format(program=program_name)).first
-        card.wait_for(state="visible", timeout=30000)
+        try:
+            card.wait_for(state="visible", timeout=30000)
+        except Exception:
+            visible = [
+                text.strip().splitlines()[0]
+                for text in self.page.locator(self.PROGRAM_CARD_BY_NAME.format(program="")).all_inner_texts()
+                if text.strip()
+            ]
+            raise AssertionError(
+                f"Program '{program_name}' was created but its card is not on the page. "
+                f"{len(visible)} card(s) visible: {visible[:10]}"
+            ) from None
 
     def invite_network_manager(self, program_name, network_manager):
         self.click(self.INVITE_BTN_BY_PROGRAM.format(program=program_name))
