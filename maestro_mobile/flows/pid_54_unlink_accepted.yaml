@@ -1,5 +1,9 @@
 # PID_54 - Selecting Yes on the unlink prompt severs the link; the worker logs in
 # and is no longer PersonalId-managed.
+#
+# Restores the link at the end (log out -> password login -> Yes on the link
+# prompt) so the worker is left linked on HQ, matching the web PID_59 behaviour
+# and keeping the dedicated worker reusable.
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_pid_relink_to_unlink_prompt.yaml
@@ -8,3 +12,20 @@ appId: org.commcare.dalvik
     visible: { text: "Logged In: ${MW_USERNAME}" }
     timeout: 30000
 - assertNotVisible: { text: "Unlink PersonalId?" }
+
+# --- restore: re-link the worker so it is left linked ---
+- tapOn: { text: "Log out of CommCare" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/edit_password" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/edit_password" }
+- inputText: "${MW_PASSWORD}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/login_button" }
+- extendedWaitUntil:
+    visible: { text: "Link to PersonalId?" }
+    timeout: 45000
+- tapOn: { text: "YES" }
+- extendedWaitUntil:
+    visible: { text: "Logged In: ${MW_USERNAME}" }
+    timeout: 30000

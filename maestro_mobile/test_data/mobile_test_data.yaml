@@ -13,14 +13,12 @@ TC_2:
 # Personal ID - Traditional App Install & Login (PID_48-55). One identity drives
 # the whole link/unlink lifecycle: a PersonalId account signed into on the device,
 # a traditional (non-Connect) app installed by code, and a mobile worker whose
-# password login is offered for linking. These are throwaway staging test creds
-# (same convention as the backup codes above); the MW_PASSWORD env var can
-# override mw_password to run against a different worker.
+# password login is offered for linking. The mobile worker credentials are
+# secrets - the runner reads mw_username / mw_password from settings.cfg [mobile]
+# (gitignored), not from here.
 PID_TRADITIONAL_LINK:
   country_code: "+7426"
   pid_phone: "7426000"          # PersonalId phone (existing staging account)
   pid_name: "Deb Test 8/12"     # PersonalId account name
   pid_backup: "742600"          # PersonalId 6-digit backup code
   app_code: "4bIPM1L"           # traditional app "[AV] Connect AI Automation" (qateam)
-  mw_username: "av_connectautomation"
-  mw_password: "pass@123"

@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import os
 import shutil
 import subprocess
@@ -9,6 +10,9 @@ import yaml
 
 FLOWS_DIR = Path(__file__).parent.parent / "flows"
 TEST_DATA_FILE = Path(__file__).parent.parent / "test_data" / "mobile_test_data.yaml"
+# Mobile worker credentials are secrets - kept in the gitignored settings.cfg at
+# the repo root (same file the web suite uses), not in the committed yaml.
+SETTINGS_FILE = Path(__file__).parent.parent.parent / "settings.cfg"
 
 FLOW_BY_CASE = {
     "TC_1": "login_signup_success.yaml",
@@ -27,27 +31,43 @@ FLOW_BY_CASE = {
 # the case id.
 DATA_KEY_BY_CASE = {c: "PID_TRADITIONAL_LINK" for c in FLOW_BY_CASE if c.startswith("PID_")}
 
-# Optional environment overrides for individual data fields (e.g. to run against
-# a different worker without editing the yaml). Falls back to the yaml value.
-ENV_OVERRIDE = {"mw_password": "MW_PASSWORD"}
+# Secret fields sourced from settings.cfg [mobile] (or an env override), never
+# the committed yaml. env_var wins, then settings.cfg, then any yaml fallback.
+SECRET_FIELDS = {
+    "mw_username": ("mobile", "mw_username", "MW_USERNAME"),
+    "mw_password": ("mobile", "mw_password", "MW_PASSWORD"),
+}
 
 
 def load_test_data(case_key):
     with open(TEST_DATA_FILE) as f:
         data = yaml.safe_load(f)
-    return data[DATA_KEY_BY_CASE.get(case_key, case_key)]
+    entry = dict(data[DATA_KEY_BY_CASE.get(case_key, case_key)])
+    if case_key.startswith("PID_"):
+        entry.update(_load_mobile_secrets())
+    return entry
+
+
+def _load_mobile_secrets():
+    cfg = configparser.ConfigParser()
+    cfg.read(SETTINGS_FILE)
+    resolved = {}
+    for field, (section, key, env_var) in SECRET_FIELDS.items():
+        value = os.getenv(env_var) or (
+            cfg.get(section, key, fallback="").strip() if cfg.has_section(section) else ""
+        )
+        if not value:
+            sys.exit(
+                f"Missing {field}: set [{section}] {key} in settings.cfg "
+                f"(or the {env_var} env var)."
+            )
+        resolved[field] = value
+    return resolved
 
 
 def build_env_args(data):
-    """One -e KEY=value per data field (keys upper-cased to match the flows).
-    An ENV_OVERRIDE env var, when set, wins over the yaml value for that field."""
-    args = []
-    for key, value in data.items():
-        env_var = ENV_OVERRIDE.get(key)
-        if env_var and os.getenv(env_var):
-            value = os.getenv(env_var)
-        args += ["-e", f"{key.upper()}={value}"]
-    return args
+    """One -e KEY=value per data field (keys upper-cased to match the flows)."""
+    return [arg for key, value in data.items() for arg in ("-e", f"{key.upper()}={value}")]
 
 
 def run_flow(case_key):
