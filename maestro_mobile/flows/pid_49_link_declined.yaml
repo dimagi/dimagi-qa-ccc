@@ -1,0 +1,8 @@
+# PID_49 - Selecting No logs the worker into the app normally (link not created).
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_link_base.yaml
+- tapOn: { text: "NO" }
+- extendedWaitUntil:
+    visible: { text: "Logged In: ${MW_USERNAME}" }
+    timeout: 30000

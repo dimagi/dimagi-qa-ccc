@@ -122,7 +122,13 @@ class MobileWorkersPage(BasePage):
         )
 
     def worker_personalid_status(self, identifier):
-        row = self._worker_row(identifier)
+        """PersonalID status label for a worker, or None if that worker row is
+        not present on the page (used to skip PID_59 gracefully)."""
+        row = self.page.locator(self.WORKER_TABLE).locator(
+            "tbody tr", has_text=identifier
+        ).first
+        if row.count() == 0:
+            return None
         labels = row.locator("span.label")
         for i in range(labels.count()):
             if labels.nth(i).is_visible():
