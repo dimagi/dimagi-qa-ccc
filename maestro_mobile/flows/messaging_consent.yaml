@@ -134,7 +134,18 @@ env:
 - eraseText
 
 # ...and the row is no longer flagged, leaving the account as it was found.
+#
+# Two Backs, conditionally: the composer still holds focus after typing, so the
+# first Back dismisses the soft keyboard rather than navigating and the screen
+# stays on the thread. The earlier Back in this flow needs no such handling
+# because nothing had been typed at that point.
 - back
+- runFlow:
+    when:
+      notVisible:
+        text: "Channels"
+    commands:
+      - back
 - extendedWaitUntil:
     visible:
       text: "Channels"
