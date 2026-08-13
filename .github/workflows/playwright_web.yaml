@@ -176,6 +176,7 @@ jobs:
             <h2>CommCare-Connect Playwright Web Report - ${{ env.TEST_ENV }}</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
+            <p><b>Triggered by:</b> ${{ github.actor }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -220,8 +221,10 @@ jobs:
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
+          actor = os.environ.get("GITHUB_ACTOR", "")
           message = (
               f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
+              f"👤 Triggered by: {actor}\n"
               f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
               f"📎 Report: <{artifact_url}|Download here>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
