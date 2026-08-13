@@ -1,0 +1,143 @@
+# Unsubscribe and resubscribe from a channel (TC-SUB-001, 002, 003, 005).
+#
+# Mobile-only: consent is a device action (POST /messaging/update_consent/), so
+# no web half is needed to drive it. The delivery-blocked pair (TC-SUB-004 /
+# TC-SUB-006) is not here - proving a message does not arrive needs a send
+# between two device sessions, and a Maestro build cannot be paused midway.
+#
+# Consent is reversible server-side with no cleanup, so this flow restores the
+# subscribed state before it ends and is safe to re-run.
+#
+# From commcare-android:
+#   "More options"      the toolbar overflow's content-desc (no resource-id)
+#   Unsubscribe / Resubscribe   overflow items, confirmed by a
+#                       CustomThreeButtonAlertDialog
+#   etMessage           doubles as the "not subscribed" banner: disabled and
+#                       showing connect_messaging_channel_list_not_subscribed
+#   imgSendMessage      stays hidden while the channel is unconsented
+#   tvUnsubscribedPill  the channel row's unsubscribed marker
+#
+# NOTE: the confirmation dialog's button labels are inferred from the dialog
+# being a three-button alert - if the first run shows different wording, the
+# failure screenshot will say so and these two taps get corrected.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- TC-SUB-001: unsubscribe ---
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Unsubscribe"
+- tapOn:
+    text: "Unsubscribe"
+
+# --- TC-SUB-002: sending is disabled and the banner explains why ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+- assertNotVisible:
+    id: "imgSendMessage"
+
+# --- TC-SUB-003: the channel row is marked unsubscribed ---
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+- assertVisible:
+    id: "tvUnsubscribedPill"
+
+# --- TC-SUB-005: resubscribe restores the channel ---
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 30000
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Resubscribe"
+- tapOn:
+    text: "Resubscribe"
+
+# The composer works again: typing makes the send control appear, which it only
+# does when the channel is consented AND the input is non-empty. That is a
+# stronger check than the banner merely disappearing.
+- extendedWaitUntil:
+    notVisible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+- tapOn:
+    id: "etMessage"
+- inputText: "resubscribed"
+- assertVisible:
+    id: "imgSendMessage"
+- eraseText
+
+# ...and the row is no longer flagged, leaving the account as it was found.
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+- assertNotVisible:
+    id: "tvUnsubscribedPill"

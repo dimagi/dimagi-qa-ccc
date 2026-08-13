@@ -1,0 +1,105 @@
+# Worker side of the hybrid keyword test (TC-KWD-002).
+#
+# Web configures a keyword whose reply is a Connect Message; this flow has the
+# worker send that keyword from the channel and asserts the configured reply
+# comes back.
+#
+# This is the only case that exercises the worker-initiated send path with a
+# product consequence attached, which is why the plan has no separate "send free
+# text" test - a bubble appearing proves the UI drew something, whereas a reply
+# proves the message actually reached the server and was processed.
+#
+# Ids come from commcare-android fragment_connect_message.xml:
+#   etMessage        the composer
+#   imgSendMessage   GONE until the composer is non-empty AND the channel is
+#                    consented, so it is asserted before being tapped
+#   tvChatMessage    a bubble's text
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # The keyword to send, and the reply HQ is configured to answer it with.
+  KEYWORD: "AUTOKW000000"
+  EXPECTED_REPLY: "Automation keyword reply"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel ---
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Send the keyword ---
+- tapOn:
+    id: "etMessage"
+- inputText: "${KEYWORD}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+
+# The outgoing bubble is optimistic - MessageManager stores it locally and shows
+# it before the network call - so seeing it proves the UI accepted the input,
+# nothing more. The reply below is what proves it reached the server.
+- extendedWaitUntil:
+    visible:
+      text: ".*${KEYWORD}.*"
+    timeout: 60000
+
+# --- The configured reply must come back ---
+# device -> ConnectID -> HQ keyword processing -> back down over FCM, plus the
+# thread's own 30s poll, so allow several minutes.
+- extendedWaitUntil:
+    visible:
+      text: ".*${EXPECTED_REPLY}.*"
+    timeout: 420000
+- assertVisible:
+    id: "tvChatDate"

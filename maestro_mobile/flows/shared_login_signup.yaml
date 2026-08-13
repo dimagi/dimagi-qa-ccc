@@ -27,8 +27,20 @@ appId: org.commcare.dalvik
 - inputText: "${PHONE_NUMBER}"
 - tapOn:
     id: "org.commcare.dalvik:id/connect_consent_check"
+# Wait for CONTINUE to actually become enabled rather than tapping straight
+# after the checkbox. The button is gated on the form re-validating, which lags
+# the tap, and Maestro will happily "tap" a disabled button: its hierarchy-based
+# tap only checks that *something* changed on screen afterwards, and a 0.5%
+# screenshot diff counts. The result is a tap that does nothing, followed by a
+# confusing failure on the next screen's element. Observed intermittently - the
+# same flow passed minutes earlier - so it is a race, not a broken selector.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+      enabled: true
+    timeout: 20000
 - tapOn:
-    text: "CONTINUE"
+    id: "org.commcare.dalvik:id/personalid_phone_continue_button"
 - extendedWaitUntil:
     notVisible:
       id: "org.commcare.dalvik:id/progress_bar"

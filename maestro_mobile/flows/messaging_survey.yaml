@@ -1,0 +1,125 @@
+# Worker side of the hybrid survey test (TC-BRD-003).
+#
+# Web sends a Connect Survey broadcast; this flow has the worker answer it in
+# the channel, question by question. The survey is a conversation, not a form
+# UI: ConnectMessageFragment renders plain text bubbles only, so each question
+# arrives as an incoming message and each answer is sent as ordinary text.
+#
+# Question labels and answers are env values rather than literals. Legacy
+# hardcoded "Name" -> "test user" and "ID" -> "101" inside fill_survey_form(),
+# which tied the test to one specific form; keeping them out here means a
+# different survey only needs different data.
+#
+# Ids come from commcare-android fragment_connect_message.xml:
+#   rvChat / tvChatMessage   the message list and a bubble's text
+#   etMessage                the composer
+#   imgSendMessage           GONE until the input is non-empty AND the channel is
+#                            consented, so it must be typed into before tapping.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # The questions this survey asks, in order, and what to answer them with.
+  Q1_LABEL: "Name"
+  Q1_ANSWER: "Automation Survey User"
+  Q2_LABEL: "ID"
+  Q2_ANSWER: "101"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel ---
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Question 1 ---
+# The survey travels HQ -> ConnectID -> FCM, and an open thread re-polls every
+# 30s, so allow well past one poll interval for the first question.
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_LABEL}.*"
+    timeout: 420000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q1_ANSWER}"
+# The send control only exists once the composer is non-empty, so assert it
+# appeared rather than tapping blind - a hidden button would otherwise fail as
+# "element not found" with no hint that the text never registered.
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 2 arrives only after question 1 is answered ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q2_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_ANSWER}.*"
+    timeout: 60000
+
+# Both answers are in the thread with timestamps - a bubble without one would
+# mean a half-rendered row rather than a delivered message.
+- assertVisible:
+    id: "tvChatDate"

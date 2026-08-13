@@ -223,3 +223,12 @@ MESSAGING:
   # MAESTRO_MESSAGING_HYBRID, the single source the Maestro runner resolves per
   # environment, so web and device cannot disagree about who signs in.
   broadcast_flow: "messaging_broadcast.yaml"
+  survey_flow: "messaging_survey.yaml"
+  keyword_flow: "messaging_keyword.yaml"
+  consent_flow: "messaging_consent.yaml"
+  # The questions "Delivery App - ETE > Surveys > Survey" asks, in order. Kept as
+  # data rather than baked into the flow the way legacy's fill_survey_form() did,
+  # so pointing survey_form at a different form only means editing this.
+  survey_q1_label: "Name"
+  survey_q2_label: "ID"
+  survey_q2_answer: "101"
