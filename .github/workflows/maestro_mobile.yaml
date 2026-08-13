@@ -150,13 +150,13 @@ jobs:
           username: ${{ secrets.FROM_EMAIL_USERNAME }}
           password: ${{ secrets.FROM_EMAIL_PASSWORD }}
           subject: >
-            CommCare-Connect Maestro Mobile -
+            CommCare-Connect Maestro Mobile [${{ matrix.environment }}] -
             ${{ steps.aggregate.outputs.status }} -
             Run #${{ github.run_number }}
           to: ${{ secrets.TO_EMAIL_USERNAME }}, qa@dimagi.com, anshu.shaik@fissionlabs.com, sameena.shaik@fissionlabs.com
           from: ${{ secrets.FROM_EMAIL_USERNAME }}
           html_body: |
-            <h2>CommCare-Connect Maestro Mobile Report</h2>
+            <h2>CommCare-Connect Maestro Mobile Report — ${{ matrix.environment }}</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
             <h3>Results</h3>
@@ -204,9 +204,10 @@ jobs:
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
           bs_url = os.environ.get("BS_URL", "https://app-automate.browserstack.com/")
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
+          app_env = os.environ.get("APP_ENV", "").upper()
 
           message = (
-              f"{icon} 📊 CommCare-Connect Maestro Mobile Tests — Run #{run_number}\n"
+              f"{icon} 📊 [{app_env}] CommCare-Connect Maestro Mobile Tests — Run #{run_number}\n"
               f"📱 Mobile → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
               f"📎 Report: <{artifact_url}|Download here>\n"
               f"🎥 Device video and logs: <{bs_url}|BrowserStack build>\n"
