@@ -1,0 +1,72 @@
+# Channel list empty state (TC-CHN-003).
+#
+# A worker who belongs to no messaging channels must be told so, rather than
+# shown a blank screen. Legacy's verify_channel_list() accepted empty OR
+# populated, so it never pinned either state.
+#
+# Doubles as the cheapest way to find out whether a given account has a channel
+# yet: it passes only if the account is in none. Run against a worker you
+# believe is unsubscribed from everything, and a failure means it already has
+# one - which for a fresh account also means the one-shot "New Channel" push of
+# TC-CHN-001a has already fired and cannot be observed again.
+#
+# From commcare-android fragment_channel_list.xml:
+#   tv_no_channel_msg  the empty-state label
+#   rvChannel          the channel RecyclerView
+#   "Channels"         connect_messaging_channel_list_title
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "4678161"
+  USERNAME: "Message Automation User"
+  BACKUP_CODE: "123456"
+  EMPTY_TEXT: "You're not subscribed to any messaging channels"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+
+# Give the channel sync a chance to bring something down before concluding the
+# list is empty - asserting immediately would pass on a slow sync rather than on
+# a genuinely empty account.
+- extendedWaitUntil:
+    visible:
+      text: ".*${EMPTY_TEXT}.*"
+    timeout: 90000
