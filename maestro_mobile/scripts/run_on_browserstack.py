@@ -44,6 +44,7 @@ WORKER_BY_FLOW = {
     "messaging_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_keyword.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_consent_history.yaml": "MAESTRO_MESSAGING_HYBRID",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

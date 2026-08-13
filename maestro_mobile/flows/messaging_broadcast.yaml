@@ -89,6 +89,17 @@ env:
     visible:
       text: "${CHANNEL_NAME}"
     timeout: 120000
+
+# --- TC-MSG-003: the channel row shows an unread count ---
+# This is the one moment the count exists: the broadcast was sent before the
+# build started, so it arrives during the first sync and is unviewed until the
+# thread is opened. Asserted here rather than in a mobile-only flow, which would
+# have to manufacture the same moment.
+- extendedWaitUntil:
+    visible:
+      id: "tvUnreadCount"
+    timeout: 120000
+
 - tapOn:
     text: "${CHANNEL_NAME}"
 
@@ -110,3 +121,16 @@ env:
 # A message with no timestamp would mean a half-rendered bubble.
 - assertVisible:
     id: "tvChatDate"
+
+# --- TC-MSG-005: opening the thread clears the unread state ---
+# Opening a channel marks its messages userViewed=true, so going back to the
+# list the count must be gone. Nothing has been typed in this flow, so a single
+# Back navigates (unlike messaging_consent.yaml, where the composer holds focus
+# and the first Back only dismisses the keyboard).
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+- assertNotVisible:
+    id: "tvUnreadCount"

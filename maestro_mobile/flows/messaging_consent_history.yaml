@@ -1,0 +1,168 @@
+# Does a channel's message history survive unsubscribe -> resubscribe?
+#
+# Written as an experiment, kept as a regression test. During TC-SUB-001..005 the
+# thread rendered completely empty right after resubscribing, on a channel that
+# had messages in it minutes earlier. That could be render timing, or consent
+# changes could be dropping local history - the two are worth telling apart,
+# because ConnectID's UpdateConsentView only flips a boolean and never touches
+# messages, so losing history would be device-side and unintended.
+#
+# ANSWERED, first run (build 516779bd): it stopped at CHECKPOINT A - the thread
+# was empty on opening, before any consent change. Message history is
+# device-local and does not survive a reinstall: messages live in the app's own
+# database, ConnectID's retrieve_notifications only returns *undelivered*
+# notifications, and update_notification_received marks them so they are never
+# re-sent. Every BrowserStack session is a fresh install, so a thread only shows
+# what was delivered during that same session. The empty thread seen after the
+# consent run was that, not unsubscribe dropping anything.
+#
+# So the flow now seeds its own history by sending a message before touching
+# consent, which is what makes the question answerable at all here. That also
+# gives the free-text send path (TC-MSG-001/002) a home.
+#
+#   fails at CHECKPOINT A -> the message could not be sent at all
+#   fails at CHECKPOINT B -> unsubscribing clears the thread
+#   fails at CHECKPOINT C -> history does not survive resubscribe
+#   fails at CHECKPOINT D -> history is gone after leaving and re-entering,
+#                            i.e. genuinely dropped rather than a stale view
+#   passes                -> consent changes leave the thread intact
+#
+# Leaves the channel subscribed either way.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # Unique per run so the assertions match this run's message rather than
+  # anything a previous session happened to leave on the device.
+  MARKER_MESSAGE: "history probe"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Seed the history this run will test ---
+# A fresh install starts with an empty thread, so there is nothing to preserve
+# unless this session puts it there. Sending also covers the free-text path:
+# imgSendMessage is GONE until the composer is non-empty AND the channel is
+# consented, so asserting it appears proves the input registered.
+- tapOn:
+    id: "etMessage"
+- inputText: "${MARKER_MESSAGE}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+
+# --- CHECKPOINT A: the message is in the thread ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${MARKER_MESSAGE}.*"
+    timeout: 60000
+
+# --- Unsubscribe ---
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Unsubscribe"
+- tapOn:
+    text: "Unsubscribe"
+- extendedWaitUntil:
+    visible:
+      text: ".*You are not subscribed to this messaging channel.*"
+    timeout: 30000
+
+# --- CHECKPOINT B: history still rendered while unsubscribed ---
+- assertVisible:
+    text: ".*${MARKER_MESSAGE}.*"
+
+# --- Resubscribe ---
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Resubscribe"
+- tapOn:
+    text: "Resubscribe"
+- extendedWaitUntil:
+    notVisible:
+      text: ".*You are not subscribed to this messaging channel.*"
+    timeout: 30000
+
+# --- CHECKPOINT C: history still rendered immediately after resubscribing ---
+# This is the exact moment the thread looked empty during the consent run.
+- assertVisible:
+    text: ".*${MARKER_MESSAGE}.*"
+
+# --- CHECKPOINT D: still there after leaving and re-entering the thread ---
+# Distinguishes a stale view from data that is actually gone.
+#
+# Two Backs, conditionally: text was typed into the composer earlier, so the
+# soft keyboard may still be up and the first Back would only dismiss it.
+- back
+- runFlow:
+    when:
+      notVisible:
+        text: "Channels"
+    commands:
+      - back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 30000
+- assertVisible:
+    text: ".*${MARKER_MESSAGE}.*"
