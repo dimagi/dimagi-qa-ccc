@@ -139,3 +139,50 @@ class MobileWorkersPage(BasePage):
         self._step("click Unlink to confirm (DESTRUCTIVE - unlinks the worker)")
         self.page.locator(self.UNLINK_MODAL_CONFIRM).locator("visible=true").first.click()
         self.page.wait_for_timeout(2000)
+
+    # --- Re-link (restore) a worker so PID_59 is idempotent. HQ re-links to the
+    #     worker's prior PersonalID association; the confirm modal takes no input. ---
+    def link_worker(self, identifier):
+        """Click 'Link PersonalID' for a worker and confirm, restoring the link."""
+        self._step(f"re-link (restore) PersonalID for worker '{identifier}'")
+        row = self._worker_row(identifier)
+        row.locator(
+            "xpath=.//button[contains(normalize-space(),'Link PersonalID') "
+            "and not(contains(normalize-space(),'Unlink'))]"
+        ).first.click()
+        modal = self.page.locator(
+            "//div[contains(@class,'modal')]//h4[normalize-space()='Link PersonalID Account']"
+        ).locator("visible=true").first
+        modal.wait_for(state="visible", timeout=10000)
+        # 'Link' (exact) won't match the 'Unlink' button on other rows.
+        self.page.locator(
+            "//div[contains(@class,'modal')]//button[normalize-space()='Link']"
+        ).locator("visible=true").first.click()
+        self.page.wait_for_timeout(2000)
+
+    def first_linked_worker_name(self):
+        """First-name of the first worker whose PersonalID link is active (has an
+        'Unlink PersonalID' action), or None. Used as a fallback unlink target."""
+        rows = self.page.locator(self.WORKER_TABLE).locator("tbody tr")
+        for i in range(rows.count()):
+            row = rows.nth(i)
+            has_unlink = row.locator(
+                "xpath=.//button[contains(normalize-space(),'Unlink PersonalID')]"
+            ).count() > 0
+            if has_unlink:
+                name = row.locator("td").nth(1).inner_text().strip()
+                if name:
+                    return name
+        return None
+
+    def worker_has_link_action(self, identifier):
+        """True if the worker exposes a 'Link PersonalID' action (i.e. it has a
+        prior PersonalID association that can be restored)."""
+        row = self.page.locator(self.WORKER_TABLE).locator("tbody tr", has_text=identifier).first
+        if row.count() == 0:
+            return False
+        btns = row.locator(
+            "xpath=.//button[contains(normalize-space(),'Link PersonalID') "
+            "and not(contains(normalize-space(),'Unlink'))]"
+        )
+        return btns.count() > 0

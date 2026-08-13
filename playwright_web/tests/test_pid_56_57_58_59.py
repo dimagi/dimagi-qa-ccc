@@ -44,37 +44,55 @@ def test_pid_56_57_58_personalid_unlink_on_mobile_workers(page, config, settings
     workers.cancel_unlink()
 
 
-# Dedicated worker to unlink for PID_59, so no other worker/test is affected
-# (per QA guidance). Override with PID_UNLINK_WORKER for a different worker.
-PID_UNLINK_WORKER = os.getenv("PID_UNLINK_WORKER", "av_connectautomation")
+# Preferred worker to unlink for PID_59. Falls back to any currently-linked
+# worker if this one is not available. Override with PID_UNLINK_WORKER.
+PID_UNLINK_WORKER = os.getenv("PID_UNLINK_WORKER", "CCC-Automationuser1")
+
+
+def _pick_linked_target(workers, config):
+    """Return the first-name of a worker with an active PersonalID link to use as
+    the unlink target - preferring PID_UNLINK_WORKER, restoring it if it was left
+    unlinked, then falling back to any other linked worker. None if none exist."""
+    if workers.worker_personalid_status(PID_UNLINK_WORKER) == "Active":
+        return PID_UNLINK_WORKER
+    if workers.worker_has_link_action(PID_UNLINK_WORKER):
+        workers.link_worker(PID_UNLINK_WORKER)
+        workers.open(config)
+        if workers.worker_personalid_status(PID_UNLINK_WORKER) == "Active":
+            return PID_UNLINK_WORKER
+    return workers.first_linked_worker_name()
 
 
 def test_pid_59_confirm_unlink_flips_status(page, config, settings):
-    """PID_59 (destructive) - confirming the unlink flips the dedicated worker to
-    Not Linked / Inactive.
+    """PID_59 (destructive, self-restoring) - confirming the unlink flips a linked
+    worker to Not Linked / Inactive.
 
-    This actually unlinks a live worker and is non-idempotent (re-linking needs
-    the mobile PersonalID flow, PID_51). To stay safe it only acts on the one
-    dedicated worker PID_UNLINK_WORKER, and skips - rather than fails - when that
-    worker is not present-and-linked on the current domain, so CI never reddens
-    when the linked state has been consumed. Re-link the worker (mobile PID_51 on
-    this domain) and it runs on the next pass.
-    """
+    Runs every time and actually unlinks a live worker, then RE-LINKS it so the
+    test is idempotent (HQ restores the worker's prior PersonalID association with
+    no input). Targets the dedicated PID_UNLINK_WORKER, or any other linked worker
+    if that one isn't available. Only skips if the domain has no linked worker at
+    all (nothing to unlink)."""
     workers = _login_and_open_workers(page, config, settings)
 
-    status = workers.worker_personalid_status(PID_UNLINK_WORKER)
-    if status != "Active":
-        pytest.skip(
-            f"Dedicated worker '{PID_UNLINK_WORKER}' is not linked (status={status!r}) "
-            "on this domain - re-link it via the mobile flow (PID_51), then PID_59 runs."
-        )
+    target = _pick_linked_target(workers, config)
+    if not target:
+        pytest.skip("No worker with an active PersonalID link on this domain to unlink.")
 
-    workers.open_unlink_confirmation_for_worker(PID_UNLINK_WORKER)
+    # --- the actual test: unlink and confirm the status flips ---
+    workers.open_unlink_confirmation_for_worker(target)
     workers.verify_unlink_confirmation_modal()
     workers.confirm_unlink()
 
     workers.open(config)  # refresh the list
-    status = workers.worker_personalid_status(PID_UNLINK_WORKER)
+    status = workers.worker_personalid_status(target)
     assert status in ("Not Linked", "Inactive"), (
-        f"Expected '{PID_UNLINK_WORKER}' unlinked after confirm; saw '{status}'"
+        f"Expected '{target}' unlinked after confirm; saw '{status}'"
+    )
+
+    # --- restore state so the test is idempotent for the next run ---
+    workers.link_worker(target)
+    workers.open(config)
+    restored = workers.worker_personalid_status(target)
+    assert restored == "Active", (
+        f"Failed to restore link for '{target}'; status={restored!r}"
     )
