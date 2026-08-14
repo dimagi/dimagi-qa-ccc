@@ -57,7 +57,11 @@ class DeferredWebAction:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
                 try:
-                    self.result = self.action(browser.new_page())
+                    # An explicit context, not browser.new_page(): page objects
+                    # that open a second tab (LoginPage.navigate_to_connect_page
+                    # calls page.context.new_page()) fail with "Please use
+                    # browser.new_context()" on a context-less page.
+                    self.result = self.action(browser.new_context().new_page())
                 finally:
                     browser.close()
             print(f"STEP [MidBuild] {self.label} completed: {self.result!r}")
