@@ -226,6 +226,13 @@ MESSAGING:
   survey_flow: "messaging_survey.yaml"
   keyword_flow: "messaging_keyword.yaml"
   consent_flow: "messaging_consent.yaml"
+  channel_created_flow: "messaging_channel_created.yaml"
+  # How long the mid-build web trigger waits before requesting consent. It
+  # must land AFTER the worker has signed in - a push sent earlier reaches a
+  # device not yet registered as that user and is lost - and before the
+  # flow's 600s shade wait runs out. Cold-start sign-in has been running
+  # ~2.5 min on BrowserStack, so this leaves roughly a minute of margin.
+  consent_trigger_delay_seconds: 210
   # The questions "Delivery App - ETE > Surveys > Survey" asks, in order. Kept as
   # data rather than baked into the flow the way legacy's fill_survey_form() did,
   # so pointing survey_form at a different form only means editing this.

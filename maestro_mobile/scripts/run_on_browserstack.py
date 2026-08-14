@@ -45,7 +45,10 @@ WORKER_BY_FLOW = {
     "messaging_keyword.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent_history.yaml": "MAESTRO_MESSAGING_HYBRID",
-    "messaging_empty_state.yaml": "MAESTRO_MESSAGING_HYBRID",
+    # Deliberately NOT the hybrid worker: that account has a channel, and an
+    # empty-state test pointed at it can never pass again.
+    "messaging_empty_state.yaml": "MAESTRO_MESSAGING_EMPTY_STATE",
+    "messaging_channel_created.yaml": "MAESTRO_MESSAGING_HYBRID",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

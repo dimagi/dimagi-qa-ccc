@@ -41,10 +41,14 @@ appId: org.commcare.dalvik
     timeout: 20000
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+# The phone-number step round-trips to the Connect server, which is markedly
+# slower on staging than prod: 15s was enough on prod and passed on staging by
+# luck, then failed there with the spinner still up. The wait costs nothing when
+# the server is quick, so give it room rather than trading flakiness for speed.
 - extendedWaitUntil:
     notVisible:
       id: "org.commcare.dalvik:id/progress_bar"
-    timeout: 15000
+    timeout: 90000
 # The name screen can lag behind the progress bar clearing on a slow (e.g.
 # BrowserStack) device - wait for the field before tapping so the flow doesn't
 # flake on a not-yet-rendered nameTextValue.

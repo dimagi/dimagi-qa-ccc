@@ -450,6 +450,58 @@ class CCHQMessagingPage(BasePage):
         self.verify_broadcast_in_list(self.broadcast_full_name)
         return message
 
+    # ------------------------------------------------------- connect user consent
+
+    REQUEST_CONSENT_BTN = locators.get("cchq_messaging_page", "request_consent_btn")
+    CONSENT_RESULT_BANNER = locators.get("cchq_messaging_page", "consent_result_banner")
+
+    def open_user_consent(self):
+        """Messaging sidebar -> CONNECT MESSSAGING > User Consent.
+
+        Served from /sms/connect_messaging_user/, and like Keywords it is only
+        reachable from the left sidebar, which exists once a Messaging page is
+        open. (HQ spells the sidebar heading "CONNECT MESSSAGING".)
+        """
+        if "/messaging/" not in self.page.url and "/sms/" not in self.page.url:
+            self.open_messaging_option("Conditional Alerts")
+        self.click(self.SIDEBAR_LINK.format(option="User Consent"))
+        self.page.wait_for_url("**/sms/connect_messaging_user/**")
+        self._wait_loaded()
+
+    def request_messaging_consent(self):
+        """Trigger the bulk consent request and return the banner it reports.
+
+        There is no per-user picker: the action covers every Connect user linked
+        to this domain through an opportunity's learn/deliver apps. A worker on
+        an opportunity whose apps belong to a different domain is not one of
+        them, and the banner then reads "No channels created".
+
+        The banner is the only signal available - the page never lists channels -
+        so it is returned rather than asserted on here, letting the caller decide
+        whether "created" or "not created" is the expected outcome.
+        """
+        self.click(self.REQUEST_CONSENT_BTN)
+        self._wait_loaded()
+        text = ""
+        banner = self._locator(self.CONSENT_RESULT_BANNER)
+        try:
+            banner.wait_for(state="visible", timeout=20_000)
+            text = banner.inner_text().strip()
+        except Exception:
+            text = ""
+        if not text:
+            # The banner markup is not guaranteed; scan the page for the outcome
+            # line instead. Returning "" would let a missed selector look exactly
+            # like "the action reported nothing", and the caller decides real
+            # behaviour from this string.
+            for line in self.page.locator("body").inner_text().splitlines():
+                lowered = line.lower()
+                if "channel" in lowered and ("created" in lowered or "consent" in lowered):
+                    text = line.strip()
+                    break
+        self._step(f"consent request reported: {text!r}")
+        return text
+
     # ------------------------------------------------------------------ keywords
 
     KEYWORD_PREFIX = "AUTOKW"

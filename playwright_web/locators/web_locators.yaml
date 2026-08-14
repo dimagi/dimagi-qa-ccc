@@ -285,3 +285,10 @@ cchq_messaging_page:
   keywords_table: "//table[contains(@class,'table-striped')]"
   keywords_row_by_name: "//table[contains(@class,'table-striped')]/tbody/tr[td[contains(normalize-space(), \"{keyword}\")]]"
   keywords_empty_msg: "//td[contains(normalize-space(), 'You have no keywords')]"
+
+  # --- Connect messaging user consent (sidebar: CONNECT MESSSAGING > User Consent) ---
+  # Served from /sms/connect_messaging_user/. The page is a single bulk action -
+  # there is no per-user picker and no list of existing channels - and it reports
+  # the outcome in a banner.
+  request_consent_btn: "//a[normalize-space()='Request Messaging Consent']"
+  consent_result_banner: "//div[contains(@class,'alert')]"

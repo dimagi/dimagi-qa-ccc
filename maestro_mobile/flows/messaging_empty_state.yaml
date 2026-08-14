@@ -4,6 +4,10 @@
 # shown a blank screen. Legacy's verify_channel_list() accepted empty OR
 # populated, so it never pinned either state.
 #
+# Runs as MAESTRO_MESSAGING_EMPTY_STATE, which must be an account in no
+# channels. Do NOT point it at the hybrid worker: that one has a channel now,
+# so the assertion could never pass again.
+#
 # Doubles as the cheapest way to find out whether a given account has a channel
 # yet: it passes only if the account is in none. Run against a worker you
 # believe is unsubscribed from everything, and a failure means it already has
@@ -17,8 +21,8 @@
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
-  PHONE_NUMBER: "4678161"
-  USERNAME: "Message Automation User"
+  PHONE_NUMBER: "7426426"
+  USERNAME: "Automation User 26"
   BACKUP_CODE: "123456"
   EMPTY_TEXT: "You're not subscribed to any messaging channels"
 ---

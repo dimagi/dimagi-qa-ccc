@@ -13,6 +13,7 @@ the flow matches on it, rather than settling for "some message arrived".
 Run with:  pytest playwright_web/tests/test_messaging_hybrid.py --env prod
 """
 
+import os
 import time
 
 import pytest
@@ -208,6 +209,75 @@ def test_keyword_triggered_from_channel_returns_a_message(page, test_data, confi
         )
     finally:
         messaging.delete_existing_keywords()
+
+
+def test_first_consent_request_creates_a_channel(config, settings, messaging_data):
+    """TC-CHN-001a / TC-CHN-002 - requesting consent creates a channel and pushes.
+
+    One-shot per (worker, HQ domain), so it is gated behind an env var the way
+    test_setup_tasking_opportunity.py gates its setup:
+
+        MESSAGING_CHANNEL_SETUP=1 pytest tests/test_messaging_hybrid.py -k first_consent --env stage
+
+    ConnectID's CreateChannelView is get_or_create on (server, connect_user,
+    channel_source), and channel_source is the HQ domain. The first request
+    creates the channel and fires a "New Channel" push; every later one returns
+    the existing channel and sends nothing. Left ungated it would burn a device
+    build on every CI run and then skip. TC-CHN-001b covers the repeat behaviour
+    on every run; see the plan for how automating learn + assessment would make
+    this one per-run too.
+
+    The web half fires PART-WAY THROUGH the build rather than before it: a push
+    sent before the worker signs in reaches a device not yet registered as that
+    user and is lost. DeferredWebAction runs it on a timer in its own browser,
+    while run_flows() blocks here polling BrowserStack.
+    """
+    if os.getenv("MESSAGING_CHANNEL_SETUP") != "1":
+        pytest.skip(
+            "One-shot: the 'New Channel' push fires only the first time a worker gets a channel. "
+            "Run with MESSAGING_CHANNEL_SETUP=1 against a worker that has none."
+        )
+
+    flow = messaging_data["channel_created_flow"]
+    delay = int(messaging_data.get("consent_trigger_delay_seconds", 210))
+
+    from flows.mid_build_web import DeferredWebAction
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+
+    def request_consent(page):
+        LoginPage(page).valid_login_cchq(config, settings)
+        CCHQHomePage(page).verify_home_page_title("Welcome")
+        messaging = CCHQMessagingPage(page)
+        messaging.open_user_consent()
+        return messaging.request_messaging_consent()
+
+    trigger = DeferredWebAction(request_consent, delay, label="request messaging consent").start()
+
+    summary = run_flows(
+        flows=[flow],
+        env={**worker, "CHANNEL_NAME": messaging_data["channel_name"]},
+        reports=False,
+        app_env=config.env,
+    )
+    banner = trigger.join_and_raise()
+
+    # Interpret the banner before judging the device. If nothing was created the
+    # channel already existed, so the push could never have fired and a device
+    # failure says nothing about the product.
+    if banner and "no channels created" in banner.lower():
+        pytest.skip(
+            f"Consent request created nothing ({banner!r}) - this worker already has a channel, "
+            "so the one-shot push cannot fire again. Use a worker with no channels, which "
+            "messaging_empty_state.yaml can confirm."
+        )
+
+    print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+    assert summary["status"] == "SUCCESS", (
+        f"Channel creation was not observed on the device: {summary['passed']} passed / "
+        f"{summary['failed']} failed - see {summary['build_url']}"
+    )
 
 
 def test_channel_unsubscribe_and_resubscribe(config, messaging_data):

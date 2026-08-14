@@ -1,0 +1,114 @@
+# Worker side of first-time channel creation (TC-CHN-001a, TC-CHN-002).
+#
+# The web half requests messaging consent PART-WAY THROUGH this build, not
+# before it. ConnectID's CreateChannelView fires a one-shot "New Channel" push
+# only when the channel is actually created, and a push sent before the worker
+# has signed in reaches a device not yet registered as that user and is lost.
+# So this flow signs in and then parks in the notification shade, waiting.
+#
+# It goes STRAIGHT to the shade after sign-in and does not open Messaging first.
+# FirebaseMessagingUtil suppresses the notification when the channel list is
+# foregrounded, so checking the empty state here would risk swallowing the very
+# push being tested. Emptiness is proven separately by messaging_empty_state.yaml.
+#
+# One-shot per (worker, HQ domain): once this channel exists, get_or_create
+# returns it and no push is ever sent again. See the plan's TC-CHN-001a note.
+#
+# From commcare-android:
+#   FirebaseMessagingUtil.handleCCCMessageChannelPushNotification builds the
+#   notification; CreateChannelView supplies its title and body.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "4678161"
+  USERNAME: "Message Automation User"
+  BACKUP_CODE: "123456"
+  CHANNEL_NAME: "connectqa-automation"
+  # Exactly what CreateChannelView sends.
+  NOTIFICATION_TITLE: "New Channel"
+  NOTIFICATION_BODY: "A new messaging channel is available from"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+# completeSignin() opens the drawer. Close it so the app is idle on the home
+# screen rather than sitting on a Connect surface while the push arrives.
+- runFlow:
+    when:
+      visible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          point: "92%,50%"
+      - extendedWaitUntil:
+          notVisible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Wait for the "New Channel" push (TC-CHN-001a) ---
+# The shade is opened first and left open: notifications land in it live, so a
+# single extendedWaitUntil resolves the moment the push arrives. Generous
+# timeout because the web half fires on a timer and the round trip is
+# HQ -> ConnectID -> FCM.
+- swipe:
+    start: "50%,1%"
+    end: "50%,80%"
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOTIFICATION_TITLE}.*"
+    timeout: 600000
+- assertVisible:
+    text: ".*${NOTIFICATION_BODY}.*"
+
+# Back closes the shade. An upward swipe does not - inside an open shade a
+# vertical drag scrolls the notification list instead.
+- back
+# What Back reveals is not guaranteed, the shade being a system window.
+- runFlow:
+    when:
+      notVisible:
+        text: "Open navigation drawer"
+    commands:
+      - launchApp
+
+# --- The channel is now in the list (TC-CHN-002) ---
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
