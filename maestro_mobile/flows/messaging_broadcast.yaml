@@ -100,8 +100,26 @@ env:
       id: "tvUnreadCount"
     timeout: 120000
 
+# --- TC-CHN-004: the row carries its metadata, not just a name ---
+# item_channel.xml renders the last-message preview and its timestamp beside the
+# name. Asserted here because a broadcast has just arrived, so a preview must
+# exist; on a channel that has never received anything there would be nothing to
+# show and the assertion would be vacuous.
+- assertVisible:
+    id: "tvChannelDescription"
+- assertVisible:
+    id: "tvLastChatTime"
+
 - tapOn:
     text: "${CHANNEL_NAME}"
+
+# --- TC-CHN-007: the thread is titled with the channel name ---
+# The list is gone once the thread opens, so the channel name still being on
+# screen is the toolbar title (ConnectMessagingActivity sets it on open).
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 30000
 
 # The thread is open once the composer is there. etMessage doubles as the
 # "not subscribed" banner, so its presence also proves the channel is consented.

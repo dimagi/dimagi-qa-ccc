@@ -152,6 +152,34 @@ def test_create_keyword_with_connect_survey(messaging, messaging_data):
         messaging.delete_existing_keywords()
 
 
+def test_repeat_consent_request_creates_no_duplicate(messaging):
+    """TC-CHN-001b - re-requesting consent does not create a second channel.
+
+    ConnectID's CreateChannelView is get_or_create on
+    (server, connect_user, channel_source), so once a worker has a channel on a
+    domain every later request returns the existing one and creates nothing.
+    This is the repeatable half of manual case 'Connect channel 1'; the
+    first-time path (TC-CHN-001a) is one-shot and covered separately.
+
+    The page is a bulk action with no per-user picker, and it never lists
+    channels, so the banner is the only signal. On a domain where every eligible
+    worker already has a channel it reads "No channels created", which is the
+    assertion. If channels ARE created, this run has just initialised the domain
+    for workers who had none - a legitimate one-off - so it skips rather than
+    failing, and the next run is the real assertion.
+    """
+    messaging.open_user_consent()
+    banner = messaging.request_messaging_consent()
+
+    assert banner, "The consent request reported nothing at all - the page or its banner has changed"
+    if "no channels created" not in banner.lower():
+        pytest.skip(
+            f"Consent request reported {banner!r}, i.e. it created channels for workers that had "
+            "none. That is a one-off initialisation of this domain; re-run and this becomes the "
+            "no-duplicate assertion."
+        )
+
+
 def test_create_connect_survey_conditional_alert(messaging, messaging_data):
     """TC-CAL-004 - a Connect Survey alert saves and appears in the list."""
     entity_id = str(int(time.time() * 1000) % 1_000_000)

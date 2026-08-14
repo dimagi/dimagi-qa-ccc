@@ -211,6 +211,65 @@ def test_keyword_triggered_from_channel_returns_a_message(page, test_data, confi
         messaging.delete_existing_keywords()
 
 
+def test_message_push_opens_the_thread(config, settings, messaging_data):
+    """TC-MSG-006 - tapping a messaging push opens that channel's thread.
+
+    Previously judged not automatable, wrongly. The case needs a message to
+    arrive while the app is BACKGROUNDED, which neither ordering can produce:
+    send before the build and it is already queued, so it arrives on the first
+    sync rather than as a push; send after and the session is over.
+
+    DeferredWebAction sends it PART-WAY THROUGH the build instead, by which time
+    the worker is signed in, the app is backgrounded and the device is parked in
+    the notification shade.
+
+    The flow matches the message BODY in the shade rather than a notification
+    title: the body is generated here and injected, whereas the title's wording
+    is the product's business and asserting it would make this a test of copy.
+    """
+    flow = messaging_data["push_deeplink_flow"]
+    delay = int(messaging_data.get("consent_trigger_delay_seconds", 210))
+
+    from flows.mid_build_web import DeferredWebAction
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+    message = f"Test Connect Message Broadcast {int(time.time() * 1000)}"
+
+    def send_broadcast(page):
+        LoginPage(page).valid_login_cchq(config, settings)
+        CCHQHomePage(page).verify_home_page_title("Welcome")
+        messaging = CCHQMessagingPage(page)
+        messaging.open_messaging_option("Broadcasts")
+        return messaging.create_broadcast_with_connect_message(
+            user_recipients=[messaging_data["worker_user_id"]],
+            message=message,
+        )
+
+    trigger = DeferredWebAction(send_broadcast, delay, label="send broadcast").start()
+
+    summary = run_flows(
+        flows=[flow],
+        env={
+            **worker,
+            "CHANNEL_NAME": messaging_data["channel_name"],
+            "EXPECTED_MESSAGE": message,
+        },
+        reports=False,
+        app_env=config.env,
+    )
+    # Surface a trigger failure first: if the broadcast never went out, the
+    # device timed out waiting for something nobody sent, and reporting that as
+    # a push-delivery failure would be misleading.
+    trigger.join_and_raise()
+
+    print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+    assert summary["status"] == "SUCCESS", (
+        f"Push did not arrive or did not open the thread: {summary['passed']} passed / "
+        f"{summary['failed']} failed - see {summary['build_url']}"
+    )
+
+
 def test_first_consent_request_creates_a_channel(config, settings, messaging_data):
     """TC-CHN-001a / TC-CHN-002 - requesting consent creates a channel and pushes.
 

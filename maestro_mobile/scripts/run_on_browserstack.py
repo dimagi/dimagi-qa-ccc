@@ -49,6 +49,7 @@ WORKER_BY_FLOW = {
     # empty-state test pointed at it can never pass again.
     "messaging_empty_state.yaml": "MAESTRO_MESSAGING_EMPTY_STATE",
     "messaging_channel_created.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_push_deeplink.yaml": "MAESTRO_MESSAGING_HYBRID",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
