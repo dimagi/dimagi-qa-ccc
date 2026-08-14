@@ -83,6 +83,18 @@ class CCHQMessagingPage(BasePage):
         super().__init__(page)
         self.cond_alert_full_name = None
         self.broadcast_full_name = None
+        self._dialogs_accepted = False
+
+    def _accept_dialogs(self):
+        """Auto-accept native confirm() dialogs, registering the handler once.
+
+        Both delete helpers are called more than once per test, and Playwright
+        keeps every listener that is registered - a second handler tries to
+        accept a dialog the first already handled.
+        """
+        if not self._dialogs_accepted:
+            self.page.on("dialog", lambda dialog: dialog.accept())
+            self._dialogs_accepted = True
 
     # ------------------------------------------------------------------ helpers
 
@@ -166,7 +178,15 @@ class CCHQMessagingPage(BasePage):
     def open_messaging_option(self, option):
         """Messaging tab -> the named entry (Conditional Alerts, Broadcasts, Keywords)."""
         self._step(f"open Messaging > {option}")
-        self.click(self.MESSAGING_TAB)
+        # Wait for the page to settle and the nav to exist before clicking. This
+        # is often called straight after a reload, and on staging the load can
+        # outrun the default 30s click timeout - seen as "waiting for locator
+        # #MessagingTab", which reads like a missing element rather than a slow
+        # page.
+        self._wait_loaded()
+        tab = self._locator(self.MESSAGING_TAB)
+        expect(tab).to_be_visible(timeout=60_000)
+        tab.click()
         self.click(self.MESSAGING_MENU_LINK.format(option=option))
         self._wait_loaded()
         assert "/messaging" in self.page.url, f"Not on a Messaging page: {self.page.url}"
@@ -380,7 +400,7 @@ class CCHQMessagingPage(BasePage):
         cleanup removes it once it has settled, so cleanup is self-healing
         instead of slow.
         """
-        self.page.on("dialog", lambda dialog: dialog.accept())
+        self._accept_dialogs()
         deleted = 0
         while True:
             self.wait_for_alert_list()

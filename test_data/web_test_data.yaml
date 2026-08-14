@@ -214,6 +214,10 @@ MESSAGING:
   # Prod value only. The staging id still has to be read off HQ's recipient
   # picker once "Message Automation User" is enrolled.
   worker_user_id: "049b54d12e564f418397"
+  # Staging, read off HQ's recipient picker on 2026-08-12 by typing the
+  # worker's name - the widget searches by name and resolves to the id, which
+  # is also how a future version could drop these hardcoded ids entirely.
+  worker_user_id_staging: "924dec685ba0a0dbc895"
   # The mobile channel is named after the HQ domain - ConnectID stores it as
   # channel_source and the app renders that as the channel name.
   channel_name: "connectqa-automation-prod"
