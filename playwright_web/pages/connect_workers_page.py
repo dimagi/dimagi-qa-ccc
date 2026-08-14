@@ -1,6 +1,6 @@
 import re
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from utils.helpers import LocatorLoader
 
@@ -153,12 +153,56 @@ class ConnectWorkersPage(BasePage):
 
     # -- Visits tab of the worker page (TC-E2E-002 / TC-E2E-003) -----------------
 
+    # The table sorts oldest-first by default (the view's queryset ends
+    # .order_by("visit_date", "pk")) and pages at DEFAULT_PAGE_SIZE = 20, and
+    # visit_rows() can only read the page it is on. The long-lived opportunity gains
+    # two visits per run, so on 2026-08-14 it crossed 20 and the newest visit landed
+    # on page 2: the test polled a full page 1 for 900s and reported the visit as
+    # never processed, when it was one page over.
+    #
+    # Newest-first keeps the row we just created on page 1 whatever the history, and
+    # is what the Date column header itself links to - "sort=-date_time" is lifted
+    # from that header's href, not guessed. page_size is belt and braces: 100 is the
+    # largest PAGE_SIZE_OPTIONS allows, so even with the sort silently ignored there
+    # are 100 rows of slack instead of 20.
+    VISITS_SORT_NEWEST_FIRST = "-date_time"
+    VISITS_PAGE_SIZE = 100
+
     def goto_worker_visits_page(self, base_url, org_slug, opp_id, user_id):
         """The Visits tab of the per-worker page. Needs ?user= like the Tasks tab."""
         self._step("Navigate to the worker's Visits tab")
-        self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_visits/?user={user_id}")
+        self.page.goto(
+            f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_visits/"
+            f"?user={user_id}&sort={self.VISITS_SORT_NEWEST_FIRST}&page_size={self.VISITS_PAGE_SIZE}"
+        )
         self.page.wait_for_load_state("load")
         self._await_real_table()  # same htmx skeleton as the Tasks tab
+        self._warn_if_not_newest_first()
+
+    @staticmethod
+    def _row_date(row):
+        """The leading "14-Aug-2026 06:35" of a visit row, or None if unparseable."""
+        try:
+            return datetime.strptime(row.split("\t")[0].strip(), "%d-%b-%Y %H:%M")
+        except (ValueError, IndexError):
+            return None
+
+    def _warn_if_not_newest_first(self):
+        """Say so if the sort did not take, rather than quietly reading a stale page.
+
+        A renamed param or a column made unorderable would silently restore the
+        oldest-first order, and the only symptom would be "visit never arrived" once
+        the list outgrows a page - which is the failure this whole change is for.
+        Warn rather than fail: reading the wrong page is our problem, not a product
+        defect, and page_size still leaves 100 rows of slack.
+        """
+        dates = [d for d in (self._row_date(r) for r in self.visit_rows()) if d]
+        if len(dates) > 1 and dates[0] < dates[-1]:
+            self._step(
+                f"WARNING: visits are oldest-first ({dates[0]:%d-%b %H:%M} .. {dates[-1]:%d-%b %H:%M}) - "
+                f"the sort={self.VISITS_SORT_NEWEST_FIRST} param did not take. Relying on "
+                f"page_size={self.VISITS_PAGE_SIZE}; fix the sort before the list outgrows it."
+            )
 
     def visit_rows(self):
         rows = [r.strip() for r in self.page.locator(self.WORKER_VISIT_ROWS).all_inner_texts()]
@@ -186,9 +230,14 @@ class ConnectWorkersPage(BasePage):
                 self._step(f"Visit row found: {match!r}")
                 return match
             if time.monotonic() >= deadline:
+                # Say what was actually looked at. The first time this fired for real
+                # the visit had been processed all along and was simply on page 2,
+                # and the bare message sent us hunting a non-existent lag.
                 raise AssertionError(
                     f"No visit row mentioning '{entity_name}' after {timeout_seconds}s. "
-                    f"Rows on the page: {rows or 'none'}"
+                    f"Read {len(rows)} row(s) sorted {self.VISITS_SORT_NEWEST_FIRST} with "
+                    f"page_size={self.VISITS_PAGE_SIZE}; if that count equals the page size the "
+                    f"row may simply be on a later page. Rows seen: {rows or 'none'}"
                 )
             self.page.wait_for_timeout(poll_seconds * 1000)
 
