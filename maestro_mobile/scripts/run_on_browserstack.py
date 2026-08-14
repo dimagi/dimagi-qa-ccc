@@ -35,6 +35,10 @@ WORKERS_FILE = PROJECT_ROOT / "test_data" / "mobile_workers.yaml"
 WORKER_BY_FLOW = {
     "login_signup_success.yaml": "MAESTRO_LOGIN_SIGNUP_SUCCESS",
     "login_account_locked.yaml": "MAESTRO_LOGIN_ACCOUNT_LOCKED",
+    # Both halves of the hybrid chain sign in as the same worker - they are two
+    # device sessions against one opportunity, split so the web side can confirm
+    # Connect evaluated the blocked visit before the task completion is submitted.
+    "worker_blocked_visit.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     "worker_relearn_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
 }
 # workers-file key -> the Maestro env key the flows read.

@@ -96,12 +96,19 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     tasks.verify_success_message("Task created successfully")
     tasks.verify_task_row(worker_name, task_type, status="To Do")
 
-    # --- MOBILE: worker syncs and completes the task form on a real device ---
+    # --- MOBILE + WEB, in two device sessions ------------------------------------
+    # Submissions reach Connect through CommCare HQ, and on staging that hop lags.
+    # With the blocked visit and the re-learn form submitted in one session, the
+    # completion could be processed first, and the blocked visit was then evaluated
+    # with nothing pending and came back Approved (2026-08-13).
+    #
+    # Submitting them in the right order is not enough: Connect has to be *seen* to
+    # have evaluated the blocked visit before the completion is submitted at all, and
+    # only the web side can see that. run_flows blocks until the build finishes, so
+    # that gate can only sit between two sessions - hence the split.
     from flows.mobile_runner import run_flows
 
-    summary = run_flows(
-        flows=[hybrid["flow"]],
-        env={
+    device_env = {
             # The runner resolves the worker for this environment itself; passing it
             # back keeps the values the web half asserted on and the values the
             # device signs in with provably the same.
@@ -115,18 +122,41 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
             # so a re-run cannot match a previous run's rows.
             "VISIT_NAME_BLOCKED": blocked_visit_name,
             "VISIT_ID_BLOCKED": blocked_visit_id,
-            "VISIT_NAME_ALLOWED": allowed_visit_name,
-            "VISIT_ID_ALLOWED": allowed_visit_id,
-        },
-        reports=False,
+        "VISIT_NAME_ALLOWED": allowed_visit_name,
+        "VISIT_ID_ALLOWED": allowed_visit_id,
+    }
+
+    def run_device_flow(flow):
         # Each build targets one Connect server, so the APK follows the env.
-        app_env=config.env,
+        summary = run_flows(flows=[flow], env=device_env, reports=False, app_env=config.env)
+        print(f"STEP [Hybrid] {flow} -> {summary['status']} ({summary['build_url']})")
+        assert summary["status"] == "SUCCESS", (
+            f"Mobile flow {flow} did not pass: {summary['passed']} passed / "
+            f"{summary['failed']} failed - see {summary['build_url']}"
+        )
+        return summary
+
+    # Session 1: submit the blocked visit and stop, with the task still pending.
+    run_device_flow(hybrid["flow_blocked_visit"])
+
+    # TC-E2E-002: submitted while the task was pending. The form receiver sets
+    # status=rejected outright and adds the "pending_task" flag - it is not merely
+    # left flagged for review. wait_for_visit only returns once the row exists, and
+    # the status is written in the same transaction that creates it, so a row here is
+    # proof Connect has evaluated this visit - which is exactly the gate the
+    # completion below must not jump.
+    user_id = workers.worker_user_id(base_url, org, opp, worker_name)
+    workers.goto_worker_visits_page(base_url, org, opp, user_id)
+    blocked_row = workers.wait_for_visit(blocked_visit_name)
+    assert "reject" in blocked_row.lower(), (
+        f"Visit '{blocked_visit_name}' was submitted with a task pending, so it should be "
+        f"rejected. Row reads: {blocked_row!r}"
     )
-    print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
-    assert summary["status"] == "SUCCESS", (
-        f"Mobile flow did not pass: {summary['passed']} passed / {summary['failed']} failed - "
-        f"see {summary['build_url']}"
-    )
+
+    # Session 2: only now complete the task, then submit the allowed visit. That
+    # second visit needs no gate of its own - the flow waits for Connect's
+    # task-completion push, which is fired after the completion is committed.
+    run_device_flow(hybrid["flow"])
 
     # --- WEB: the form receiver round trip is async, so poll ---
     tasks.goto_task_list(base_url, org, opp)
@@ -172,21 +202,10 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
         "A pending task was left behind - the next J2 run would fail on the duplicate constraint"
     )
 
-    # --- WEB: the two delivery visits (TC-E2E-002 / TC-E2E-003) ---
-    # Checked on the Visits tab of the same worker page. They have to be asserted as
-    # a pair: the rejected one alone would still pass if delivery were blocked
-    # permanently, which is the bug this guards against.
-    user_id = workers.worker_user_id(base_url, org, opp, worker_name)
+    # --- WEB: the second delivery visit (TC-E2E-003) ---
+    # The pair still has to hold together: TC-E2E-002 above would pass on its own
+    # even if delivery were blocked permanently, which is the bug this guards against.
     workers.goto_worker_visits_page(base_url, org, opp, user_id)
-
-    # TC-E2E-002: submitted while the task was pending. The form receiver sets
-    # status=rejected outright and adds the "pending_task" flag - it is not merely
-    # left flagged for review.
-    blocked_row = workers.wait_for_visit(blocked_visit_name)
-    assert "reject" in blocked_row.lower(), (
-        f"Visit '{blocked_visit_name}' was submitted with a task pending, so it should be "
-        f"rejected. Row reads: {blocked_row!r}"
-    )
 
     # TC-E2E-003: submitted after the task completed, so the flag is never added and
     # the visit is processed normally. On this opportunity that means **Approved**
