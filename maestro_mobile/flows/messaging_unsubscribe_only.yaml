@@ -1,0 +1,87 @@
+# Unsubscribe and stop (first half of TC-SUB-004).
+#
+# Exists so the consent-gating pair can be tested without depending on timing
+# inside a single build. The first attempt tried to do it all in one session:
+# unsubscribe, wait out a mid-build send, then resubscribe. The "wait" was
+# extendedWaitUntil on etMessage, which was already visible, so it returned
+# instantly and the device resubscribed ~10s after unsubscribing - a full minute
+# BEFORE the supposedly-blocked message was sent. The message was therefore
+# delivered to a consented channel and the test proved nothing.
+#
+# Splitting it in two removes the timing question entirely: this build leaves
+# the channel unsubscribed and ends, the web half sends with the channel
+# provably unsubscribed, and messaging_consent_delivery.yaml then checks what
+# happened. Consent is server-side state, so it survives between builds even
+# though the app is reinstalled.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# Unsubscribe, and confirm the server accepted it before the build ends - the
+# banner only appears once update_consent has returned.
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Unsubscribe"
+- tapOn:
+    text: "Unsubscribe"
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000

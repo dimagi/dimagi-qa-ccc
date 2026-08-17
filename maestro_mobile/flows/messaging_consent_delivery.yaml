@@ -1,0 +1,114 @@
+# Consent gates delivery, second half (TC-SUB-004, TC-SUB-006).
+#
+# Runs AFTER messaging_unsubscribe_only.yaml has left the channel unsubscribed
+# and after the web half has sent MESSAGE_BLOCKED into it. Consent is
+# server-side state, so it survives the reinstall between builds.
+#
+# Split into two builds on purpose. The single-build version tried to wait out
+# the blocked send between unsubscribing and resubscribing, but the wait was
+# extendedWaitUntil on an already-visible element and returned instantly - the
+# device resubscribed a minute before the message was sent, so it was delivered
+# to a consented channel and the test proved nothing. Two builds make the
+# ordering a fact rather than a hope.
+#
+# The pair has to be judged together: TC-SUB-004 alone would still pass if
+# delivery were broken permanently. So the blocked message is checked for
+# absence only AFTER the allowed one has arrived, at which point the channel is
+# provably live.
+#
+# Leaves the channel subscribed.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  MESSAGE_BLOCKED: "Blocked while unsubscribed"
+  MESSAGE_ALLOWED: "Allowed after resubscribe"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- TC-SUB-004: the blocked message must NOT be here ---
+# The channel is still unsubscribed from the previous build, and the web half
+# already sent MESSAGE_BLOCKED into it. Checked before resubscribing, so this is
+# the state a genuinely unsubscribed worker sees.
+- assertNotVisible:
+    text: ".*${MESSAGE_BLOCKED}.*"
+- assertVisible:
+    text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+
+# --- Resubscribe ---
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Resubscribe"
+- tapOn:
+    text: "Resubscribe"
+- extendedWaitUntil:
+    notVisible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+
+# --- TC-SUB-006: delivery resumes ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${MESSAGE_ALLOWED}.*"
+    timeout: 420000
+
+# --- The pair's real assertion ---
+# The channel is provably live (the allowed message just arrived), so the
+# blocked message being absent means it was never delivered, not that it was
+# slow.
+- assertNotVisible:
+    text: ".*${MESSAGE_BLOCKED}.*"

@@ -211,6 +211,94 @@ def test_keyword_triggered_from_channel_returns_a_message(page, test_data, confi
         messaging.delete_existing_keywords()
 
 
+def test_consent_gates_message_delivery(config, settings, messaging_data):
+    """TC-SUB-004 / TC-SUB-006 - nothing arrives while unsubscribed, delivery resumes after.
+
+    Three phases, because ordering has to be a fact rather than a hope:
+
+      build 1  the device unsubscribes and the build ends
+      web      a broadcast is sent with the channel provably unsubscribed
+      build 2  the device confirms it never arrived, resubscribes, and a second
+               broadcast (sent mid-build) does arrive
+
+    Consent is server-side state, so it survives the reinstall between builds.
+
+    The single-build version of this was wrong in a way worth remembering: it
+    tried to wait out the blocked send between unsubscribing and resubscribing,
+    but the wait was an extendedWaitUntil on an already-visible element and
+    returned instantly. The device resubscribed a minute BEFORE the message was
+    sent, so it was delivered to a consented channel and the test proved
+    nothing while looking like a product bug.
+
+    The pair is judged together: TC-SUB-004 alone would still pass if delivery
+    were broken permanently, so the blocked message's absence is only checked
+    after the allowed one has arrived.
+    """
+    unsubscribe_flow = messaging_data["unsubscribe_flow"]
+    delivery_flow = messaging_data["consent_delivery_flow"]
+    allowed_delay = int(messaging_data.get("allowed_send_delay_seconds", 500))
+
+    from flows.mid_build_web import DeferredWebAction
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    stamp = int(time.time() * 1000)
+    blocked = f"Blocked while unsubscribed {stamp}"
+    allowed = f"Allowed after resubscribe {stamp}"
+
+    def send(body):
+        def action(page):
+            LoginPage(page).valid_login_cchq(config, settings)
+            CCHQHomePage(page).verify_home_page_title("Welcome")
+            messaging = CCHQMessagingPage(page)
+            messaging.open_messaging_option("Broadcasts")
+            return messaging.create_broadcast_with_connect_message(
+                user_recipients=[messaging_data["worker_user_id"]],
+                message=body,
+            )
+
+        return action
+
+    # --- Phase 1: unsubscribe and end the session ---
+    worker = env_by_flow([unsubscribe_flow], config.env)[unsubscribe_flow]
+    first = run_flows(
+        flows=[unsubscribe_flow],
+        env={**worker, "CHANNEL_NAME": messaging_data["channel_name"]},
+        reports=False,
+        app_env=config.env,
+    )
+    print(f"STEP [Hybrid] unsubscribe build {first['build_id']} -> {first['status']}")
+    assert first["status"] == "SUCCESS", (
+        f"Could not leave the channel unsubscribed, so the rest proves nothing - see {first['build_url']}"
+    )
+
+    # --- Phase 2: send while it is definitely unsubscribed ---
+    blocked_send = DeferredWebAction(send(blocked), 0, label="send while unsubscribed").start()
+    blocked_send.join_and_raise()
+    print(f"STEP [Hybrid] sent while unsubscribed: {blocked!r}")
+
+    # --- Phase 3: verify absence, resubscribe, and verify delivery resumes ---
+    worker = env_by_flow([delivery_flow], config.env)[delivery_flow]
+    allowed_send = DeferredWebAction(send(allowed), allowed_delay, label="send after resubscribe").start()
+    second = run_flows(
+        flows=[delivery_flow],
+        env={
+            **worker,
+            "CHANNEL_NAME": messaging_data["channel_name"],
+            "MESSAGE_BLOCKED": blocked,
+            "MESSAGE_ALLOWED": allowed,
+        },
+        reports=False,
+        app_env=config.env,
+    )
+    allowed_send.join_and_raise()
+
+    print(f"STEP [Hybrid] delivery build {second['build_id']} -> {second['status']} ({second['build_url']})")
+    assert second["status"] == "SUCCESS", (
+        f"Consent did not gate delivery as expected: {second['passed']} passed / "
+        f"{second['failed']} failed - see {second['build_url']}"
+    )
+
+
 def test_message_push_opens_the_thread(config, settings, messaging_data):
     """TC-MSG-006 - tapping a messaging push opens that channel's thread.
 

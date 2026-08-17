@@ -232,6 +232,12 @@ MESSAGING:
   consent_flow: "messaging_consent.yaml"
   channel_created_flow: "messaging_channel_created.yaml"
   push_deeplink_flow: "messaging_push_deeplink.yaml"
+  unsubscribe_flow: "messaging_unsubscribe_only.yaml"
+  consent_delivery_flow: "messaging_consent_delivery.yaml"
+  # Two mid-build sends for the consent-gating pair. The first must land
+  # after the device has unsubscribed, the second after it has resubscribed.
+  blocked_send_delay_seconds: 260
+  allowed_send_delay_seconds: 500
   # How long the mid-build web trigger waits before requesting consent. It
   # must land AFTER the worker has signed in - a push sent earlier reaches a
   # device not yet registered as that user and is lost - and before the
