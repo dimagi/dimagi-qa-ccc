@@ -8,6 +8,11 @@ from pathlib import Path
 
 import yaml
 
+import hq_client
+
+# The Maestro suite runs against staging; override with HQ_BASE_URL if needed.
+HQ_BASE_URL = os.getenv("HQ_BASE_URL", "https://staging.commcarehq.org")
+
 FLOWS_DIR = Path(__file__).parent.parent / "flows"
 TEST_DATA_FILE = Path(__file__).parent.parent / "test_data" / "mobile_test_data.yaml"
 # Mobile worker credentials are secrets - kept in the gitignored settings.cfg at
@@ -45,7 +50,28 @@ def load_test_data(case_key):
     entry = dict(data[DATA_KEY_BY_CASE.get(case_key, case_key)])
     if case_key.startswith("PID_"):
         entry.update(_load_mobile_secrets())
+        # The install code is tied to one build and goes stale on every publish,
+        # so resolve it fresh from HQ (domain + app_id -> current code) instead of
+        # hardcoding it. Mechanism mirrored from hq_client.py (Kankana Bordoloi).
+        domain = entry.pop("domain")
+        app_id = entry.pop("app_id")
+        entry["app_code"] = _resolve_app_code(domain, app_id)
     return entry
+
+
+def _resolve_app_code(domain, app_id):
+    cfg = configparser.ConfigParser()
+    cfg.read(SETTINGS_FILE)
+    user = os.getenv("hq_username") or cfg.get("creds", "hq_username", fallback="").strip()
+    pwd = os.getenv("hq_password") or cfg.get("creds", "hq_password", fallback="").strip()
+    if not user or not pwd:
+        sys.exit("Missing HQ credentials: set [creds] hq_username/hq_password in settings.cfg.")
+    client = hq_client.HQClient(base_url=HQ_BASE_URL, domain=domain)
+    client.login(user, pwd)
+    # release_first=False: read the current top build's code without publishing.
+    code = client.get_app_install_code(app_id, release_first=False)
+    print(f"Resolved app install code for {domain}/{app_id}: {code}")
+    return code
 
 
 def _load_mobile_secrets():
