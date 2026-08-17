@@ -20,6 +20,22 @@ cchq_login_page:
   iframe_guide_popup: "//iframe[contains(@class,'userflowjs-bubble__frame')]"
   guide_popup: "//div[contains(@class,'userflowjs-bubble-frame-root') and contains(@class,'appearance-modal')]"
 
+cchq_mobile_workers_page:
+  # Mobile Workers page (Users > Mobile Workers). The main worker table is the
+  # one carrying the "PersonalID Status" header (there are also confirmation /
+  # pending-invite tables on the same page).
+  worker_table: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]"
+  personalid_status_header: "//th[contains(normalize-space(),'PersonalID Status')]"
+  personalid_status_labels: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]//tbody//span[contains(@class,'label')]"
+  # Action-column control per linked worker (Bootstrap modal trigger).
+  unlink_button: "//button[contains(normalize-space(),'Unlink PersonalID')]"
+  link_button: "//button[contains(@data-bind,'activate_personalid_link_')]"
+  # The unlink confirmation modal (one hidden instance per worker, id carries the user id).
+  unlink_modal: "//div[contains(@class,'modal') and contains(@id,'deactivate_personalid_link_')]"
+  unlink_modal_title: "//div[contains(@class,'modal')]//h4[normalize-space()='Unlink PersonalID Account']"
+  unlink_modal_cancel: "//div[contains(@class,'modal')]//button[normalize-space()='Cancel']"
+  unlink_modal_confirm: "//div[contains(@class,'modal')]//button[contains(@class,'btn-danger') and normalize-space()='Unlink']"
+
 cchq_application_page:
   sidebar_settings_icon: "//a[.//i[@aria-label='Application Settings']]"
   settings_tab_by_name: "//ul[contains(@class,'nav-tabs')]//a[normalize-space()='{tab_name}']"

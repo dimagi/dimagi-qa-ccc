@@ -68,6 +68,9 @@ jobs:
       TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
+      # Per-PR runs skip on_demand tests (real-device Maestro builds); a manual
+      # workflow_dispatch runs everything.
+      PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand' || '' }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
@@ -97,7 +100,9 @@ jobs:
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
         run: |
-          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          MARKER_ARGS=()
+          [ -n "$PYTEST_MARKERS" ] && MARKER_ARGS=(-m "$PYTEST_MARKERS")
+          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload JUnit report
         if: always()
@@ -171,6 +176,7 @@ jobs:
             <h2>CommCare-Connect Playwright Web Report - ${{ env.TEST_ENV }}</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
+            <p><b>Triggered by:</b> ${{ github.actor }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -215,8 +221,10 @@ jobs:
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
+          actor = os.environ.get("GITHUB_ACTOR", "")
           message = (
               f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
+              f"👤 Triggered by: {actor}\n"
               f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
               f"📎 Report: <{artifact_url}|Download here>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"

@@ -8,6 +8,9 @@ from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_workers_page import ConnectWorkersPage
 
 
+# Drives a real device via a BrowserStack Maestro build - kept out of the per-PR
+# gate (run on-demand / nightly), per the migration notes in PR #23.
+@pytest.mark.on_demand
 def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     """P2-A - assign on web, complete on a real device, verify on web.
 
