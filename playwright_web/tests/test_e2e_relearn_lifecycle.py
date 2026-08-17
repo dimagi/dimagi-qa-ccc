@@ -112,19 +112,19 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     from flows.mobile_runner import run_flows
 
     device_env = {
-            # The runner resolves the worker for this environment itself; passing it
-            # back keeps the values the web half asserted on and the values the
-            # device signs in with provably the same.
-            **worker,
-            "OPPORTUNITY": hybrid.get("opportunity_name") or "",
-            # Connect builds this body from the task type's name
-            # (send_task_completion_notification), so derive it from the same
-            # value the task was assigned with rather than restating it.
-            "COMPLETION_NOTIFICATION_BODY": f"You have completed the task '{task_type}'.",
-            # Unique per run so each visit is findable by entity name on web, and
-            # so a re-run cannot match a previous run's rows.
-            "VISIT_NAME_BLOCKED": blocked_visit_name,
-            "VISIT_ID_BLOCKED": blocked_visit_id,
+        # The runner resolves the worker for this environment itself; passing it back
+        # keeps the values the web half asserted on and the values the device signs in
+        # with provably the same.
+        **worker,
+        "OPPORTUNITY": hybrid.get("opportunity_name") or "",
+        # Connect builds this body from the task type's name
+        # (send_task_completion_notification), so derive it from the same value the
+        # task was assigned with rather than restating it.
+        "COMPLETION_NOTIFICATION_BODY": f"You have completed the task '{task_type}'.",
+        # Unique per run so each visit is findable by entity name on web, and so a
+        # re-run cannot match a previous run's rows.
+        "VISIT_NAME_BLOCKED": blocked_visit_name,
+        "VISIT_ID_BLOCKED": blocked_visit_id,
         "VISIT_NAME_ALLOWED": allowed_visit_name,
         "VISIT_ID_ALLOWED": allowed_visit_id,
     }
