@@ -74,6 +74,20 @@ env:
             id: "nav_drawer_recycler"
           timeout: 15000
 
+# --- TC-MSG-004: the drawer carries an unread badge ---
+# The broadcast was sent before this build started, so it arrives on the first
+# sync and is unviewed - which is the only state in which the badge exists. It
+# is rendered by NavDrawerAdapter.bindBadgeCount into tv_message_count inside
+# badge_layout, NOT in nav_drawer_item_view.xml, which is where one would look
+# first and find nothing.
+#
+# Presence, not a number: bindBadgeCount renders anything above 9 as "9+", so
+# asserting a count would be wrong the moment the channel has ten unread.
+- extendedWaitUntil:
+    visible:
+      id: "tv_message_count"
+    timeout: 120000
+
 # --- Open Messaging ---
 - tapOn:
     text: "Messaging"
