@@ -281,11 +281,15 @@ def upload_test_suite(auth, env=None, flow_env=None):
     return test_suite_url
 
 
-def trigger_build(auth, app_url, test_suite_url, flows=None):
+def trigger_build(auth, app_url, test_suite_url, flows=None, app_env=None):
+    app_env = app_env or DEFAULT_APP_ENV
+    # Env in the project and build tag so stage and prod builds are distinguishable
+    # on the BrowserStack dashboard (and in anything that echoes the build).
     body = {
         "app": app_url,
         "testSuite": test_suite_url,
-        "project": PROJECT_NAME,
+        "project": f"{PROJECT_NAME} - {app_env.upper()}",
+        "buildTag": app_env,
         "devices": [DEVICE],
         "execute": flows or TEST_FLOWS,
     }
@@ -420,7 +424,7 @@ def run_flows(flows=None, env=None, reports=True, session_retries=1, app_env=Non
     # never retried.
     attempt = 0
     while True:
-        build_id = trigger_build(auth, app_url, test_suite_url, flows=flows)
+        build_id = trigger_build(auth, app_url, test_suite_url, flows=flows, app_env=app_env)
         result = poll_build(auth, build_id)
         if result.get("status") != "error" or attempt >= session_retries:
             break

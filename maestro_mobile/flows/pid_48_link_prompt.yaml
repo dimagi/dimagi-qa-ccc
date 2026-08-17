@@ -1,0 +1,8 @@
+# PID_48 - After a password login (PersonalId signed in on device, non-Connect
+# app), the "Link to PersonalId?" prompt appears with Yes/No.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_link_base.yaml   # ends by asserting the dialog is visible
+- assertVisible: { text: "Do you want to link this login to your PersonalId account.*" }
+- assertVisible: { text: "YES" }
+- assertVisible: { text: "NO" }
