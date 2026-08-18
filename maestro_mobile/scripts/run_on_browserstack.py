@@ -55,6 +55,7 @@ WORKER_BY_FLOW = {
     # Deliberately the TASKING worker: the messaging worker is enrolled on no
     # opportunity on prod, so it cannot submit the form that fires the alert.
     "messaging_conditional_alert.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    "messaging_conditional_alert_survey.yaml": "MAESTRO_WORKER_RELEARN_TASK",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

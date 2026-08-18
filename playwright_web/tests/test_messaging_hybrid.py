@@ -279,6 +279,69 @@ def test_conditional_alert_reaches_the_channel(page, config, settings, messaging
         messaging.delete_existing_alerts(messaging.MESSAGE_ALERT_NAME)
 
 
+def test_conditional_alert_survey_is_answerable(page, config, settings, messaging_data):
+    """TC-CAL-005 - an alert-triggered Connect Survey is delivered and answerable.
+
+    Ports test_tc_09's Messaging_3. Same trigger as TC-CAL-003 - a form
+    submission carrying the entity id the alert filters on - but the content is
+    a survey, so the worker answers it question by question in the chat.
+
+    Runs as the tasking worker for the same reason as TC-CAL-003: it is the
+    account that can actually submit the form. See that test for the coupling
+    note.
+
+    Reaching the second question is what makes this more than a delivery test:
+    it only arrives once the first is answered, so the survey is proven to be a
+    live conversation rather than a single canned message.
+    """
+    flow = messaging_data["conditional_alert_survey_flow"]
+
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+    entity_id = str(int(time.time() * 1000) % 1_000_000)
+    first_answer = f"Automation Alert Survey {entity_id}"
+
+    login_page = LoginPage(page)
+    login_page.valid_login_cchq(config, settings)
+    CCHQHomePage(page).verify_home_page_title("Welcome")
+
+    messaging = CCHQMessagingPage(page)
+    messaging.open_messaging_option("Conditional Alerts")
+    messaging.delete_existing_alerts(messaging.SURVEY_ALERT_NAME)
+    try:
+        messaging.create_connect_survey_conditional_alert(
+            entity_id_value=entity_id,
+            user_recipients=[messaging_data["alert_worker_user_id"]],
+            survey_form=messaging_data["survey_form"],
+        )
+        print(f"STEP [Hybrid] Survey alert created on entity_id={entity_id}")
+
+        summary = run_flows(
+            flows=[flow],
+            env={
+                **worker,
+                "OPPORTUNITY": messaging_data["alert_opportunity"],
+                "CHANNEL_NAME": messaging_data["channel_name"],
+                "ENTITY_ID": entity_id,
+                "Q1_LABEL": messaging_data["survey_q1_label"],
+                "Q1_ANSWER": first_answer,
+                "Q2_LABEL": messaging_data["survey_q2_label"],
+                "Q2_ANSWER": messaging_data["survey_q2_answer"],
+            },
+            reports=False,
+            app_env=config.env,
+        )
+        print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+        assert summary["status"] == "SUCCESS", (
+            f"The alert survey was not delivered or could not be answered: {summary['passed']} passed / "
+            f"{summary['failed']} failed - see {summary['build_url']}"
+        )
+    finally:
+        messaging.open_messaging_option("Conditional Alerts")
+        messaging.delete_existing_alerts(messaging.SURVEY_ALERT_NAME)
+
+
 def test_consent_gates_message_delivery(config, settings, messaging_data):
     """TC-SUB-004 / TC-SUB-006 - nothing arrives while unsubscribed, delivery resumes after.
 

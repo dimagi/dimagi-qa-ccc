@@ -1,8 +1,9 @@
-# Worker side of the conditional-alert test (TC-CAL-003).
+# Worker side of the conditional-alert SURVEY test (TC-CAL-005).
 #
 # The last of the legacy ports: test_tc_09's mobile half (Messaging_2/3). Web
 # creates an alert keyed on a case property, the worker submits a form carrying
-# that value, and the alert fires a Connect Message into the worker's channel.
+# that value, and the alert fires a Connect SURVEY into the worker's channel, which the worker
+# then answers question by question.
 #
 # WHICH WORKER, AND WHY. The messaging worker (+74267426121) is enrolled on no
 # opportunity on prod - legacy's "test_09" no longer exists - so it cannot
@@ -38,7 +39,12 @@ env:
   # The value the alert's case-property filter matches on. Unique per run, and
   # the join between the HQ rule and this submission.
   ENTITY_ID: "900001"
-  EXPECTED_MESSAGE: "Automation Test Message"
+  # The survey asks these in order; answers are data so a different form only
+  # means different values, not a different flow.
+  Q1_LABEL: "Name"
+  Q1_ANSWER: "Automation Alert Survey"
+  Q2_LABEL: "ID"
+  Q2_ANSWER: "101"
 ---
 - launchApp:
     clearState: true
@@ -202,7 +208,38 @@ env:
     timeout: 60000
 - extendedWaitUntil:
     visible:
-      text: ".*${EXPECTED_MESSAGE}.*"
+      text: ".*${Q1_LABEL}.*"
     timeout: 600000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q1_ANSWER}"
+# The send control only exists once the composer is non-empty, so assert it
+# appeared rather than tapping blind.
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_ANSWER}.*"
+    timeout: 60000
+
+# The second question only arrives once the first is answered, so reaching it
+# proves the survey is a live conversation rather than a single canned message.
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q2_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_ANSWER}.*"
+    timeout: 60000
 - assertVisible:
     id: "tvChatDate"

@@ -235,6 +235,7 @@ MESSAGING:
   unsubscribe_flow: "messaging_unsubscribe_only.yaml"
   consent_delivery_flow: "messaging_consent_delivery.yaml"
   conditional_alert_flow: "messaging_conditional_alert.yaml"
+  conditional_alert_survey_flow: "messaging_conditional_alert_survey.yaml"
   # The alert cases run as the TASKING worker, which is enrolled and
   # delivering on the tasking opportunity - the messaging worker is enrolled
   # nowhere on prod. The alert matches a case property and its recipient is a
