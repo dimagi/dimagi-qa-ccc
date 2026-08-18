@@ -182,6 +182,11 @@ TASKING_HYBRID:
   # per environment. It is deliberately not repeated here: the number differs
   # between environments, and a copy in two files drifts into a device signing in as
   # the wrong worker on one of them.
+  # Two device sessions, gated in between by the web side: the blocked visit has to
+  # be seen evaluated by Connect before the task completion is submitted, because the
+  # HQ -> Connect hop lags on staging and the completion can otherwise be processed
+  # first. See the comment in worker_blocked_visit.yaml.
+  flow_blocked_visit: "worker_blocked_visit.yaml"
   flow: "worker_relearn_task.yaml"
   # Form submission travels device -> CommCare HQ -> Connect's form receiver,
   # which is far from instant on staging, so poll generously.
