@@ -185,14 +185,30 @@ MAESTRO_MESSAGING_HYBRID:
 # Deliberately subscribed to NO channels - the empty-state case asserts
 # "You're not subscribed to any messaging channels".
 #   MAESTRO_MESSAGING_EMPTY_STATE -> TC-CHN-003
-# Left pointing at the login worker until confirmed on a device: that account has
-# most likely never been added to a channel, in which case no new account is
-# needed at all.
+#
+# ###################################################################
+# #  NEVER INVITE THESE TWO NUMBERS TO A CHANNEL OR AN OPPORTUNITY. #
+# ###################################################################
+#
+# These accounts are reserved, and reserved is the whole point: TC-CHN-003 needs
+# an account that has never been in ANY channel on ANY domain. A channel cannot
+# be undone - ConnectID's CreateChannelView is get_or_create on (server,
+# connect_user, channel_source), so once one exists it exists forever and
+# unsubscribing does not remove it, it only flags the row. One consent request
+# sent to either number therefore retires the case permanently and costs a fresh
+# account to restore.
+#
+# That also means: do not point any other messaging test at these, and do not
+# reach for them as a spare login when an account is misbehaving. They earn their
+# keep by staying empty.
+#
+# Provided 2026-08-18 to replace the previous pair (prod 7426426 "Automation User
+# 26", staging 7426000 "Deb Test 8/12"), which were no longer clean.
 MAESTRO_MESSAGING_EMPTY_STATE:
   country_code: "+7426"
-  phone_number: "7426426"
-  username: "Automation User 26"
+  phone_number: "4376447"
+  username: "No Channel User"
   backup_code: "123456"
-  phone_number_staging: "7426000"
-  username_staging: "Deb Test 8/12"
-  backup_code_staging: "742600"
+  phone_number_staging: "4376448"
+  username_staging: "No Channel User"
+  backup_code_staging: "123456"
