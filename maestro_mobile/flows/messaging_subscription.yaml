@@ -27,7 +27,7 @@ env:
   SPARE_CHANNEL: "connetqa-prod"
   # A channel that stays subscribed throughout, used as the position anchor.
   CHANNEL_NAME: "connectqa-automation-prod"
-  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this channel"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
 ---
 - launchApp:
     clearState: true
@@ -79,10 +79,42 @@ env:
       text: "${CHANNEL_NAME}"
     timeout: 120000
 
+# --- Put the account back if a previous run died mid-way ---
+# This flow unsubscribes and then restores, so a run that fails in between
+# leaves the spare flagged. The pre-assert below would then fail for a reason
+# with nothing to do with sorting, and every later run would fail the same way
+# until somebody fixed the account by hand. Restoring it here first makes the
+# case recoverable on its own.
+- runFlow:
+    when:
+      visible:
+        id: "tvUnsubscribedPill"
+    commands:
+      - tapOn:
+          text: "${SPARE_CHANNEL}"
+      - extendedWaitUntil:
+          visible:
+            id: "etMessage"
+          timeout: 60000
+      - tapOn:
+          text: "More options"
+      - tapOn:
+          text: "Resubscribe"
+      - tapOn:
+          text: "Resubscribe"
+      - extendedWaitUntil:
+          notVisible:
+            text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+          timeout: 30000
+      - back
+      - extendedWaitUntil:
+          visible:
+            text: "Channels"
+          timeout: 30000
+
 # --- Both are subscribed to begin with, and the spare sits ABOVE the anchor ---
-# If this fails, the account did not start in the state this case assumes -
-# most likely the spare is already unsubscribed - and the run should stop rather
-# than assert a sort it cannot actually observe.
+# If this still fails, the account is not in the state this case assumes and the
+# run should stop rather than assert a sort it cannot actually observe.
 - assertNotVisible:
     id: "tvUnsubscribedPill"
 - assertVisible:
