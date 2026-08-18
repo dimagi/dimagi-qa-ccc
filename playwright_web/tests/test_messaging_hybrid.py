@@ -211,6 +211,74 @@ def test_keyword_triggered_from_channel_returns_a_message(page, test_data, confi
         messaging.delete_existing_keywords()
 
 
+def test_conditional_alert_reaches_the_channel(page, config, settings, messaging_data):
+    """TC-CAL-003 - an alert fires on a matching form submission and reaches the channel.
+
+    The last of the legacy ports: test_tc_09's mobile half (Messaging_2).
+
+    Runs as the TASKING worker, not the messaging one. The messaging worker is
+    enrolled on no opportunity on prod - legacy's "test_09" no longer exists -
+    so it cannot submit the form that fires the alert. The tasking worker is
+    already enrolled, past assessment and delivering on an opportunity whose
+    deliver app has the Registration Form, and is a mobile worker on the same
+    HQ domain, so it can receive the alert too.
+
+    That works because the alert matches a CASE PROPERTY while its recipient is
+    a USER: submitter and recipient are free to be the same account, and no new
+    opportunity was needed.
+
+    Coupling to be aware of: this shares an account with the tasking suite, so
+    the two must not run device sessions concurrently - a PersonalID number
+    cannot hold a session twice.
+    """
+    flow = messaging_data["conditional_alert_flow"]
+
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+
+    # The join between the HQ rule and the mobile submission. Unique per run, so
+    # a stale alert from a previous run cannot satisfy this one.
+    entity_id = str(int(time.time() * 1000) % 1_000_000)
+
+    login_page = LoginPage(page)
+    login_page.valid_login_cchq(config, settings)
+    CCHQHomePage(page).verify_home_page_title("Welcome")
+
+    messaging = CCHQMessagingPage(page)
+    messaging.open_messaging_option("Conditional Alerts")
+    messaging.delete_existing_alerts(messaging.MESSAGE_ALERT_NAME)
+    try:
+        # --- WEB: the alert has to exist before the form is submitted ---
+        message = messaging.create_connect_message_conditional_alert(
+            entity_id_value=entity_id,
+            user_recipients=[messaging_data["alert_worker_user_id"]],
+        )
+        print(f"STEP [Hybrid] Alert created on entity_id={entity_id}, body {message!r}")
+
+        # --- MOBILE: submit the form carrying that entity id, then read the channel ---
+        summary = run_flows(
+            flows=[flow],
+            env={
+                **worker,
+                "OPPORTUNITY": messaging_data["alert_opportunity"],
+                "CHANNEL_NAME": messaging_data["channel_name"],
+                "ENTITY_ID": entity_id,
+                "EXPECTED_MESSAGE": message,
+            },
+            reports=False,
+            app_env=config.env,
+        )
+        print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+        assert summary["status"] == "SUCCESS", (
+            f"The alert did not reach the channel: {summary['passed']} passed / "
+            f"{summary['failed']} failed - see {summary['build_url']}"
+        )
+    finally:
+        messaging.open_messaging_option("Conditional Alerts")
+        messaging.delete_existing_alerts(messaging.MESSAGE_ALERT_NAME)
+
+
 def test_consent_gates_message_delivery(config, settings, messaging_data):
     """TC-SUB-004 / TC-SUB-006 - nothing arrives while unsubscribed, delivery resumes after.
 

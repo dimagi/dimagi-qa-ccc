@@ -1,0 +1,196 @@
+# Worker side of the conditional-alert test (TC-CAL-003).
+#
+# The last of the legacy ports: test_tc_09's mobile half (Messaging_2/3). Web
+# creates an alert keyed on a case property, the worker submits a form carrying
+# that value, and the alert fires a Connect Message into the worker's channel.
+#
+# WHICH WORKER, AND WHY. The messaging worker (+74267426121) is enrolled on no
+# opportunity on prod - legacy's "test_09" no longer exists - so it cannot
+# submit a form. This flow therefore runs as the TASKING worker, which is
+# already enrolled, past learn and assessment, and delivering on the long-lived
+# tasking opportunity whose deliver app has the Registration Form. It is also a
+# mobile worker on connectqa-automation-prod, so it can receive the alert.
+#
+# The alert's recipient and the form's submitter are the same worker here, but
+# they need not be: the alert matches a CASE PROPERTY, and its recipient is a
+# USER. That is why no new opportunity was needed.
+#
+# CONSEQUENCE: this flow shares an account with the tasking suite, so the two
+# must not run device sessions concurrently - a PersonalID number cannot hold a
+# session twice. Both are on-demand rather than per-PR, so that is manageable,
+# but it is a real coupling and the reason it is called out here.
+#
+# The deliver-app steps mirror worker_relearn_task.yaml, which is the proven
+# path to this app's Registration Form.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "6540852"
+  USERNAME: "Relearn User 2"
+  BACKUP_CODE: "123456"
+  OPPORTUNITY: "Demo Opportunity_04-Aug-2026 : 15:37"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # Casing differs between the master app and an opportunity's copy, and Maestro
+  # matches case-sensitively, so these carry character classes.
+  VISIT_MODULE: "Case List"
+  VISIT_FORM: "[Rr]egistration [Ff]orm"
+  VISIT_NAME: "CAL003 Alert Trigger"
+  # The value the alert's case-property filter matches on. Unique per run, and
+  # the join between the HQ rule and this submission.
+  ENTITY_ID: "900001"
+  EXPECTED_MESSAGE: "Automation Test Message"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+# completeSignin() opens the drawer; dismiss it by tapping the scrim rather than
+# pressing Back, which on the setup screen closes the activity entirely.
+- runFlow:
+    when:
+      visible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          point: "92%,50%"
+      - extendedWaitUntil:
+          notVisible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Reach the Connect menu ---
+# connect_login_button is hidden until the app has Connect access, which a fresh
+# install lacks. "Refresh Opportunities" fetches jobs and turns access on.
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_login_button"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn: "Refresh Opportunities"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_login_button"
+          timeout: 120000
+
+- tapOn:
+    id: "connect_login_button"
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 20000
+
+# Learning is already complete for this worker, so the card offers Resume, which
+# downloads the deliver app on a fresh install. Allow for a real download.
+- tapOn:
+    id: "btn_resume"
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 600000
+
+# --- Submit the form that fires the alert ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+# Wait on the form's own next arrow rather than a question label: it proves a
+# form is open without depending on how the first question is worded.
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+# Form widgets are built at runtime and carry no resource ids, so the answer
+# field is reached by tapping just below the question label.
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${ENTITY_ID}"
+- tapOn:
+    id: "nav_btn_next"
+# Whatever remains (picture, GPS) is skippable. Optional taps are WARNED rather
+# than failed once the arrow is gone, which is what ends the walk.
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- The alert must fire and reach the channel ---
+# The submission travels device -> CommCare HQ -> the messaging rule -> ConnectID
+# -> FCM, which is far from instant, hence the long wait.
+- tapOn:
+    text: "Open navigation drawer"
+- extendedWaitUntil:
+    visible:
+      id: "nav_drawer_recycler"
+    timeout: 15000
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 180000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: ".*${EXPECTED_MESSAGE}.*"
+    timeout: 600000
+- assertVisible:
+    id: "tvChatDate"
