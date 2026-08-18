@@ -106,11 +106,7 @@ env:
           notVisible:
             text: ".*${NOT_SUBSCRIBED_TEXT}.*"
           timeout: 30000
-      - back
-      - extendedWaitUntil:
-          visible:
-            text: "Channels"
-          timeout: 30000
+      - runFlow: shared_back_to_channels.yaml
 
 # --- Both are subscribed to begin with, and the spare sits ABOVE the anchor ---
 # If this still fails, the account is not in the state this case assumes and the
@@ -141,11 +137,7 @@ env:
     timeout: 30000
 
 # --- TC-CHN-006: it is now flagged, and has moved BELOW the subscribed one ---
-- back
-- extendedWaitUntil:
-    visible:
-      text: "Channels"
-    timeout: 30000
+- runFlow: shared_back_to_channels.yaml
 - assertVisible:
     id: "tvUnsubscribedPill"
 - assertVisible:
@@ -170,11 +162,7 @@ env:
     notVisible:
       text: ".*${NOT_SUBSCRIBED_TEXT}.*"
     timeout: 30000
-- back
-- extendedWaitUntil:
-    visible:
-      text: "Channels"
-    timeout: 30000
+- runFlow: shared_back_to_channels.yaml
 # No row is flagged any more, and the spare is back above the anchor - which is
 # also what proves the earlier move was the sort reacting to subscription state
 # rather than the row simply living at the bottom.

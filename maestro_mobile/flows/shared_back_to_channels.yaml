@@ -1,0 +1,29 @@
+# Return to the channel list from inside a thread.
+#
+# A single `back` is not reliable here. After a subscribe/unsubscribe
+# confirmation, one back press can be consumed by something other than the
+# thread fragment - build b8beb020 pressed back, waited 30s, and was still on
+# the thread with the composer enabled - so the press clearly went somewhere
+# else. Rather than assume which thing ate it, press until the list is actually
+# showing, which is the state the caller needs anyway.
+#
+# Bounded and guarded: each attempt only fires while "Channels" is not visible,
+# so it stops as soon as it has worked, and waitForAnimationToEnd spaces the
+# attempts without failing if there is no animation to wait for.
+appId: org.commcare.dalvik
+---
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - back
+            - waitForAnimationToEnd:
+                timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
