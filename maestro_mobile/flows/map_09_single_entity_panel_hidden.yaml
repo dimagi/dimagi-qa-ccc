@@ -1,0 +1,19 @@
+# Map_09 - with a single geo entity in the list, the map's toggle panel is
+# HIDDEN (the panel only appears when >=2 toggles are needed). Reuses the shared
+# navigation, then asserts the panel and its switches are not present.
+#
+# DATA SWAP (per Anshu, staging + prod): the single-entity data lives under the
+# **"Map_08" PersonalId account** (+74268080808), not "Map_09" - the worker is
+# wired in run_on_browserstack.py / run_tests.py, so do not "fix" the mismatch.
+#
+# Real-device only: the local emulator fails PersonalId's device-security check
+# for these accounts, so this is validated on BrowserStack (Pixel 7), not locally.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_map_open.yaml
+
+# Single entity -> the toggle panel and all three switches are hidden.
+- assertNotVisible: { id: "org.commcare.dalvik:id/map_overlay" }
+- assertNotVisible: { id: "org.commcare.dalvik:id/toggle_markers" }
+- assertNotVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
+- assertNotVisible: { id: "org.commcare.dalvik:id/toggle_geopoints" }

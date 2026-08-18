@@ -35,11 +35,16 @@ FLOW_BY_CASE = {
     # single-purpose workers once that data exists.
     "MAP_10": "map_10_toggle_panel_visible.yaml",
     "MAP_11": "map_11_toggle_switches.yaml",
+    "MAP_08": "map_08_config_warning.yaml",
+    "MAP_09": "map_09_single_entity_panel_hidden.yaml",
 }
 
 # Cases that read a shared test-data entry rather than one keyed by the case id.
 DATA_KEY_BY_CASE = {c: "PID_TRADITIONAL_LINK" for c in FLOW_BY_CASE if c.startswith("PID_")}
 DATA_KEY_BY_CASE.update({"MAP_10": "MAP_CASE_LIST", "MAP_11": "MAP_CASE_LIST"})
+# DATA SWAP (Anshu): the misconfigured data (MAP_08 test) lives under the Map_09
+# account, and the single-entity data (MAP_09 test) under the Map_08 account.
+DATA_KEY_BY_CASE.update({"MAP_08": "MAP_USER_09", "MAP_09": "MAP_USER_08"})
 
 # Secret fields sourced from settings.cfg [mobile] (or an env override), never
 # the committed yaml. env_var wins, then settings.cfg, then any yaml fallback.

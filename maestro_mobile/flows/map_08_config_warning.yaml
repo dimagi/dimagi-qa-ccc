@@ -1,0 +1,22 @@
+# Map_08 - with a misconfigured geo entity in the list, the map shows a warning
+# banner at the bottom that not all markers loaded. Reuses the shared navigation,
+# then asserts that banner.
+#
+# DATA SWAP (per Anshu, staging + prod): the misconfigured data lives under the
+# **"Map_09" PersonalId account** (+74269090909), not "Map_08" - the worker is
+# wired in run_on_browserstack.py / run_tests.py, so do not "fix" the mismatch.
+#
+# Real-device only: the local emulator fails PersonalId's device-security check
+# for these accounts, so this is validated on BrowserStack (Pixel 7), not locally.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_map_open.yaml
+
+# The app-configuration error banner appears at the bottom of the map. Match a
+# stable substring (regex) so minor punctuation differences don't break it.
+# Full text: "There was an error in app configuration due to which not all
+# markers on the map are loaded correctly."
+- extendedWaitUntil:
+    visible:
+      text: ".*not all markers on the map are loaded correctly.*"
+    timeout: 30000

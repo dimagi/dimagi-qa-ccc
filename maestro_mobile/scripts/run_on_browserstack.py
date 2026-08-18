@@ -31,6 +31,11 @@ TEST_FLOWS = [
     # Case List Map "View on Map" cases (share the Case_list worker).
     "map_10_toggle_panel_visible.yaml",
     "map_11_toggle_switches.yaml",
+    # Map_08 (config-error banner) and Map_09 (single-entity, panel hidden) - each
+    # on its own worker. Real-device only: the emulator fails PersonalId's
+    # device-security check for these accounts.
+    "map_08_config_warning.yaml",
+    "map_09_single_entity_panel_hidden.yaml",
 ]
 POLL_INTERVAL_SECONDS = 15
 
@@ -46,6 +51,11 @@ WORKER_BY_FLOW = {
     # flow and inherited by the shared_map_open subflow via runFlow.
     "map_10_toggle_panel_visible.yaml": "MAESTRO_MAP_CASE_LIST",
     "map_11_toggle_switches.yaml": "MAESTRO_MAP_CASE_LIST",
+    # DATA SWAP (Anshu): the MAP_08 test (misconfigured banner) runs on the Map_09
+    # account, and the MAP_09 test (single entity, panel hidden) on the Map_08
+    # account. Wired here deliberately - do not "correct" the mismatch.
+    "map_08_config_warning.yaml": "MAESTRO_MAP_USER_09",
+    "map_09_single_entity_panel_hidden.yaml": "MAESTRO_MAP_USER_08",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
