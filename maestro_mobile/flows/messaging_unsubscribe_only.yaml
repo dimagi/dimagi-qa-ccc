@@ -93,12 +93,24 @@ env:
 
 # Unsubscribe, and confirm the server accepted it before the build ends - the
 # banner only appears once update_consent has returned.
-- tapOn:
-    text: "More options"
-- tapOn:
-    text: "Unsubscribe"
-- tapOn:
-    text: "Unsubscribe"
+#
+# Guarded on the channel actually being subscribed. Consent is server-side state
+# that survives between builds, so a previous run that died after this flow left
+# the channel unsubscribed - and then this flow failed on a menu offering
+# "Resubscribe" instead. The point of this build is that the channel ENDS
+# unsubscribed, not that it changed state, so doing nothing when it is already
+# unsubscribed is the correct behaviour rather than a failure.
+- runFlow:
+    when:
+      notVisible:
+        text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn:
+          text: "Unsubscribe"
+      - tapOn:
+          text: "Unsubscribe"
 - extendedWaitUntil:
     visible:
       text: ".*${NOT_SUBSCRIBED_TEXT}.*"
