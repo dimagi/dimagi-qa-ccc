@@ -1,0 +1,154 @@
+# Worker side of the channel-sort test (TC-CHN-006).
+#
+# ChannelAdapter.setChannels lists subscribed channels first and appends
+# unsubscribed ones below. This proves that by moving a channel across the
+# boundary and watching it change position.
+#
+# Why it asserts the order BEFORE unsubscribing as well: the account has several
+# channels, and if the spare already happened to sit last, "it is below the
+# anchor" would be true no matter what the app did. Checking that it starts
+# ABOVE the anchor and ends BELOW it makes the assertion about the sort rather
+# than about where the row happened to be.
+#
+# SPARE_CHANNEL is deliberately not the channel the rest of the suite delivers
+# into. Every broadcast, keyword, alert and survey test sends to CHANNEL_NAME,
+# and a run that died between unsubscribe and resubscribe would leave that
+# channel unsubscribed and quietly break all of them. The spare is expendable.
+#
+# Ids come from commcare-android:
+#   tvUnsubscribedPill   the "unsubscribed" marker on a channel row
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  # The channel that gets unsubscribed and restored.
+  SPARE_CHANNEL: "connetqa-prod"
+  # A channel that stays subscribed throughout, used as the position anchor.
+  CHANNEL_NAME: "connectqa-automation-prod"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel list ---
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${SPARE_CHANNEL}"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+
+# --- Both are subscribed to begin with, and the spare sits ABOVE the anchor ---
+# If this fails, the account did not start in the state this case assumes -
+# most likely the spare is already unsubscribed - and the run should stop rather
+# than assert a sort it cannot actually observe.
+- assertNotVisible:
+    id: "tvUnsubscribedPill"
+- assertVisible:
+    text: "${SPARE_CHANNEL}"
+    above:
+      text: "${CHANNEL_NAME}"
+
+# --- Unsubscribe the spare ---
+- tapOn:
+    text: "${SPARE_CHANNEL}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Unsubscribe"
+- tapOn:
+    text: "Unsubscribe"
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+
+# --- TC-CHN-006: it is now flagged, and has moved BELOW the subscribed one ---
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+- assertVisible:
+    id: "tvUnsubscribedPill"
+- assertVisible:
+    text: "${SPARE_CHANNEL}"
+    below:
+      text: "${CHANNEL_NAME}"
+
+# --- Restore it, and the account, to how it was found ---
+- tapOn:
+    text: "${SPARE_CHANNEL}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 30000
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Resubscribe"
+- tapOn:
+    text: "Resubscribe"
+- extendedWaitUntil:
+    notVisible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 30000
+# No row is flagged any more, and the spare is back above the anchor - which is
+# also what proves the earlier move was the sort reacting to subscription state
+# rather than the row simply living at the bottom.
+- assertNotVisible:
+    id: "tvUnsubscribedPill"
+- assertVisible:
+    text: "${SPARE_CHANNEL}"
+    above:
+      text: "${CHANNEL_NAME}"

@@ -239,6 +239,13 @@ MESSAGING:
   keyword_flow: "messaging_keyword.yaml"
   keyword_survey_flow: "messaging_keyword_survey.yaml"
   consent_flow: "messaging_consent.yaml"
+  subscription_flow: "messaging_subscription.yaml"
+  # The channel TC-CHN-006 unsubscribes and restores. Deliberately NOT
+  # channel_name: every delivery test sends into that one, and a run that died
+  # between unsubscribe and resubscribe would leave it unsubscribed and break
+  # them all. This one is referenced nowhere else.
+  spare_channel: "connetqa-prod"
+  spare_channel_staging: "connectqa"
   channel_created_flow: "messaging_channel_created.yaml"
   push_deeplink_flow: "messaging_push_deeplink.yaml"
   unsubscribe_flow: "messaging_unsubscribe_only.yaml"

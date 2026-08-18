@@ -25,7 +25,7 @@ from pages.cchq_messaging_page import CCHQMessagingPage
 from pages.cchq_reports_page import CCHQReportsPage
 from tests.test_messaging_web import _env_value
 
-ENV_SPECIFIC_KEYS = ("survey_form", "worker_user_id", "channel_name")
+ENV_SPECIFIC_KEYS = ("survey_form", "worker_user_id", "channel_name", "spare_channel")
 
 
 @pytest.fixture
@@ -492,6 +492,46 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
     finally:
         messaging.open_messaging_option("Conditional Alerts")
         messaging.delete_existing_alerts(messaging.SURVEY_ALERT_NAME)
+
+
+def test_subscribed_channels_sort_before_unsubscribed(config, messaging_data):
+    """TC-CHN-006 - subscribed channels list above unsubscribed ones.
+
+    Device-only: the sort is ChannelAdapter.setChannels, and nothing about it is
+    observable from HQ.
+
+    Needs no setup. The account already holds several channels and they are all
+    subscribed, so the flow creates the unsubscribed state itself by
+    unsubscribing a spare, then restores it - which also keeps the case
+    re-runnable rather than depending on a channel someone left in the right
+    state by hand.
+
+    It moves a channel that starts ABOVE the anchor to below it, and back. A
+    test that only checked "the unsubscribed one is at the bottom" would pass
+    even if the app never sorted at all, provided the row already happened to
+    sit last.
+    """
+    flow = messaging_data["subscription_flow"]
+
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+
+    summary = run_flows(
+        flows=[flow],
+        env={
+            **worker,
+            "CHANNEL_NAME": messaging_data["channel_name"],
+            "SPARE_CHANNEL": messaging_data["spare_channel"],
+        },
+        reports=False,
+        app_env=config.env,
+    )
+    print(f"STEP [Mobile] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+    assert summary["status"] == "SUCCESS", (
+        f"Channel sort did not behave as expected: {summary['passed']} passed / "
+        f"{summary['failed']} failed - see {summary['build_url']}"
+    )
 
 
 def test_consent_gates_message_delivery(config, settings, messaging_data):
