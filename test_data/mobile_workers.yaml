@@ -207,8 +207,8 @@ MAESTRO_MESSAGING_HYBRID:
 MAESTRO_MESSAGING_EMPTY_STATE:
   country_code: "+7426"
   phone_number: "4376447"
-  username: "No Channel User"
+  username: "No Channel User (Prod)"
   backup_code: "123456"
   phone_number_staging: "4376448"
-  username_staging: "No Channel User"
+  username_staging: "No Channel User (Staging)"
   backup_code_staging: "123456"

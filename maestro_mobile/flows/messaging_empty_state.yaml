@@ -22,7 +22,7 @@ appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
   PHONE_NUMBER: "4376447"
-  USERNAME: "No Channel User"
+  USERNAME: "No Channel User (Prod)"
   BACKUP_CODE: "123456"
   EMPTY_TEXT: "You're not subscribed to any messaging channels"
 ---
