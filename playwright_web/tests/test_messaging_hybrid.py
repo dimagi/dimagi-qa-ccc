@@ -103,6 +103,9 @@ def test_broadcast_connect_survey_is_answerable(page, test_data, config, setting
       fill_survey_form(), so the test is not tied to one specific survey form.
     - The first answer is unique per run, so the submission this run produced is
       identifiable rather than indistinguishable from every previous run's.
+      Since the form is now the SMS app's Registration Form, that first answer
+      is the case name, which is the field submit history displays - so the
+      value this test generates is directly the one TC-BRD-004 searches for.
 
     TC-BRD-004 - proving the completed submission reached HQ's submit history -
     is deliberately not asserted yet: it needs the Submit History report mapped,
@@ -146,6 +149,10 @@ def test_broadcast_connect_survey_is_answerable(page, test_data, config, setting
             "Q1_ANSWER": first_answer,
             "Q2_LABEL": messaging_data["survey_q2_label"],
             "Q2_ANSWER": messaging_data["survey_q2_answer"],
+            "Q3_LABEL": messaging_data["survey_q3_label"],
+            "Q3_ANSWER": messaging_data["survey_q3_answer"],
+            "Q4_LABEL": messaging_data["survey_q4_label"],
+            "Q4_ANSWER": messaging_data["survey_q4_answer"],
         },
         reports=False,
         app_env=config.env,
@@ -328,6 +335,10 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
                 "Q1_ANSWER": first_answer,
                 "Q2_LABEL": messaging_data["survey_q2_label"],
                 "Q2_ANSWER": messaging_data["survey_q2_answer"],
+                "Q3_LABEL": messaging_data["survey_q3_label"],
+                "Q3_ANSWER": messaging_data["survey_q3_answer"],
+                "Q4_LABEL": messaging_data["survey_q4_label"],
+                "Q4_ANSWER": messaging_data["survey_q4_answer"],
             },
             reports=False,
             app_env=config.env,

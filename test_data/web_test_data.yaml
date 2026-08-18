@@ -196,10 +196,18 @@ TASKING_HYBRID:
 # Connect messaging (CCCT-2671). Unsuffixed keys are prod, `_staging` overrides
 # them - the same convention the rest of this file uses.
 MESSAGING:
-  # Survey form the Connect Survey content type points at. Both values are
-  # carried over from the legacy page object, which hardcoded them per env.
-  survey_form: "Delivery App - ETE > Surveys > Survey"
-  survey_form_staging: "SMS Tests [DO NOT DELETE] > Surveys > Survey"
+  # Survey form the Connect Survey content type points at.
+  #
+  # One value for both environments on purpose. These used to differ - prod
+  # pointed at "Delivery App - ETE > Surveys > Survey" and staging at the SMS
+  # app's "Surveys > Survey" - which meant the two environments exercised
+  # different forms and only one of them could be right. A Connect Survey is
+  # meant to be driven from the SMS app, and prod's completed surveys never
+  # appeared in HQ's submit history while it pointed at a Delivery App form.
+  # Whether that is the whole explanation is what TC-BRD-004 has to show; what
+  # is certain is that both environments should ask the same questions, so the
+  # answers below can be one set rather than two.
+  survey_form: "SMS Tests [DO NOT DELETE] > Case List > Registration Form"
   # HQ user id of the mobile worker every alert and broadcast is addressed to.
   # It MUST be the user that MAESTRO_MESSAGING_HYBRID signs in as on the device
   # (prod: CCC- Automationuser1, +74267426121), or the message is delivered to
@@ -252,9 +260,25 @@ MESSAGING:
   # flow's 600s shade wait runs out. Cold-start sign-in has been running
   # ~2.5 min on BrowserStack, so this leaves roughly a minute of margin.
   consent_trigger_delay_seconds: 210
-  # The questions "Delivery App - ETE > Surveys > Survey" asks, in order. Kept as
-  # data rather than baked into the flow the way legacy's fill_survey_form() did,
-  # so pointing survey_form at a different form only means editing this.
-  survey_q1_label: "Name"
-  survey_q2_label: "ID"
+  # The questions survey_form asks, in order, and what to answer them with.
+  # Kept as data rather than baked into the flow the way legacy's
+  # fill_survey_form() did, so pointing survey_form at another form of the same
+  # shape only means editing this. A form with a different NUMBER of questions
+  # is not just data: each question is an explicit wait-then-answer pair in
+  # messaging_survey.yaml and messaging_conditional_alert_survey.yaml, so those
+  # gain or lose a block too. Registration Form asks four; the previous form
+  # asked two.
+  #
+  # Q1 has no answer here on purpose: the test generates a per-run value so the
+  # resulting submission is attributable to one run when searching HQ, which is
+  # exactly what TC-BRD-004 needs.
+  survey_q1_label: "Enter case name"
+  survey_q2_label: "Define External ID"
   survey_q2_answer: "101"
+  survey_q3_label: "Enter age"
+  survey_q3_answer: "30"
+  survey_q4_label: "Enter appointment date"
+  # Connect surveys take dates in YYYY-MM-DD. Not yet confirmed against this
+  # form - a rejected answer shows as the survey re-asking question 4 instead of
+  # ending, so the first device run settles it.
+  survey_q4_answer: "2026-09-01"

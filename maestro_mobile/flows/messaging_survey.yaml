@@ -23,10 +23,14 @@ env:
   BACKUP_CODE: "123123"
   CHANNEL_NAME: "connectqa-automation-prod"
   # The questions this survey asks, in order, and what to answer them with.
-  Q1_LABEL: "Name"
+  Q1_LABEL: "Enter case name"
   Q1_ANSWER: "Automation Survey User"
-  Q2_LABEL: "ID"
+  Q2_LABEL: "Define External ID"
   Q2_ANSWER: "101"
+  Q3_LABEL: "Enter age"
+  Q3_ANSWER: "30"
+  Q4_LABEL: "Enter appointment date"
+  Q4_ANSWER: "2026-09-01"
 ---
 - launchApp:
     clearState: true
@@ -121,5 +125,40 @@ env:
 
 # Both answers are in the thread with timestamps - a bubble without one would
 # mean a half-rendered row rather than a delivered message.
+# --- Question 3 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q3_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q3_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# Deliberately no echo assertion on this answer. It is a bare number, and the
+# bubbles carry timestamps, so ".*30.*" would happily match "10:30" on a row
+# that has nothing to do with the answer - a check that passes for the wrong
+# reason is worse than no check. Question 4 arriving is the stronger proof that
+# this one was accepted, and that is the next thing the flow waits for.
+
+# --- Question 4 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q4_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_ANSWER}.*"
+    timeout: 60000
+
 - assertVisible:
     id: "tvChatDate"
