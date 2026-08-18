@@ -1,0 +1,177 @@
+# Worker side of the hybrid keyword-survey test (TC-KWD-004 / TC-KWD-005).
+#
+# Web configures a keyword whose reply is a Connect Survey; this flow has the
+# worker send that keyword from the channel and then answer the survey question
+# by question, which is the combination messaging_keyword.yaml (send, expect a
+# reply) and messaging_survey.yaml (answer a survey) each cover half of.
+#
+# What makes this different from TC-KWD-002: there the reply is a single canned
+# message, so one bubble ends the test. Here the reply is a conversation, and
+# each question only arrives once the previous is answered - so reaching the
+# last one proves HQ is running the survey rather than echoing a string.
+#
+# The survey questions and answers are env values rather than literals, the same
+# way the other two survey flows carry them, so repointing the suite at a
+# different form does not mean editing this file.
+#
+# Ids come from commcare-android fragment_connect_message.xml:
+#   etMessage        the composer
+#   imgSendMessage   GONE until the composer is non-empty AND the channel is
+#                    consented, so it is asserted before being tapped
+#   tvChatDate       a delivered bubble's timestamp
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  KEYWORD: "AUTOKW000000"
+  Q1_LABEL: "Enter case name"
+  Q1_ANSWER: "Automation Keyword Survey"
+  Q2_LABEL: "Define External ID"
+  Q2_ANSWER: "101"
+  Q3_LABEL: "Enter age"
+  Q3_ANSWER: "30"
+  Q4_LABEL: "Enter appointment date"
+  Q4_ANSWER: "20260901"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          text: "OK"
+          optional: true
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel ---
+- tapOn:
+    text: "Messaging"
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Send the keyword ---
+- tapOn:
+    id: "etMessage"
+- inputText: "${KEYWORD}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# The outgoing bubble is optimistic - stored and drawn locally before the
+# network call - so it proves the UI accepted the input, nothing more. The first
+# question coming back is what proves the keyword reached the server.
+- extendedWaitUntil:
+    visible:
+      text: ".*${KEYWORD}.*"
+    timeout: 60000
+
+# --- Question 1, which is the keyword's reply ---
+# device -> ConnectID -> HQ keyword processing -> survey start -> back down over
+# FCM, plus the thread's own 30s poll, so allow several minutes.
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_LABEL}.*"
+    timeout: 420000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q1_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 2 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q2_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 3 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q3_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q3_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# No echo assertion here, for the same reason as the other survey flows: the
+# answer is a bare number and bubbles carry timestamps, so ".*30.*" would match
+# "10:30" on an unrelated row. Question 4 arriving is the stronger proof.
+
+# --- Question 4 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q4_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_ANSWER}.*"
+    timeout: 60000
+
+- assertVisible:
+    id: "tvChatDate"

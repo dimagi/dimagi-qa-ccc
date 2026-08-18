@@ -237,6 +237,7 @@ MESSAGING:
   broadcast_flow: "messaging_broadcast.yaml"
   survey_flow: "messaging_survey.yaml"
   keyword_flow: "messaging_keyword.yaml"
+  keyword_survey_flow: "messaging_keyword_survey.yaml"
   consent_flow: "messaging_consent.yaml"
   channel_created_flow: "messaging_channel_created.yaml"
   push_deeplink_flow: "messaging_push_deeplink.yaml"

@@ -43,6 +43,7 @@ WORKER_BY_FLOW = {
     "messaging_broadcast.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_keyword.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_keyword_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent_history.yaml": "MAESTRO_MESSAGING_HYBRID",
     # Deliberately NOT the hybrid worker: that account has a channel, and an

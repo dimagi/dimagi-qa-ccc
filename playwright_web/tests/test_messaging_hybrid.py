@@ -249,6 +249,89 @@ def test_keyword_triggered_from_channel_returns_a_message(page, test_data, confi
         messaging.delete_existing_keywords()
 
 
+def test_keyword_returns_a_survey_that_is_answerable(page, config, settings, messaging_data):
+    """TC-KWD-004 - a keyword whose reply is a Connect Survey is delivered and answerable.
+
+    The survey half of TC-KWD-002. There the reply is a single canned message,
+    so one bubble ends the test; here the reply is a conversation, and each
+    question arrives only once the previous is answered - so reaching the last
+    one proves HQ is running the survey rather than echoing a string back.
+
+    Also covers **TC-KWD-005** - that the completed survey reached HQ - the same
+    way TC-BRD-004 does, bounded by a cutoff taken before the keyword is
+    configured so a previous run's submission cannot satisfy it.
+
+    The keyword is removed at both ends so prod does not accumulate them and the
+    test stays re-runnable.
+    """
+    flow = messaging_data["keyword_survey_flow"]
+
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+    stamp = str(int(time.time()))[-6:]
+    first_answer = f"Automation Keyword Survey {stamp}"
+    started_at = datetime.datetime.now(datetime.timezone.utc)
+
+    login_page = LoginPage(page)
+    login_page.valid_login_cchq(config, settings)
+    CCHQHomePage(page).verify_home_page_title("Welcome")
+
+    messaging = CCHQMessagingPage(page)
+    messaging.delete_existing_keywords()
+    try:
+        # --- WEB: configure a keyword whose reply is the survey ---
+        keyword = messaging.create_keyword_with_connect_survey(
+            survey_form=messaging_data["survey_form"],
+        )
+        print(f"STEP [Hybrid] Keyword {keyword!r} configured to reply with a Connect Survey")
+
+        # --- MOBILE: send the keyword, then answer every question ---
+        summary = run_flows(
+            flows=[flow],
+            env={
+                **worker,
+                "CHANNEL_NAME": messaging_data["channel_name"],
+                "KEYWORD": keyword,
+                "Q1_LABEL": messaging_data["survey_q1_label"],
+                "Q1_ANSWER": first_answer,
+                "Q2_LABEL": messaging_data["survey_q2_label"],
+                "Q2_ANSWER": messaging_data["survey_q2_answer"],
+                "Q3_LABEL": messaging_data["survey_q3_label"],
+                "Q3_ANSWER": messaging_data["survey_q3_answer"],
+                "Q4_LABEL": messaging_data["survey_q4_label"],
+                "Q4_ANSWER": messaging_data["survey_q4_answer"],
+            },
+            reports=False,
+            app_env=config.env,
+        )
+        print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+        assert summary["status"] == "SUCCESS", (
+            f"The keyword survey was not delivered or could not be answered: {summary['passed']} passed / "
+            f"{summary['failed']} failed - see {summary['build_url']}"
+        )
+
+        # --- WEB: TC-KWD-005, the completed survey reached HQ ---
+        reports = CCHQReportsPage(page, config)
+        submission = reports.wait_for_submission(
+            user_id=messaging_data["worker_user_id"],
+            form_path_contains=messaging_data["survey_form"],
+            after=started_at,
+        )
+        assert submission, (
+            f"The keyword survey was answered on the device but no "
+            f"{messaging_data['survey_form']!r} submission by "
+            f"{messaging_data['worker_user_id']} appeared in Submit History after "
+            f"{started_at:%Y-%m-%d %H:%M:%S} UTC - see {summary['build_url']}"
+        )
+        print(
+            f"STEP [Web] Submission reached HQ: {submission['path']} at {submission['time']} "
+            f"(form {submission['form_id']})"
+        )
+    finally:
+        messaging.delete_existing_keywords()
+
+
 def test_conditional_alert_reaches_the_channel(page, config, settings, messaging_data):
     """TC-CAL-003 - an alert fires on a matching form submission and reaches the channel.
 
