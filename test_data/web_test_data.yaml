@@ -240,6 +240,7 @@ MESSAGING:
   keyword_survey_flow: "messaging_keyword_survey.yaml"
   consent_flow: "messaging_consent.yaml"
   subscription_flow: "messaging_subscription.yaml"
+  empty_state_flow: "messaging_empty_state.yaml"
   # The channel TC-CHN-006 unsubscribes and restores. Deliberately NOT
   # channel_name: every delivery test sends into that one, and a run that died
   # between unsubscribe and resubscribe would leave it unsubscribed and break

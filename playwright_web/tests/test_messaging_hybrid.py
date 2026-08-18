@@ -494,6 +494,36 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
         messaging.delete_existing_alerts(messaging.SURVEY_ALERT_NAME)
 
 
+def test_channel_list_shows_empty_state(config, messaging_data):
+    """TC-CHN-003 - a worker in no channels is told so, not shown a blank screen.
+
+    Device-only, and the one case that cannot share an account with anything
+    else. It runs as MAESTRO_MESSAGING_EMPTY_STATE, which has to be an account
+    that has never been in ANY channel on ANY domain - a channel cannot be
+    undone, so a single consent request to that number retires this case for
+    good. mobile_workers.yaml carries the same warning next to the entry.
+
+    Legacy's verify_channel_list() accepted empty OR populated, so it pinned
+    neither state and would have passed here regardless.
+
+    A failure is worth reading carefully: it most likely means the account has
+    picked up a channel rather than that the empty state is broken.
+    """
+    flow = messaging_data["empty_state_flow"]
+
+    from flows.mobile_runner import env_by_flow, run_flows
+
+    worker = env_by_flow([flow], config.env)[flow]
+
+    summary = run_flows(flows=[flow], env=worker, reports=False, app_env=config.env)
+    print(f"STEP [Mobile] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+    assert summary["status"] == "SUCCESS", (
+        f"The channel list did not show the empty state: {summary['passed']} passed / "
+        f"{summary['failed']} failed. If this account has been added to a channel the case cannot "
+        f"pass again and needs a fresh worker - see {summary['build_url']}"
+    )
+
+
 def test_subscribed_channels_sort_before_unsubscribed(config, messaging_data):
     """TC-CHN-006 - subscribed channels list above unsubscribed ones.
 
