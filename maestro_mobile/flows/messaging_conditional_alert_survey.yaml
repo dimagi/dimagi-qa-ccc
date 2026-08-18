@@ -180,20 +180,42 @@ env:
 # moment and swallows the drawer tap - the tap "succeeds" against the banner and
 # the drawer never opens. Swipe it away first. Not optional-guarded because a
 # swipe on empty space is harmless if the banner has already auto-dismissed.
-- swipe:
-    start: "50%,10%"
-    end: "95%,10%"
-- runFlow:
-    when:
-      notVisible:
-        id: "nav_drawer_recycler"
+# One blind swipe is not enough, and the reason is a race rather than a slow UI.
+# The banner IS the alert arriving, so it lands some seconds after the submission
+# that triggered it - which can be after the swipe has already run over empty
+# space. The dismissal then did nothing, the banner came down over the toolbar,
+# and the drawer tap "succeeded" against the banner with the drawer still shut
+# (build 5cf6616e).
+#
+# So try the pair up to four times rather than once, each attempt guarded on the
+# drawer still being closed: whichever attempt runs after the banner has actually
+# appeared clears it and gets through, and the remaining ones are no-ops. The
+# spacing matters as much as the repetition - four attempts with no delay all
+# burn inside a second and miss a banner that is still in flight - and
+# waitForAnimationToEnd is used for it because it delays without failing.
+#
+# The tap is optional on purpose: a swallowed tap reports success anyway, so it
+# cannot be the thing that decides this worked. The assertion below is.
+- repeat:
+    times: 4
     commands:
-      - tapOn:
-          text: "Open navigation drawer"
-      - extendedWaitUntil:
-          visible:
-            id: "nav_drawer_recycler"
-          timeout: 30000
+      - runFlow:
+          when:
+            notVisible:
+              id: "nav_drawer_recycler"
+          commands:
+            - swipe:
+                start: "50%,10%"
+                end: "95%,10%"
+            - tapOn:
+                text: "Open navigation drawer"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "nav_drawer_recycler"
+    timeout: 30000
 - tapOn:
     text: "Messaging"
 - extendedWaitUntil:
