@@ -5,11 +5,20 @@ from utils.helpers import LocatorLoader
 
 locators = LocatorLoader()
 
-# Stage app "[AV] Case List Map" on connectqa-automation (module 0 = "Case List").
-# Copied from connectqa app 6687228a372e411299076007ba256ac2 onto the standard
-# automation domain. The prod copy does not exist yet, so there is no prod
-# default - override with MAP_APP_ID when one is created.
-DEFAULT_MAP_APP_ID = "0c4ed4b5973342e9aaed4ceff42b2389"
+# "[AV] Case List Map" app (module 0 = "Case List"), one copy per environment.
+# Stage lives on connectqa-automation, prod on connectqa-automation-prod. Keyed
+# by ConfigLoader.env; MAP_APP_ID overrides for both. An env with no entry (and
+# no override) has no app to open, so the tests skip there.
+MAP_APP_IDS = {
+    "stage": "0c4ed4b5973342e9aaed4ceff42b2389",
+    "prod": "b855ffda686a47ca9437f3b6dc04e00b",
+}
+
+
+def resolve_app_id(env):
+    """App id for an environment: MAP_APP_ID override wins, else the per-env map,
+    else None (no copy on this env)."""
+    return os.getenv("MAP_APP_ID") or MAP_APP_IDS.get(env)
 
 # Format-dropdown values that only render on the map, and the Address format they
 # all depend on (deleting the Address column auto-removes every geo row).
@@ -52,9 +61,10 @@ class CaseListMapPage(BasePage):
         """Derive the module-0 config URL from the configured cchq login URL.
 
         cchq_url is '.../a/<domain>/login/'; the app builder lives at
-        '.../a/<domain>/apps/view/<app_id>/modules-0/'.
+        '.../a/<domain>/apps/view/<app_id>/modules-0/'. The app id defaults to
+        the copy for this environment (see MAP_APP_IDS).
         """
-        app_id = app_id or os.getenv("MAP_APP_ID", DEFAULT_MAP_APP_ID)
+        app_id = app_id or resolve_app_id(config.env)
         base = config.get("cchq_url").split("/login/")[0]
         return f"{base}/apps/view/{app_id}/modules-0/"
 

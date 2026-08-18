@@ -13,14 +13,13 @@ reloading without saving (nothing is ever persisted - see CaseListMapPage).
 The rendering cases (Map_03-06) and the mobile toggle/warning cases (Map_07-11)
 are canvas/Maestro work and live elsewhere.
 """
-import os
-
 import pytest
 
 from pages.cchq_case_list_map_page import (
     GEO_BOUNDARY_LABEL,
     GEO_FORMAT_VALUES,
     CaseListMapPage,
+    resolve_app_id,
 )
 from pages.cchq_login_page import LoginPage
 
@@ -34,12 +33,11 @@ EXPECTED_GEO_LABELS = [
 
 
 def _open_case_list_map(page, config, settings):
-    # "[AV] Case List Map" only exists on staging (connectqa-automation); the prod
-    # copy has not been created yet, so there is no app to open on other envs.
-    if config.env != "stage" and not os.getenv("MAP_APP_ID"):
+    # "[AV] Case List Map" has a copy on stage and prod; skip only on an
+    # environment with no known app id (and no MAP_APP_ID override).
+    if not resolve_app_id(config.env):
         pytest.skip(
-            f"'[AV] Case List Map' app exists only on staging; no {config.env} copy yet. "
-            f"Set MAP_APP_ID to run on {config.env}."
+            f"No '[AV] Case List Map' app id for env '{config.env}'. Set MAP_APP_ID to run here."
         )
     LoginPage(page).valid_login_cchq(config, settings)
     screen = CaseListMapPage(page)
