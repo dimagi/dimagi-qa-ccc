@@ -13,6 +13,7 @@ the flow matches on it, rather than settling for "some message arrived".
 Run with:  pytest playwright_web/tests/test_messaging_hybrid.py --env prod
 """
 
+import datetime
 import os
 import time
 
@@ -21,6 +22,7 @@ import pytest
 from pages.cchq_home_page import CCHQHomePage
 from pages.cchq_login_page import LoginPage
 from pages.cchq_messaging_page import CCHQMessagingPage
+from pages.cchq_reports_page import CCHQReportsPage
 from tests.test_messaging_web import _env_value
 
 ENV_SPECIFIC_KEYS = ("survey_form", "worker_user_id", "channel_name")
@@ -103,14 +105,17 @@ def test_broadcast_connect_survey_is_answerable(page, test_data, config, setting
       fill_survey_form(), so the test is not tied to one specific survey form.
     - The first answer is unique per run, so the submission this run produced is
       identifiable rather than indistinguishable from every previous run's.
-      Since the form is now the SMS app's Registration Form, that first answer
-      is the case name, which is the field submit history displays - so the
-      value this test generates is directly the one TC-BRD-004 searches for.
 
-    TC-BRD-004 - proving the completed submission reached HQ's submit history -
-    is deliberately not asserted yet: it needs the Submit History report mapped,
-    and answering the survey is worth landing on its own first. Until then this
-    covers delivery and answering, not submission.
+    Also covers **TC-BRD-004** - that the completed survey reached HQ. The
+    device answering every question does not prove the submission landed, so
+    the test finishes by finding this run's own row in Submit History.
+
+    Submit History shows only who submitted, when, and which form - not the case
+    name - so the row is pinned to this run with a timestamp cutoff taken before
+    the send, not with the unique first answer. Note the submission is
+    attributed to the Connect user id rather than the PersonalID mobile worker,
+    which is why searching by mobile worker turned up nothing and left these
+    cases looking blocked.
     """
     flow = messaging_data["survey_flow"]
 
@@ -122,6 +127,12 @@ def test_broadcast_connect_survey_is_answerable(page, test_data, config, setting
     # what TC-BRD-004 will search HQ for.
     stamp = str(int(time.time()))[-6:]
     first_answer = f"Automation Survey {stamp}"
+
+    # Cutoff for the submit-history search, taken before anything is sent so it
+    # cannot exclude this run's own submission. Without it the newest matching
+    # row from a PREVIOUS run satisfies the assertion and the test passes having
+    # proved nothing.
+    started_at = datetime.datetime.now(datetime.timezone.utc)
 
     login_page = LoginPage(page)
     login_page.valid_login_cchq(config, settings)
@@ -161,6 +172,26 @@ def test_broadcast_connect_survey_is_answerable(page, test_data, config, setting
     assert summary["status"] == "SUCCESS", (
         f"Survey was not delivered or could not be answered: {summary['passed']} passed / "
         f"{summary['failed']} failed - see {summary['build_url']}"
+    )
+
+    # --- WEB: TC-BRD-004, the completed survey reached HQ ---
+    # Matched on survey_form itself rather than a hardcoded form name: Submit
+    # History's breadcrumb is exactly that string, so pointing the suite at a
+    # different form cannot leave a stale literal behind here.
+    reports = CCHQReportsPage(page, config)
+    submission = reports.wait_for_submission(
+        user_id=messaging_data["worker_user_id"],
+        form_path_contains=messaging_data["survey_form"],
+        after=started_at,
+    )
+    assert submission, (
+        f"The survey was answered on the device but no {messaging_data['survey_form']!r} "
+        f"submission by {messaging_data['worker_user_id']} appeared in Submit History after "
+        f"{started_at:%Y-%m-%d %H:%M:%S} UTC - see {summary['build_url']}"
+    )
+    print(
+        f"STEP [Web] Submission reached HQ: {submission['path']} at {submission['time']} "
+        f"(form {submission['form_id']})"
     )
 
 
@@ -300,6 +331,12 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
     Reaching the second question is what makes this more than a delivery test:
     it only arrives once the first is answered, so the survey is proven to be a
     live conversation rather than a single canned message.
+
+    Also covers **TC-CAL-006** - that the completed survey reached HQ - by
+    finding this run's row in Submit History. The match is on the full
+    survey_form breadcrumb rather than just "Registration Form", because this
+    flow submits a Delivery App Registration Form too (that is what fires the
+    alert), and a loose match would happily assert on that one instead.
     """
     flow = messaging_data["conditional_alert_survey_flow"]
 
@@ -308,6 +345,9 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
     worker = env_by_flow([flow], config.env)[flow]
     entity_id = str(int(time.time() * 1000) % 1_000_000)
     first_answer = f"Automation Alert Survey {entity_id}"
+    # Taken before the alert is created, so it cannot exclude this run's own
+    # submission - see TC-BRD-004 for why an unbounded search proves nothing.
+    started_at = datetime.datetime.now(datetime.timezone.utc)
 
     login_page = LoginPage(page)
     login_page.valid_login_cchq(config, settings)
@@ -347,6 +387,24 @@ def test_conditional_alert_survey_is_answerable(page, config, settings, messagin
         assert summary["status"] == "SUCCESS", (
             f"The alert survey was not delivered or could not be answered: {summary['passed']} passed / "
             f"{summary['failed']} failed - see {summary['build_url']}"
+        )
+
+        # --- WEB: TC-CAL-006, the completed survey reached HQ ---
+        reports = CCHQReportsPage(page, config)
+        submission = reports.wait_for_submission(
+            user_id=messaging_data["alert_worker_user_id"],
+            form_path_contains=messaging_data["survey_form"],
+            after=started_at,
+        )
+        assert submission, (
+            f"The alert survey was answered on the device but no "
+            f"{messaging_data['survey_form']!r} submission by "
+            f"{messaging_data['alert_worker_user_id']} appeared in Submit History after "
+            f"{started_at:%Y-%m-%d %H:%M:%S} UTC - see {summary['build_url']}"
+        )
+        print(
+            f"STEP [Web] Submission reached HQ: {submission['path']} at {submission['time']} "
+            f"(form {submission['form_id']})"
         )
     finally:
         messaging.open_messaging_option("Conditional Alerts")
