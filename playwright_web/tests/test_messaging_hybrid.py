@@ -25,7 +25,21 @@ from pages.cchq_messaging_page import CCHQMessagingPage
 from pages.cchq_reports_page import CCHQReportsPage
 from tests.test_messaging_web import _env_value
 
-ENV_SPECIFIC_KEYS = ("survey_form", "worker_user_id", "channel_name", "spare_channel")
+# Keys whose value differs per environment. Anything left out of this tuple is
+# used verbatim on both, which is fine for genuinely shared values and silently
+# wrong for the rest: alert_worker_user_id and alert_opportunity were missing
+# here, so a staging run addressed the alert to a prod HQ user id and looked for
+# a prod opportunity on the device. Neither is empty, so the fixture's
+# missing-value skip did not catch it either - the tests would simply have
+# failed, on staging only, for a reason that had nothing to do with messaging.
+ENV_SPECIFIC_KEYS = (
+    "survey_form",
+    "worker_user_id",
+    "channel_name",
+    "spare_channel",
+    "alert_worker_user_id",
+    "alert_opportunity",
+)
 
 
 @pytest.fixture

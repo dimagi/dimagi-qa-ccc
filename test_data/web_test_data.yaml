@@ -262,7 +262,16 @@ MESSAGING:
   # nowhere on prod. The alert matches a case property and its recipient is a
   # user, so submitter and recipient are free to be the same account.
   alert_worker_user_id: "022fc4d2f72ec5375a24"     # Relearn User 2, prod
+  # Staging, read off HQ's recipient picker on 2026-08-18 by typing the worker's
+  # staging name - the same way the prod id was captured. The ids differ because
+  # the accounts do: prod's tasking worker is "Relearn User 2", staging's is
+  # "Relearn Task User" (mobile_workers.yaml, MAESTRO_WORKER_RELEARN_TASK).
+  alert_worker_user_id_staging: "e9aa6630f447cb3226bb"   # Relearn Task User, staging
   alert_opportunity: "Demo Opportunity_04-Aug-2026 : 15:37"
+  # Same opportunity the tasking suite uses on staging (TASKING_HYBRID
+  # .opportunity_name_staging) - these alert cases run as the tasking worker, so
+  # they are enrolled on whatever that suite is enrolled on, per environment.
+  alert_opportunity_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
   # Two mid-build sends for the consent-gating pair. The first must land
   # after the device has unsubscribed, the second after it has resubscribed.
   blocked_send_delay_seconds: 260
