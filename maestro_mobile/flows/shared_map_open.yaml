@@ -13,11 +13,24 @@
 # The staging PersonalId phone sign-in is SLOW (>20s between steps), hence the
 # long extendedWaitUntil timeouts. Bare ids so debug builds also match.
 #
-# Env (injected by the runner):
-#   COUNTRY_CODE  PID_PHONE  PID_NAME  PID_BACKUP  - the PersonalId to sign into
-#   OPPORTUNITY                                    - Connect opportunity card title
-#   MODULE  CASE_LIST_MENU                         - deliver-app menu + follow-up list
+# Env - worker identity uses the same canonical keys as the rest of the Maestro
+# suite (COUNTRY_CODE/PHONE_NUMBER/USERNAME/BACKUP_CODE) so both runners feed it:
+#   - CI (run_on_browserstack.py) bakes them from test_data/mobile_workers.yaml
+#     MAESTRO_MAP_CASE_LIST into the executed flow, which passes them down here.
+#   - Local (run_tests.py) passes them via -e from mobile_test_data.yaml MAP_CASE_LIST.
+# OPPORTUNITY/MODULE/CASE_LIST_MENU are app-structure labels, identical on every
+# environment, so they live here as defaults rather than in the per-worker data.
+# The defaults below are the staging Case_list worker, so this flow is runnable
+# stand-alone for debugging.
 appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "9870654"
+  USERNAME: "Case_list"
+  BACKUP_CODE: "123456"
+  OPPORTUNITY: "Case List Opportunity"
+  MODULE: "Case List"
+  CASE_LIST_MENU: "Optional Unit"
 ---
 - launchApp:
     clearState: true
@@ -44,7 +57,7 @@ appId: org.commcare.dalvik
 - tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
 - tapOn: { text: "Cancel", optional: true }
 - tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
-- inputText: "${PID_PHONE}"
+- inputText: "${PHONE_NUMBER}"
 - tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
 - tapOn: { text: "CONTINUE" }
 # Staging is slow here - the OTP/registration round-trip can take well over the
@@ -59,7 +72,7 @@ appId: org.commcare.dalvik
 - tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
 - tapOn: { text: "Cancel", optional: true }
 - tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
-- inputText: "${PID_NAME}"
+- inputText: "${USERNAME}"
 - hideKeyboard
 - tapOn: { text: "CONTINUE" }
 - extendedWaitUntil:
@@ -70,7 +83,7 @@ appId: org.commcare.dalvik
 - extendedWaitUntil:
     visible: { id: "org.commcare.dalvik:id/backup_code_view" }
     timeout: 20000
-- inputText: "${PID_BACKUP}"
+- inputText: "${BACKUP_CODE}"
 - hideKeyboard
 - tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
 # All our seeded map workers are pre-created PersonalId accounts, so signing in

@@ -20,19 +20,17 @@ TC_2:
 # The app install code is NOT stored (it is tied to one build and goes stale on
 # every publish); the runner resolves it fresh from HQ at run time from the
 # domain + app_id below via hq_client.get_app_install_code.
-# Case List Map - shared by Map_10 and Map_11. The "Case_list" PersonalId worker
-# has no mobile-worker password: the deliver app is opened through the Connect
-# menu (see flows/shared_map_open.yaml), so no app_code / mw creds are needed.
-# The backup code is low-sensitivity staging test data, kept here like
-# PID_TRADITIONAL_LINK's pid_backup rather than in settings.cfg.
+# Case List Map - shared by Map_10 and Map_11 (local run_tests.py path). The
+# "Case_list" PersonalId worker has no mobile-worker password: the deliver app is
+# opened through the Connect menu (see flows/shared_map_open.yaml), so no app_code
+# is needed. Worker identity uses the suite's canonical keys; the CI path reads
+# the same identity from test_data/mobile_workers.yaml (MAESTRO_MAP_CASE_LIST).
+# The app-structure labels (opportunity/module/list) live as defaults in the flow.
 MAP_CASE_LIST:
   country_code: "+7426"
-  pid_phone: "9870654"
-  pid_name: "Case_list"
-  pid_backup: "123456"
-  opportunity: "Case List Opportunity"   # Connect opportunity card title
-  module: "Case List"                    # deliver-app menu module
-  case_list_menu: "Optional Unit"        # follow-up case list with the geo data
+  phone_number: "9870654"
+  username: "Case_list"
+  backup_code: "123456"
 
 PID_TRADITIONAL_LINK:
   country_code: "+7426"
