@@ -254,6 +254,8 @@ MESSAGING:
   channel_created_flow: "messaging_channel_created.yaml"
   push_deeplink_flow: "messaging_push_deeplink.yaml"
   unsubscribe_flow: "messaging_unsubscribe_only.yaml"
+  # Repair used in a finally by the consent-gating test - see the flow header.
+  resubscribe_flow: "messaging_resubscribe_only.yaml"
   consent_delivery_flow: "messaging_consent_delivery.yaml"
   conditional_alert_flow: "messaging_conditional_alert.yaml"
   conditional_alert_survey_flow: "messaging_conditional_alert_survey.yaml"

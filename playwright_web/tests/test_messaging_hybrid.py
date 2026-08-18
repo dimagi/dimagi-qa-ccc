@@ -555,6 +555,16 @@ def test_subscribed_channels_sort_before_unsubscribed(config, messaging_data):
     even if the app never sorted at all, provided the row already happened to
     sit last.
     """
+    if config.env == "stage":
+        pytest.skip(
+            "Staging orders its two channels connectqa-automation above connectqa, so the only "
+            "safe spare is already last and unsubscribing it moves nothing - the assertion would "
+            "hold before the unsubscribe as well as after, proving no sort at all. The channel "
+            "that WOULD move is the one every delivery test sends into, and unsubscribing that "
+            "routinely is what caused a cascade of failures on staging already. A third staging "
+            "channel would make this runnable there; until then it is a prod case."
+        )
+
     flow = messaging_data["subscription_flow"]
 
     from flows.mobile_runner import env_by_flow, run_flows
@@ -638,32 +648,55 @@ def test_consent_gates_message_delivery(config, settings, messaging_data):
         f"Could not leave the channel unsubscribed, so the rest proves nothing - see {first['build_url']}"
     )
 
-    # --- Phase 2: send while it is definitely unsubscribed ---
-    blocked_send = DeferredWebAction(send(blocked), 0, label="send while unsubscribed").start()
-    blocked_send.join_and_raise()
-    print(f"STEP [Hybrid] sent while unsubscribed: {blocked!r}")
+    # From here the channel is unsubscribed on the SERVER, and stays that way
+    # until phase 3 puts it back. Anything that fails in between leaves it that
+    # way for every test after this one - which is exactly what happened on
+    # staging: a mid-build send failed, and the next two tests failed for want
+    # of a channel that could receive anything. The repair costs one build and
+    # is a no-op when it is not needed.
+    resubscribed_by_phase_3 = False
+    try:
+        # --- Phase 2: send while it is definitely unsubscribed ---
+        blocked_send = DeferredWebAction(send(blocked), 0, label="send while unsubscribed").start()
+        blocked_send.join_and_raise()
+        print(f"STEP [Hybrid] sent while unsubscribed: {blocked!r}")
 
-    # --- Phase 3: verify absence, resubscribe, and verify delivery resumes ---
-    worker = env_by_flow([delivery_flow], config.env)[delivery_flow]
-    allowed_send = DeferredWebAction(send(allowed), allowed_delay, label="send after resubscribe").start()
-    second = run_flows(
-        flows=[delivery_flow],
-        env={
-            **worker,
-            "CHANNEL_NAME": messaging_data["channel_name"],
-            "MESSAGE_BLOCKED": blocked,
-            "MESSAGE_ALLOWED": allowed,
-        },
-        reports=False,
-        app_env=config.env,
-    )
-    allowed_send.join_and_raise()
+        # --- Phase 3: verify absence, resubscribe, and verify delivery resumes ---
+        worker = env_by_flow([delivery_flow], config.env)[delivery_flow]
+        allowed_send = DeferredWebAction(send(allowed), allowed_delay, label="send after resubscribe").start()
+        second = run_flows(
+            flows=[delivery_flow],
+            env={
+                **worker,
+                "CHANNEL_NAME": messaging_data["channel_name"],
+                "MESSAGE_BLOCKED": blocked,
+                "MESSAGE_ALLOWED": allowed,
+            },
+            reports=False,
+            app_env=config.env,
+        )
+        allowed_send.join_and_raise()
+        resubscribed_by_phase_3 = second["status"] == "SUCCESS"
 
-    print(f"STEP [Hybrid] delivery build {second['build_id']} -> {second['status']} ({second['build_url']})")
-    assert second["status"] == "SUCCESS", (
-        f"Consent did not gate delivery as expected: {second['passed']} passed / "
-        f"{second['failed']} failed - see {second['build_url']}"
-    )
+        print(f"STEP [Hybrid] delivery build {second['build_id']} -> {second['status']} ({second['build_url']})")
+        assert second["status"] == "SUCCESS", (
+            f"Consent did not gate delivery as expected: {second['passed']} passed / "
+            f"{second['failed']} failed - see {second['build_url']}"
+        )
+    finally:
+        if not resubscribed_by_phase_3:
+            repair_flow = messaging_data["resubscribe_flow"]
+            repair_worker = env_by_flow([repair_flow], config.env)[repair_flow]
+            repair = run_flows(
+                flows=[repair_flow],
+                env={**repair_worker, "CHANNEL_NAME": messaging_data["channel_name"]},
+                reports=False,
+                app_env=config.env,
+            )
+            print(
+                f"STEP [Hybrid] channel repair build {repair['build_id']} -> {repair['status']} "
+                f"({repair['build_url']})"
+            )
 
 
 def test_message_push_opens_the_thread(config, settings, messaging_data):

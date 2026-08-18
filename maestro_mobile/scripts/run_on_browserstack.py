@@ -53,6 +53,7 @@ WORKER_BY_FLOW = {
     "messaging_push_deeplink.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_consent_delivery.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_unsubscribe_only.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_resubscribe_only.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_subscription.yaml": "MAESTRO_MESSAGING_HYBRID",
     # Deliberately the TASKING worker: the messaging worker is enrolled on no
     # opportunity on prod, so it cannot submit the form that fires the alert.

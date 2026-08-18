@@ -1,18 +1,16 @@
-# Unsubscribe and stop (first half of TC-SUB-004).
+# Repair flow: put the channel back to subscribed and stop there.
 #
-# Exists so the consent-gating pair can be tested without depending on timing
-# inside a single build. The first attempt tried to do it all in one session:
-# unsubscribe, wait out a mid-build send, then resubscribe. The "wait" was
-# extendedWaitUntil on etMessage, which was already visible, so it returned
-# instantly and the device resubscribed ~10s after unsubscribing - a full minute
-# BEFORE the supposedly-blocked message was sent. The message was therefore
-# delivered to a consented channel and the test proved nothing.
+# The mirror of messaging_unsubscribe_only.yaml, and it exists because that one
+# deliberately leaves the channel unsubscribed for the web half of TC-SUB-004 to
+# be sent against. If anything between the two builds fails - as a mid-build send
+# did on staging - the channel stays unsubscribed and every later test that needs
+# delivery fails for a reason that has nothing to do with what it was testing.
 #
-# Splitting it in two removes the timing question entirely: this build leaves
-# the channel unsubscribed and ends, the web half sends with the channel
-# provably unsubscribed, and messaging_consent_delivery.yaml then checks what
-# happened. Consent is server-side state, so it survives between builds even
-# though the app is reinstalled.
+# test_consent_gates_message_delivery runs this in a finally, so a failed run
+# costs one repair build rather than poisoning the rest of the suite.
+#
+# Guarded, so running it against an already-subscribed channel is a no-op rather
+# than an error - a repair that only works when it is needed is no repair at all.
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
@@ -91,15 +89,27 @@ env:
       id: "etMessage"
     timeout: 60000
 
-# Unsubscribe, and confirm the server accepted it before the build ends - the
-# banner only appears once update_consent has returned.
-- tapOn:
-    text: "More options"
-- tapOn:
-    text: "Unsubscribe"
-- tapOn:
-    text: "Unsubscribe"
-- extendedWaitUntil:
-    visible:
-      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
-    timeout: 30000
+# --- Resubscribe, only if it is actually unsubscribed ---
+- runFlow:
+    when:
+      visible:
+        text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn:
+          text: "Resubscribe"
+      - tapOn:
+          text: "Resubscribe"
+      - extendedWaitUntil:
+          notVisible:
+            text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+          timeout: 30000
+      # Typing makes the send control appear only on a consented channel, so this
+      # proves the resubscribe actually took rather than that a banner vanished.
+      - tapOn:
+          id: "etMessage"
+      - inputText: "repaired"
+      - assertVisible:
+          id: "imgSendMessage"
+      - eraseText

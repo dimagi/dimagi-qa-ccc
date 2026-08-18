@@ -23,6 +23,7 @@ rework. They arrive once the DOM has been inspected.
 
 import time
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import expect
 
 from pages.base_page import BasePage
@@ -158,10 +159,24 @@ class CCHQMessagingPage(BasePage):
         for value in values:
             field.click()
             field.type(str(value))
-            # The dropdown resolves the typed text against an asynchronously
-            # loaded option list; Enter pressed before the option exists is
-            # silently dropped and the field stays empty.
-            self.page.wait_for_timeout(1500)
+            # Wait for the option to exist rather than guessing at how long it
+            # takes to arrive. The dropdown resolves the typed text against an
+            # asynchronously loaded list, and Enter pressed before the option
+            # exists is silently dropped, leaving the field empty.
+            #
+            # This used to be a flat 1.5s. That held on prod and lost on staging
+            # inside a mid-build send, where the action runs in its own fresh
+            # browser context with nothing warmed up: the token never committed,
+            # the test failed after the device had already unsubscribed, and the
+            # channel was left unsubscribed for every test after it.
+            option = self.page.locator(".select2-results__option", has_text=str(value)).first
+            try:
+                option.wait_for(state="visible", timeout=15_000)
+            except PlaywrightTimeoutError:
+                # Not every build of the widget renders results the same way, so
+                # fall back to the old behaviour rather than failing here - the
+                # expect() below is the real check either way.
+                self.page.wait_for_timeout(1500)
             field.press("Enter")
             # Verify rather than assume. An uncommitted token leaves a required
             # field blank, and the only symptom is that the form refuses to
