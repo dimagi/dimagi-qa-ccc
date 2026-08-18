@@ -48,7 +48,7 @@ env:
   Q3_LABEL: "Enter age"
   Q3_ANSWER: "30"
   Q4_LABEL: "Enter appointment date"
-  Q4_ANSWER: "2026-09-01"
+  Q4_ANSWER: "20260901"
 ---
 - launchApp:
     clearState: true

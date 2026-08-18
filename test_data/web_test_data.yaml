@@ -278,7 +278,6 @@ MESSAGING:
   survey_q3_label: "Enter age"
   survey_q3_answer: "30"
   survey_q4_label: "Enter appointment date"
-  # Connect surveys take dates in YYYY-MM-DD. Not yet confirmed against this
-  # form - a rejected answer shows as the survey re-asking question 4 instead of
-  # ending, so the first device run settles it.
-  survey_q4_answer: "2026-09-01"
+  # Connect surveys take dates as YYYYMMDD with no separators - not YYYY-MM-DD,
+  # which the survey rejects.
+  survey_q4_answer: "20260901"
