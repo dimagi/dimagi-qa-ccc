@@ -244,7 +244,11 @@ MESSAGING:
   # channel_name: every delivery test sends into that one, and a run that died
   # between unsubscribe and resubscribe would leave it unsubscribed and break
   # them all. This one is referenced nowhere else.
-  spare_channel: "connetqa-prod"
+  # Must sort ABOVE channel_name while subscribed, so unsubscribing it is an
+  # observable move rather than a no-op. connetqa-prod was the first choice and
+  # was wrong: it sorts last, so the assertion would have held before the
+  # unsubscribe as well as after it.
+  spare_channel: "connectqa"
   spare_channel_staging: "connectqa"
   channel_created_flow: "messaging_channel_created.yaml"
   push_deeplink_flow: "messaging_push_deeplink.yaml"
