@@ -12,8 +12,14 @@ appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml
 
-# Single entity -> the toggle panel and all three switches are hidden.
-- assertNotVisible: { id: "org.commcare.dalvik:id/map_overlay" }
+# The map takes ~2-3s to load; the toggle panel is shown during that load and
+# then hidden once the app determines fewer than two toggles are needed. So wait
+# for the panel to DISAPPEAR rather than asserting immediately (an instant
+# assertNotVisible catches the transient loading state and fails).
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/map_overlay" }
+    timeout: 20000
+# With the panel gone, none of the switches are present either.
 - assertNotVisible: { id: "org.commcare.dalvik:id/toggle_markers" }
 - assertNotVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
 - assertNotVisible: { id: "org.commcare.dalvik:id/toggle_geopoints" }
