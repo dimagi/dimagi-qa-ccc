@@ -1,7 +1,7 @@
 # Map_10 - with multiple geo entities in the list, the map shows the toggle
 # panel with all three toggles (Markers / Polygons / Geopoints), each ON by
-# default. (Map_09 - the panel hiding for a single entity - needs its own
-# single-entity worker and lives in a separate flow.)
+# default. (Map_09 - the panel hiding for a single entity - is a manual case:
+# its data-driven rendering does not reproduce on the BrowserStack device farm.)
 #
 # map_overlay + the three toggle_* switches are real views (verified live
 # 2026-08-18); only the markers themselves render on the Google Map canvas, so

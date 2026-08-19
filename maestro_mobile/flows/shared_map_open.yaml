@@ -1,7 +1,8 @@
-# Shared base for the Case List Map mobile cases (Map_10, Map_11 - and later
-# Map_08/09 once their data workers exist). From a clean install it signs into
-# PersonalId, opens the Connect opportunity's deliver app, and lands on the
-# "View on Map" screen (EntityMapActivity) of the geo case list.
+# Shared base for the automated Case List Map mobile cases (Map_10, Map_11).
+# From a clean install it signs into PersonalId, opens the Connect opportunity's
+# deliver app, and lands on the "View on Map" screen (EntityMapActivity) of the
+# geo case list. (Map_08/09 are manual - their data-driven map rendering does not
+# reproduce on the BrowserStack device farm.)
 #
 # Unlike the PID "traditional app" cases (shared_pid_link_base.yaml), the map app
 # is a CONNECT job app with no mobile-worker password: access is via the Connect
