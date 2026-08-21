@@ -26,8 +26,6 @@ TC_3_to_4:
 #  username_staging: "Automation User 44"
 #  backup_code_staging: "742644"
 
-
-
 TC_5:
   country_code: "+7426"
   phone_number: "7426017"
@@ -212,3 +210,13 @@ MAESTRO_MESSAGING_EMPTY_STATE:
   phone_number_staging: "4376448"
   username_staging: "No Channel User (Staging)"
   backup_code_staging: "123456"
+# Case List Map (Map_10 / Map_11). The map app is a Connect job app opened via
+# the Connect menu, so only PersonalId identity is needed - no password/app-code.
+# Same account on both environments (confirmed with the data owner), so a single
+# unsuffixed entry; the stage/prod matrix runs serially (max-parallel: 1), so the
+# shared number can't hold a session on both at once.
+MAESTRO_MAP_CASE_LIST:
+  country_code: "+7426"
+  phone_number: "9870654"
+  username: "Case_list"
+  backup_code: "123456"

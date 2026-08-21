@@ -30,11 +30,17 @@ FLOW_BY_CASE = {
     "PID_53": "pid_53_unlink_prompt.yaml",
     "PID_54": "pid_54_unlink_accepted.yaml",
     "PID_55": "pid_55_unlink_declined.yaml",
+    # Case List Map - mobile "View on Map" cases. Map_10/Map_11 share the
+    # Case_list worker (multi-entity list). Map_08/09 are MANUAL - their
+    # data-driven map rendering does not appear on the BrowserStack device farm
+    # (default world view, no geo overlay), though it works on a physical device.
+    "MAP_10": "map_10_toggle_panel_visible.yaml",
+    "MAP_11": "map_11_toggle_switches.yaml",
 }
 
-# Cases that read the shared PID_TRADITIONAL_LINK entry rather than one keyed by
-# the case id.
+# Cases that read a shared test-data entry rather than one keyed by the case id.
 DATA_KEY_BY_CASE = {c: "PID_TRADITIONAL_LINK" for c in FLOW_BY_CASE if c.startswith("PID_")}
+DATA_KEY_BY_CASE.update({"MAP_10": "MAP_CASE_LIST", "MAP_11": "MAP_CASE_LIST"})
 
 # Secret fields sourced from settings.cfg [mobile] (or an env override), never
 # the committed yaml. env_var wins, then settings.cfg, then any yaml fallback.

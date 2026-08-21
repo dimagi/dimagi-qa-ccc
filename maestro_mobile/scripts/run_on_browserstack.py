@@ -25,7 +25,18 @@ APK_BY_ENV = {
 DEFAULT_APP_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
-TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml"]
+TEST_FLOWS = [
+    "login_signup_success.yaml",
+    "login_account_locked.yaml",
+    # Case List Map "View on Map" cases (share the Case_list worker).
+    "map_10_toggle_panel_visible.yaml",
+    "map_11_toggle_switches.yaml",
+    # Map_08 (config-error banner) and Map_09 (single-entity, panel hidden) are
+    # MANUAL: their data-driven map rendering (markers/zoom/panel-hide/banner)
+    # does not appear on the BrowserStack device farm - the map opens at a
+    # default world view with the default toggle panel and no geo overlay, while
+    # it renders correctly on a physical device. See docs/manual for details.
+]
 POLL_INTERVAL_SECONDS = 15
 
 # Single source of truth for mobile identities, shared with the hybrid web test -
@@ -59,6 +70,10 @@ WORKER_BY_FLOW = {
     # opportunity on prod, so it cannot submit the form that fires the alert.
     "messaging_conditional_alert.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     "messaging_conditional_alert_survey.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    # Map_10/Map_11 sign in as the same worker; it is baked into each executed
+    # flow and inherited by the shared_map_open subflow via runFlow.
+    "map_10_toggle_panel_visible.yaml": "MAESTRO_MAP_CASE_LIST",
+    "map_11_toggle_switches.yaml": "MAESTRO_MAP_CASE_LIST",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
