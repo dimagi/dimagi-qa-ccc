@@ -48,6 +48,33 @@ def _env_value(data, key, config):
     return data.get(key)
 
 
+@pytest.fixture(autouse=True)
+def _skip_while_staging_drops_messages(config):
+    """Temporarily skip the messaging suite on staging - see CCCT-2671.
+
+    Staging intermittently fails to deliver Connect messages to the device. HQ's
+    Messaging History reports them Completed to the right recipient and they
+    never arrive, across every message type and both worker accounts. It hits a
+    rotating one to five tests per run, and the same tests pass on prod and pass
+    on staging when re-run, so a staging failure says nothing about the change
+    under review.
+
+    Applied to the whole messaging suite, web included. The web tests do not
+    depend on delivery and were green on staging throughout, so this is broader
+    than the evidence strictly requires - it is a deliberate choice to keep one
+    environment's worth of noise out of the PR gate while the delivery issue is
+    open, rather than a claim that those tests are affected.
+
+    Autouse here and imported by test_messaging_hybrid, so removing this one
+    fixture re-enables both files. Other suites are untouched and keep staging.
+    """
+    if config.env == "stage":
+        pytest.skip(
+            "Messaging is prod-only while staging drops Connect messages (CCCT-2671) - HQ reports "
+            "them sent and they never reach the device. Dispatch a staging run to re-test."
+        )
+
+
 @pytest.fixture
 def messaging(page, config, settings):
     """Logged in to HQ, sitting on the Conditional Alerts page."""

@@ -23,7 +23,7 @@ from pages.cchq_home_page import CCHQHomePage
 from pages.cchq_login_page import LoginPage
 from pages.cchq_messaging_page import CCHQMessagingPage
 from pages.cchq_reports_page import CCHQReportsPage
-from tests.test_messaging_web import _env_value
+from tests.test_messaging_web import _env_value, _skip_while_staging_drops_messages  # noqa: F401
 
 # Keys whose value differs per environment. Anything left out of this tuple is
 # used verbatim on both, which is fine for genuinely shared values and silently
@@ -40,31 +40,6 @@ ENV_SPECIFIC_KEYS = (
     "alert_worker_user_id",
     "alert_opportunity",
 )
-
-
-@pytest.fixture(autouse=True)
-def _skip_while_staging_drops_messages(config):
-    """Temporarily skip these on staging - see CCCT-2671.
-
-    Staging intermittently fails to deliver Connect messages to the device. HQ's
-    Messaging History reports them Completed to the right recipient and they
-    never arrive, across every message type and both worker accounts. It hits a
-    rotating one to five tests per run, and the same tests pass on prod and pass
-    on staging when re-run, so a staging failure here says nothing about the
-    change under review.
-
-    Deliberately scoped to this module. test_messaging_web.py keeps running on
-    staging - those tests are web-only, do not depend on delivery, and have been
-    green there throughout - and the tasking and PersonalID suites are unaffected,
-    so staging keeps its coverage of everything except the part that is broken.
-
-    Remove this fixture once delivery is reliable. Nothing else needs changing.
-    """
-    if config.env == "stage":
-        pytest.skip(
-            "Staging drops Connect messages intermittently (CCCT-2671) - HQ reports them sent "
-            "and they never reach the device. Run these against prod, or on demand once fixed."
-        )
 
 
 @pytest.fixture
@@ -575,10 +550,17 @@ def test_subscribed_channels_sort_before_unsubscribed(config, messaging_data):
     re-runnable rather than depending on a channel someone left in the right
     state by hand.
 
-    It moves a channel that starts ABOVE the anchor to below it, and back. A
-    test that only checked "the unsubscribed one is at the bottom" would pass
-    even if the app never sorted at all, provided the row already happened to
-    sit last.
+    Asserts the subscribed/unsubscribed boundary, not an absolute position. An
+    earlier version required the spare to start above the anchor and end below
+    it, which failed twice on prod for a reason that was never the app's fault:
+    the order WITHIN the subscribed group is unstable - three different orders in
+    three days, all four channels subscribed throughout - and the app never
+    promised otherwise. What it does promise is that unsubscribed channels are
+    appended below subscribed ones, so that is what this checks.
+
+    Trade-off worth knowing: if the spare already happened to be the bottom row,
+    the assertion held before the unsubscribe too, so that run proves the state
+    rather than the movement. It still cannot pass if the app stops partitioning.
     """
     if config.env == "stage":
         pytest.skip(
