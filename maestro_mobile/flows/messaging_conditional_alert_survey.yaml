@@ -250,17 +250,10 @@ env:
     visible:
       id: "etMessage"
     timeout: 60000
-# 15 minutes, not 10. This is the alert firing, travelling HQ -> the messaging
-# rule -> ConnectID -> FCM, and then the survey's first question coming back the
-# same way - none of which we control or can hurry. 600s held locally twice and
-# lost in CI on the same code and data (build 5b2fbd67), and a keyword survey on
-# prod once took the better part of an hour to work through its questions. The
-# wait costs nothing when delivery is quick; losing a 1h44m CI job to it costs a
-# lot.
 - extendedWaitUntil:
     visible:
       text: ".*${Q1_LABEL}.*"
-    timeout: 900000
+    timeout: 600000
 - tapOn:
     id: "etMessage"
 - inputText: "${Q1_ANSWER}"
