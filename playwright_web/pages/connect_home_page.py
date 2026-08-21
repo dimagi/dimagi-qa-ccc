@@ -7,6 +7,7 @@ locators = LocatorLoader()
 class ConnectHomePage(BasePage):
     LOGIN_WITH_CC_HQ = locators.get("connect_home_page", "login_with_cc_hq")
     AUTHORIZE_BUTTON = locators.get("connect_home_page", "authorize_button")
+    AUTHORIZE_SELECT_ALL = locators.get("connect_home_page", "authorize_select_all")
     OPPORTUNITIES_NAVBAR_LINK = locators.get("connect_home_page", "opportunities_navbar_item")
     PROGRAMS_NAVBAR_LINK = locators.get("connect_home_page", "programs_navbar_item")
     ORGANIZATION_CONTAINER = locators.get("connect_home_page", "organization_container")
@@ -24,11 +25,31 @@ class ConnectHomePage(BasePage):
     def signin_to_connect_page_using_cchq(self):
         try:
             self.click(self.LOGIN_WITH_CC_HQ)
-            self.click(self.AUTHORIZE_BUTTON)
         except Exception:
-            print("User already signed in")
-        finally:
-            self.click_organizations_in_sidebar()
+            print("Login with CommCareHQ button not shown - continuing")
+        self._authorize_if_prompted()
+        self.click_organizations_in_sidebar()
+
+    def _authorize_if_prompted(self):
+        """Clear CommCare HQ's OAuth consent screen if it appears.
+
+        First-time authorization (and every run under a fresh Playwright context,
+        which carries no prior grant) shows an "Authorize commcare_connect?" screen.
+        Its Authorize button stays disabled until at least one project space is
+        granted, so select all first, then authorize. When the screen is absent
+        (already authorized in this context) both steps no-op.
+        """
+        try:
+            self.page.locator(self.AUTHORIZE_BUTTON).first.wait_for(state="visible", timeout=10000)
+        except Exception:
+            print("No OAuth consent screen - already authorized")
+            return
+        try:
+            self.click(self.AUTHORIZE_SELECT_ALL)
+        except Exception:
+            print("No project-space selector on consent screen")
+        self.click(self.AUTHORIZE_BUTTON)
+        self.page.wait_for_load_state("load")
 
     def is_org_selected(self, organization_name):
         self.page.wait_for_timeout(1000)
