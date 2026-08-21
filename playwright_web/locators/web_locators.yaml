@@ -297,3 +297,20 @@ connect_opportunity_list_page:
   kebab_toggle_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'group')][.//a[normalize-space()='{name}']]//span[contains(@class,'cursor-pointer')]"
   kebab_menu_items: "//div[contains(@class,'dropdown-content')]//a"
   kebab_menu_item_by_text: "//div[contains(@class,'dropdown-content')]//a[normalize-space()='{title}']"
+# --- Case List Map: geo Display Properties config (Map_01/Map_02) ---
+# The module's "Case List" tab (pane #case-detail-screen-config-tab) holds a
+# "Display Properties" table. The config panel nests several tables, so the
+# properties table is matched by its column headers, never by position.
+cchq_case_list_map_page:
+  case_list_tab: "//ul[contains(@class,'nav-tabs')]//a[normalize-space()='Case List']"
+  # The one table whose header row carries all three column names.
+  display_properties_table: "//table[.//thead//th[normalize-space()='Property'] and .//thead//th[normalize-space()='Display Text'] and .//thead//th[normalize-space()='Format']]"
+  # Real data rows carry a Format <select> (the trailing knockout template row
+  # does not), so rows are addressed through their Format control.
+  property_rows: "//table[.//thead//th[normalize-space()='Property'] and .//thead//th[normalize-space()='Format']]//tbody/tr[.//select[.//option[normalize-space()='Geo Boundary (Mobile only)']]]"
+  # Row-relative locators (Format/Property/Display Text/Delete within a <tr>) are
+  # not listed here: LocatorLoader only treats '//' and '(' as XPath, so a './/'
+  # value would be mangled into an id. They live as xpath= constants in the page
+  # object instead.
+  add_property_button: "//button[contains(@data-bind,'addProperty')]"
+  save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"

@@ -1,0 +1,146 @@
+# Shared base for the automated Case List Map mobile cases (Map_10, Map_11).
+# From a clean install it signs into PersonalId, opens the Connect opportunity's
+# deliver app, and lands on the "View on Map" screen (EntityMapActivity) of the
+# geo case list. (Map_08/09 are manual - their data-driven map rendering does not
+# reproduce on the BrowserStack device farm.)
+#
+# Unlike the PID "traditional app" cases (shared_pid_link_base.yaml), the map app
+# is a CONNECT job app with no mobile-worker password: access is via the Connect
+# menu, not username/password. Path verified live (APK app-cccStaging) 2026-08-18:
+#   PersonalId sign-in -> "GO TO CONNECT MENU" (connect_login_button)
+#   -> opportunity card Resume -> deliver app Start -> "Case List" module
+#   -> the follow-up case list -> overflow "View on Map".
+#
+# The staging PersonalId phone sign-in is SLOW (>20s between steps), hence the
+# long extendedWaitUntil timeouts. Bare ids so debug builds also match.
+#
+# Env - worker identity uses the same canonical keys as the rest of the Maestro
+# suite (COUNTRY_CODE/PHONE_NUMBER/USERNAME/BACKUP_CODE) so both runners feed it:
+#   - CI (run_on_browserstack.py) bakes them from test_data/mobile_workers.yaml
+#     MAESTRO_MAP_CASE_LIST into the executed flow, which passes them down here.
+#   - Local (run_tests.py) passes them via -e from mobile_test_data.yaml MAP_CASE_LIST.
+# OPPORTUNITY/MODULE/CASE_LIST_MENU are app-structure labels, identical on every
+# environment, so they live here as defaults rather than in the per-worker data.
+# The defaults below are the staging Case_list worker, so this flow is runnable
+# stand-alone for debugging.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "9870654"
+  USERNAME: "Case_list"
+  BACKUP_CODE: "123456"
+  OPPORTUNITY: "Case List Opportunity"
+  MODULE: "Case List"
+  CASE_LIST_MENU: "Optional Unit"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+# Google "Location Accuracy" device dialog blocks the first sign-in after a
+# fresh install - accept it if it shows.
+- tapOn: { text: "Turn on", optional: true }
+
+# --- 1. Sign into PersonalId ---
+- tapOn: { text: "Open navigation drawer", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nav_drawer_sign_in_button" }
+- tapOn: { text: "Turn on", optional: true }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+    timeout: 20000
+# Country code + phone. The Google autofill sheet can steal focus on first tap,
+# so dismiss it (Cancel) then re-focus before typing.
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- inputText: "${PHONE_NUMBER}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+- tapOn: { text: "CONTINUE" }
+# Staging is slow here - the OTP/registration round-trip can take well over the
+# 15s the login-signup subflow allows, so wait generously.
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+# Name (shown for both new and returning accounts on this build).
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/nameTextValue" }
+    timeout: 20000
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- inputText: "${USERNAME}"
+- hideKeyboard
+- tapOn: { text: "CONTINUE" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+# Backup code (six-box NumericCodeView - typed into the focused view). Existing
+# accounts show "Welcome back <name>" above it.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 20000
+- inputText: "${BACKUP_CODE}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
+# All our seeded map workers are pre-created PersonalId accounts, so signing in
+# recovers the account and shows an "Account Recovered" dialog. It appears a few
+# seconds after the code is submitted (a server round-trip), so wait for its OK
+# button and tap it - an early optional tap races the dialog and leaves it
+# covering the screen when the next step runs.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_message_button" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/connect_message_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 30000
+
+# PersonalId sign-in leaves the nav drawer open; close it by tapping the scrim
+# so the next taps land on the screen behind it.
+- runFlow:
+    when:
+      visible: { id: "org.commcare.dalvik:id/nav_drawer_recycler" }
+    commands:
+      - tapOn: { point: "92%,50%" }
+      - extendedWaitUntil:
+          notVisible: { id: "org.commcare.dalvik:id/nav_drawer_recycler" }
+          timeout: 15000
+
+# --- 2. Open the Connect opportunity's deliver app ---
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_login_button" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/connect_login_button" }
+# Connect menu: find the opportunity card and resume it. Resume downloads the
+# deliver app on a fresh install, so allow a long wait for the home screen.
+- extendedWaitUntil:
+    visible: { text: "${OPPORTUNITY}" }
+    timeout: 60000
+- tapOn: { text: "Resume" }
+- extendedWaitUntil:
+    visible: { text: "Sync with Server" }
+    timeout: 600000
+
+# Sync so the seeded geo cases are present before opening the list.
+- tapOn: { text: "Sync with Server" }
+- extendedWaitUntil:
+    visible: { text: ".*Sync Successful.*|.*Sync Complete.*|.*up to date.*" }
+    timeout: 180000
+
+# --- 3. Case List -> follow-up list -> View on Map ---
+- tapOn: { text: "Start" }
+- tapOn: { text: "${MODULE}" }
+- tapOn: { text: "${CASE_LIST_MENU}" }
+- extendedWaitUntil:
+    visible: { text: "More options" }
+    timeout: 30000
+- tapOn: { text: "More options" }
+- tapOn: { text: "View on Map" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/map" }
+    timeout: 30000
