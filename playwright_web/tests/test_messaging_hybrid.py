@@ -42,6 +42,31 @@ ENV_SPECIFIC_KEYS = (
 )
 
 
+@pytest.fixture(autouse=True)
+def _skip_while_staging_drops_messages(config):
+    """Temporarily skip these on staging - see CCCT-2671.
+
+    Staging intermittently fails to deliver Connect messages to the device. HQ's
+    Messaging History reports them Completed to the right recipient and they
+    never arrive, across every message type and both worker accounts. It hits a
+    rotating one to five tests per run, and the same tests pass on prod and pass
+    on staging when re-run, so a staging failure here says nothing about the
+    change under review.
+
+    Deliberately scoped to this module. test_messaging_web.py keeps running on
+    staging - those tests are web-only, do not depend on delivery, and have been
+    green there throughout - and the tasking and PersonalID suites are unaffected,
+    so staging keeps its coverage of everything except the part that is broken.
+
+    Remove this fixture once delivery is reliable. Nothing else needs changing.
+    """
+    if config.env == "stage":
+        pytest.skip(
+            "Staging drops Connect messages intermittently (CCCT-2671) - HQ reports them sent "
+            "and they never reach the device. Run these against prod, or on demand once fixed."
+        )
+
+
 @pytest.fixture
 def messaging_data(test_data, config):
     data = dict(test_data.get("MESSAGING"))

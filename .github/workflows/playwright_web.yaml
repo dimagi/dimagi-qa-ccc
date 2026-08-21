@@ -40,17 +40,9 @@ jobs:
       matrix: ${{ steps.set.outputs.matrix }}
     steps:
       - id: set
-        # Manual dispatch runs whatever was asked for.
-        #
-        # A PR runs PROD ONLY, temporarily. Staging drops Connect messages
-        # intermittently - HQ's Messaging History reports them Completed and they
-        # never reach the device - so the device tests fail there on a rotating
-        # one-to-five tests per run while prod passes the same suite clean. Gating
-        # PRs on that means red checks that say nothing about the change.
-        #
-        # This is a workaround, not a fix. Staging stays fully runnable on demand,
-        # which is how the issue gets re-tested: dispatch with environment=stage.
-        # Restore ["stage","prod"] here once delivery is reliable again.
+        # Manual dispatch runs whatever was asked for; anything else - a push to a
+        # PR - runs both environments, so a change is never merged having only been
+        # proven against staging.
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ "${{ inputs.environment }}" = "both" ]; then
@@ -59,7 +51,7 @@ jobs:
               echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
             fi
           else
-            echo 'matrix={"environment":["prod"]}' >> $GITHUB_OUTPUT
+            echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
           fi
 
   playwright-web:
