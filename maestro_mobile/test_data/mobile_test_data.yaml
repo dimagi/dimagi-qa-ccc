@@ -40,3 +40,17 @@ PID_TRADITIONAL_LINK:
   # Traditional app "[AV] Accessibility Test" on qateam (same domain as the worker).
   domain: "qateam"
   app_id: "7c98dfcad251eecdccc81012196a3cb5"
+
+# Case List Map_08 / Map_09 workers (local run_tests.py path). See the data-swap
+# note in run_tests.py DATA_KEY_BY_CASE: MAP_08 test uses the Map_09 account and
+# MAP_09 test uses the Map_08 account.
+MAP_USER_08:
+  country_code: "+7426"
+  phone_number: "8080808"
+  username: "Map_08"
+  backup_code: "123456"
+MAP_USER_09:
+  country_code: "+7426"
+  phone_number: "9090909"
+  username: "Map_09"
+  backup_code: "123456"

@@ -26,6 +26,8 @@ TC_3_to_4:
 #  username_staging: "Automation User 44"
 #  backup_code_staging: "742644"
 
+
+
 TC_5:
   country_code: "+7426"
   phone_number: "7426017"
@@ -145,4 +147,20 @@ MAESTRO_MAP_CASE_LIST:
   country_code: "+7426"
   phone_number: "9870654"
   username: "Case_list"
+  backup_code: "123456"
+
+# Case List Map_08 / Map_09 (BrowserStack real-device only - the emulator fails
+# PersonalId device-security for these). DATA SWAP (Anshu): the single-entity
+# data (Map_09 test) is under the Map_08 account; the misconfigured data (Map_08
+# test) is under the Map_09 account. Entries named by account; the test->account
+# mapping is in run_on_browserstack.py WORKER_BY_FLOW. Same creds on stage+prod.
+MAESTRO_MAP_USER_08:
+  country_code: "+7426"
+  phone_number: "8080808"
+  username: "Map_08"
+  backup_code: "123456"
+MAESTRO_MAP_USER_09:
+  country_code: "+7426"
+  phone_number: "9090909"
+  username: "Map_09"
   backup_code: "123456"

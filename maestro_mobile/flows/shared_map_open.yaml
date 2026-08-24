@@ -1,8 +1,7 @@
-# Shared base for the automated Case List Map mobile cases (Map_10, Map_11).
-# From a clean install it signs into PersonalId, opens the Connect opportunity's
-# deliver app, and lands on the "View on Map" screen (EntityMapActivity) of the
-# geo case list. (Map_08/09 are manual - their data-driven map rendering does not
-# reproduce on the BrowserStack device farm.)
+# Shared base for the Case List Map mobile cases (Map_10, Map_11 - and later
+# Map_08/09 once their data workers exist). From a clean install it signs into
+# PersonalId, opens the Connect opportunity's deliver app, and lands on the
+# "View on Map" screen (EntityMapActivity) of the geo case list.
 #
 # Unlike the PID "traditional app" cases (shared_pid_link_base.yaml), the map app
 # is a CONNECT job app with no mobile-worker password: access is via the Connect
@@ -37,6 +36,15 @@ env:
     clearState: true
     permissions:
       all: allow
+# The map's data overlay - markers, zoom-to-cases, the config-error banner, and
+# the single-entity panel hide - is gated on a device LOCATION FIX (per the mobile
+# dev on the interrupt ticket). Automation devices (emulator / BrowserStack) have
+# no GPS, so the map never gets a fix and draws nothing data-driven. Inject a mock
+# fix so the overlay renders; the coordinates only need to be valid (central India,
+# near the seeded cases, so the camera also lands sensibly).
+- setLocation:
+    latitude: 21.15
+    longitude: 79.09
 # Google "Location Accuracy" device dialog blocks the first sign-in after a
 # fresh install - accept it if it shows.
 - tapOn: { text: "Turn on", optional: true }
