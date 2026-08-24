@@ -104,3 +104,9 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
         olp._step(f"Landed on opportunity page: {connect_page.url}")
     else:
         olp._step("No opportunities in NM list - skipping row-open assertion (needs >=1 row)")
+
+    # OLP_02 (NM cannot create an opportunity) is left manual: the only create path
+    # is the program-scoped ManagedOpportunityInit, which resolves the program in
+    # setup() before the ProgramManagerMixin permission check - so a clean 403 needs
+    # a real program slug the NM org can reference, and this NM org has no program
+    # data on staging (a bogus slug 500s). Not worth a fragile, data-seeded probe.
