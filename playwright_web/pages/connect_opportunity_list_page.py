@@ -73,6 +73,9 @@ class ConnectOpportunityListPage(BasePage):
     KEBAB_TOGGLE_BY_NAME = locators.get("connect_opportunity_list_page", "kebab_toggle_by_name")
     KEBAB_MENU_ITEMS = locators.get("connect_opportunity_list_page", "kebab_menu_items")
     KEBAB_MENU_ITEM_BY_TEXT = locators.get("connect_opportunity_list_page", "kebab_menu_item_by_text")
+    STATUS_BADGES = locators.get("connect_opportunity_list_page", "status_badges")
+    STATS_LINKS = locators.get("connect_opportunity_list_page", "stats_links")
+    COUNT_LINK_BY_HREF = locators.get("connect_opportunity_list_page", "count_link_by_href")
 
     # -- navigation / structure ------------------------------------------------
 
@@ -253,3 +256,60 @@ class ConnectOpportunityListPage(BasePage):
 
     def has_test_badge(self, name):
         return self.page.locator(self.TEST_ICON_BY_NAME.format(name=name)).count() > 0
+
+    # -- Tier 2: filter behaviour ----------------------------------------------
+
+    def apply_status_filter(self, labels):
+        """Select one or more Status values (TomSelect multi) and apply."""
+        self.open_filter_modal()
+        for label in labels:
+            self.select_tomselect_by_label(self._raw("filter_status_select"), label, scope=self.FILTER_MODAL)
+        self.apply_filters()
+
+    def apply_program_filter(self, program_label):
+        self.open_filter_modal()
+        self.select_tomselect_by_label(self._raw("filter_program_select"), program_label, scope=self.FILTER_MODAL)
+        self.apply_filters()
+
+    def visible_statuses(self):
+        statuses = [s.strip() for s in self.page.locator(self.STATUS_BADGES).all_inner_texts() if s.strip()]
+        self._step(f"Visible row statuses: {statuses}")
+        return statuses
+
+    def clear_filters(self):
+        """Drop all query params by reloading the bare list URL."""
+        base = self.page.url.split("?")[0]
+        self.page.goto(base)
+        self.page.wait_for_load_state("load")
+        self.verify_loaded()
+
+    # -- Tier 3: count-cell drill-downs ----------------------------------------
+
+    def count_link_count(self, href_fragment):
+        n = self.page.locator(self.COUNT_LINK_BY_HREF.format(frag=href_fragment)).count()
+        self._step(f"Count links matching {href_fragment!r}: {n}")
+        return n
+
+    def stats_link_count(self):
+        return self.page.locator(self.STATS_LINKS).count()
+
+    def open_first_count_link(self, href_fragment):
+        self._step(f"Open first count link matching {href_fragment!r}")
+        self.click(self.COUNT_LINK_BY_HREF.format(frag=href_fragment))
+        self.page.wait_for_load_state("load")
+
+    def apply_is_test_and_status(self, is_test_label, status_labels):
+        """OLP_22 - combined filters: is_test (plain Select) + status (TomSelect)."""
+        self.open_filter_modal()
+        self.select_by_visible_text(self.FILTER_IS_TEST_SELECT, is_test_label)
+        for label in status_labels:
+            self.select_tomselect_by_label(self._raw("filter_status_select"), label, scope=self.FILTER_MODAL)
+        self.apply_filters()
+
+    def kebab_item_hrefs(self, name):
+        """Kebab action titles -> href, read in a single open (no navigation)."""
+        self.open_kebab(name)
+        links = self.page.locator(self.KEBAB_MENU_ITEMS)
+        hrefs = {links.nth(i).inner_text().strip(): links.nth(i).get_attribute("href") for i in range(links.count())}
+        self._step(f"Kebab hrefs for '{name}': {hrefs}")
+        return hrefs

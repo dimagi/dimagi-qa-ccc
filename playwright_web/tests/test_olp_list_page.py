@@ -88,6 +88,14 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     assert olp.status_options() == STATUS_OPTIONS
     olp.close_filter_modal()
 
+    # OLP_23/24/26 - NM count cells drill down to the right pages (by sort param:
+    # inactive workers -> worker list; payments due -> payments tab). Checked
+    # before the row-open navigation so both run off the same login.
+    if olp.row_count() > 0:
+        assert olp.stats_link_count() > 0, "NM rows should expose clickable count cells (Pending Invites)"
+        assert olp.count_link_count("sort=last_active") > 0, "Inactive Connect Workers drill-down missing"
+        assert olp.count_link_count("sort=-total_paid") > 0, "Payments Due drill-down missing"
+
     # OLP_08 - selecting an opportunity opens its dashboard
     if olp.row_count() > 0:
         name = olp.first_row_name()
