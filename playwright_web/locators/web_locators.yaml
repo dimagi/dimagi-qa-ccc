@@ -249,23 +249,29 @@ connect_worker_invite_page:
   form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
   error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
 
-# CCCT-2671. Carried over from the legacy Selenium locators (locators/web_locators.yaml)
-# because they are proven against these HQ pages; the positional XPaths marked BRITTLE
-# want replacing with semantic anchors once the DOM has been inspected directly.
+# CCCT-2671. Originally carried over verbatim from the legacy Selenium locators, then
+# reworked after review (PR #30, kbo001): the positional XPaths are gone. Each control
+# is now anchored on something that IS the control - its destination URL, its Knockout
+# binding, or the custom element that owns it - so a layout change no longer breaks it.
+#
+#   new_conditional_alert / add_broadcast_btn   href to the /add page
+#   case_property_entity_dropdown              scoped by <case-property-input>
+#   case_property_equals_dropdown              data-bind="value: match_type"
+#   case_property_name_input                   data-bind="value: property_value"
 cchq_messaging_page:
   messaging_tab: "MessagingTab"
   messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
 
   # --- Conditional alerts ---
-  new_conditional_alert: "//*[@id='conditional-alert-list']/div[1]/div[1]/div/a[1]"  # BRITTLE
+  new_conditional_alert: "//a[contains(@href, '/messaging/conditional/add')]"
   conditional_alert_name_input: "id_conditional-alert-name"
   continue_btn: "//button[contains(text(), 'Continue')]"
   case_type_input: "id_criteria-case_type"
   select_a_filter_btn: "//button[.//i[contains(@class,'fa-plus')]]"
   case_property_filter_option: "//button[.//i[contains(@class,'fa-plus')]]/..//a[normalize-space()='Case property']"
-  case_property_entity_dropdown: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[2]/case-property-input/div/select"  # BRITTLE
-  case_property_equals_dropdown: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[3]/select"  # BRITTLE
-  case_property_name_input: "//*[@id='rule-criteria-panel']/div/div[1]/div/div[4]/input"  # BRITTLE
+  case_property_entity_dropdown: "//case-property-input//select"
+  case_property_equals_dropdown: "//select[contains(@data-bind, 'match_type')]"
+  case_property_name_input: "//input[contains(@data-bind, 'property_value')]"
   alerts_list_table: "conditional-alert-list"
   alert_row: "//table[contains(@class,'table')]/tbody/tr"
   search_box: "//form[@class='input-group']/input[@class='form-control']"
@@ -281,7 +287,7 @@ cchq_messaging_page:
   save_btn: "//button[text()='Save']"
 
   # --- Broadcasts ---
-  add_broadcast_btn: "//*[@id='hq-content']/div[2]/a"  # BRITTLE
+  add_broadcast_btn: "//a[contains(@href, '/messaging/broadcasts/add')]"
   broadcast_name_input: "id_schedule-schedule_name"
   send_broadcast_btn: "//button[normalize-space()='Send Broadcast']"
   broadcasts_table: "//div[@id='immediate-broadcasts']//table"
