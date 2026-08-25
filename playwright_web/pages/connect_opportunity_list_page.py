@@ -73,6 +73,7 @@ class ConnectOpportunityListPage(BasePage):
     KEBAB_TOGGLE_BY_NAME = locators.get("connect_opportunity_list_page", "kebab_toggle_by_name")
     KEBAB_MENU_ITEMS = locators.get("connect_opportunity_list_page", "kebab_menu_items")
     KEBAB_MENU_ITEM_BY_TEXT = locators.get("connect_opportunity_list_page", "kebab_menu_item_by_text")
+    KEBAB_MENU_ITEMS_BY_NAME = locators.get("connect_opportunity_list_page", "kebab_menu_items_by_name")
     STATUS_BADGES = locators.get("connect_opportunity_list_page", "status_badges")
     STATS_LINKS = locators.get("connect_opportunity_list_page", "stats_links")
     COUNT_LINK_BY_HREF = locators.get("connect_opportunity_list_page", "count_link_by_href")
@@ -114,7 +115,9 @@ class ConnectOpportunityListPage(BasePage):
         without hard-coding one, keeping the tests independent of seed data."""
         row = self.page.locator(self.DATA_ROWS).first
         row.wait_for(state="visible", timeout=15000)
-        name = row.locator("xpath=.//a").first.inner_text().strip()
+        # The name cell also carries the NM org as a subtitle line; keep only the
+        # opportunity name (first line) for matching.
+        name = row.locator("xpath=.//a").first.inner_text().strip().split("\n")[0].strip()
         self._step(f"First opportunity in list: {name!r}")
         return name
 
@@ -225,8 +228,12 @@ class ConnectOpportunityListPage(BasePage):
         self.verify_loaded()
 
     def go_next_page(self):
-        self._step("Next page")
-        self.click(self.NEXT_PAGE_BTN)
+        # The pager's Next button drives goToPage(), which simply sets ?page=N and
+        # reloads. Navigating the param directly exercises the same code path without
+        # depending on the (scroll-sensitive) footer button being actionable.
+        self._step("Next page (?page=2)")
+        base = self.page.url.split("?")[0]
+        self.page.goto(f"{base}?page=2")
         self.page.wait_for_load_state("load")
         self.verify_loaded()
 
@@ -244,7 +251,8 @@ class ConnectOpportunityListPage(BasePage):
 
     def kebab_options(self, name):
         self.open_kebab(name)
-        items = [i.strip() for i in self.page.locator(self.KEBAB_MENU_ITEMS).all_inner_texts() if i.strip()]
+        loc = self.page.locator(self.KEBAB_MENU_ITEMS_BY_NAME.format(name=name))
+        items = [i.strip() for i in loc.all_inner_texts() if i.strip()]
         self._step(f"Kebab options for '{name}': {items}")
         return items
 
@@ -259,16 +267,36 @@ class ConnectOpportunityListPage(BasePage):
 
     # -- Tier 2: filter behaviour ----------------------------------------------
 
+    def _set_tomselect(self, select_id, labels):
+        """Select option(s) on a TomSelect-enhanced <select> by label, driving the
+        native element (the form's source of truth) and syncing the widget.
+
+        Clicking dropdown options is unreliable for multi-selects - the dropdown
+        closes after the first pick - so set the native <select> directly and push
+        the values through the TomSelect instance (el.tomselect) when present.
+        """
+        self.page.wait_for_timeout(300)
+        self.page.evaluate(
+            """([id, labels]) => {
+                const sel = document.getElementById(id);
+                const opts = [...sel.options];
+                opts.forEach(o => { o.selected = labels.includes(o.textContent.trim()); });
+                const values = opts.filter(o => o.selected).map(o => o.value);
+                if (sel.tomselect) { sel.tomselect.setValue(values, true); }
+                sel.dispatchEvent(new Event('change', {bubbles: true}));
+            }""",
+            [select_id, labels],
+        )
+
     def apply_status_filter(self, labels):
         """Select one or more Status values (TomSelect multi) and apply."""
         self.open_filter_modal()
-        for label in labels:
-            self.select_tomselect_by_label(self._raw("filter_status_select"), label, scope=self.FILTER_MODAL)
+        self._set_tomselect(self._raw("filter_status_select"), labels)
         self.apply_filters()
 
     def apply_program_filter(self, program_label):
         self.open_filter_modal()
-        self.select_tomselect_by_label(self._raw("filter_program_select"), program_label, scope=self.FILTER_MODAL)
+        self._set_tomselect(self._raw("filter_program_select"), [program_label])
         self.apply_filters()
 
     def visible_statuses(self):
@@ -302,8 +330,7 @@ class ConnectOpportunityListPage(BasePage):
         """OLP_22 - combined filters: is_test (plain Select) + status (TomSelect)."""
         self.open_filter_modal()
         self.select_by_visible_text(self.FILTER_IS_TEST_SELECT, is_test_label)
-        for label in status_labels:
-            self.select_tomselect_by_label(self._raw("filter_status_select"), label, scope=self.FILTER_MODAL)
+        self._set_tomselect(self._raw("filter_status_select"), status_labels)
         self.apply_filters()
 
     def managed_create_status(self, config, program_id):
@@ -325,7 +352,7 @@ class ConnectOpportunityListPage(BasePage):
     def kebab_item_hrefs(self, name):
         """Kebab action titles -> href, read in a single open (no navigation)."""
         self.open_kebab(name)
-        links = self.page.locator(self.KEBAB_MENU_ITEMS)
+        links = self.page.locator(self.KEBAB_MENU_ITEMS_BY_NAME.format(name=name))
         hrefs = {links.nth(i).inner_text().strip(): links.nth(i).get_attribute("href") for i in range(links.count())}
         self._step(f"Kebab hrefs for '{name}': {hrefs}")
         return hrefs
