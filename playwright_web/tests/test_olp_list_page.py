@@ -16,7 +16,7 @@ Manual case map (CCC Web Platform [Master] sheet):
 """
 
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect
+from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_list_page import (
     IS_TEST_OPTIONS,
     KEBAB_ACTIONS,
@@ -88,6 +88,14 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     assert olp.status_options() == STATUS_OPTIONS
     olp.close_filter_modal()
 
+    # OLP_23/24/26 - NM count cells drill down to the right pages (by sort param:
+    # inactive workers -> worker list; payments due -> payments tab). Checked
+    # before the row-open navigation so both run off the same login.
+    if olp.row_count() > 0:
+        assert olp.stats_link_count() > 0, "NM rows should expose clickable count cells (Pending Invites)"
+        assert olp.count_link_count("sort=last_active") > 0, "Inactive Connect Workers drill-down missing"
+        assert olp.count_link_count("sort=-total_paid") > 0, "Payments Due drill-down missing"
+
     # OLP_08 - selecting an opportunity opens its dashboard
     if olp.row_count() > 0:
         name = olp.first_row_name()
@@ -96,3 +104,15 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
         olp._step(f"Landed on opportunity page: {connect_page.url}")
     else:
         olp._step("No opportunities in NM list - skipping row-open assertion (needs >=1 row)")
+
+    # OLP_02 - an NM org cannot create an opportunity. The only create path is the
+    # program-scoped ManagedOpportunityInit (PM-only via ProgramManagerMixin), so it
+    # answers 403 for this org. Needs a real program UUID (seeded per env); skips
+    # where none is configured (e.g. prod).
+    program_id = env_value(test_data.get("OLP_NM_CREATE"), "managed_program_id", config)
+    if program_id:
+        assert olp.managed_create_status(config, program_id) == 403, (
+            "NM org should be denied (403) from the managed opportunity-init view"
+        )
+    else:
+        olp._step("No managed_program_id for this env - skipping OLP_02")

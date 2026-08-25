@@ -305,3 +305,8 @@ MESSAGING:
   # Connect surveys take dates as YYYYMMDD with no separators - not YYYY-MM-DD,
   # which the survey rejects.
   survey_q4_answer: "20260901"
+# OLP_02 (NM cannot create an opportunity). The managed opportunity-init view keys
+# off a real program_id (UUID) and denies non-PM orgs with 403. Staging program
+# "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.
+OLP_NM_CREATE:
+  managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
