@@ -197,3 +197,11 @@ TASKING_HYBRID:
 # "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.
 OLP_NM_CREATE:
   managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
+
+# Opportunity Dashboard (OD_1-OD_19, read-only tier). One fully-configured
+# opportunity to open. "Demo Opportunity" is the automation-seeded opp (same one
+# OLP_4 uses) and exists on both environments; add an _staging override if the
+# staging seed ever diverges. If the name is not found the test falls back to the
+# first row in the list, so the suite stays runnable without seed coupling.
+OPD:
+  opportunity_name: "Demo Opportunity"

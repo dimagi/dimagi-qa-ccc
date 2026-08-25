@@ -88,6 +88,41 @@ connect_opportunities_page:
 
 opportunity_dashboard_page:
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+  # Load signals - the detail page shows the opportunity name (h1) and the bars
+  # menu icon; the list page has neither, so together they distinguish the two
+  # (both live under /opportunity/).
+  opp_title: "//h1"
+  # Summary info cards (dashboard.html basic_details): each card carries an icon
+  # and an <h6> label. Match by the label text.
+  info_card_by_label: "//div[contains(@class,'infocard') or (.//i[contains(@class,'fa-solid')] and .//h6)][.//h6[normalize-space()='{label}']]"
+  status_badge: "//span[contains(@class,'badge') and (contains(@class,'positive') or contains(@class,'warning') or contains(@class,'negative'))]"
+  # Async HTMX stat sections (skeleton -> swapped). Stored as bare ids: the
+  # locator loader prefixes '#' to any non-xpath value.
+  stats_container: "opp-stats-container"
+  funnel_container: "opp-funnel-container"
+  worker_progress_container: "worker-progress-container"
+  funnel_heading: "//*[normalize-space()='Worker Progress Funnel']"
+  # A stat panel is (optionally) wrapped in an <a href>; match the anchor by an
+  # unambiguous fragment of its target url so the click lands deterministically.
+  panel_link_by_href: "//div[@id='opp-stats-container']//a[contains(@href,'{frag}')]"
+  # Hamburger / kebab menu (opportunity_menu.html), toggled by the bars icon.
+  # Scope the toggle to the bars icon that shares a container with the opp menu -
+  # a bare //i[fa-bars] also matches the site-nav icon and toggles nothing here.
+  hamburger_toggle: "//div[.//div[contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]]//i[contains(@class,'fa-bars')]"
+  hamburger_menu: "//div[contains(@class,'absolute') and contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]"
+  hamburger_menu_items: "//div[contains(@class,'absolute') and contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]//a"
+  hamburger_item_by_text: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='{text}']"
+  # Resource cards that launch the Learn/Deliver/Payment-units modal.
+  resource_card_learn: "//div[contains(@class,'min-w-48')][.//i[contains(@class,'fa-book-open')]]"
+  # Resource modal (opportunity_resource_modal.html): 3 tabs + a table body.
+  resource_modal: "//div[contains(@class,'fixed') and contains(@class,'inset-0')][.//ul[contains(@class,'tabs')]]"
+  resource_modal_tab: "//ul[contains(@class,'tabs')]//li[normalize-space()='{text}']"
+  resource_modal_close: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//i[contains(@class,'fa-xmark')]"
+  resource_modal_table_headers: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//table//th"
+  resource_modal_inputs: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//input | //div[contains(@class,'fixed') and contains(@class,'inset-0')]//textarea"
+  # Worker sub-page (worker_list_base.html) tabs + swapped table. Bare id -> loader prefixes '#'.
+  worker_tab_by_id: "{tab}-tab"
+  worker_table_headers: "//div[@id='table']//table//th | //table[contains(@class,'base-table')]//th"
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
