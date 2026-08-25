@@ -306,6 +306,22 @@ class ConnectOpportunityListPage(BasePage):
             self.select_tomselect_by_label(self._raw("filter_status_select"), label, scope=self.FILTER_MODAL)
         self.apply_filters()
 
+    def managed_create_status(self, config, program_id):
+        """OLP_02 - GET the managed opportunity-init URL for the current org and
+        return the HTTP status.
+
+        ManagedOpportunityViewMixin.dispatch resolves the program by program_id
+        (a real UUID is required - a non-UUID 500s, a missing one redirects), then
+        ProgramManagerMixin denies any non-PM org with 403. So a PM org would reach
+        the form (200) and an NM org gets 403.
+        """
+        slug = self.page.url.split("/a/")[1].split("/")[0]
+        url = f"{config.get('connect_url')}/a/{slug}/program/{program_id}/opportunity-init"
+        response = self.page.goto(url)
+        status = response.status if response else None
+        self._step(f"Managed create probe for org '{slug}' -> HTTP {status}")
+        return status
+
     def kebab_item_hrefs(self, name):
         """Kebab action titles -> href, read in a single open (no navigation)."""
         self.open_kebab(name)

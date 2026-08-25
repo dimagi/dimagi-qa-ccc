@@ -191,3 +191,9 @@ TASKING_HYBRID:
   # Form submission travels device -> CommCare HQ -> Connect's form receiver,
   # which is far from instant on staging, so poll generously.
   completion_timeout_seconds: 900
+
+# OLP_02 (NM cannot create an opportunity). The managed opportunity-init view keys
+# off a real program_id (UUID) and denies non-PM orgs with 403. Staging program
+# "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.
+OLP_NM_CREATE:
+  managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
