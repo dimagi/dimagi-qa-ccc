@@ -262,16 +262,16 @@ connect_opportunity_list_page:
   table: "//table[contains(@class,'base-table')]"
   column_headers: "//table[contains(@class,'base-table')]//thead//th"
   # Data rows only. The empty-state row carries the placeholder text instead.
-  data_rows: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'group')]"
+  data_rows: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]"
   empty_text: "//table[contains(@class,'base-table')]//td[contains(normalize-space(),'No Opportunities created yet')]"
   # A sortable header is an <a href=?sort=...> inside the th (sort_link.sortable_header);
   # non-sortable columns render a plain <span>, so this only matches the sortable set.
   sort_header_by_label: "//table[contains(@class,'base-table')]//th//a[contains(normalize-space(.),'{label}')]"
   # Row addressed by the opportunity-name link in its first data column.
-  row_link_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'group')]//a[normalize-space()='{name}']"
+  row_link_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[contains(normalize-space(.),'{name}')]"
   # Test/Real column: the icon is present-but-invisible for real opportunities and
   # visible (no 'invisible' class) for test ones - hence the not(...invisible) guard.
-  test_icon_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'group')][.//a[normalize-space()='{name}']]//i[contains(@class,'fa-file-circle-exclamation') and not(contains(@class,'invisible'))]"
+  test_icon_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//i[contains(@class,'fa-file-circle-exclamation') and not(contains(@class,'invisible'))]"
 
   # Filter modal (Alpine x-show over .modal-backdrop)
   filter_button: "//button[.//i[contains(@class,'fa-sliders')]]"
@@ -289,14 +289,24 @@ connect_opportunity_list_page:
   # Pagination + page size live in base_table.html and only render when the row
   # count exceeds DEFAULT_PAGE_SIZE (20); below that there is no pager at all.
   page_size_select: "page-size"
-  next_page_btn: "//button[@aria-label='Next page']"
-  prev_page_btn: "//button[@aria-label='Previous page']"
+  next_page_btn: "//div[contains(@class,'table-footer')]//button[.//i[contains(@class,'fa-chevron-right')]]"
+  prev_page_btn: "//div[contains(@class,'table-footer')]//button[.//i[contains(@class,'fa-chevron-left')]]"
   page_number_input: "//div[contains(@class,'table-footer')]//input[@type='number']"
 
   # Kebab (...) actions column - components/dropdowns/text_button_dropdown.html.
-  kebab_toggle_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'group')][.//a[normalize-space()='{name}']]//span[contains(@class,'cursor-pointer')]"
+  kebab_toggle_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//span[contains(@class,'cursor-pointer')]"
   kebab_menu_items: "//div[contains(@class,'dropdown-content')]//a"
   kebab_menu_item_by_text: "//div[contains(@class,'dropdown-content')]//a[normalize-space()='{title}']"
+  # Every row's dropdown is present in the DOM (Alpine x-show), so kebab reads must
+  # be scoped to the target row or they return all rows' items.
+  kebab_menu_items_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//div[contains(@class,'dropdown-content')]//a"
+  # Tier 2/3. Status badges on data rows (render_status: Active/Ended/Inactive).
+  status_badges: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//span[contains(@class,'badge')]"
+  # Count cells are links wrapped in a div with the stats_style 'underline' class
+  # (render_worker_list_url_column). Drill-down targets are distinguished by the
+  # sort param the renderer appends, which is stable regardless of URL path naming.
+  stats_links: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//div[contains(@class,'underline')]//a"
+  count_link_by_href: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[contains(@href,'{frag}')]"
 # --- Case List Map: geo Display Properties config (Map_01/Map_02) ---
 # The module's "Case List" tab (pane #case-detail-screen-config-tab) holds a
 # "Display Properties" table. The config panel nests several tables, so the
