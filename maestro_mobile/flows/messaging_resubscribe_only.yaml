@@ -1,0 +1,168 @@
+# Repair flow: put the channel back to subscribed and stop there.
+#
+# The mirror of messaging_unsubscribe_only.yaml, and it exists because that one
+# deliberately leaves the channel unsubscribed for the web half of TC-SUB-004 to
+# be sent against. If anything between the two builds fails - as a mid-build send
+# did on staging - the channel stays unsubscribed and every later test that needs
+# delivery fails for a reason that has nothing to do with what it was testing.
+#
+# test_consent_gates_message_delivery runs this in a finally, so a failed run
+# costs one repair build rather than poisoning the rest of the suite.
+#
+# Guarded, so running it against an already-subscribed channel is a no-op rather
+# than an error - a repair that only works when it is needed is no repair at all.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap. Staging build 7712d963
+      # failed that way: the screenshot shows the dialog still up, and the flow
+      # failing several steps later on a tap that never had a chance.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Resubscribe, only if it is actually unsubscribed ---
+- runFlow:
+    when:
+      visible:
+        text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn:
+          text: "Resubscribe"
+      - tapOn:
+          text: "Resubscribe"
+      - extendedWaitUntil:
+          notVisible:
+            text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+          timeout: 30000
+      # Typing makes the send control appear only on a consented channel, so this
+      # proves the resubscribe actually took rather than that a banner vanished.
+      - tapOn:
+          id: "etMessage"
+      - inputText: "repaired"
+      - assertVisible:
+          id: "imgSendMessage"
+      - eraseText

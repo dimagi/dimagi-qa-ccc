@@ -1,0 +1,153 @@
+# A messaging push opens the thread when tapped (TC-MSG-006).
+#
+# This was previously judged not automatable, wrongly. The case needs a message
+# to arrive while the app is BACKGROUNDED, and a build-then-web or
+# web-then-build ordering cannot produce that: send first and the message is
+# already queued, so it arrives on the first sync rather than as a push; send
+# after and the session is over.
+#
+# The web half instead fires PART-WAY THROUGH this build (DeferredWebAction), so
+# the worker is signed in, the app is backgrounded, and the device is parked in
+# the notification shade when the broadcast goes out.
+#
+# MESSAGING NOTIFICATIONS ARE CONTENT-FREE. Observed on prod (build 41288633):
+#
+#     🔔 New Message 🔔
+#     You received a new message from connectqa-automation-prod, press here to view.
+#
+# The body never appears in the shade, which is correct for end-to-end encrypted
+# messaging - the server cannot include plaintext it cannot read, and the app
+# does not leak decrypted content to the lock screen. So this waits on the
+# notification naming the CHANNEL, and only asserts the message body once the
+# thread is open and the content has been decrypted on-device.
+#
+# From commcare-android: FirebaseMessagingUtil suppresses the notification while
+# the channel list is foregrounded or that channel is the active one, which is
+# exactly why the app is put in the background first.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  EXPECTED_MESSAGE: "Test Connect Message Broadcast"
+  # The notification's own wording, which carries no message content.
+  NOTIFICATION_TITLE: "New Message"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap. Staging build 7712d963
+      # failed that way: the screenshot shows the dialog still up, and the flow
+      # failing several steps later on a tap that never had a chance.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+# Close the drawer completeSignin() opened, so the app is idle rather than on a
+# Connect surface when it goes to the background.
+- runFlow:
+    when:
+      visible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          point: "92%,50%"
+      - extendedWaitUntil:
+          notVisible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Background the app: without this the push is suppressed ---
+- pressKey: Home
+
+# --- Wait in the shade for the broadcast the web half sends mid-build ---
+- swipe:
+    start: "50%,1%"
+    end: "50%,80%"
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOTIFICATION_TITLE}.*"
+    timeout: 600000
+# It must be the notification for THIS channel, not any messaging notification:
+# the body names the channel even though it carries no message content.
+- assertVisible:
+    text: ".*${CHANNEL_NAME}.*"
+
+# --- Tapping it must land in the right thread ---
+- tapOn:
+    text: ".*${NOTIFICATION_TITLE}.*"
+
+# ConnectMessagingActivity.handleRedirectIfAny() runs the PersonalID unlock path
+# before it can show the thread, so allow for that before asserting.
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 120000
+# The right thread, not merely a thread. This is asserted on the MESSAGE, not on
+# the toolbar title, because of a product defect found here (prod, build
+# 32f1cf9e): a thread opened from a notification shows the literal placeholder
+# "Channel Name" in the toolbar instead of the channel's name. Opening the same
+# thread from the channel list shows it correctly, so the deep-link path does
+# not set the title. Tracked as TC-MSG-010; restore a title assertion here once
+# it is fixed.
+#
+# The message body is the stronger evidence anyway: it is unique per run, so it
+# proves this exact broadcast was delivered, decrypted on-device and rendered in
+# the thread the notification pointed at.
+# extendedWaitUntil, not assertVisible: the thread opens as soon as the deep
+# link resolves, but the message syncs into it a moment later, and
+# assertVisible's ~17s default expired just before it rendered - the failure
+# screenshot showed the message on screen. Every other message assertion in
+# this suite waits properly; this one had been the exception.
+- extendedWaitUntil:
+    visible:
+      text: ".*${EXPECTED_MESSAGE}.*"
+    timeout: 120000

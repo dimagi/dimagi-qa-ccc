@@ -1,0 +1,235 @@
+# Worker side of the hybrid survey test (TC-BRD-003).
+#
+# Web sends a Connect Survey broadcast; this flow has the worker answer it in
+# the channel, question by question. The survey is a conversation, not a form
+# UI: ConnectMessageFragment renders plain text bubbles only, so each question
+# arrives as an incoming message and each answer is sent as ordinary text.
+#
+# Question labels and answers are env values rather than literals. Legacy
+# hardcoded "Name" -> "test user" and "ID" -> "101" inside fill_survey_form(),
+# which tied the test to one specific form; keeping them out here means a
+# different survey only needs different data.
+#
+# Ids come from commcare-android fragment_connect_message.xml:
+#   rvChat / tvChatMessage   the message list and a bubble's text
+#   etMessage                the composer
+#   imgSendMessage           GONE until the input is non-empty AND the channel is
+#                            consented, so it must be typed into before tapping.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  # The questions this survey asks, in order, and what to answer them with.
+  Q1_LABEL: "Enter case name"
+  Q1_ANSWER: "Automation Survey User"
+  Q2_LABEL: "Define External ID"
+  Q2_ANSWER: "101"
+  Q3_LABEL: "Enter age"
+  Q3_ANSWER: "30"
+  Q4_LABEL: "Enter appointment date"
+  Q4_ANSWER: "20260901"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap. Staging build 7712d963
+      # failed that way: the screenshot shows the dialog still up, and the flow
+      # failing several steps later on a tap that never had a chance.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel ---
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Question 1 ---
+# The survey travels HQ -> ConnectID -> FCM, and an open thread re-polls every
+# 30s, so allow well past one poll interval for the first question.
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_LABEL}.*"
+    timeout: 420000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q1_ANSWER}"
+# The send control only exists once the composer is non-empty, so assert it
+# appeared rather than tapping blind - a hidden button would otherwise fail as
+# "element not found" with no hint that the text never registered.
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 2 arrives only after question 1 is answered ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q2_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_ANSWER}.*"
+    timeout: 60000
+
+# Both answers are in the thread with timestamps - a bubble without one would
+# mean a half-rendered row rather than a delivered message.
+# --- Question 3 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q3_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q3_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# Deliberately no echo assertion on this answer. It is a bare number, and the
+# bubbles carry timestamps, so ".*30.*" would happily match "10:30" on a row
+# that has nothing to do with the answer - a check that passes for the wrong
+# reason is worse than no check. Question 4 arriving is the stronger proof that
+# this one was accepted, and that is the next thing the flow waits for.
+
+# --- Question 4 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q4_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_ANSWER}.*"
+    timeout: 60000
+
+- assertVisible:
+    id: "tvChatDate"

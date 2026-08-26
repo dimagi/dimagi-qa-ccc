@@ -51,6 +51,25 @@ WORKER_BY_FLOW = {
     # Connect evaluated the blocked visit before the task completion is submitted.
     "worker_blocked_visit.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     "worker_relearn_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    "messaging_broadcast.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_keyword.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_keyword_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_consent.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_consent_history.yaml": "MAESTRO_MESSAGING_HYBRID",
+    # Deliberately NOT the hybrid worker: that account has a channel, and an
+    # empty-state test pointed at it can never pass again.
+    "messaging_empty_state.yaml": "MAESTRO_MESSAGING_EMPTY_STATE",
+    "messaging_channel_created.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_push_deeplink.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_consent_delivery.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_unsubscribe_only.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_resubscribe_only.yaml": "MAESTRO_MESSAGING_HYBRID",
+    "messaging_subscription.yaml": "MAESTRO_MESSAGING_HYBRID",
+    # Deliberately the TASKING worker: the messaging worker is enrolled on no
+    # opportunity on prod, so it cannot submit the form that fires the alert.
+    "messaging_conditional_alert.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    "messaging_conditional_alert_survey.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     # Map_10/Map_11 sign in as the same worker; it is baked into each executed
     # flow and inherited by the shared_map_open subflow via runFlow.
     "map_10_toggle_panel_visible.yaml": "MAESTRO_MAP_CASE_LIST",

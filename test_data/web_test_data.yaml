@@ -121,6 +121,7 @@ Make_Payment:
   worker_name: "Automation User 10"
   country_code: "+7426"
   phone_number: "7426006"
+
 # --- Tasking workflow automation (CCCT-2658) ---
 TASKING:
   # The live task unit. Its slug is already consumed on both apps by the task
@@ -192,6 +193,118 @@ TASKING_HYBRID:
   # which is far from instant on staging, so poll generously.
   completion_timeout_seconds: 900
 
+# Connect messaging (CCCT-2671). Unsuffixed keys are prod, `_staging` overrides
+# them - the same convention the rest of this file uses.
+MESSAGING:
+  # Survey form the Connect Survey content type points at.
+  #
+  # One value for both environments on purpose. These used to differ - prod
+  # pointed at "Delivery App - ETE > Surveys > Survey" and staging at the SMS
+  # app's "Surveys > Survey" - which meant the two environments exercised
+  # different forms and only one of them could be right. A Connect Survey is
+  # meant to be driven from the SMS app, and prod's completed surveys never
+  # appeared in HQ's submit history while it pointed at a Delivery App form.
+  # Whether that is the whole explanation is what TC-BRD-004 has to show; what
+  # is certain is that both environments should ask the same questions, so the
+  # answers below can be one set rather than two.
+  survey_form: "SMS Tests [DO NOT DELETE] > Case List > Registration Form"
+  # HQ user id of the mobile worker every alert and broadcast is addressed to.
+  # It MUST be the user that MAESTRO_MESSAGING_HYBRID signs in as on the device
+  # (prod: CCC- Automationuser1, +74267426121), or the message is delivered to
+  # somebody else's channel and the device waits for something that was never
+  # sent to it.
+  #
+  # One id, not one per content type. Legacy used a second id for broadcasts
+  # (MESSAGING_4_5_6 -> 001b8edd7bc3d3c58a70), which belongs to a different
+  # account entirely - harmless when nothing checked the phone, wrong the moment
+  # a device does.
+  #
+  # Prod value only. The staging id still has to be read off HQ's recipient
+  # picker once "Message Automation User" is enrolled.
+  worker_user_id: "049b54d12e564f418397"
+  # Staging, read off HQ's recipient picker on 2026-08-12 by typing the
+  # worker's name - the widget searches by name and resolves to the id, which
+  # is also how a future version could drop these hardcoded ids entirely.
+  worker_user_id_staging: "924dec685ba0a0dbc895"
+  # The mobile channel is named after the HQ domain - ConnectID stores it as
+  # channel_source and the app renders that as the channel name.
+  channel_name: "connectqa-automation-prod"
+  channel_name_staging: "connectqa-automation"
+  # Maestro flow driving the device half of the broadcast test. The worker is
+  # deliberately not repeated here: it lives in mobile_workers.yaml under
+  # MAESTRO_MESSAGING_HYBRID, the single source the Maestro runner resolves per
+  # environment, so web and device cannot disagree about who signs in.
+  broadcast_flow: "messaging_broadcast.yaml"
+  survey_flow: "messaging_survey.yaml"
+  keyword_flow: "messaging_keyword.yaml"
+  keyword_survey_flow: "messaging_keyword_survey.yaml"
+  consent_flow: "messaging_consent.yaml"
+  subscription_flow: "messaging_subscription.yaml"
+  empty_state_flow: "messaging_empty_state.yaml"
+  # The channel TC-CHN-006 unsubscribes and restores. Deliberately NOT
+  # channel_name: every delivery test sends into that one, and a run that died
+  # between unsubscribe and resubscribe would leave it unsubscribed and break
+  # them all. This one is referenced nowhere else.
+  # Must sort ABOVE channel_name while subscribed, so unsubscribing it is an
+  # observable move rather than a no-op. connetqa-prod was the first choice and
+  # was wrong: it sorts last, so the assertion would have held before the
+  # unsubscribe as well as after it.
+  spare_channel: "connectqa"
+  spare_channel_staging: "connectqa"
+  channel_created_flow: "messaging_channel_created.yaml"
+  push_deeplink_flow: "messaging_push_deeplink.yaml"
+  unsubscribe_flow: "messaging_unsubscribe_only.yaml"
+  # Repair used in a finally by the consent-gating test - see the flow header.
+  resubscribe_flow: "messaging_resubscribe_only.yaml"
+  consent_delivery_flow: "messaging_consent_delivery.yaml"
+  conditional_alert_flow: "messaging_conditional_alert.yaml"
+  conditional_alert_survey_flow: "messaging_conditional_alert_survey.yaml"
+  # The alert cases run as the TASKING worker, which is enrolled and
+  # delivering on the tasking opportunity - the messaging worker is enrolled
+  # nowhere on prod. The alert matches a case property and its recipient is a
+  # user, so submitter and recipient are free to be the same account.
+  alert_worker_user_id: "022fc4d2f72ec5375a24"     # Relearn User 2, prod
+  # Staging, read off HQ's recipient picker on 2026-08-18 by typing the worker's
+  # staging name - the same way the prod id was captured. The ids differ because
+  # the accounts do: prod's tasking worker is "Relearn User 2", staging's is
+  # "Relearn Task User" (mobile_workers.yaml, MAESTRO_WORKER_RELEARN_TASK).
+  alert_worker_user_id_staging: "e9aa6630f447cb3226bb"   # Relearn Task User, staging
+  alert_opportunity: "Demo Opportunity_04-Aug-2026 : 15:37"
+  # Same opportunity the tasking suite uses on staging (TASKING_HYBRID
+  # .opportunity_name_staging) - these alert cases run as the tasking worker, so
+  # they are enrolled on whatever that suite is enrolled on, per environment.
+  alert_opportunity_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
+  # Two mid-build sends for the consent-gating pair. The first must land
+  # after the device has unsubscribed, the second after it has resubscribed.
+  blocked_send_delay_seconds: 260
+  allowed_send_delay_seconds: 500
+  # How long the mid-build web trigger waits before requesting consent. It
+  # must land AFTER the worker has signed in - a push sent earlier reaches a
+  # device not yet registered as that user and is lost - and before the
+  # flow's 600s shade wait runs out. Cold-start sign-in has been running
+  # ~2.5 min on BrowserStack, so this leaves roughly a minute of margin.
+  consent_trigger_delay_seconds: 210
+  # The questions survey_form asks, in order, and what to answer them with.
+  # Kept as data rather than baked into the flow the way legacy's
+  # fill_survey_form() did, so pointing survey_form at another form of the same
+  # shape only means editing this. A form with a different NUMBER of questions
+  # is not just data: each question is an explicit wait-then-answer pair in
+  # messaging_survey.yaml and messaging_conditional_alert_survey.yaml, so those
+  # gain or lose a block too. Registration Form asks four; the previous form
+  # asked two.
+  #
+  # Q1 has no answer here on purpose: the test generates a per-run value so the
+  # resulting submission is attributable to one run when searching HQ, which is
+  # exactly what TC-BRD-004 needs.
+  survey_q1_label: "Enter case name"
+  survey_q2_label: "Define External ID"
+  survey_q2_answer: "101"
+  survey_q3_label: "Enter age"
+  survey_q3_answer: "30"
+  survey_q4_label: "Enter appointment date"
+  # Connect surveys take dates as YYYYMMDD with no separators - not YYYY-MM-DD,
+  # which the survey rejects.
+  survey_q4_answer: "20260901"
 # OLP_02 (NM cannot create an opportunity). The managed opportunity-init view keys
 # off a real program_id (UUID) and denies non-PM orgs with 403. Staging program
 # "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.

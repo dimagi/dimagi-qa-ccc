@@ -249,6 +249,71 @@ connect_worker_invite_page:
   form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
   error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
 
+# CCCT-2671. Originally carried over verbatim from the legacy Selenium locators, then
+# reworked after review (PR #30, kbo001): the positional XPaths are gone. Each control
+# is now anchored on something that IS the control - its destination URL, its Knockout
+# binding, or the custom element that owns it - so a layout change no longer breaks it.
+#
+#   new_conditional_alert / add_broadcast_btn   href to the /add page
+#   case_property_entity_dropdown              scoped by <case-property-input>
+#   case_property_equals_dropdown              data-bind="value: match_type"
+#   case_property_name_input                   data-bind="value: property_value"
+cchq_messaging_page:
+  messaging_tab: "MessagingTab"
+  messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
+
+  # --- Conditional alerts ---
+  new_conditional_alert: "//a[contains(@href, '/messaging/conditional/add')]"
+  conditional_alert_name_input: "id_conditional-alert-name"
+  continue_btn: "//button[contains(text(), 'Continue')]"
+  case_type_input: "id_criteria-case_type"
+  select_a_filter_btn: "//button[.//i[contains(@class,'fa-plus')]]"
+  case_property_filter_option: "//button[.//i[contains(@class,'fa-plus')]]/..//a[normalize-space()='Case property']"
+  case_property_entity_dropdown: "//case-property-input//select"
+  case_property_equals_dropdown: "//select[contains(@data-bind, 'match_type')]"
+  case_property_name_input: "//input[contains(@data-bind, 'property_value')]"
+  alerts_list_table: "conditional-alert-list"
+  alert_row: "//table[contains(@class,'table')]/tbody/tr"
+  search_box: "//form[@class='input-group']/input[@class='form-control']"
+  search_btn: "//button/i[contains(@class,'search')]"
+
+  # --- Shared by alerts and broadcasts ---
+  recipient_input: "//*[@id='div_id_schedule-recipient_types']//textarea"
+  user_recipients_input: "//*[@id='div_id_schedule-user_recipients']//textarea"
+  what_to_send_input: "id_schedule-content"
+  message_input: "(//div[./input[@id='id_content-message']]//textarea)[1]"
+  survey_form_input: "id_content-app_and_form_unique_id"
+  expire_after_input: "id_content-survey_expiration_in_hours"
+  save_btn: "//button[text()='Save']"
+
+  # --- Broadcasts ---
+  add_broadcast_btn: "//a[contains(@href, '/messaging/broadcasts/add')]"
+  broadcast_name_input: "id_schedule-schedule_name"
+  send_broadcast_btn: "//button[normalize-space()='Send Broadcast']"
+  broadcasts_table: "//div[@id='immediate-broadcasts']//table"
+  page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
+
+  # --- Keywords ---
+  # Served from /reminders/keywords/, not /messaging/, and reached from the left
+  # sidebar rather than the Messaging top-nav dropdown.
+  sidebar_link: "//a[normalize-space()='{option}']"
+  add_keyword_btn: "//a[normalize-space()='Add Keyword']"
+  keyword_input: "id_keyword"
+  keyword_description_input: "id_description"
+  keyword_sender_content_type: "id_sender_content_type"
+  keyword_sender_message: "id_sender_message"
+  keyword_survey_form: "id_sender_app_and_form_unique_id"
+  keyword_allow_use_by: "id_allow_keyword_use_by"
+  keywords_table: "//table[contains(@class,'table-striped')]"
+  keywords_row_by_name: "//table[contains(@class,'table-striped')]/tbody/tr[td[contains(normalize-space(), \"{keyword}\")]]"
+  keywords_empty_msg: "//td[contains(normalize-space(), 'You have no keywords')]"
+
+  # --- Connect messaging user consent (sidebar: CONNECT MESSSAGING > User Consent) ---
+  # Served from /sms/connect_messaging_user/. The page is a single bulk action -
+  # there is no per-user picker and no list of existing channels - and it reports
+  # the outcome in a banner.
+  request_consent_btn: "//a[normalize-space()='Request Messaging Consent']"
+  consent_result_banner: "//div[contains(@class,'alert')]"
 # --- Opportunity List page (CCCT-2667) ---
 # Derived from the Connect source (commcare-connect):
 #   template  opportunity/opportunities_list.html  (filter modal, heading)
