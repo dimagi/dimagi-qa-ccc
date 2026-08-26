@@ -16,6 +16,8 @@ The opportunity is chosen from test data (OPD.opportunity_name, the seeded "Demo
 Opportunity") with a fall-back to the first row so the suite is not seed-coupled.
 """
 
+import pytest
+
 from flows.olp_setup import PM_ORG
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
@@ -57,14 +59,34 @@ def _open_dashboard(page, test_data, config, settings):
 
     dashboard = OpportunityDashboardPage(connect_page)
     dashboard.verify_loaded()
+    dashboard.dashboard_url = dashboard.page.url
     return dashboard
 
 
-def test_opd_01_02_land_on_dashboard_and_details(page, test_data, config, settings):
+@pytest.fixture(scope="module")
+def dashboard(browser, config, settings, test_data):
+    """One authenticated session for the whole module: log in, open the dashboard,
+    yield it to every test, then close the context (logout) at the end. The login
+    is retried once to absorb the occasional CommCareHQ login flake."""
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        try:
+            dash = _open_dashboard(page, test_data, config, settings)
+        except Exception:
+            page.close()
+            page = context.new_page()
+            dash = _open_dashboard(page, test_data, config, settings)
+        yield dash
+    finally:
+        context.close()
+
+
+def test_opd_01_02_land_on_dashboard_and_details(dashboard):
     """OD_1: selecting an opportunity lands on its dashboard.
     OD_2: the dashboard shows the opportunity detail cards, live stat panels and
     the funnel / worker-progress graphs."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
 
     # OD_1 - landed on a dashboard (verify_loaded already asserted h1 + url).
     # OD_2 - opportunity config cards + status badge.
@@ -85,18 +107,18 @@ def test_opd_01_02_land_on_dashboard_and_details(page, test_data, config, settin
     dashboard.verify_graphs_present()
 
 
-def test_opd_03_connect_workers_drilldown(page, test_data, config, settings):
+def test_opd_03_connect_workers_drilldown(dashboard):
     """OD_3: the Connect Workers button lands on the connect workers page."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
     dashboard.wait_for_stats()
 
     url = dashboard.click_stat_panel("connect_workers")
     assert "/workers/" in url, f"Connect Workers button did not open the workers page: {url}"
 
 
-def test_opd_04_services_delivered_tab(page, test_data, config, settings):
+def test_opd_04_services_delivered_tab(dashboard):
     """OD_4: the Services Delivered button opens the deliver tab with its columns."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
     dashboard.wait_for_stats()
 
     url = dashboard.click_stat_panel("services_delivered")
@@ -104,9 +126,9 @@ def test_opd_04_services_delivered_tab(page, test_data, config, settings):
     dashboard.verify_worker_columns(["Name", "Delivered", "Approved", "Rejected"])
 
 
-def test_opd_05_payments_tab(page, test_data, config, settings):
+def test_opd_05_payments_tab(dashboard):
     """OD_5: the Payments Earned button opens the payments tab with its columns."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
     dashboard.wait_for_stats()
 
     url = dashboard.click_stat_panel("payments_earned")
@@ -114,10 +136,10 @@ def test_opd_05_payments_tab(page, test_data, config, settings):
     dashboard.verify_worker_columns(["Accrued", "Total Paid", "Confirm"])
 
 
-def test_opd_06_07_hamburger_menu_and_verification_flags(page, test_data, config, settings):
+def test_opd_06_07_hamburger_menu_and_verification_flags(dashboard):
     """OD_6: the hamburger menu exposes the management options.
     OD_7: 'Verification Flags' opens the verification-flags config page (PM)."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
 
     # OD_6
     options = dashboard.hamburger_options()
@@ -134,10 +156,10 @@ def test_opd_06_07_hamburger_menu_and_verification_flags(page, test_data, config
     )
 
 
-def test_opd_18_19_learn_deliver_payment_modal(page, test_data, config, settings):
+def test_opd_18_19_learn_deliver_payment_modal(dashboard):
     """OD_18: the Learn & Deliver apps modal shows app/module info (non-editable).
     OD_19: the Payment Units tab lists every payment unit with its details."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
 
     dashboard.open_resource_modal()
     dashboard.verify_resource_tabs_present(["Learn App", "Deliver App", "Payment Units"])
@@ -159,10 +181,10 @@ def test_opd_18_19_learn_deliver_payment_modal(page, test_data, config, settings
     dashboard.close_resource_modal()
 
 
-def test_opd_inactive_workers_prefilter(page, test_data, config, settings):
+def test_opd_inactive_workers_prefilter(dashboard):
     """OD_18 (inactive-worker variant): the 'Inactive last 3 days' panel lands on
     the deliver page with the last_active=3 filter pre-applied."""
-    dashboard = _open_dashboard(page, test_data, config, settings)
+    dashboard.goto_dashboard()
     dashboard.wait_for_stats()
 
     url = dashboard.click_stat_panel("inactive")

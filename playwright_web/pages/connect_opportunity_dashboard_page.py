@@ -152,7 +152,9 @@ class OpportunityDashboardPage(BasePage):
         return items
 
     def click_hamburger_item(self, text):
-        if self.page.locator(self.HAMBURGER_MENU).count() == 0:
+        # The menu div is always in the DOM (x-show toggles visibility, not
+        # presence), so re-open by visibility, not by element count.
+        if not self.is_displayed(self.HAMBURGER_MENU, timeout=1000):
             self.open_hamburger()
         self._step(f"Click hamburger item '{text}'")
         self.click(self.HAMBURGER_ITEM_BY_TEXT.format(text=text))
@@ -190,10 +192,18 @@ class OpportunityDashboardPage(BasePage):
         self._step(f"Resource modal tabs present: {tabs}")
 
     def verify_resource_columns(self, expected):
-        joined = " | ".join(self.resource_modal_columns())
+        # The three modal tables HTMX-load independently, so a tab's headers can
+        # arrive after another's - poll until the expected columns are present
+        # rather than reading once and racing the load.
+        joined = ""
+        for _ in range(20):  # ~10s
+            joined = " | ".join(self.resource_modal_columns())
+            if all(c in joined for c in expected):
+                self._step(f"All expected modal columns present: {expected}")
+                return
+            self.page.wait_for_timeout(500)
         missing = [c for c in expected if c not in joined]
         assert not missing, f"Missing modal columns {missing}"
-        self._step(f"All expected modal columns present: {expected}")
 
     def verify_resource_modal_readonly(self):
         """The dialog is informational - no editable inputs beyond the close icon."""
@@ -204,6 +214,185 @@ class OpportunityDashboardPage(BasePage):
     def close_resource_modal(self):
         self.click(self.RESOURCE_MODAL_CLOSE)
         self.page.locator(self.RESOURCE_MODAL).first.wait_for(state="hidden", timeout=10000)
+
+    # -- gap-analysis surfaces (OD_20+) -----------------------------------------
+
+    RESOURCE_CARD_BY_NAME = locators.get("opportunity_dashboard_page", "resource_card_by_name")
+    FUNNEL_STAGE_LABELS = locators.get("opportunity_dashboard_page", "funnel_stage_labels")
+    FUNNEL_STAGE_COUNTS = locators.get("opportunity_dashboard_page", "funnel_stage_counts")
+    WORKER_PROGRESS_LABELS = locators.get("opportunity_dashboard_page", "worker_progress_labels")
+    WORKER_PROGRESS_BARS = locators.get("opportunity_dashboard_page", "worker_progress_bars")
+    INCREMENT_BADGE = locators.get("opportunity_dashboard_page", "increment_badge")
+    STAT_PANEL_BY_TITLE = locators.get("opportunity_dashboard_page", "stat_panel_by_title")
+    DELIVER_FILTER_BUTTON = locators.get("opportunity_dashboard_page", "deliver_filter_button")
+    DELIVER_FILTER_APPLY = locators.get("opportunity_dashboard_page", "deliver_filter_apply")
+    FILTER_SELECT_BY_NAME = locators.get("opportunity_dashboard_page", "filter_select_by_name")
+    WORKERS_SEARCH_INPUT = locators.get("opportunity_dashboard_page", "workers_search_input")
+    WORKERS_DISPLAYING_COUNT = locators.get("opportunity_dashboard_page", "workers_displaying_count")
+    WORKERS_SEARCH_CLEAR = locators.get("opportunity_dashboard_page", "workers_search_clear")
+    WORKERS_TAB_LABEL = locators.get("opportunity_dashboard_page", "workers_tab_label")
+
+    FUNNEL_STAGES = ["Invited", "Accepted", "Started Learning", "Completed Learning",
+                     "Completed Assessment", "Claimed Job", "Started Delivery"]
+    WORKER_PROGRESS_TITLES = ["Approved", "Rejected", "Earned", "Paid"]
+
+    def goto_dashboard(self):
+        """Return to the opportunity dashboard without re-authenticating. Used by
+        the shared-session tests so each test starts from a known state after the
+        previous one navigated away. dashboard_url is set by the module fixture."""
+        self.page.goto(self.dashboard_url)
+        self.page.wait_for_load_state("load")
+        self.verify_loaded()
+
+    def base_url_parts(self):
+        """(scheme://host, org_slug, opp_id) parsed from the current dashboard url:
+        .../a/<slug>/opportunity/<opp_id>/ ."""
+        from urllib.parse import urlparse
+        u = urlparse(self.page.url)
+        parts = [p for p in u.path.split("/") if p]
+        slug = parts[parts.index("a") + 1]
+        opp_id = parts[parts.index("opportunity") + 1]
+        return f"{u.scheme}://{u.netloc}", slug, opp_id
+
+    # OD_24 covered by verify_status_badge; OD_25 by wait_for_stats + verify_graphs.
+
+    # OD_27: currency-formatted values
+    def summary_card_value(self, label):
+        card = self.page.locator(self.INFO_CARD_BY_LABEL.format(label=label)).first
+        card.wait_for(state="visible", timeout=15000)
+        value = card.locator("xpath=.//p").first.inner_text().strip()
+        self._step(f"Summary card '{label}' value: {value!r}")
+        return value
+
+    # OD_29: map/audit/tasks panels present (product-risk - assert render, not click-through)
+    def stat_panel_present(self, title):
+        present = self.page.locator(self.STAT_PANEL_BY_TITLE.format(title=title)).count() > 0
+        self._step(f"Stat panel '{title}' present: {present}")
+        return present
+
+    def stat_panel_href(self, title):
+        """Return the href of the anchor wrapping a panel, or None if not a link."""
+        anchor = self.page.locator(
+            f"//a[.//*[self::h3 or self::p][normalize-space()='{title}']]"
+        )
+        if anchor.count() == 0:
+            return None
+        return anchor.first.get_attribute("href")
+
+    # OD_31: funnel
+    def funnel_stage_labels(self):
+        self.page.locator(self.FUNNEL_CONTAINER).first.wait_for(state="visible", timeout=30000)
+        self.page.locator(self.FUNNEL_HEADING).first.wait_for(state="visible", timeout=30000)
+        labels = [t.strip() for t in self.page.locator(self.FUNNEL_STAGE_LABELS).all_inner_texts() if t.strip()]
+        self._step(f"Funnel stages: {labels}")
+        return labels
+
+    def funnel_counts_nonempty(self):
+        counts = [t.strip() for t in self.page.locator(self.FUNNEL_STAGE_COUNTS).all_inner_texts()]
+        self._step(f"Funnel counts: {counts}")
+        return all(c != "" for c in counts) and len(counts) >= 7
+
+    # OD_32: worker progress bars
+    def worker_progress_labels(self):
+        self.page.locator(self.WORKER_PROGRESS_CONTAINER).first.wait_for(state="visible", timeout=30000)
+        # Bars are HTMX-swapped in after the container; wait for the first label,
+        # then read. An opportunity with no deliveries/payments renders no bars.
+        self.is_displayed(self.WORKER_PROGRESS_LABELS, timeout=15000)
+        labels = [t.strip() for t in self.page.locator(self.WORKER_PROGRESS_LABELS).all_inner_texts() if t.strip()]
+        self._step(f"Worker-progress labels: {labels}")
+        return labels
+
+    def worker_progress_bar_count(self):
+        return self.page.locator(self.WORKER_PROGRESS_BARS).count()
+
+    # OD_33: resource card count + open modal on the right tab
+    def resource_card_count(self, name):
+        card = self.page.locator(self.RESOURCE_CARD_BY_NAME.format(name=name)).first
+        card.wait_for(state="visible", timeout=15000)
+        # The card holds two <h3> (name, then the count); take the last.
+        count = card.locator("xpath=.//h3").last.inner_text().strip()
+        self._step(f"Resource card '{name}' count: {count!r}")
+        return count
+
+    def open_resource_card(self, name):
+        self._step(f"Open resource card '{name}'")
+        self.click(self.RESOURCE_CARD_BY_NAME.format(name=name))
+        self.page.locator(self.RESOURCE_MODAL).first.wait_for(state="visible", timeout=10000)
+
+    def active_resource_tab(self):
+        tab = self.page.locator("//ul[contains(@class,'tabs')]//li[contains(@class,'active')]").first
+        tab.wait_for(state="visible", timeout=10000)
+        return tab.inner_text().strip()
+
+    # OD_38 Learn tab / OD_40 workers tab: navigate a worker sub-tab by url
+    def goto_worker_tab(self, tab):
+        """tab in {workers, learn, deliver, payments, tasks}."""
+        host, slug, opp_id = self.base_url_parts()
+        suffix = {"workers": "workers/", "learn": "workers/learn/", "deliver": "workers/deliver/",
+                  "payments": "workers/payments/", "tasks": "workers/tasks/"}[tab]
+        url = f"{host}/a/{slug}/opportunity/{opp_id}/{suffix}"
+        self._step(f"Go to worker '{tab}' tab: {url}")
+        self.page.goto(url)
+        self.page.wait_for_load_state("load")
+
+    def workers_tab_label_text(self):
+        # WORKERS_TAB_LABEL already carries the loader's '#' prefix.
+        loc = self.page.locator(self.WORKERS_TAB_LABEL)
+        loc.first.wait_for(state="visible", timeout=15000)
+        text = loc.first.inner_text().strip()
+        self._step(f"Connect Workers tab label: {text!r}")
+        return text
+
+    def search_workers(self, term):
+        self._step(f"Search workers for {term!r}")
+        self.is_displayed(self.WORKERS_SEARCH_INPUT, timeout=15000)
+        self.type(self.WORKERS_SEARCH_INPUT, term)
+        self.page.locator(self.WORKERS_SEARCH_INPUT).first.press("Enter")
+        self.page.wait_for_timeout(1500)
+
+    def displaying_count_text(self):
+        if self.page.locator(self.WORKERS_DISPLAYING_COUNT).count() == 0:
+            return ""
+        text = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first.inner_text().strip()
+        self._step(f"Displaying-count line: {text!r}")
+        return text
+
+    # OD_42/OD_43: deliver-tab filters
+    def open_deliver_filter_modal(self):
+        self._step("Open deliver filter modal")
+        self.click(self.DELIVER_FILTER_BUTTON)
+        self.page.locator(self.DELIVER_FILTER_APPLY).first.wait_for(state="visible", timeout=10000)
+
+    def filter_present(self, name):
+        return self.page.locator(self.FILTER_SELECT_BY_NAME.format(name=name)).count() > 0
+
+    def apply_deliver_filter(self, name, label):
+        self.select_by_visible_text(self.FILTER_SELECT_BY_NAME.format(name=name), label)
+        self._step(f"Apply deliver filter {name}={label!r}")
+        self.click(self.DELIVER_FILTER_APPLY)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1000)
+
+    # OD_45 / OD_47: authenticated direct GETs (share the page's session cookies)
+    def get_status(self, path):
+        host, slug, opp_id = self.base_url_parts()
+        url = path if path.startswith("http") else f"{host}{path}"
+        resp = self.page.request.get(url)
+        self._step(f"GET {url} -> {resp.status}")
+        return resp.status
+
+    def stat_endpoint_url(self, name):
+        host, slug, opp_id = self.base_url_parts()
+        suffix = {
+            "delivery": "opportunity_delivery_stats/",
+            "worker_progress": "opportunity_worker_progress_stats/",
+            "funnel": "opportunity_funnel_progress_stats/",
+        }[name]
+        return f"{host}/a/{slug}/opportunity/{opp_id}/{suffix}"
+
+    def export_probe_url(self, kind, task_id):
+        host, slug, opp_id = self.base_url_parts()
+        return f"{host}/a/{slug}/opportunity/{kind}/{task_id}"
 
     # -- retained: used by test_olp_04 ------------------------------------------
 

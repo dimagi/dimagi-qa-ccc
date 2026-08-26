@@ -205,3 +205,15 @@ OLP_NM_CREATE:
 # first row in the list, so the suite stays runnable without seed coupling.
 OPD:
   opportunity_name: "Demo Opportunity"
+  # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
+  # tests/test_opd_gaps.py. Each is skipped until its key is filled in; add a
+  # _staging suffix for a staging-specific value.
+  # nm_org: ""            # OD_20: a Network Manager org that can see the opp
+  # viewer_username: ""   # OD_21: a VIEWER-role account
+  # standalone_opp: ""    # OD_22: a standalone (non-program) opportunity name
+  # incomplete_opp: ""    # OD_23: an opportunity with setup not complete
+  # test_opp: ""          # OD_26: an is_test opportunity name
+  # microplanning_opp: "" # OD_28: an opportunity with the MICROPLANNING flag on
+  # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
+  # ended_opp: ""         # OD_37: an ended opportunity name
+  # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity

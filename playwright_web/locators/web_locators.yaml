@@ -124,6 +124,29 @@ opportunity_dashboard_page:
   worker_tab_by_id: "{tab}-tab"
   worker_table_headers: "//div[@id='table']//table//th | //table[contains(@class,'base-table')]//th"
 
+  # -- gap-analysis surfaces (OD_20+) ----------------------------------------
+  # Resource card (dashboard.html:58-67): wrapper by app name; count is the card's
+  # last <h3> (the small one holding app.count).
+  resource_card_by_name: "//div[contains(@class,'min-w-48') and contains(@class,'cursor-pointer')][.//h3[normalize-space()='{name}']]"
+  # Worker Progress Funnel (opportunity_funnel_progress.html): 7 stages.
+  funnel_stage_labels: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xs')]"
+  funnel_stage_counts: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xl')]"
+  # Worker-progress bars (opportunity_worker_progress.html): Approved/Rejected/Earned/Paid.
+  worker_progress_labels: "//div[@id='worker-progress-container']//span[contains(@class,'text-sm') and contains(@class,'block')]"
+  worker_progress_bars: "//div[@id='worker-progress-container']//div[contains(@class,'bg-brand-indigo') and contains(@class,'rounded-full')]"
+  # 24h increment badge (opportunity_delivery_stat.html:57): carries the up-arrow.
+  increment_badge: "//div[@id='opp-stats-container']//span[contains(normalize-space(.),'↑')]"
+  stat_panel_by_title: "//div[@id='opp-stats-container']//*[self::h3 or self::p][normalize-space()='{title}']"
+  # Deliver-tab filter modal (components/filter_modal.html + DeliverFilterSet).
+  deliver_filter_button: "//button[.//i[contains(@class,'fa-sliders')]]"
+  deliver_filter_apply: "//button[@form='filterForm' and normalize-space()='Apply']"
+  filter_select_by_name: "//select[@name='{name}']"
+  # Workers tab (workers.html): search, count line, clear, tab label with (N).
+  workers_search_input: "//input[@name='q']"
+  workers_displaying_count: "//span[contains(normalize-space(.),'Displaying') and contains(.,'Connect Workers')]"
+  workers_search_clear: "//div[@id='worker-search']//button[.//i[contains(@class,'fa-xmark')]]"
+  workers_tab_label: "workers-tab"
+
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
   program_add_form: "program-add-form"
