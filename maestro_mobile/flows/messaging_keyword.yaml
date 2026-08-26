@@ -14,6 +14,22 @@
 #   imgSendMessage   GONE until the composer is non-empty AND the channel is
 #                    consented, so it is asserted before being tapped
 #   tvChatMessage    a bubble's text
+#
+# IF THIS FAILS AND THE SCREENSHOT SHOWS A SURVEY QUESTION AS THE REPLY, the
+# keyword is not broken - it was eaten. An HQ survey session is a stateful
+# conversation on the channel, and while one is open EVERY inbound text is
+# treated as the answer to the pending question, so the keyword never reaches
+# keyword processing at all. Any earlier test that started a survey and died
+# before finishing it leaves the channel in that state, and because this worker
+# has one channel, every later text-sending test on it inherits the problem.
+#
+# Prod run 32871098256 is the worked example. The survey test lost a drawer tap,
+# stranded its survey at question 1, and then:
+#   this flow sent AUTOKW200404  -> channel answered "Define External ID" (Q2)
+#   the keyword-survey flow sent AUTOKW955365 -> answered "Enter age"     (Q3)
+# One swallowed tap, three red tests, and the survey walked forward a question
+# per victim. The tap is fixed below; the tests are also ordered so the
+# survey-answering ones run last, which bounds the damage if it recurs.
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
@@ -94,8 +110,45 @@ env:
           timeout: 15000
 
 # --- Open the channel ---
-- tapOn:
-    text: "Messaging"
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
 - extendedWaitUntil:
     visible:
       text: "Channels"

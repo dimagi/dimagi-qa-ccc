@@ -107,8 +107,45 @@ env:
             id: "nav_drawer_recycler"
           timeout: 15000
 
-- tapOn:
-    text: "Messaging"
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
 - extendedWaitUntil:
     visible:
       text: "Channels"

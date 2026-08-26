@@ -10,6 +10,29 @@ with a per-channel key that only the device holds, so no test can read message
 content server-side. The web half therefore returns the exact body it sent and
 the flow matches on it, rather than settling for "some message arrived".
 
+TEST ORDER IN THIS FILE IS LOAD-BEARING, and only for the tests that send text
+into the channel. An HQ survey is a stateful conversation: while one is open on
+a channel, every inbound text is consumed as the answer to the pending question
+instead of being processed on its own merits. A test that starts a survey and
+dies before finishing it leaves the channel in that state, and this worker has
+exactly one channel, so everything after it inherits the problem.
+
+Prod run 32871098256 is what that costs. One swallowed drawer tap stranded the
+broadcast survey at question 1, and the two keyword tests that ran next had
+their keywords eaten as answers - the channel replied "Define External ID" and
+then "Enter age", the survey advancing one question per victim. Three red tests,
+one actual defect.
+
+So the text-senders run cheapest-to-strand first:
+
+    keyword          sends a keyword, starts no survey, can strand nothing
+    keyword_survey   starts a survey via keyword, so it can strand
+    broadcast_survey answers a survey, so it can strand - and runs last
+
+Fully removing the coupling means a separate worker (and therefore channel) per
+survey test, which needs another PersonalID account on prod. Until then the
+ordering bounds the blast radius to one test rather than all of them.
+
 Run with:  pytest playwright_web/tests/test_messaging_hybrid.py --env prod
 """
 
@@ -106,106 +129,6 @@ def test_broadcast_connect_message_reaches_the_channel(page, test_data, config, 
     assert summary["status"] == "SUCCESS", (
         f"Broadcast did not reach the channel: {summary['passed']} passed / {summary['failed']} failed - "
         f"see {summary['build_url']}"
-    )
-
-
-def test_broadcast_connect_survey_is_answerable(page, test_data, config, settings, messaging_data):
-    """TC-BRD-003 - a Connect Survey broadcast is delivered and can be answered.
-
-    Ports the mobile half of legacy test_tc_10 (Messaging_6), with the two
-    things that made the legacy version weaker replaced:
-
-    - The questions and answers are data, not literals baked into
-      fill_survey_form(), so the test is not tied to one specific survey form.
-    - The first answer is unique per run, so the submission this run produced is
-      identifiable rather than indistinguishable from every previous run's.
-
-    Also covers **TC-BRD-004** - that the completed survey reached HQ. The
-    device answering every question does not prove the submission landed, so
-    the test finishes by finding this run's own row in Submit History.
-
-    Submit History shows only who submitted, when, and which form - not the case
-    name - so the row is pinned to this run with a timestamp cutoff taken before
-    the send, not with the unique first answer. Note the submission is
-    attributed to the Connect user id rather than the PersonalID mobile worker,
-    which is why searching by mobile worker turned up nothing and left these
-    cases looking blocked.
-    """
-    flow = messaging_data["survey_flow"]
-
-    from flows.mobile_runner import env_by_flow
-
-    worker = env_by_flow([flow], config.env)[flow]
-
-    # Unique so the resulting submission is attributable to this run - which is
-    # what TC-BRD-004 will search HQ for.
-    stamp = str(int(time.time()))[-6:]
-    first_answer = f"Automation Survey {stamp}"
-
-    # Cutoff for the submit-history search, taken before anything is sent so it
-    # cannot exclude this run's own submission. Without it the newest matching
-    # row from a PREVIOUS run satisfies the assertion and the test passes having
-    # proved nothing.
-    started_at = datetime.datetime.now(datetime.timezone.utc)
-
-    login_page = LoginPage(page)
-    login_page.valid_login_cchq(config, settings)
-    CCHQHomePage(page).verify_home_page_title("Welcome")
-
-    messaging = CCHQMessagingPage(page)
-    messaging.open_messaging_option("Broadcasts")
-
-    # --- WEB: send the survey ---
-    messaging.create_broadcast_with_connect_survey(
-        user_recipients=[messaging_data["worker_user_id"]],
-        survey_form=messaging_data["survey_form"],
-    )
-    print(f"STEP [Hybrid] Survey broadcast sent, first answer will be {first_answer!r}")
-
-    # --- MOBILE: the worker answers it question by question ---
-    from flows.mobile_runner import run_flows
-
-    summary = run_flows(
-        flows=[flow],
-        env={
-            **worker,
-            "CHANNEL_NAME": messaging_data["channel_name"],
-            "Q1_LABEL": messaging_data["survey_q1_label"],
-            "Q1_ANSWER": first_answer,
-            "Q2_LABEL": messaging_data["survey_q2_label"],
-            "Q2_ANSWER": messaging_data["survey_q2_answer"],
-            "Q3_LABEL": messaging_data["survey_q3_label"],
-            "Q3_ANSWER": messaging_data["survey_q3_answer"],
-            "Q4_LABEL": messaging_data["survey_q4_label"],
-            "Q4_ANSWER": messaging_data["survey_q4_answer"],
-        },
-        reports=False,
-        app_env=config.env,
-    )
-    print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
-    assert summary["status"] == "SUCCESS", (
-        f"Survey was not delivered or could not be answered: {summary['passed']} passed / "
-        f"{summary['failed']} failed - see {summary['build_url']}"
-    )
-
-    # --- WEB: TC-BRD-004, the completed survey reached HQ ---
-    # Matched on survey_form itself rather than a hardcoded form name: Submit
-    # History's breadcrumb is exactly that string, so pointing the suite at a
-    # different form cannot leave a stale literal behind here.
-    reports = CCHQReportsPage(page, config)
-    submission = reports.wait_for_submission(
-        user_id=messaging_data["worker_user_id"],
-        form_path_contains=messaging_data["survey_form"],
-        after=started_at,
-    )
-    assert submission, (
-        f"The survey was answered on the device but no {messaging_data['survey_form']!r} "
-        f"submission by {messaging_data['worker_user_id']} appeared in Submit History after "
-        f"{started_at:%Y-%m-%d %H:%M:%S} UTC - see {summary['build_url']}"
-    )
-    print(
-        f"STEP [Web] Submission reached HQ: {submission['path']} at {submission['time']} "
-        f"(form {submission['form_id']})"
     )
 
 
@@ -344,6 +267,106 @@ def test_keyword_returns_a_survey_that_is_answerable(page, config, settings, mes
         )
     finally:
         messaging.delete_existing_keywords()
+
+
+def test_broadcast_connect_survey_is_answerable(page, test_data, config, settings, messaging_data):
+    """TC-BRD-003 - a Connect Survey broadcast is delivered and can be answered.
+
+    Ports the mobile half of legacy test_tc_10 (Messaging_6), with the two
+    things that made the legacy version weaker replaced:
+
+    - The questions and answers are data, not literals baked into
+      fill_survey_form(), so the test is not tied to one specific survey form.
+    - The first answer is unique per run, so the submission this run produced is
+      identifiable rather than indistinguishable from every previous run's.
+
+    Also covers **TC-BRD-004** - that the completed survey reached HQ. The
+    device answering every question does not prove the submission landed, so
+    the test finishes by finding this run's own row in Submit History.
+
+    Submit History shows only who submitted, when, and which form - not the case
+    name - so the row is pinned to this run with a timestamp cutoff taken before
+    the send, not with the unique first answer. Note the submission is
+    attributed to the Connect user id rather than the PersonalID mobile worker,
+    which is why searching by mobile worker turned up nothing and left these
+    cases looking blocked.
+    """
+    flow = messaging_data["survey_flow"]
+
+    from flows.mobile_runner import env_by_flow
+
+    worker = env_by_flow([flow], config.env)[flow]
+
+    # Unique so the resulting submission is attributable to this run - which is
+    # what TC-BRD-004 will search HQ for.
+    stamp = str(int(time.time()))[-6:]
+    first_answer = f"Automation Survey {stamp}"
+
+    # Cutoff for the submit-history search, taken before anything is sent so it
+    # cannot exclude this run's own submission. Without it the newest matching
+    # row from a PREVIOUS run satisfies the assertion and the test passes having
+    # proved nothing.
+    started_at = datetime.datetime.now(datetime.timezone.utc)
+
+    login_page = LoginPage(page)
+    login_page.valid_login_cchq(config, settings)
+    CCHQHomePage(page).verify_home_page_title("Welcome")
+
+    messaging = CCHQMessagingPage(page)
+    messaging.open_messaging_option("Broadcasts")
+
+    # --- WEB: send the survey ---
+    messaging.create_broadcast_with_connect_survey(
+        user_recipients=[messaging_data["worker_user_id"]],
+        survey_form=messaging_data["survey_form"],
+    )
+    print(f"STEP [Hybrid] Survey broadcast sent, first answer will be {first_answer!r}")
+
+    # --- MOBILE: the worker answers it question by question ---
+    from flows.mobile_runner import run_flows
+
+    summary = run_flows(
+        flows=[flow],
+        env={
+            **worker,
+            "CHANNEL_NAME": messaging_data["channel_name"],
+            "Q1_LABEL": messaging_data["survey_q1_label"],
+            "Q1_ANSWER": first_answer,
+            "Q2_LABEL": messaging_data["survey_q2_label"],
+            "Q2_ANSWER": messaging_data["survey_q2_answer"],
+            "Q3_LABEL": messaging_data["survey_q3_label"],
+            "Q3_ANSWER": messaging_data["survey_q3_answer"],
+            "Q4_LABEL": messaging_data["survey_q4_label"],
+            "Q4_ANSWER": messaging_data["survey_q4_answer"],
+        },
+        reports=False,
+        app_env=config.env,
+    )
+    print(f"STEP [Hybrid] Maestro build {summary['build_id']} -> {summary['status']} ({summary['build_url']})")
+    assert summary["status"] == "SUCCESS", (
+        f"Survey was not delivered or could not be answered: {summary['passed']} passed / "
+        f"{summary['failed']} failed - see {summary['build_url']}"
+    )
+
+    # --- WEB: TC-BRD-004, the completed survey reached HQ ---
+    # Matched on survey_form itself rather than a hardcoded form name: Submit
+    # History's breadcrumb is exactly that string, so pointing the suite at a
+    # different form cannot leave a stale literal behind here.
+    reports = CCHQReportsPage(page, config)
+    submission = reports.wait_for_submission(
+        user_id=messaging_data["worker_user_id"],
+        form_path_contains=messaging_data["survey_form"],
+        after=started_at,
+    )
+    assert submission, (
+        f"The survey was answered on the device but no {messaging_data['survey_form']!r} "
+        f"submission by {messaging_data['worker_user_id']} appeared in Submit History after "
+        f"{started_at:%Y-%m-%d %H:%M:%S} UTC - see {summary['build_url']}"
+    )
+    print(
+        f"STEP [Web] Submission reached HQ: {submission['path']} at {submission['time']} "
+        f"(form {submission['form_id']})"
+    )
 
 
 def test_conditional_alert_reaches_the_channel(page, config, settings, messaging_data):
