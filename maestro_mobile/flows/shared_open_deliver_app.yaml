@@ -45,9 +45,36 @@ appId: org.commcare.dalvik
       - inputText: "${BACKUP_CODE}"
       - tapOn:
           id: "connect_backup_code_button"
-      - tapOn:
-          text: "OK"
-          optional: true
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap.
+      #
+      # Prod build b238ea98 is that exactly: the optional OK tap ran at
+      # 07:36:01 and WARNED at 07:36:08 having found nothing, the dialog then
+      # arrived, and "More options" FAILED at 07:36:27 with the failure
+      # screenshot showing "Account Recovered" still up and its OK button
+      # unpressed. The tap that mattered had already been spent on an empty
+      # screen.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      #
+      # This is the same block the messaging flows already carry. It belonged
+      # here too and did not get copied across when it was written - the reason
+      # this flow kept failing several steps downstream of the real problem.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
       - assertNotVisible:
           id: "connect_backup_code_error_message"
 
