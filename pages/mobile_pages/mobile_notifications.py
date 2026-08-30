@@ -13,6 +13,7 @@ class MobileNotifications(BasePage):
     EXPAND_BTN = locators.get("mobile_notifications", "expand_btn")
     PAYMENT_RECEIVED_TXT = locators.get("mobile_notifications", "payment_received_title_txt")
     PAYMENT_TXT = locators.get("mobile_notifications", "payment_txt")
+    ASSESSMENT_SCORED_TITLE_TXT = locators.get("mobile_notifications", "assessment_scored_title_txt")
 
     def verify_opportunity_invite(self):
         if self.is_displayed(self.EXPAND_BTN, timeout=30):
@@ -103,3 +104,19 @@ class MobileNotifications(BasePage):
     def click_payment_received(self):
         self.wait_for_element(self.PAYMENT_RECEIVED_TXT)
         self.click_element(self.PAYMENT_RECEIVED_TXT)
+
+    def check_and_open_assessment_notification(self, retries=6, wait_between=20):
+        for attempt in range(1, retries + 1):
+            try:
+                self.open_notifications()
+                self.scroll_to_element(self.ASSESSMENT_SCORED_TITLE_TXT)
+                assert self.is_displayed(self.ASSESSMENT_SCORED_TITLE_TXT)
+                self.click_element(self.ASSESSMENT_SCORED_TITLE_TXT)
+                return
+            except:
+                if attempt < retries:
+                    self.refresh_notifications()
+                    time.sleep(wait_between)
+                else:
+                    close_notification(driver=self.driver)
+        raise AssertionError(f"Assessment scored notification not found after {retries} attempts")

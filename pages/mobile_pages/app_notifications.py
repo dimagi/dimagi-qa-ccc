@@ -17,6 +17,7 @@ class AppNotifications(BasePage):
     NOTIFICATION_ARROW = locators.get("app_notification", "notification_arrow")
     NO_NOTIFICATION_TXT = locators.get("app_notification", "no_notification_txt")
     SYNC_BTN = locators.get("app_notification", "notification_sync_btn")
+    ASSESSMENT_SCORED_TXT = locators.get("app_notification", "assessment_scored_txt")
 
 
     def verify_payment_received(self):
@@ -59,4 +60,10 @@ class AppNotifications(BasePage):
             assert opp_found, f"No notification found for opportunity '{opp}'"
         else:
             self.navigate_back()
+
+    def verify_assessment_scored_notification(self):
+        self.click_element(self.SYNC_BTN)
+        time.sleep(10)
+        assert self.is_displayed(self.ASSESSMENT_SCORED_TXT), \
+            "Assessment scored notification not found in in-app notifications"
 

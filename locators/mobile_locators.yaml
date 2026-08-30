@@ -43,6 +43,7 @@ mobile_notifications:
 
 
   payment_txt: "//android.widget.TextView[contains(@text, 'You have received a payment')]"
+  assessment_scored_title_txt: "//android.widget.TextView[contains(@text, 'Update on your Assessment')]"
 
 opportunity_page:
   opp_list_new: "//android.widget.TextView[@text='New Opportunities']"
@@ -172,6 +173,7 @@ app_notification:
   notification_text: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification']"
   notification_time: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTime']"
   notification_arrow: "//android.widget.ImageView[@resource-id='org.commcare.dalvik:id/ivForwardArrow']"
+  assessment_scored_txt: "//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvNotification' and contains(@text, 'Update on your Assessment')]"
 
 
 messaging:
