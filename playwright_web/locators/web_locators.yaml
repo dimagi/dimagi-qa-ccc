@@ -146,6 +146,24 @@ opportunity_dashboard_page:
   workers_displaying_count: "//span[contains(normalize-space(.),'Displaying') and contains(.,'Connect Workers')]"
   workers_search_clear: "//div[@id='worker-search']//button[.//i[contains(@class,'fa-xmark')]]"
   workers_tab_label: "workers-tab"
+  # --- OD Tier 2/3: Add Budget / Send Message / Add Workers pages ---
+  # Add Budget existing-users form (add_visits_existing_users.html): number_of_visits
+  # carries min=1 (OD_13); Increase/Decrease radios; a "Save" button opens an Alpine
+  # confirm modal that shows totalVisits()/calculatedBudget() (OD_16). When the opp
+  # has no claims the form is replaced by a "No Opportunity Claims yet." notice.
+  add_budget_visits_input: "id_number_of_visits"
+  add_budget_adjustment_by_value: "//input[@name='adjustment_type' and @value='{value}']"
+  add_budget_worker_checkboxes: "//input[@name='selected_users' and not(@id='select_all_users')]"
+  add_budget_save_btn: "//button[normalize-space()='Save']"
+  add_budget_no_claims_text: "//*[contains(normalize-space(),'No Opportunity Claims yet')]"
+  add_budget_confirm_modal: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]"
+  # New-workers tab (HTMX-loaded): entering add_users recomputes total_budget via an
+  # oninput handler (OD_17).
+  add_budget_new_tab: "new_workers-tab"
+  add_budget_new_users_input: "id_add_users"
+  add_budget_total_budget_input: "id_total_budget"
+  # Send Message page (send_message.html): worker checkboxes + a Confirm submit.
+  send_message_confirm_btn: "//button[normalize-space()='Confirm']"
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"

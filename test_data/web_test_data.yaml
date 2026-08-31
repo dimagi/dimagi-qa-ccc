@@ -205,6 +205,8 @@ OLP_NM_CREATE:
 # first row in the list, so the suite stays runnable without seed coupling.
 OPD:
   opportunity_name: "Demo Opportunity"
+  # Budget/message cases need an opp with claimed workers; Demo has none.
+  budget_opportunity_name_staging: "OLP_Test_Opp"
   # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
   # tests/test_opd_gaps.py. Each is skipped until its key is filled in; add a
   # _staging suffix for a staging-specific value.

@@ -254,6 +254,89 @@ class OpportunityDashboardPage(BasePage):
         opp_id = parts[parts.index("opportunity") + 1]
         return f"{u.scheme}://{u.netloc}", slug, opp_id
 
+    # -- OD Tier 2/3: Add Budget / Send Message / Add Workers -------------------
+
+    ADD_BUDGET_VISITS_INPUT = locators.get("opportunity_dashboard_page", "add_budget_visits_input")
+    ADD_BUDGET_ADJUSTMENT_BY_VALUE = locators.get("opportunity_dashboard_page", "add_budget_adjustment_by_value")
+    ADD_BUDGET_WORKER_CHECKBOXES = locators.get("opportunity_dashboard_page", "add_budget_worker_checkboxes")
+    ADD_BUDGET_SAVE_BTN = locators.get("opportunity_dashboard_page", "add_budget_save_btn")
+    ADD_BUDGET_NO_CLAIMS_TEXT = locators.get("opportunity_dashboard_page", "add_budget_no_claims_text")
+    ADD_BUDGET_CONFIRM_MODAL = locators.get("opportunity_dashboard_page", "add_budget_confirm_modal")
+    ADD_BUDGET_NEW_TAB = locators.get("opportunity_dashboard_page", "add_budget_new_tab")
+    ADD_BUDGET_NEW_USERS_INPUT = locators.get("opportunity_dashboard_page", "add_budget_new_users_input")
+    ADD_BUDGET_TOTAL_BUDGET_INPUT = locators.get("opportunity_dashboard_page", "add_budget_total_budget_input")
+    SEND_MESSAGE_CONFIRM_BTN = locators.get("opportunity_dashboard_page", "send_message_confirm_btn")
+
+    def _dashboard_parts(self):
+        """(base, slug, opp_id) from the stored dashboard_url - stable regardless of
+        where the current page has navigated."""
+        from urllib.parse import urlparse
+        u = urlparse(self.dashboard_url)
+        parts = [p for p in u.path.split("/") if p]
+        return f"{u.scheme}://{u.netloc}", parts[parts.index("a") + 1], parts[parts.index("opportunity") + 1]
+
+    def goto_add_budget(self):
+        """Open the Add Budget page directly (existing-users tab is the default)."""
+        base, slug, opp = self._dashboard_parts()
+        self.page.goto(f"{base}/a/{slug}/opportunity/{opp}/add_budget_existing_users")
+        self.page.wait_for_load_state("load")
+        self._step("Add Budget page loaded")
+
+    def open_send_message(self):
+        """OD_8 - reach Send Message via the hamburger option (from the dashboard)."""
+        self.click_hamburger_item("Send Message")
+        self.page.wait_for_load_state("load")
+
+    def send_message_page_ready(self):
+        return self.is_displayed(self.SEND_MESSAGE_CONFIRM_BTN, timeout=15000)
+
+    def open_add_connect_workers(self):
+        """OD_9 - reach the Add Connect Workers (invite) page via the hamburger."""
+        self.click_hamburger_item("Add Connect Workers")
+        self.page.wait_for_load_state("load")
+
+    def visits_field_validity(self, value):
+        """OD_13 - set number_of_visits and read the browser ValidityState (min=1)."""
+        field = self.page.locator(self.ADD_BUDGET_VISITS_INPUT).first
+        field.fill(str(value))
+        validity = field.evaluate(
+            "el => ({valid: el.checkValidity(), rangeUnderflow: el.validity.rangeUnderflow,"
+            " min: el.min, message: el.validationMessage})"
+        )
+        self._step(f"number_of_visits={value} -> {validity}")
+        return validity
+
+    def add_budget_has_claimed_workers(self):
+        if self.page.locator(self.ADD_BUDGET_NO_CLAIMS_TEXT).count() > 0:
+            return False
+        return self.page.locator(self.ADD_BUDGET_WORKER_CHECKBOXES).count() > 0
+
+    def open_budget_confirm_modal(self, visits, adjustment="increase_visits"):
+        """OD_16 - select one worker, enter visits + adjustment, open the confirm
+        modal (does not submit). Returns the modal's text."""
+        self.page.locator(self.ADD_BUDGET_WORKER_CHECKBOXES).first.check()
+        self.page.locator(self.ADD_BUDGET_VISITS_INPUT).first.fill(str(visits))
+        self.click(self.ADD_BUDGET_ADJUSTMENT_BY_VALUE.format(value=adjustment))
+        self.click(self.ADD_BUDGET_SAVE_BTN)
+        modal = self.page.locator(self.ADD_BUDGET_CONFIRM_MODAL).first
+        modal.wait_for(state="visible", timeout=10000)
+        text = modal.inner_text().strip()
+        self._step(f"Confirm modal text: {text!r}")
+        return text
+
+    def open_new_workers_tab(self):
+        """OD_17 - switch to the new-workers tab (HTMX-loads its form)."""
+        self.click(self.ADD_BUDGET_NEW_TAB)
+        self.page.locator(self.ADD_BUDGET_NEW_USERS_INPUT).first.wait_for(state="visible", timeout=15000)
+
+    def total_budget_value(self):
+        return self.page.locator(self.ADD_BUDGET_TOTAL_BUDGET_INPUT).first.input_value()
+
+    def set_new_workers_count(self, n):
+        self.page.locator(self.ADD_BUDGET_NEW_USERS_INPUT).first.fill(str(n))
+        # the field's oninput handler recomputes total_budget
+        self.page.wait_for_timeout(500)
+
     # OD_24 covered by verify_status_badge; OD_25 by wait_for_stats + verify_graphs.
 
     # OD_27: currency-formatted values
