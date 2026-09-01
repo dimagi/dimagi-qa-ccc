@@ -219,8 +219,9 @@ OPD:
   # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
   # ended_opp: ""         # OD_37: an ended opportunity name
   # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity
-  # mutation_opportunity_name(_staging): GATE for the budget-MUTATION tests
-  # (tests/test_opd_budget_mutations.py, OD_10/11/12/14/15). Left unset so those
-  # tests never change shared data unattended in CI. Point it at a staging opp with
-  # claimed workers (safe to mutate-then-revert) and run supervised, e.g.:
-  # mutation_opportunity_name_staging: "OLP_Test_Opp"
+  # GATE for the budget-MUTATION tests (tests/test_opd_budget_mutations.py,
+  # OD_10/11/12/14/15). Points at the dedicated staging "Add Budget Opp" provided
+  # for this purpose (safe to mutate-then-revert; tests are net-zero). No prod value
+  # -> the module skips on prod (assert-and-skip policy). Open by id (robust).
+  mutation_opportunity_id_staging: "b18288ce-8763-4681-b5e8-d50934bffbd7"
+  # mutation_opportunity_name(_staging): alternative to id, matched in the opp list.

@@ -27,17 +27,27 @@ from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 
 
 def _mutation_opp(test_data, config):
-    return env_value(test_data.get("OPD") or {}, "mutation_opportunity_name", config)
+    """The gated mutation opportunity - by id (preferred; robust) or by name."""
+    opd = test_data.get("OPD") or {}
+    return (
+        env_value(opd, "mutation_opportunity_id", config),
+        env_value(opd, "mutation_opportunity_name", config),
+    )
 
 
-def _open_dashboard(page, test_data, config, settings, name):
+def _open_dashboard(page, test_data, config, settings, opp_id, name):
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     olp = ConnectOpportunityListPage(connect_page)
     olp.verify_loaded()
-    if connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-        pytest.skip(f"Mutation opportunity {name!r} not visible to this account/env")
-    olp.open_opportunity(name)
     dash = OpportunityDashboardPage(connect_page)
+    if opp_id:
+        # Open the dashboard directly by id (the org slug is stable for PM_ORG).
+        connect_page.goto(f"{config.get('connect_url')}/a/pm_automation_01/opportunity/{opp_id}/")
+        connect_page.wait_for_load_state("load")
+    else:
+        if connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
+            pytest.skip(f"Mutation opportunity {name!r} not visible to this account/env")
+        olp.open_opportunity(name)
     dash.verify_loaded()
     dash.dashboard_url = dash.page.url
     return dash
@@ -45,12 +55,11 @@ def _open_dashboard(page, test_data, config, settings, name):
 
 @pytest.fixture(scope="module")
 def budget(browser, config, settings, test_data):
-    name = _mutation_opp(test_data, config)
-    if not name:
+    opp_id, name = _mutation_opp(test_data, config)
+    if not opp_id and not name:
         pytest.skip(
-            "OPD.mutation_opportunity_name not set - budget-mutation tests are gated so they "
-            "never change shared data unattended. Point it at a staging opp with claimed workers "
-            "and run supervised."
+            "OPD.mutation_opportunity_id/name not set - budget-mutation tests are gated. Point "
+            "OPD.mutation_opportunity_id_staging at the dedicated Add Budget opp and re-run."
         )
     if config.env == "prod":
         pytest.skip("Budget mutations run on staging only (assert-and-skip on prod).")
@@ -58,11 +67,11 @@ def budget(browser, config, settings, test_data):
     page = context.new_page()
     try:
         try:
-            dash = _open_dashboard(page, test_data, config, settings, name)
+            dash = _open_dashboard(page, test_data, config, settings, opp_id, name)
         except Exception:
             page.close()
             page = context.new_page()
-            dash = _open_dashboard(page, test_data, config, settings, name)
+            dash = _open_dashboard(page, test_data, config, settings, opp_id, name)
         yield dash
     finally:
         context.close()
