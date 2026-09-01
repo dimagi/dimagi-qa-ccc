@@ -219,3 +219,8 @@ OPD:
   # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
   # ended_opp: ""         # OD_37: an ended opportunity name
   # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity
+  # mutation_opportunity_name(_staging): GATE for the budget-MUTATION tests
+  # (tests/test_opd_budget_mutations.py, OD_10/11/12/14/15). Left unset so those
+  # tests never change shared data unattended in CI. Point it at a staging opp with
+  # claimed workers (safe to mutate-then-revert) and run supervised, e.g.:
+  # mutation_opportunity_name_staging: "OLP_Test_Opp"

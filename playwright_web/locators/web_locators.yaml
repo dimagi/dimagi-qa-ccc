@@ -164,6 +164,18 @@ opportunity_dashboard_page:
   add_budget_total_budget_input: "id_total_budget"
   # Send Message page (send_message.html): worker checkboxes + a Confirm submit.
   send_message_confirm_btn: "//button[normalize-space()='Confirm']"
+  # Add-budget mutation flow (OD_10/11/12/14/15). The confirm modal's Confirm is a
+  # native submit; on success the view 302-redirects back with a Django flash. The
+  # page's own table carries a "Max Visits" column (total_max_visits summed across
+  # payment units per worker) - the deterministic before/after read surface.
+  add_budget_confirm_submit: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]//button[@type='submit' and normalize-space()='Confirm']"
+  add_budget_table: "//table[contains(@class,'base-table')]"
+  add_budget_table_headers: "//table[contains(@class,'base-table')]//th"
+  add_budget_table_rows: "//table[contains(@class,'base-table')]//tbody//tr"
+  add_budget_success_msg: "//*[contains(normalize-space(),'Increased visits') or contains(normalize-space(),'Decreased visits')]"
+  add_budget_decrease_error: "//*[contains(normalize-space(),'Cannot decrease the number of visits')]"
+  # Deliver tab progress-bar denominator (= that payment unit's max_visits).
+  deliver_progress_denominators: "//div[@id='table']//table//span[contains(@class,'text-gray-700')]"
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"

@@ -337,6 +337,55 @@ class OpportunityDashboardPage(BasePage):
         # the field's oninput handler recomputes total_budget
         self.page.wait_for_timeout(500)
 
+    # -- Add-budget mutation flow (OD_10/11/12/14/15) ---------------------------
+
+    ADD_BUDGET_CONFIRM_SUBMIT = locators.get("opportunity_dashboard_page", "add_budget_confirm_submit")
+    ADD_BUDGET_TABLE_HEADERS = locators.get("opportunity_dashboard_page", "add_budget_table_headers")
+    ADD_BUDGET_TABLE_ROWS = locators.get("opportunity_dashboard_page", "add_budget_table_rows")
+    ADD_BUDGET_SUCCESS_MSG = locators.get("opportunity_dashboard_page", "add_budget_success_msg")
+    ADD_BUDGET_DECREASE_ERROR = locators.get("opportunity_dashboard_page", "add_budget_decrease_error")
+    DELIVER_PROGRESS_DENOMINATORS = locators.get("opportunity_dashboard_page", "deliver_progress_denominators")
+
+    def add_budget_row_max_visits(self, row_index=0):
+        """Read a worker row's summed 'Max Visits' from the add-budget page table.
+        Assumes goto_add_budget() has been called and the opp has claimed workers."""
+        headers = [h.strip() for h in self.page.locator(self.ADD_BUDGET_TABLE_HEADERS).all_inner_texts()]
+        assert "Max Visits" in headers, f"'Max Visits' column not found in {headers}"
+        col = headers.index("Max Visits")
+        row = self.page.locator(self.ADD_BUDGET_TABLE_ROWS).nth(row_index)
+        cell = row.locator("xpath=./td").nth(col).inner_text().strip()
+        value = int("".join(ch for ch in cell if ch.isdigit()) or "0")
+        self._step(f"Add-budget row {row_index} Max Visits = {value}")
+        return value
+
+    def apply_budget_change(self, visits, adjustment):
+        """Select the first worker, set visits + adjustment, open the confirm modal
+        and submit it. The view answers with a 302 back to the add-budget page, so
+        wait for the reload. Returns True on a success flash, False otherwise."""
+        self.goto_add_budget()  # ensure we are on the form (a revert may run from another tab)
+        self.open_budget_confirm_modal(visits, adjustment)  # selects worker, Save -> modal
+        self._step(f"Submit budget change: {adjustment} by {visits}")
+        with self.page.expect_navigation(wait_until="load"):
+            self.click(self.ADD_BUDGET_CONFIRM_SUBMIT)
+        applied = self.is_displayed(self.ADD_BUDGET_SUCCESS_MSG, timeout=8000)
+        self._step(f"Budget change applied (success flash present): {applied}")
+        return applied
+
+    def budget_decrease_error_present(self):
+        return self.is_displayed(self.ADD_BUDGET_DECREASE_ERROR, timeout=8000)
+
+    def deliver_denominator_sum(self):
+        """Sum the numeric progress-bar denominators on the Deliver tab (each is a
+        payment unit's max_visits). Used to cross-check a budget change (OD_15)."""
+        self.is_displayed(self.DELIVER_PROGRESS_DENOMINATORS, timeout=15000)
+        total = 0
+        for t in self.page.locator(self.DELIVER_PROGRESS_DENOMINATORS).all_inner_texts():
+            digits = "".join(ch for ch in t if ch.isdigit())
+            if digits:
+                total += int(digits)
+        self._step(f"Deliver-tab denominator sum = {total}")
+        return total
+
     # OD_24 covered by verify_status_badge; OD_25 by wait_for_stats + verify_graphs.
 
     # OD_27: currency-formatted values
