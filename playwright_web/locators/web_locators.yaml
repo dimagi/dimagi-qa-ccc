@@ -177,6 +177,26 @@ opportunity_dashboard_page:
   # Deliver tab progress-bar denominator (= that payment unit's max_visits).
   deliver_progress_denominators: "//div[@id='table']//table//span[contains(@class,'text-gray-700')]"
 
+  # -- Export / import flows (OD_36/44/46) -----------------------------------
+  # Catchment Areas: hamburger 'Catchment Areas' toggle reveals Import/Export links.
+  catchment_toggle: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Catchment Areas']"
+  catchment_import_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Import']"
+  catchment_export_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Export']"
+  catchment_import_file: "//input[@type='file' and @name='catchments']"
+  # Modal submit buttons (native POST forms). One modal open at a time -> .first visible.
+  modal_export_submit: "//button[@type='submit' and normalize-space()='Export']"
+  modal_import_submit: "//button[@type='submit' and normalize-space()='Import']"
+  # Deliver tab export/import (deliver.html).
+  deliver_export_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-download')]]"
+  deliver_export_radio_by_value: "//input[@name='form_type' and @value='{value}']"
+  export_submit_btn: "export-submit-btn"
+  export_from_date: "id_from_date"
+  deliver_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  deliver_import_file: "//input[@type='file' and @name='visits']"
+  # Payments tab import (payments.html).
+  payment_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  payment_import_file: "//input[@type='file' and @name='payments']"
+
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
   program_add_form: "program-add-form"
