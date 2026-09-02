@@ -507,6 +507,10 @@ class OpportunityDashboardPage(BasePage):
         self.page.locator(self.DELIVER_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
 
     def deliver_import_available(self):
+        # The deliver toolbar loads async; wait for the always-present export
+        # button first, then decide whether the import button is present (it is
+        # hidden when automatic_visit_verification is on).
+        self.is_displayed(self.DELIVER_EXPORT_BTN, timeout=15000)
         return self.page.locator(self.DELIVER_IMPORT_BTN).count() > 0
 
     def open_payment_import_modal(self):

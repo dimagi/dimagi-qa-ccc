@@ -225,3 +225,11 @@ OPD:
   # -> the module skips on prod (assert-and-skip policy). Open by id (robust).
   mutation_opportunity_id_staging: "b18288ce-8763-4681-b5e8-d50934bffbd7"
   # mutation_opportunity_name(_staging): alternative to id, matched in the opp list.
+  # Manual-verification opp (automatic_visit_verification OFF) - the only way to see
+  # the PM "PM Review Sheet" export option (OD_44) and the visit-status import
+  # (OD_46). Lives in the dedicated PM org pm_automation_02 (auto-verify is org-wide,
+  # so it needed a separate org). Staging only; no prod equivalent -> those tests
+  # skip on prod. Do NOT create new opps here - only this one is manual (new opps in
+  # the org revert to auto-approval).
+  manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  manual_verify_org_slug_staging: "pm_automation_02"

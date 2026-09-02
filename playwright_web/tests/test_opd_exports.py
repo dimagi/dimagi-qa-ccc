@@ -54,6 +54,42 @@ def dashboard(browser, config, settings, test_data):
         context.close()
 
 
+def _open_manual(page, test_data, config, settings):
+    """Open the manual-verification opp (PM view) by id under its PM org. The shared
+    account is admin on that org, so a direct navigation switches context."""
+    opp_id = env_value(test_data.get("OPD"), "manual_verify_opp_id", config)
+    slug = env_value(test_data.get("OPD"), "manual_verify_org_slug", config)
+    connect_page = login_to_connect(page, config, settings, PM_ORG)
+    connect_page.goto(f"{config.get('connect_url')}/a/{slug}/opportunity/{opp_id}/")
+    connect_page.wait_for_load_state("load")
+    dash = OpportunityDashboardPage(connect_page)
+    dash.verify_loaded()
+    dash.dashboard_url = dash.page.url
+    return dash
+
+
+@pytest.fixture(scope="module")
+def manual_dashboard(browser, config, settings, test_data):
+    """Session on the manual-verification opp (auto-verify OFF), where the PM
+    'PM Review Sheet' export option and the visit-status import are visible. Gated:
+    skips unless OPD.manual_verify_opp_id[_staging] is set (staging only)."""
+    opp_id = env_value(test_data.get("OPD"), "manual_verify_opp_id", config)
+    if not opp_id:
+        pytest.skip("OPD.manual_verify_opp_id not set for this env - manual-flow opp only exists on staging")
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        try:
+            dash = _open_manual(page, test_data, config, settings)
+        except Exception:
+            page.close()
+            page = context.new_page()
+            dash = _open_manual(page, test_data, config, settings)
+        yield dash
+    finally:
+        context.close()
+
+
 def test_opd_36_catchment_export(dashboard):
     """OD_36: Catchment Areas > Export queues an export (redirects with an export
     task id). No data changed."""
@@ -71,21 +107,20 @@ def test_opd_36_catchment_import_rejects_bad_columns(dashboard):
     assert dashboard.import_error_present(body), "Expected a column/format rejection for the catchment import"
 
 
-def test_opd_44_deliver_export_flow(dashboard):
-    """OD_44: the Deliver export offers the NM 'User Visits Sheet' (and PM 'PM
-    Review Sheet' unless auto-verification) and queuing an export redirects with a
-    task id."""
+def test_opd_44_deliver_export_flow(manual_dashboard):
+    """OD_44: on a manual-verification opp the Deliver export offers BOTH the NM
+    'User Visits Sheet' and the PM 'PM Review Sheet' options. (Runs on the manual
+    opp because auto-verification hides the PM option.)"""
+    dashboard = manual_dashboard
     dashboard.goto_dashboard()
     dashboard.goto_worker_tab("deliver")
     dashboard.open_deliver_export_modal()
-    # Deterministic: the NM 'User Visits Sheet' option is always present; the PM
-    # 'PM Review Sheet' option is hidden when automatic_visit_verification is on.
     assert dashboard.export_radio_present("nm_review"), "NM 'User Visits Sheet' export option missing"
-    dashboard._step(f"PM 'PM Review Sheet' present: {dashboard.export_radio_present('pm_review')}")
+    assert dashboard.export_radio_present("pm_review"), "PM 'PM Review Sheet' export option missing (manual opp)"
     assert dashboard.deliver_export_fields_present(), "Export form (Format/date/Status) not rendered"
     # Best-effort: drive the required-field export form; assert the queued redirect
     # only when it happens (the background export is a required-heavy, HTMX-gated
-    # form - the radios + live form above are the stable coverage for OD_44).
+    # form - the NM+PM radios + live form above are the stable coverage for OD_44).
     url = dashboard.submit_deliver_export()
     if "export_task_id" in url:
         dashboard._step("Deliver export queued successfully")
@@ -94,13 +129,13 @@ def test_opd_44_deliver_export_flow(dashboard):
     assert "/workers/deliver/" in url, f"Left the deliver export flow unexpectedly: {url}"
 
 
-def test_opd_46_visit_import_rejects_bad_file(dashboard):
-    """OD_46: the Deliver visit-status import rejects a non-csv/xlsx file. Skips
-    when the import is unavailable (auto-verification hides it)."""
+def test_opd_46_visit_import_rejects_bad_file(manual_dashboard):
+    """OD_46: the Deliver visit-status import (visible on a manual-verification opp)
+    rejects a non-csv/xlsx file."""
+    dashboard = manual_dashboard
     dashboard.goto_dashboard()
     dashboard.goto_worker_tab("deliver")
-    if not dashboard.deliver_import_available():
-        pytest.skip("Deliver import not available (automatic_visit_verification is on)")
+    assert dashboard.deliver_import_available(), "Deliver visit import not available on the manual opp"
     body = dashboard.upload_and_import(
         dashboard.open_deliver_import_modal, dashboard.DELIVER_IMPORT_FILE, BAD_TYPE_FILE
     )
