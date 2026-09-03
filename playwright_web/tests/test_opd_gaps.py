@@ -281,9 +281,19 @@ def test_opd_37_add_workers_hidden_when_ended(test_data, config):
     pytest.skip("Ended-opp fixture pending")
 
 
-def test_opd_43_auto_verify_filters_and_columns(test_data, config):
-    """OD_43: automatic_visit_verification removes review_pending + has_duplicates
-    filters and the deliver 'Pending' column."""
-    if not _opd(test_data, "autoverify_opp", config):
-        pytest.skip("OPD.autoverify_opp not configured - need an automatic-verification opp")
-    pytest.skip("Auto-verify-opp fixture pending")
+def test_opd_43_auto_verify_filters_and_columns(dashboard):
+    """OD_43: on an automatic-verification opp the Deliver filter modal drops the
+    review_pending + has_duplicates filters (and the 'Pending' column). Demo
+    Opportunity is auto-verify, so this runs on the shared session."""
+    dashboard.goto_dashboard()
+    dashboard.goto_worker_tab("deliver")
+    dashboard.open_deliver_filter_modal()
+    # Auto-verify removes these two filters...
+    assert not dashboard.filter_present("review_pending"), "review_pending filter should be absent under auto-verify"
+    assert not dashboard.filter_present("has_duplicates"), "has_duplicates filter should be absent under auto-verify"
+    # ...while the flag/limit/last_active filters remain.
+    assert dashboard.filter_present("has_flags"), "has_flags filter should remain"
+    assert dashboard.filter_present("has_overlimit"), "has_overlimit filter should remain"
+    # The 'Pending' column is also dropped (best-effort: empty deliver tab renders
+    # no columns, so this only asserts absence, never presence).
+    assert "Pending" not in " | ".join(dashboard.worker_table_columns()), "'Pending' column should be absent under auto-verify"
