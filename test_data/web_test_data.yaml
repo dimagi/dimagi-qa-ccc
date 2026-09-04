@@ -205,6 +205,8 @@ OLP_NM_CREATE:
 # first row in the list, so the suite stays runnable without seed coupling.
 OPD:
   opportunity_name: "Demo Opportunity"
+  # Budget/message cases need an opp with claimed workers; Demo has none.
+  budget_opportunity_name_staging: "OLP_Test_Opp"
   # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
   # tests/test_opd_gaps.py. Each is skipped until its key is filled in; add a
   # _staging suffix for a staging-specific value.
@@ -217,3 +219,17 @@ OPD:
   # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
   # ended_opp: ""         # OD_37: an ended opportunity name
   # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity
+  # GATE for the budget-MUTATION tests (tests/test_opd_budget_mutations.py,
+  # OD_10/11/12/14/15). Points at the dedicated staging "Add Budget Opp" provided
+  # for this purpose (safe to mutate-then-revert; tests are net-zero). No prod value
+  # -> the module skips on prod (assert-and-skip policy). Open by id (robust).
+  mutation_opportunity_id_staging: "b18288ce-8763-4681-b5e8-d50934bffbd7"
+  # mutation_opportunity_name(_staging): alternative to id, matched in the opp list.
+  # Manual-verification opp (automatic_visit_verification OFF) - the only way to see
+  # the PM "PM Review Sheet" export option (OD_44) and the visit-status import
+  # (OD_46). Lives in the dedicated PM org pm_automation_02 (auto-verify is org-wide,
+  # so it needed a separate org). Staging only; no prod equivalent -> those tests
+  # skip on prod. Do NOT create new opps here - only this one is manual (new opps in
+  # the org revert to auto-approval).
+  manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  manual_verify_org_slug_staging: "pm_automation_02"

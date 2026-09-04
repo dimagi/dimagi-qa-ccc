@@ -254,6 +254,281 @@ class OpportunityDashboardPage(BasePage):
         opp_id = parts[parts.index("opportunity") + 1]
         return f"{u.scheme}://{u.netloc}", slug, opp_id
 
+    # -- OD Tier 2/3: Add Budget / Send Message / Add Workers -------------------
+
+    ADD_BUDGET_VISITS_INPUT = locators.get("opportunity_dashboard_page", "add_budget_visits_input")
+    ADD_BUDGET_ADJUSTMENT_BY_VALUE = locators.get("opportunity_dashboard_page", "add_budget_adjustment_by_value")
+    ADD_BUDGET_WORKER_CHECKBOXES = locators.get("opportunity_dashboard_page", "add_budget_worker_checkboxes")
+    ADD_BUDGET_SAVE_BTN = locators.get("opportunity_dashboard_page", "add_budget_save_btn")
+    ADD_BUDGET_NO_CLAIMS_TEXT = locators.get("opportunity_dashboard_page", "add_budget_no_claims_text")
+    ADD_BUDGET_CONFIRM_MODAL = locators.get("opportunity_dashboard_page", "add_budget_confirm_modal")
+    ADD_BUDGET_NEW_TAB = locators.get("opportunity_dashboard_page", "add_budget_new_tab")
+    ADD_BUDGET_NEW_USERS_INPUT = locators.get("opportunity_dashboard_page", "add_budget_new_users_input")
+    ADD_BUDGET_TOTAL_BUDGET_INPUT = locators.get("opportunity_dashboard_page", "add_budget_total_budget_input")
+    SEND_MESSAGE_CONFIRM_BTN = locators.get("opportunity_dashboard_page", "send_message_confirm_btn")
+
+    def _dashboard_parts(self):
+        """(base, slug, opp_id) from the stored dashboard_url - stable regardless of
+        where the current page has navigated."""
+        from urllib.parse import urlparse
+        u = urlparse(self.dashboard_url)
+        parts = [p for p in u.path.split("/") if p]
+        return f"{u.scheme}://{u.netloc}", parts[parts.index("a") + 1], parts[parts.index("opportunity") + 1]
+
+    def goto_add_budget(self):
+        """Open the Add Budget page directly (existing-users tab is the default)."""
+        base, slug, opp = self._dashboard_parts()
+        self.page.goto(f"{base}/a/{slug}/opportunity/{opp}/add_budget_existing_users")
+        self.page.wait_for_load_state("load")
+        self._step("Add Budget page loaded")
+
+    def open_send_message(self):
+        """OD_8 - reach Send Message via the hamburger option (from the dashboard)."""
+        self.click_hamburger_item("Send Message")
+        self.page.wait_for_load_state("load")
+
+    def send_message_page_ready(self):
+        return self.is_displayed(self.SEND_MESSAGE_CONFIRM_BTN, timeout=15000)
+
+    def open_add_connect_workers(self):
+        """OD_9 - reach the Add Connect Workers (invite) page via the hamburger."""
+        self.click_hamburger_item("Add Connect Workers")
+        self.page.wait_for_load_state("load")
+
+    def visits_field_validity(self, value):
+        """OD_13 - set number_of_visits and read the browser ValidityState (min=1)."""
+        field = self.page.locator(self.ADD_BUDGET_VISITS_INPUT).first
+        field.fill(str(value))
+        validity = field.evaluate(
+            "el => ({valid: el.checkValidity(), rangeUnderflow: el.validity.rangeUnderflow,"
+            " min: el.min, message: el.validationMessage})"
+        )
+        self._step(f"number_of_visits={value} -> {validity}")
+        return validity
+
+    def add_budget_has_claimed_workers(self):
+        if self.page.locator(self.ADD_BUDGET_NO_CLAIMS_TEXT).count() > 0:
+            return False
+        return self.page.locator(self.ADD_BUDGET_WORKER_CHECKBOXES).count() > 0
+
+    def open_budget_confirm_modal(self, visits, adjustment="increase_visits"):
+        """OD_16 - select one worker, enter visits + adjustment, open the confirm
+        modal (does not submit). Returns the modal's text."""
+        self.page.locator(self.ADD_BUDGET_WORKER_CHECKBOXES).first.check()
+        self.page.locator(self.ADD_BUDGET_VISITS_INPUT).first.fill(str(visits))
+        self.click(self.ADD_BUDGET_ADJUSTMENT_BY_VALUE.format(value=adjustment))
+        self.click(self.ADD_BUDGET_SAVE_BTN)
+        modal = self.page.locator(self.ADD_BUDGET_CONFIRM_MODAL).first
+        modal.wait_for(state="visible", timeout=10000)
+        text = modal.inner_text().strip()
+        self._step(f"Confirm modal text: {text!r}")
+        return text
+
+    def open_new_workers_tab(self):
+        """OD_17 - switch to the new-workers tab (HTMX-loads its form)."""
+        self.click(self.ADD_BUDGET_NEW_TAB)
+        self.page.locator(self.ADD_BUDGET_NEW_USERS_INPUT).first.wait_for(state="visible", timeout=15000)
+
+    def total_budget_value(self):
+        return self.page.locator(self.ADD_BUDGET_TOTAL_BUDGET_INPUT).first.input_value()
+
+    def set_new_workers_count(self, n):
+        self.page.locator(self.ADD_BUDGET_NEW_USERS_INPUT).first.fill(str(n))
+        # the field's oninput handler recomputes total_budget
+        self.page.wait_for_timeout(500)
+
+    # -- Add-budget mutation flow (OD_10/11/12/14/15) ---------------------------
+
+    ADD_BUDGET_CONFIRM_SUBMIT = locators.get("opportunity_dashboard_page", "add_budget_confirm_submit")
+    ADD_BUDGET_TABLE_HEADERS = locators.get("opportunity_dashboard_page", "add_budget_table_headers")
+    ADD_BUDGET_TABLE_ROWS = locators.get("opportunity_dashboard_page", "add_budget_table_rows")
+    ADD_BUDGET_SUCCESS_MSG = locators.get("opportunity_dashboard_page", "add_budget_success_msg")
+    ADD_BUDGET_DECREASE_ERROR = locators.get("opportunity_dashboard_page", "add_budget_decrease_error")
+    DELIVER_PROGRESS_DENOMINATORS = locators.get("opportunity_dashboard_page", "deliver_progress_denominators")
+
+    def add_budget_row_max_visits(self, row_index=0):
+        """Read a worker row's summed 'Max Visits' from the add-budget page table.
+        Assumes goto_add_budget() has been called and the opp has claimed workers."""
+        headers = [h.strip() for h in self.page.locator(self.ADD_BUDGET_TABLE_HEADERS).all_inner_texts()]
+        assert "Max Visits" in headers, f"'Max Visits' column not found in {headers}"
+        col = headers.index("Max Visits")
+        row = self.page.locator(self.ADD_BUDGET_TABLE_ROWS).nth(row_index)
+        cell = row.locator("xpath=./td").nth(col).inner_text().strip()
+        value = int("".join(ch for ch in cell if ch.isdigit()) or "0")
+        self._step(f"Add-budget row {row_index} Max Visits = {value}")
+        return value
+
+    def apply_budget_change(self, visits, adjustment):
+        """Select the first worker, set visits + adjustment, open the confirm modal
+        and submit it. The view answers with a 302 back to the add-budget page, so
+        wait for the reload. Returns True on a success flash, False otherwise."""
+        self.goto_add_budget()  # ensure we are on the form (a revert may run from another tab)
+        self.open_budget_confirm_modal(visits, adjustment)  # selects worker, Save -> modal
+        self._step(f"Submit budget change: {adjustment} by {visits}")
+        with self.page.expect_navigation(wait_until="load"):
+            self.click(self.ADD_BUDGET_CONFIRM_SUBMIT)
+        applied = self.is_displayed(self.ADD_BUDGET_SUCCESS_MSG, timeout=8000)
+        self._step(f"Budget change applied (success flash present): {applied}")
+        return applied
+
+    def budget_decrease_error_present(self):
+        return self.is_displayed(self.ADD_BUDGET_DECREASE_ERROR, timeout=8000)
+
+    # -- Export / import flows (OD_36/44/46) ------------------------------------
+
+    CATCHMENT_TOGGLE = locators.get("opportunity_dashboard_page", "catchment_toggle")
+    CATCHMENT_IMPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_import_link")
+    CATCHMENT_EXPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_export_link")
+    CATCHMENT_IMPORT_FILE = locators.get("opportunity_dashboard_page", "catchment_import_file")
+    MODAL_EXPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_export_submit")
+    MODAL_IMPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_import_submit")
+    DELIVER_EXPORT_BTN = locators.get("opportunity_dashboard_page", "deliver_export_btn")
+    DELIVER_EXPORT_RADIO_BY_VALUE = locators.get("opportunity_dashboard_page", "deliver_export_radio_by_value")
+    EXPORT_SUBMIT_BTN = locators.get("opportunity_dashboard_page", "export_submit_btn")
+    EXPORT_FROM_DATE = locators.get("opportunity_dashboard_page", "export_from_date")
+    DELIVER_IMPORT_BTN = locators.get("opportunity_dashboard_page", "deliver_import_btn")
+    DELIVER_IMPORT_FILE = locators.get("opportunity_dashboard_page", "deliver_import_file")
+    PAYMENT_IMPORT_BTN = locators.get("opportunity_dashboard_page", "payment_import_btn")
+    PAYMENT_IMPORT_FILE = locators.get("opportunity_dashboard_page", "payment_import_file")
+
+    # Known server rejection strings (the import validation surfaces).
+    IMPORT_ERROR_STRINGS = (
+        "Invalid file format",
+        "File format not supported",
+        "Missing required column",
+        "did not contain any headers",
+        "Import failed",
+        "failed:",
+    )
+
+    def open_catchment_submenu(self):
+        self.open_hamburger()
+        self.click(self.CATCHMENT_TOGGLE)
+        self.page.locator(self.CATCHMENT_IMPORT_LINK).first.wait_for(state="visible", timeout=8000)
+
+    def submit_catchment_export(self):
+        """Open the catchment export modal and submit (queues a Celery export ->
+        302 to the dashboard with ?export_task_id). No data is mutated."""
+        self.open_catchment_submenu()
+        self.click(self.CATCHMENT_EXPORT_LINK)
+        self.page.locator(self.MODAL_EXPORT_SUBMIT).first.wait_for(state="visible", timeout=8000)
+        with self.page.expect_navigation(wait_until="load"):
+            self.click(self.MODAL_EXPORT_SUBMIT)
+        return self.page.url
+
+    def upload_and_import(self, open_fn, file_locator, payload):
+        """Open an import modal (via open_fn), upload an invalid `payload`, submit,
+        and poll the page for a rejection string. Some imports reject synchronously
+        (a flash on redirect); others queue a task and surface the error in the
+        status poller a couple of seconds later - so poll rather than read once.
+        Invalid input -> nothing is imported. Returns the final page text."""
+        open_fn()
+        file_input = self.page.locator(file_locator).first
+        file_input.wait_for(state="attached", timeout=8000)
+        file_input.set_input_files(payload)
+        with self.page.expect_navigation(wait_until="load"):
+            self.click(self.MODAL_IMPORT_SUBMIT)
+        body = self.page.inner_text("body")
+        for _ in range(12):  # ~24s, covers the async status poller (polls every 2s)
+            if any(s.lower() in body.lower() for s in self.IMPORT_ERROR_STRINGS):
+                break
+            self.page.wait_for_timeout(2000)
+            body = self.page.inner_text("body")
+        self._step(f"After import submit: url={self.page.url}")
+        return body
+
+    def import_error_present(self, body_text):
+        hit = next((s for s in self.IMPORT_ERROR_STRINGS if s.lower() in body_text.lower()), None)
+        self._step(f"Import rejection string found: {hit!r}")
+        return hit is not None
+
+    def open_catchment_import_modal(self):
+        self.open_catchment_submenu()
+        self.click(self.CATCHMENT_IMPORT_LINK)
+        self.page.locator(self.CATCHMENT_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
+
+    # Deliver export
+    def open_deliver_export_modal(self):
+        self.click(self.DELIVER_EXPORT_BTN)
+        self.page.locator(self.DELIVER_EXPORT_RADIO_BY_VALUE.format(value="nm_review")).first.wait_for(
+            state="visible", timeout=8000
+        )
+
+    def export_radio_present(self, value):
+        return self.page.locator(self.DELIVER_EXPORT_RADIO_BY_VALUE.format(value=value)).count() > 0
+
+    def submit_deliver_export(self):
+        """Set a From Date (which HTMX-enables the disabled Export button), submit,
+        and return the landed URL (worker_deliver?export_task_id=...)."""
+        self.select_deliver_export_radio("nm_review")
+        # The export form has several required fields (From/To date, Status, Format);
+        # fill/select what we can, then submit the enabled button's own form.
+        for sel in (self.EXPORT_FROM_DATE, "#id_to_date"):
+            loc = self.page.locator(sel).first
+            if loc.count():
+                loc.fill("2020-01-01")
+                loc.dispatch_event("change")
+        for sid in ("#id_status", "#id_format"):
+            s = self.page.locator(sid).first
+            if s.count():
+                try:
+                    s.select_option(index=1)
+                except Exception:
+                    pass
+        enabled = f"{self.EXPORT_SUBMIT_BTN}:not([disabled])"
+        try:
+            self.page.locator(enabled).first.wait_for(state="visible", timeout=15000)
+        except Exception:
+            self._step("Export submit button did not enable")
+            return self.page.url
+        self._step("Submit deliver export")
+        self.page.evaluate(
+            "() => { const b = document.querySelector('#export-submit-btn:not([disabled])');"
+            " if (b && b.form) { b.form.requestSubmit(b); } else if (b) { b.click(); } }"
+        )
+        try:
+            self.page.wait_for_url("**export_task_id=**", timeout=20000)
+        except Exception:
+            self._step(f"Export did not queue (required-field form). url={self.page.url}")
+        return self.page.url
+
+    def deliver_export_fields_present(self):
+        """The export form exposes Format + date + Status controls (proves the
+        export flow is live even when the required-field submit is not driven)."""
+        present = self.page.locator("#id_format").count() > 0 and self.page.locator(self.EXPORT_FROM_DATE).count() > 0
+        self._step(f"Deliver export form fields present: {present}")
+        return present
+
+    def select_deliver_export_radio(self, value):
+        self.page.locator(self.DELIVER_EXPORT_RADIO_BY_VALUE.format(value=value)).first.check()
+
+    def open_deliver_import_modal(self):
+        self.click(self.DELIVER_IMPORT_BTN)
+        self.page.locator(self.DELIVER_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
+
+    def deliver_import_available(self):
+        # The deliver toolbar loads async; wait for the always-present export
+        # button first, then decide whether the import button is present (it is
+        # hidden when automatic_visit_verification is on).
+        self.is_displayed(self.DELIVER_EXPORT_BTN, timeout=15000)
+        return self.page.locator(self.DELIVER_IMPORT_BTN).count() > 0
+
+    def open_payment_import_modal(self):
+        self.click(self.PAYMENT_IMPORT_BTN)
+        self.page.locator(self.PAYMENT_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
+
+    def deliver_denominator_sum(self):
+        """Sum the numeric progress-bar denominators on the Deliver tab (each is a
+        payment unit's max_visits). Used to cross-check a budget change (OD_15)."""
+        self.is_displayed(self.DELIVER_PROGRESS_DENOMINATORS, timeout=15000)
+        total = 0
+        for t in self.page.locator(self.DELIVER_PROGRESS_DENOMINATORS).all_inner_texts():
+            digits = "".join(ch for ch in t if ch.isdigit())
+            if digits:
+                total += int(digits)
+        self._step(f"Deliver-tab denominator sum = {total}")
+        return total
+
     # OD_24 covered by verify_status_badge; OD_25 by wait_for_stats + verify_graphs.
 
     # OD_27: currency-formatted values

@@ -146,6 +146,56 @@ opportunity_dashboard_page:
   workers_displaying_count: "//span[contains(normalize-space(.),'Displaying') and contains(.,'Connect Workers')]"
   workers_search_clear: "//div[@id='worker-search']//button[.//i[contains(@class,'fa-xmark')]]"
   workers_tab_label: "workers-tab"
+  # --- OD Tier 2/3: Add Budget / Send Message / Add Workers pages ---
+  # Add Budget existing-users form (add_visits_existing_users.html): number_of_visits
+  # carries min=1 (OD_13); Increase/Decrease radios; a "Save" button opens an Alpine
+  # confirm modal that shows totalVisits()/calculatedBudget() (OD_16). When the opp
+  # has no claims the form is replaced by a "No Opportunity Claims yet." notice.
+  add_budget_visits_input: "id_number_of_visits"
+  add_budget_adjustment_by_value: "//input[@name='adjustment_type' and @value='{value}']"
+  add_budget_worker_checkboxes: "//input[@name='selected_users' and not(@id='select_all_users')]"
+  add_budget_save_btn: "//button[normalize-space()='Save']"
+  add_budget_no_claims_text: "//*[contains(normalize-space(),'No Opportunity Claims yet')]"
+  add_budget_confirm_modal: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]"
+  # New-workers tab (HTMX-loaded): entering add_users recomputes total_budget via an
+  # oninput handler (OD_17).
+  add_budget_new_tab: "new_workers-tab"
+  add_budget_new_users_input: "id_add_users"
+  add_budget_total_budget_input: "id_total_budget"
+  # Send Message page (send_message.html): worker checkboxes + a Confirm submit.
+  send_message_confirm_btn: "//button[normalize-space()='Confirm']"
+  # Add-budget mutation flow (OD_10/11/12/14/15). The confirm modal's Confirm is a
+  # native submit; on success the view 302-redirects back with a Django flash. The
+  # page's own table carries a "Max Visits" column (total_max_visits summed across
+  # payment units per worker) - the deterministic before/after read surface.
+  add_budget_confirm_submit: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]//button[@type='submit' and normalize-space()='Confirm']"
+  add_budget_table: "//table[contains(@class,'base-table')]"
+  add_budget_table_headers: "//table[contains(@class,'base-table')]//th"
+  add_budget_table_rows: "//table[contains(@class,'base-table')]//tbody//tr"
+  add_budget_success_msg: "//*[contains(normalize-space(),'Increased visits') or contains(normalize-space(),'Decreased visits')]"
+  add_budget_decrease_error: "//*[contains(normalize-space(),'Cannot decrease the number of visits')]"
+  # Deliver tab progress-bar denominator (= that payment unit's max_visits).
+  deliver_progress_denominators: "//div[@id='table']//table//span[contains(@class,'text-gray-700')]"
+
+  # -- Export / import flows (OD_36/44/46) -----------------------------------
+  # Catchment Areas: hamburger 'Catchment Areas' toggle reveals Import/Export links.
+  catchment_toggle: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Catchment Areas']"
+  catchment_import_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Import']"
+  catchment_export_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Export']"
+  catchment_import_file: "//input[@type='file' and @name='catchments']"
+  # Modal submit buttons (native POST forms). One modal open at a time -> .first visible.
+  modal_export_submit: "//button[@type='submit' and normalize-space()='Export']"
+  modal_import_submit: "//button[@type='submit' and normalize-space()='Import']"
+  # Deliver tab export/import (deliver.html).
+  deliver_export_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-download')]]"
+  deliver_export_radio_by_value: "//input[@name='form_type' and @value='{value}']"
+  export_submit_btn: "export-submit-btn"
+  export_from_date: "id_from_date"
+  deliver_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  deliver_import_file: "//input[@type='file' and @name='visits']"
+  # Payments tab import (payments.html).
+  payment_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  payment_import_file: "//input[@type='file' and @name='payments']"
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
