@@ -310,10 +310,15 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
 
 
 def test_opd_30_increment_badges(test_data, config):
-    """OD_30: 24h increment badges show on Services Delivered + Payments Earned."""
-    if not _opd(test_data, "fresh_delivery_opp", config):
-        pytest.skip("OPD.fresh_delivery_opp not configured - needs deliveries/payments in last 24h (pending)")
-    pytest.skip("Fresh-24h-data fixture pending")
+    """OD_30: 24h increment ('↑') badges on Services Delivered + Payments Earned.
+
+    DESCOPED here: the badge needs deliveries/payments in the last 24h, which no
+    standalone web test can keep fresh (no daily cadence exists). Its proper home
+    is inside the delivery-submitting E2E flow (test_e2e_relearn_lifecycle): assert
+    the increment badge right after that test submits a visit, so submit+verify
+    happen together with no freshness problem. Fold in there if/when we prioritise
+    it or enable a daily schedule."""
+    pytest.skip("DESCOPED - fold into the E2E delivery-submission test; no daily-fresh data otherwise")
 
 
 def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
