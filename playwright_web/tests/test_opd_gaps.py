@@ -253,9 +253,12 @@ def test_opd_20_pm_vs_nm_hamburger_menu(session, test_data, config):
 
 def test_opd_21_viewer_read_only(test_data, config):
     """OD_21: a VIEWER loads the dashboard but cannot open the hamburger menu."""
-    if not _opd(test_data, "viewer_username", config):
-        pytest.skip("OPD.viewer_username not configured - need a VIEWER-role account (pending)")
-    pytest.skip("Viewer-role login flow not yet wired - fixture pending")
+    # A VIEWER account (kbordoloi+ccc.viewer) was provided 2026-09-04, but its
+    # credentials do not authenticate against staging CCHQ yet (login bounces to
+    # the sign-in page) - pending Anshu/Kankana verifying the account. Once it logs
+    # in, wire: viewer login -> open a viewable opp -> assert the bars icon does not
+    # open the menu (dashboard.html renders it non-interactive for viewers).
+    pytest.skip("Viewer account creds not authenticating on staging yet - pending account fix")
 
 
 def test_opd_22_standalone_opportunity_menu(test_data, config):
