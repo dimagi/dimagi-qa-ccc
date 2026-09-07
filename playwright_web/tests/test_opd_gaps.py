@@ -251,14 +251,48 @@ def test_opd_20_pm_vs_nm_hamburger_menu(session, test_data, config):
         assert pm_only not in joined, f"NM unexpectedly sees PM-only item {pm_only!r}. Menu: {joined}"
 
 
-def test_opd_21_viewer_read_only(test_data, config):
-    """OD_21: a VIEWER loads the dashboard but cannot open the hamburger menu."""
-    # A VIEWER account (kbordoloi+ccc.viewer) was provided 2026-09-04, but its
-    # credentials do not authenticate against staging CCHQ yet (login bounces to
-    # the sign-in page) - pending Anshu/Kankana verifying the account. Once it logs
-    # in, wire: viewer login -> open a viewable opp -> assert the bars icon does not
-    # open the menu (dashboard.html renders it non-interactive for viewers).
-    pytest.skip("Viewer account creds not authenticating on staging yet - pending account fix")
+def test_opd_21_viewer_read_only(browser, config, settings):
+    """OD_21: a VIEWER can load an opportunity dashboard but cannot open the
+    hamburger menu (dashboard.html renders the bars icon non-interactive for
+    viewers). The viewer is a Connect-native account (direct email/password
+    sign-in, no CommCareHQ/OAuth) per Anshu 2026-09-04."""
+    if config.env == "prod":
+        pytest.skip("Viewer fixture exists on staging only")
+    vu = settings.get(section="viewer", key="hq_username", env_var="viewer_username")
+    vp = settings.get(section="viewer", key="hq_password", env_var="viewer_password")
+    if not vu or not vp:
+        pytest.skip("Viewer creds not configured (settings.cfg [viewer])")
+
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        base = config.get("connect_url")
+        page.goto(f"{base}/accounts/login/")
+        page.wait_for_load_state("load")
+        page.locator("#id_login").fill(vu)
+        page.locator("#id_password").fill(vp)
+        # The direct-login submit reads "Login" (the OAuth button is "Login with CommCareHQ").
+        page.locator("xpath=//button[@type='submit'][.//span[normalize-space()='Login']]").first.click()
+        page.wait_for_load_state("load")
+
+        dash = OpportunityDashboardPage(page)
+        # Reach a dashboard. Prefer the first opportunity the viewer can see.
+        olp = ConnectOpportunityListPage(page)
+        olp.verify_loaded()
+        olp.open_opportunity(olp.first_row_name())
+        # Viewer-safe load check: the delivery-stats container renders for all roles
+        # (don't require the hamburger toggle, which viewers may not get).
+        page.locator(dash.STATS_CONTAINER).first.wait_for(state="attached", timeout=30000)
+        assert "/opportunity/" in page.url, f"Viewer did not reach a dashboard: {page.url}"
+
+        # The menu must not be openable for a viewer.
+        if page.locator(dash.HAMBURGER_TOGGLE).count():
+            page.locator(dash.HAMBURGER_TOGGLE).first.click()
+        assert not dash.is_displayed(dash.HAMBURGER_MENU, timeout=3000), (
+            "Viewer should not be able to open the hamburger menu"
+        )
+    finally:
+        context.close()
 
 
 def test_opd_22_standalone_opportunity_menu(test_data, config):
