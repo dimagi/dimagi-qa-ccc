@@ -2,9 +2,18 @@
 
 **Ticket:** [CCCT-2784](https://dimagi.atlassian.net/browse/CCCT-2784) — End to end testing scripts for Manage Profile
 **Feature source:** [CCC-101](https://dimagi.atlassian.net/browse/CCC-101) → epic CCCT-2344 (CCCT-2456 … CCCT-2461)
-**Target build:** CommCare Connect **2.64** (`origin/commcare_2.64`, tag `commcare_2.64.0`)
+**Target build:** CommCare Connect **2.65 staging** — the APK now in `app/app-cccStaging-release.apk`
+(verified `versionName=2.65`, pointing at `staging.commcarehq.org`). No `commcare_2.65`
+branch exists yet, so **`origin/master` is the source reference**; behaviour below was first
+established on `origin/commcare_2.64` and then re-verified against `origin/master`.
 **Framework:** Maestro (`maestro_mobile/`), continuing the migration off the Appium suite
 **Date:** 2026-09-07
+
+> **Scope decision (2026-09-07):** 2.65 also adds a *Change Backup Code* feature to the
+> Profile screen (a fourth email workflow, `FORGOT_BACKUP_CODE_EXISTING_USER`, plus a
+> "Recover backup code" → email OTP → "Set New Backup Code" journey). It is
+> **deliberately deferred** — this spec covers signup, email addition, and Manage Profile
+> only. See §8.
 
 ## 1. Why this is bigger than "Manage Profile"
 
@@ -23,7 +32,12 @@ serve all three. Automating one context and not the others would leave the share
 covered by accident rather than by design, so this spec covers all four surfaces:
 signup, recovery, the email offer prompt, and Manage Profile.
 
-## 2. Feature behaviour (established from 2.64 source)
+## 2. Feature behaviour
+
+Established from the 2.64 source and re-verified against `origin/master` (the 2.65 build).
+`PersonalIdBackupCodeFragment` was rewritten from Java to Kotlin between the two, but the
+routing conditions below are byte-for-byte equivalent, and every selector in §7 is
+unchanged. Where this section names a screen, that screen is identical on both.
 
 ### 2.1 Master toggle
 
@@ -41,12 +55,12 @@ The nav graph now runs:
 phone → biometric config → phone OTP → name → backup code → email → photo capture
 ```
 
-`PersonalIdBackupCodeFragment:183` routes to the email step when the toggle is active,
+`PersonalIdBackupCodeFragment` routes to the email step when the toggle is active,
 and straight to photo capture when it is not.
 
 ### 2.3 Recovery (RECOVERY)
 
-`PersonalIdBackupCodeFragment:220` shows the email step after the backup code is accepted
+`PersonalIdBackupCodeFragment` shows the email step after the backup code is accepted
 **only when the session data carries no email**. `ConfirmBackupCodeResponseParser`
 populates that field only when the server already holds a *verified* address for the user.
 The branch:
@@ -103,7 +117,7 @@ per the table in §1.
 
 ## 3. Test inventory
 
-36 cases across 10 test flows (plus one shared sub-flow that carries no cases of its own).
+37 cases across 10 test flows (plus one shared sub-flow that carries no cases of its own).
 Case steps are written at UI level; resource IDs live in the selector appendix (§7) so the
 cases stay readable.
 
@@ -127,6 +141,7 @@ cases stay readable.
 | SE_09 | Repeated failures raise "Verification unsuccessful"; "Proceed without email" continues to photo capture |
 | SE_10 | **[OTP-gated]** The correct code shows "Email Added" and continues to photo capture |
 | SE_11 | An address already held by another account shows "This email is already linked to another account. Please use a different email address." |
+| SE_12 | Exhausting the verification attempts shows "Maximum verification attempts reached. Please try again later." |
 
 ### 3.3 Recovery — `recovery_email_prompt.yaml` (RECOVERY)
 
@@ -235,7 +250,7 @@ suite is not acceptable.
 
 ## 5. Email OTP retrieval
 
-Three of the 36 cases (SE_10, RE_03, MP_13) require reading a 6-digit code from a mailbox.
+Three of the 37 cases (SE_10, RE_03, MP_13) require reading a 6-digit code from a mailbox.
 No mechanism exists in the suite today — the `+7426` demo accounts bypass phone OTP
 entirely and there is no email equivalent.
 
@@ -248,7 +263,7 @@ from config; they are never typed into a login form.
 
 **Until that mailbox exists**, the three cases are written as stubs that assert the flow
 reaches the Verify Email screen correctly and then stop, each marked with the blocker.
-The remaining 33 cases — every negative path, every skip path, and everything up to and
+The remaining 34 cases — every negative path, every skip path, and everything up to and
 including "Send Code" — are fully automatable without it. Wiring the helper in later is a
 contained change, not a rewrite.
 
@@ -256,7 +271,7 @@ contained change, not a rewrite.
 
 | # | Requirement | Status |
 |---|---|---|
-| 1 | 2.64 staging APK at `app/app-cccStaging-release.apk` | **Outstanding** — current file is 2.63.4 |
+| 1 | Staging APK at `app/app-cccStaging-release.apk` | **Met** — 2.65 staging build in place as of 2026-09-07 |
 | 2 | `email_otp_verification` toggle active for all test accounts | **Outstanding** — server-side |
 | 3 | Recovery account **with** a verified email | **Outstanding** |
 | 4 | Recovery account **without** an email | **Outstanding** |
@@ -333,6 +348,14 @@ matches as `.*phrase.*`, per the README.
 
 ## 8. Out of scope
 
+- **Change Backup Code / forgot-backup-code (2.65).** The Profile screen in 2.65 carries an
+  additional `profile_change_backup_code` button ("Change backup code") leading to a
+  "Recover backup code" → email OTP → "Set New Backup Code" journey, backed by a fourth
+  workflow `FORGOT_BACKUP_CODE_EXISTING_USER`. Deferred by decision on 2026-09-07. No flow
+  in this spec asserts on it, and none assumes Forget is the only action on the Profile
+  screen, so the extra button is inert for our purposes. Note for whoever picks it up: that
+  journey *requires* an email on the account ("Please add an email address" otherwise), so
+  it depends on both the email feature and the OTP retrieval in §5.
 - **Photo capture / update.** Camera automation is unreliable on the emulator and the
   behaviour is already covered by CCCT-2330. The Profile screen's photo element is
   asserted as present (MP_02) but not exercised.
