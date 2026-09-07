@@ -96,6 +96,9 @@ opportunity_dashboard_page:
   # and an <h6> label. Match by the label text.
   info_card_by_label: "//div[contains(@class,'infocard') or (.//i[contains(@class,'fa-solid')] and .//h6)][.//h6[normalize-space()='{label}']]"
   status_badge: "//span[contains(@class,'badge') and (contains(@class,'positive') or contains(@class,'warning') or contains(@class,'negative'))]"
+  # is_test badge in the header (OD_26) and the MICROPLANNING-only worker tab (OD_28).
+  test_badge: "//span[contains(@class,'badge') and normalize-space()='Test']"
+  work_areas_tab: "//*[self::li or self::a][contains(normalize-space(),'Work Area')]"
   # Async HTMX stat sections (skeleton -> swapped). Stored as bare ids: the
   # locator loader prefixes '#' to any non-xpath value.
   stats_container: "opp-stats-container"

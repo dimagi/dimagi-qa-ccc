@@ -58,6 +58,23 @@ def dashboard(browser, config, settings, test_data):
         context.close()
 
 
+@pytest.fixture(scope="module")
+def session(browser, config, settings, test_data):
+    """One login the shared account can use to reach opps in any org it belongs to
+    (pm_automation_01 + nm_automation). Yields (dashboard_page, base_url); tests
+    navigate to their fixture opp by id. Staging-only fixtures - skips on prod."""
+    if config.env == "prod":
+        pytest.skip("Gap-case fixtures exist on staging only")
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        connect_page = login_to_connect(page, config, settings, PM_ORG)
+        dash = OpportunityDashboardPage(connect_page)
+        yield dash, config.get("connect_url")
+    finally:
+        context.close()
+
+
 def _opd(test_data, key, config):
     return env_value(test_data.get("OPD") or {}, key, config)
 
@@ -219,66 +236,97 @@ def test_opd_47_stat_htmx_endpoints_load(dashboard):
 # These take only (test_data, config) so a skip spins up no browser. OD_20 needs a
 # separate NM login, so it resolves `page` lazily only when actually enabled.
 
-def test_opd_20_pm_vs_nm_hamburger_menu(request, test_data, config, settings):
-    """OD_20: PM sees the full hamburger set; a Network Manager sees the reduced
-    set. Needs an NM org that can see the opportunity (OPD.nm_org)."""
-    nm_org = _opd(test_data, "nm_org", config)
-    if not nm_org:
-        pytest.skip("OPD.nm_org not configured - need a Network Manager org that sees the opp")
-    page = request.getfixturevalue("page")
-    dash = _open_dashboard(page, test_data, config, settings, organization=nm_org)
+def test_opd_20_pm_vs_nm_hamburger_menu(session, test_data, config):
+    """OD_20: a Network Manager sees the reduced hamburger set - the PM-only items
+    (Edit Opportunity, Add Payment Unit, Verification Rules, Configure Task Types)
+    are absent. Runs on the manual opp viewed via the NM org."""
+    dash, base = session
+    opp_id = _opd(test_data, "nm_view_opp_id", config)
+    slug = _opd(test_data, "nm_view_org_slug", config)
+    if not opp_id:
+        pytest.skip("OPD.nm_view_opp_id not configured")
+    dash.goto_opp(base, slug, opp_id)
     joined = " | ".join(dash.hamburger_options())
     for pm_only in ["Edit Opportunity", "Add Payment Unit", "Verification Rules", "Configure Task Types"]:
-        assert pm_only not in joined, f"NM unexpectedly sees PM-only item {pm_only!r}"
+        assert pm_only not in joined, f"NM unexpectedly sees PM-only item {pm_only!r}. Menu: {joined}"
 
 
 def test_opd_21_viewer_read_only(test_data, config):
     """OD_21: a VIEWER loads the dashboard but cannot open the hamburger menu."""
     if not _opd(test_data, "viewer_username", config):
-        pytest.skip("OPD.viewer_username not configured - need a VIEWER-role account")
+        pytest.skip("OPD.viewer_username not configured - need a VIEWER-role account (pending)")
     pytest.skip("Viewer-role login flow not yet wired - fixture pending")
 
 
 def test_opd_22_standalone_opportunity_menu(test_data, config):
-    """OD_22: a standalone (non-program) opp hides PM-only menu items."""
-    if not _opd(test_data, "standalone_opp", config):
-        pytest.skip("OPD.standalone_opp not configured - need a standalone opportunity")
-    pytest.skip("Standalone-opp fixture pending")
+    """OD_22: DEPRECATED - no standalone (non-program) opportunities exist; they were
+    migrated to the legacy program (per Anshu 2026-09-04). Pending Nitin confirm."""
+    pytest.skip("DEPRECATED - no standalone opps exist (migrated to legacy program)")
 
 
-def test_opd_23_setup_incomplete_redirect(test_data, config):
-    """OD_23: an opportunity with incomplete setup redirects to Add Payment Units."""
-    if not _opd(test_data, "incomplete_opp", config):
-        pytest.skip("OPD.incomplete_opp not configured - need a setup-incomplete opportunity")
-    pytest.skip("Setup-incomplete-opp fixture pending")
+def test_opd_23_setup_incomplete_redirect(session, test_data, config):
+    """OD_23: opening a setup-incomplete opportunity (no payment units) redirects to
+    the Add Payment Units page."""
+    dash, base = session
+    opp_id = _opd(test_data, "incomplete_opp_id", config)
+    slug = _opd(test_data, "gap_org_slug", config)
+    if not opp_id:
+        pytest.skip("OPD.incomplete_opp_id not configured")
+    dash.page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/")
+    dash.page.wait_for_load_state("load")
+    assert "payment_unit" in dash.page.url, (
+        f"Setup-incomplete opp should redirect to Add Payment Units, landed: {dash.page.url}"
+    )
 
 
-def test_opd_26_test_opportunity_badge(test_data, config):
-    """OD_26: a test opportunity (is_test) shows the Test badge + theme."""
-    if not _opd(test_data, "test_opp", config):
-        pytest.skip("OPD.test_opp not configured - need an is_test opportunity")
-    pytest.skip("Test-opp fixture pending")
+def test_opd_26_test_opportunity_badge(session, test_data, config):
+    """OD_26: a test opportunity (is_test) shows the 'Test' badge in the header."""
+    dash, base = session
+    opp_id = _opd(test_data, "test_opp_id", config)
+    slug = _opd(test_data, "gap_org_slug", config)
+    if not opp_id:
+        pytest.skip("OPD.test_opp_id not configured")
+    dash.goto_opp(base, slug, opp_id)
+    assert dash.test_badge_present(), "'Test' badge not shown on the is_test opportunity"
 
 
-def test_opd_28_microplanning_flag_gating(test_data, config):
-    """OD_28: MICROPLANNING flag controls the Work Areas tab (direct URL 404 off)."""
-    if not _opd(test_data, "microplanning_opp", config):
-        pytest.skip("OPD.microplanning_opp not configured - need MICROPLANNING-flagged opp")
-    pytest.skip("Microplanning fixture pending")
+def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
+    """OD_28: with the MICROPLANNING flag on, the worker 'Work Area Assignments' tab
+    is present and its URL is reachable (200)."""
+    dash, base = session
+    opp_id = _opd(test_data, "microplanning_opp_id", config)
+    slug = _opd(test_data, "gap_org_slug", config)
+    if not opp_id:
+        pytest.skip("OPD.microplanning_opp_id not configured")
+    dash.goto_opp(base, slug, opp_id)
+    # The Work Areas tab lives on the worker sub-page tab bar, not the dashboard.
+    dash.goto_worker_tab("workers")
+    assert dash.work_areas_tab_present(), "Work Area Assignments tab missing on the MICROPLANNING opp"
+    status = dash.get_status(f"{base}/a/{slug}/opportunity/{opp_id}/workers/work-areas/")
+    assert status == 200, f"work-areas URL returned {status} on the MICROPLANNING opp"
 
 
 def test_opd_30_increment_badges(test_data, config):
     """OD_30: 24h increment badges show on Services Delivered + Payments Earned."""
     if not _opd(test_data, "fresh_delivery_opp", config):
-        pytest.skip("OPD.fresh_delivery_opp not configured - needs deliveries/payments in last 24h")
+        pytest.skip("OPD.fresh_delivery_opp not configured - needs deliveries/payments in last 24h (pending)")
     pytest.skip("Fresh-24h-data fixture pending")
 
 
-def test_opd_37_add_workers_hidden_when_ended(test_data, config):
-    """OD_37: 'Add Connect Workers' is hidden for an ended opportunity."""
-    if not _opd(test_data, "ended_opp", config):
-        pytest.skip("OPD.ended_opp not configured - need an ended opportunity")
-    pytest.skip("Ended-opp fixture pending")
+def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
+    """OD_37: 'Add Connect Workers' is hidden for an ENDED opportunity. Self-skips
+    until the fixture opp's end date has actually passed (badge reads 'Ended')."""
+    dash, base = session
+    opp_id = _opd(test_data, "ended_opp_id", config)
+    slug = _opd(test_data, "gap_org_slug", config)
+    if not opp_id:
+        pytest.skip("OPD.ended_opp_id not configured")
+    dash.goto_opp(base, slug, opp_id)
+    if dash.status_badge_text() != "Ended":
+        pytest.skip("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
+    assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
+        "'Add Connect Workers' should be hidden for an ended opportunity"
+    )
 
 
 def test_opd_43_auto_verify_filters_and_columns(dashboard):

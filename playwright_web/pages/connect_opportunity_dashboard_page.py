@@ -11,6 +11,8 @@ class OpportunityDashboardPage(BasePage):
     OPP_TITLE = locators.get("opportunity_dashboard_page", "opp_title")
     INFO_CARD_BY_LABEL = locators.get("opportunity_dashboard_page", "info_card_by_label")
     STATUS_BADGE = locators.get("opportunity_dashboard_page", "status_badge")
+    TEST_BADGE = locators.get("opportunity_dashboard_page", "test_badge")
+    WORK_AREAS_TAB = locators.get("opportunity_dashboard_page", "work_areas_tab")
     STATS_CONTAINER = locators.get("opportunity_dashboard_page", "stats_container")
     FUNNEL_CONTAINER = locators.get("opportunity_dashboard_page", "funnel_container")
     WORKER_PROGRESS_CONTAINER = locators.get("opportunity_dashboard_page", "worker_progress_container")
@@ -73,11 +75,15 @@ class OpportunityDashboardPage(BasePage):
         assert not missing, f"Missing summary info cards: {missing}"
 
     def verify_status_badge(self):
+        text = self.status_badge_text()
+        assert text in ("Active", "Ended", "Inactive"), f"Unexpected status badge: {text!r}"
+
+    def status_badge_text(self):
         badge = self.page.locator(self.STATUS_BADGE).first
         badge.wait_for(state="visible", timeout=15000)
         text = badge.inner_text().strip()
-        assert text in ("Active", "Ended", "Inactive"), f"Unexpected status badge: {text!r}"
         self._step(f"Opportunity status badge: {text}")
+        return text
 
     def verify_graphs_present(self):
         """The funnel and worker-progress sections render as their own HTMX
@@ -235,6 +241,24 @@ class OpportunityDashboardPage(BasePage):
     FUNNEL_STAGES = ["Invited", "Accepted", "Started Learning", "Completed Learning",
                      "Completed Assessment", "Claimed Job", "Started Delivery"]
     WORKER_PROGRESS_TITLES = ["Approved", "Rejected", "Earned", "Paid"]
+
+    def goto_opp(self, base_url, slug, opp_id):
+        """Open any opportunity's dashboard by (org slug, opp id) - used to reach
+        opps in other orgs the shared account has access to, without re-login."""
+        self.page.goto(f"{base_url}/a/{slug}/opportunity/{opp_id}/")
+        self.page.wait_for_load_state("load")
+        self.verify_loaded()
+        self.dashboard_url = self.page.url
+
+    def test_badge_present(self):
+        present = self.page.locator(self.TEST_BADGE).count() > 0
+        self._step(f"'Test' badge present: {present}")
+        return present
+
+    def work_areas_tab_present(self):
+        present = self.page.locator(self.WORK_AREAS_TAB).count() > 0
+        self._step(f"'Work Area Assignments' tab present: {present}")
+        return present
 
     def goto_dashboard(self):
         """Return to the opportunity dashboard without re-authenticating. Used by

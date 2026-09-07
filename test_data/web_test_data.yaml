@@ -217,8 +217,23 @@ OPD:
   # test_opp: ""          # OD_26: an is_test opportunity name
   # microplanning_opp: "" # OD_28: an opportunity with the MICROPLANNING flag on
   # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
-  # ended_opp: ""         # OD_37: an ended opportunity name
-  # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity
+  # Gap-case fixtures provided by Anshu (staging, 2026-09-04):
+  # OD_20 NM view: the manual opp seen as Network Manager (org nm_automation).
+  nm_view_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  nm_view_org_slug_staging: "nm_automation"
+  # OD_26 test opp + OD_28 microplanning: "OLP Test opp" (all opps here are is_test;
+  # this one also has the MICROPLANNING flag). Org pm_automation_01.
+  test_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
+  microplanning_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
+  # OD_37 ended opp - end date set to 2026-09-05; only shows as Ended after it
+  # passes, so the test self-skips until the badge reads "Ended". Org pm_automation_01.
+  ended_opp_id_staging: "4c853985-699a-4952-883f-4a91348c9cbe"
+  gap_org_slug_staging: "pm_automation_01"
+  # OD_23 setup-incomplete opp (no payment units) - the dashboard redirects to
+  # payment_units/create. Org pm_automation_01.
+  incomplete_opp_id_staging: "38421ba7-d240-4721-a770-65edf0d90b88"
+  # Still pending: OD_21 (viewer acct), OD_30 (24h data).
+  # OD_22 (standalone) deprecated - no standalone opps exist (migrated to legacy program).
   # GATE for the budget-MUTATION tests (tests/test_opd_budget_mutations.py,
   # OD_10/11/12/14/15). Points at the dedicated staging "Add Budget Opp" provided
   # for this purpose (safe to mutate-then-revert; tests are net-zero). No prod value
