@@ -1,0 +1,65 @@
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  # A number in the 129xxxx automation block that has never been used or invited.
+  # Deliberately outside the 1292950-1292999 batch put forward for invites, so a
+  # pass here means integrity cleared WITHOUT an invite.
+  PHONE_NUMBER: "1293501"
+  USERNAME: "QA Integrity Probe"
+---
+# PROBE - not a test case. Answers one question: can a fresh, un-invited +7426
+# number get past Google Play Integrity on a real BrowserStack device?
+#
+# On a local emulator this fails deterministically with "Process Failed -
+# Unfortunately, this device did not pass the security checks required to sign up
+# for PersonalID", because a side-loaded build is not Play-recognised and the only
+# ConnectID bypass is an existing UserInvite for the number.
+#
+# Passing here means registration cases can generate numbers freely.
+# Failing here means they need a pool of pre-invited numbers.
+- launchApp:
+    clearState: true
+- tapOn:
+    text: "Open navigation drawer"
+- assertVisible:
+    text: "About CommCare"
+- tapOn:
+    id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+- assertVisible:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- eraseText
+- inputText: "${PHONE_NUMBER}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_consent_check"
+- tapOn:
+    text: "CONTINUE"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
+
+# The verdict. Reaching the Name screen means integrity cleared without an invite.
+# If this fails, read the log for "Process Failed" to confirm it was integrity
+# rather than the intermittent network error.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/nameTextValue"
+    timeout: 30000
+- assertVisible:
+    text: "Please enter your name as it appears on your government-issued identification"
