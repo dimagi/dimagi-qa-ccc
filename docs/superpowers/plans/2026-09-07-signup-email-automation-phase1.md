@@ -35,20 +35,25 @@ this; do not repeat it.
 (unlock skip, phone → name shortcut, auto-photo) are real but are **not** what the suite
 relies on, and the shortened signup path described below applies only to that build.
 
-**Code fields are not text inputs.** The backup code and both OTP fields are
-`NumericCodeView` — a `LinearLayout` of one `EditText` per digit, children with raw integer
-ids and no resource-id. Sending a whole string to the container raises
-`InvalidElementStateException`. `BasePage.type_code()` handles this for Appium; **the Maestro
-flows need an equivalent**, so `inputText` against `backup_code_view` in the tasks below will
-not work as written. This is the largest unresolved risk in the plan.
+**Code fields are not text inputs — but Maestro copes.** The backup code and both OTP fields
+are `NumericCodeView`, a `LinearLayout` of one `EditText` per digit whose children carry raw
+integer ids and no resource-id. Appium cannot send a whole string to the container
+(`InvalidElementStateException`), which is why `BasePage.type_code()` exists.
+
+**Maestro needs no workaround** — verified on a real device. Tapping `backup_code_view`
+focuses the first box and `inputText` types six digits that auto-advance across them, so the
+`inputText` steps in the tasks below are correct as written.
 
 **Confirmed on a real device:** the email step appears after the backup code in the RECOVERY
 journey with all strings as specified, and CONTINUE is disabled on an empty field — SE_02 and
 RE_01 effectively observed. The skip dialog's buttons render as **`YES`/`NO`** (Material
 upper-casing), not `Yes`/`No`.
 
-**Already done** (commit `a61393f`, TC_1 green): the four 2.65 repairs to the existing suite,
-including Task 1 Step 6's Forget-menu fix.
+**Already done — the whole baseline is green on BrowserStack/staging.** Commits `a61393f`
+(Appium) and `ceb1a5f` (Maestro) repair all four 2.65 breakages: the dead
+`connect_backup_code_input` locator, per-digit code entry for Appium, the newly inserted
+email step, and the renamed Forget menu item. Appium TC_1 and TC_2 pass; both Maestro flows
+pass. **Task 1 and Task 9's regression check are therefore complete** — start at Task 2.
 
 **Still open:** whether a *fresh* number clears integrity on a real device. That decides
 whether Task 5 generates numbers or draws from a pre-invited pool.
