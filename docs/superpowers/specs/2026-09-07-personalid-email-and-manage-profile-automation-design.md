@@ -139,7 +139,7 @@ cases stay readable.
 | SE_07 | Resend is hidden behind a countdown for 2 minutes, then becomes available |
 | SE_08 | A wrong code shows "You have entered the wrong 6-digit passcode. Please try again." |
 | SE_09 | Repeated failures raise "Verification unsuccessful"; "Proceed without email" continues to photo capture |
-| SE_10 | **[OTP-gated]** The correct code shows "Email Added" and continues to photo capture |
+| SE_10 | The correct code continues to photo capture, which greets the new user. **Automated in Appium** (`test_tc_11.py`), not Maestro — see §5. There is **no** "Email Added" dialog on this path; that belongs to MP_13 |
 | SE_11 | An address already held by another account shows "This email is already linked to another account. Please use a different email address." |
 | SE_12 | Exhausting the verification attempts shows "Maximum verification attempts reached. Please try again later." |
 
@@ -248,7 +248,39 @@ maestro_mobile/
 2.64 until this is updated. Fixing it is part of this work; landing new flows on a red
 suite is not acceptable.
 
-## 5. Email OTP retrieval
+## 5. Email OTP retrieval — solved
+
+**The OTP-dependent cases go in the Appium suite, not Maestro.** Reading a code means
+pausing mid-session to poll a mailbox, which only works where Python holds the session.
+That is how `dimagi-qa-sureadhere` does it for password reset, and it works against
+BrowserStack because the Python process runs locally and only the device is remote.
+
+Maestro cannot: flows execute remotely as declarative YAML with no way to call back into
+Python. It *could* fetch over HTTP via `evalScript`, but the mailbox is IMAP, and putting
+mail credentials inside a flow file would ship them to BrowserStack on every run.
+
+So SE_10, RE_03 and MP_13 are Appium; everything else stays Maestro. `utils/email_otp.py`
+provides `EmailOtpReader`, modelled on the SureAdhere implementation:
+
+```python
+mailbox = EmailOtpReader(settings)
+address = mailbox.address_for("se10")        # unique, plus-addressed
+requested_at = time.time()                    # BEFORE asking the app to send
+pid.enter_email(address)
+code = mailbox.get_verification_code(address, not_before=requested_at)
+```
+
+`not_before` matters: a failed earlier run leaves a valid code in the inbox, and without it
+a later run fails on a code that was genuinely correct at the time.
+
+Configuration is two lines in `settings.cfg` (`address`, `imap_password` — a Gmail **app
+password**, not the account password), or `QA_EMAIL_*` environment variables on CI. See
+`settings-sample.cfg`.
+
+**Proven on a real device 2026-09-08** (`test_tc_11.py`, ~7 minutes): PersonalID does deliver
+to a plus-addressed Gmail, and the code is read and accepted end to end.
+
+### Original design notes
 
 Three of the 37 cases (SE_10, RE_03, MP_13) require reading a 6-digit code from a mailbox.
 No mechanism exists in the suite today — the `+7426` demo accounts bypass phone OTP
@@ -277,7 +309,7 @@ contained change, not a rewrite.
 | 4 | Recovery account **without** an email | **Outstanding** |
 | 5 | Fresh signed-in account with no email and no prior offers (for EO_01–03) | **Outstanding** |
 | 6 | An address already bound to another account (for SE_11) | **Outstanding** |
-| 7 | QA mailbox + IMAP credentials in `settings.cfg` | Optional — gates SE_10, RE_03, MP_13 |
+| 7 | QA mailbox + IMAP credentials in `settings.cfg` | **Met** — verified reading a real code on a device 2026-09-08 |
 | 8 | BrowserStack credentials in `settings.cfg` | **Met** |
 
 **Run on BrowserStack against staging, not a local emulator.** `settings.cfg` sets
