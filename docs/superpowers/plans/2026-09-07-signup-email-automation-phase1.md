@@ -59,6 +59,32 @@ It is global per environment, managed in the ConnectID Django admin.
   pattern is: `tapOn` field → `tapOn {text: "Cancel", optional: true}` → `tapOn` field again →
   `inputText`.
 
+**Observed on the emulator, 2026-09-07 — these are not theoretical:**
+
+- **Every API-backed step fails intermittently** with an inline
+  "No network connection. Please check your internet and try again.", even though the network is
+  fully validated. It succeeds on a retry. This affects the phone Continue, the name Continue,
+  and every later submit. A one-shot `tapOn` fails more often than it passes, so **each such step
+  needs a retry**, e.g. `retry` with `maxRetries`, or an `extendedWaitUntil` on the *next* screen
+  wrapped in a repeat. The legacy `PersonalIdPage.start_signup` already loops on this exact error,
+  which corroborates it.
+- **The Play Services phone-number hint sheet has no "Cancel" text** — only an icon
+  (`com.google.android.gms:id/cancel`). The documented `tapOn: {text: "Cancel"}` does **not**
+  match this variant. Setting `autofill_service` to null does **not** suppress it either; the app
+  requests the hint picker explicitly. It must be dismissed by tapping the icon.
+- **`uiautomator dump` needs `MSYS_NO_PATHCONV=1` in Git Bash**, not just the double-slash trick
+  the README documents for `adb pull`. Without it the dump silently writes to
+  `C:/Program Files/Git/sdcard/...` and you read a stale file while believing it is current.
+- **The emulator can die mid-run.** Check `adb devices` before trusting a result; a dead device
+  produces `no devices/emulators found` on every step while a stale dump file still parses fine.
+
+**The collision guard — registration vs recovery.** An existing account takes the recovery path,
+which on this build is reached through the *same* phone → Name sequence and is easy to mistake for
+signup. Recovery is identifiable on the backup code screen by: toolbar title "Confirm Backup Code",
+plus `welcome_back`, `welcome_back_layout` and `user_photo` present, and a single code entry rather
+than a set/confirm pair. Every registration flow must assert it is **not** on that screen, so a
+number collision fails loudly instead of silently exercising recovery.
+
 ---
 
 ## File structure
@@ -613,6 +639,10 @@ def test_fresh_phone_number_is_seven_digits():
     assert re.fullmatch(r"\d{7}", number)
 
 
+def test_fresh_phone_number_uses_the_automation_block():
+    assert fresh_phone_number().startswith("129")
+
+
 def test_fresh_phone_number_is_unique_across_calls():
     numbers = {fresh_phone_number() for _ in range(5)}
     assert len(numbers) == 5
@@ -659,15 +689,32 @@ Create `maestro_mobile/scripts/test_data_gen.py`:
 ```python
 """Generation of unique, demo-safe test data for PersonalID registration flows.
 
-Registration requires a phone number with no existing account, because
-PersonalIdBackupCodeFragment routes an existing account down the recovery path
-instead. It also requires the +7426 demo prefix, because ConnectID only treats
-demo users as phone-validated and the qaAutomation build never shows the phone
-OTP screen.
+Numbering scheme (decided 2026-09-07): subscriber numbers are the fixed
+automation block AUTOMATION_BLOCK followed by four clock-derived digits, dialled
+under country code +7426.
+
+Two separate reasons for the shape:
+
+* The +7426 country code makes the user a demo user on ConnectID, which bypasses
+  SMS and marks the session phone-validated. The qaAutomation build never shows
+  the phone OTP screen, so without this the email OTP endpoints return 403
+  PHONE_NOT_VALIDATED.
+* The 129 block makes every account this suite creates identifiable at a glance,
+  so they can be audited or bulk-deactivated later. Accounts are not recycled
+  today; ConnectID's phone-number uniqueness is conditional on is_active=True, so
+  a future cleanup job can free these numbers via
+  recover/initiate_deactivation + recover/confirm_deactivation without any change
+  to this scheme.
+
+Registration additionally requires a number with no existing account: an existing
+account sends PersonalIdBackupCodeFragment down the recovery path instead. The
+flows guard against that visually - see the collision guard note in the plan.
 """
 
 import itertools
 import time
+
+AUTOMATION_BLOCK = "129"
 
 # Numbers already committed to mobile_test_data.yaml for the recovery cases.
 RESERVED_PHONE_NUMBERS = frozenset({"7426000", "7426005"})
@@ -675,18 +722,16 @@ RESERVED_PHONE_NUMBERS = frozenset({"7426000", "7426005"})
 _counter = itertools.count()
 
 
-def _unique_suffix():
-    """A value that differs on every call within a run, and across runs."""
-    return f"{int(time.time())}{next(_counter)}"
-
-
 def fresh_phone_number():
-    """A 7-digit subscriber number not used by any existing test account.
+    """A 7-digit subscriber number in the automation block, unique per call.
 
     Combined with country code +7426 this is always a demo user.
     """
     while True:
-        number = _unique_suffix()[-7:]
+        # Four digits from the clock plus an in-process counter, so numbers
+        # differ both within a run and between runs.
+        tail = f"{(int(time.time()) + next(_counter)) % 10000:04d}"
+        number = f"{AUTOMATION_BLOCK}{tail}"
         if number not in RESERVED_PHONE_NUMBERS:
             return number
 
