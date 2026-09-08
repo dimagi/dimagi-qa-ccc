@@ -1,0 +1,251 @@
+# Worker side of the channel-sort test (TC-CHN-006).
+#
+# ChannelAdapter.setChannels lists subscribed channels first and appends
+# unsubscribed ones below. This proves that by moving a channel across the
+# boundary and watching it change position.
+#
+# Why it asserts the order BEFORE unsubscribing as well: the account has several
+# channels, and if the spare already happened to sit last, "it is below the
+# anchor" would be true no matter what the app did. Checking that it starts
+# ABOVE the anchor and ends BELOW it makes the assertion about the sort rather
+# than about where the row happened to be.
+#
+# SPARE_CHANNEL is deliberately not the channel the rest of the suite delivers
+# into. Every broadcast, keyword, alert and survey test sends to CHANNEL_NAME,
+# and a run that died between unsubscribe and resubscribe would leave that
+# channel unsubscribed and quietly break all of them. The spare is expendable.
+#
+# Ids come from commcare-android:
+#   tvUnsubscribedPill   the "unsubscribed" marker on a channel row
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  # The channel that gets unsubscribed and restored. Its position in the list
+  # does not matter: this flow asserts the subscribed/unsubscribed BOUNDARY, not
+  # where any channel sits within the subscribed group.
+  SPARE_CHANNEL: "connectqa"
+  # A channel that stays subscribed throughout, used as the position anchor.
+  CHANNEL_NAME: "connectqa-automation-prod"
+  NOT_SUBSCRIBED_TEXT: "You are not subscribed to this messaging channel"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap. Staging build 7712d963
+      # failed that way: the screenshot shows the dialog still up, and the flow
+      # failing several steps later on a tap that never had a chance.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel list ---
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${SPARE_CHANNEL}"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+
+# --- Put the account back if a previous run died mid-way ---
+# This flow unsubscribes and then restores, so a run that fails in between
+# leaves the spare flagged. The pre-assert below would then fail for a reason
+# with nothing to do with sorting, and every later run would fail the same way
+# until somebody fixed the account by hand. Restoring it here first makes the
+# case recoverable on its own.
+- runFlow:
+    when:
+      visible:
+        id: "tvUnsubscribedPill"
+    commands:
+      - tapOn:
+          text: "${SPARE_CHANNEL}"
+      - extendedWaitUntil:
+          visible:
+            id: "etMessage"
+          timeout: 60000
+      - tapOn:
+          text: "More options"
+      - tapOn:
+          text: "Resubscribe"
+      - tapOn:
+          text: "Resubscribe"
+      - extendedWaitUntil:
+          notVisible:
+            text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+          timeout: 30000
+      - runFlow: shared_back_to_channels.yaml
+
+# --- Both are subscribed to begin with, and the spare sits ABOVE the anchor ---
+# If this still fails, the account is not in the state this case assumes and the
+# run should stop rather than assert a sort it cannot actually observe.
+- assertNotVisible:
+    id: "tvUnsubscribedPill"
+
+# --- Unsubscribe the spare ---
+- tapOn:
+    text: "${SPARE_CHANNEL}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Unsubscribe"
+- tapOn:
+    text: "Unsubscribe"
+- extendedWaitUntil:
+    visible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+
+# --- TC-CHN-006: it is now flagged, and sits BELOW a still-subscribed channel ---
+# Asserted against the boundary rather than an absolute position, because the
+# order WITHIN the subscribed group is not stable: prod showed three different
+# orders in three days with all four channels subscribed, and an earlier version
+# of this flow failed twice on a starting-order assumption the app never made.
+# ChannelAdapter partitions subscribed above unsubscribed, and that is the claim
+# worth testing.
+#
+# Known limit: if the spare already happened to be the bottom row, "below the
+# anchor" was true before we unsubscribed, so that run does not prove the row
+# moved. It still cannot pass if the app stops partitioning, which is the failure
+# that matters. Proving movement every time would need the live order read at
+# runtime and the spare chosen from it, which Maestro does not express cleanly.
+- runFlow: shared_back_to_channels.yaml
+- assertVisible:
+    id: "tvUnsubscribedPill"
+- assertVisible:
+    text: "${SPARE_CHANNEL}"
+    below:
+      text: "${CHANNEL_NAME}"
+
+# --- Restore it, and the account, to how it was found ---
+- tapOn:
+    text: "${SPARE_CHANNEL}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 30000
+- tapOn:
+    text: "More options"
+- tapOn:
+    text: "Resubscribe"
+- tapOn:
+    text: "Resubscribe"
+- extendedWaitUntil:
+    notVisible:
+      text: ".*${NOT_SUBSCRIBED_TEXT}.*"
+    timeout: 30000
+- runFlow: shared_back_to_channels.yaml
+# No row is flagged any more, and the spare is back above the anchor - which is
+# also what proves the earlier move was the sort reacting to subscription state
+# rather than the row simply living at the bottom.
+- assertNotVisible:
+    id: "tvUnsubscribedPill"

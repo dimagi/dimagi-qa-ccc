@@ -1,0 +1,258 @@
+# Worker side of the hybrid keyword-survey test (TC-KWD-004 / TC-KWD-005).
+#
+# Web configures a keyword whose reply is a Connect Survey; this flow has the
+# worker send that keyword from the channel and then answer the survey question
+# by question, which is the combination messaging_keyword.yaml (send, expect a
+# reply) and messaging_survey.yaml (answer a survey) each cover half of.
+#
+# What makes this different from TC-KWD-002: there the reply is a single canned
+# message, so one bubble ends the test. Here the reply is a conversation, and
+# each question only arrives once the previous is answered - so reaching the
+# last one proves HQ is running the survey rather than echoing a string.
+#
+# The survey questions and answers are env values rather than literals, the same
+# way the other two survey flows carry them, so repointing the suite at a
+# different form does not mean editing this file.
+#
+# Ids come from commcare-android fragment_connect_message.xml:
+#   etMessage        the composer
+#   imgSendMessage   GONE until the composer is non-empty AND the channel is
+#                    consented, so it is asserted before being tapped
+#   tvChatDate       a delivered bubble's timestamp
+#
+# THIS FLOW BOTH SUFFERS AND CAUSES the stranded-survey problem documented at
+# the top of messaging_keyword.yaml: it fails if an earlier survey is still
+# open, because its keyword is consumed as an answer to that survey rather than
+# starting this one - and if it dies partway through its own questions it
+# strands a survey for whatever runs next on this worker's channel.
+#
+# It is therefore ordered after messaging_keyword.yaml (which never strands
+# anything) and before messaging_survey.yaml, so the only test it can poison is
+# one that is already a survey test and diagnoses the same way.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426121"
+  USERNAME: "CCC- Automationuser1"
+  BACKUP_CODE: "123123"
+  CHANNEL_NAME: "connectqa-automation-prod"
+  KEYWORD: "AUTOKW000000"
+  Q1_LABEL: "Enter case name"
+  Q1_ANSWER: "Automation Keyword Survey"
+  Q2_LABEL: "Define External ID"
+  Q2_ANSWER: "101"
+  Q3_LABEL: "Enter age"
+  Q3_ANSWER: "30"
+  Q4_LABEL: "Enter appointment date"
+  Q4_ANSWER: "20260901"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - assertVisible:
+          id: "welcome_back"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap. Staging build 7712d963
+      # failed that way: the screenshot shows the dialog still up, and the flow
+      # failing several steps later on a tap that never had a chance.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - assertNotVisible:
+          id: "connect_backup_code_error_message"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          text: "Open navigation drawer"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_drawer_recycler"
+          timeout: 15000
+
+# --- Open the channel ---
+# Open Messaging from the drawer, and retry until the Channels screen is really
+# there.
+#
+# The drawer is opened by completeSignin() and slides in. Tapping a row while
+# that animation is still running is accepted by Maestro - the row's final
+# bounds are already in the view hierarchy, and the ripple registers as
+# "Something have changed in the UI judging by view hierarchy" - but
+# DrawerLayout swallows the touch. The tap reports COMPLETED and nothing
+# navigates.
+#
+# Prod build 2b090dc6 is exactly that: "Tap on Messaging COMPLETED" at 16:41:06,
+# the Channels assertion failing 60s later, and the failure screenshot still
+# showing the drawer wide open over the home screen. Same shape as the
+# notification banner and the backup-code guard - a step that succeeds while
+# doing nothing.
+#
+# That one swallowed tap was expensive out of proportion to itself: it stranded
+# a half-answered survey on the channel, and the next two tests sent their
+# keywords into that open survey instead of to keyword processing. See the note
+# on the keyword flows.
+#
+# So settle first, then retry the tap while Channels is still absent. The tap is
+# optional because a swallowed tap reports success anyway and therefore cannot
+# be the thing that decides this worked; the wait after the loop is.
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              text: "Channels"
+          commands:
+            - tapOn:
+                text: "Messaging"
+                optional: true
+            - waitForAnimationToEnd:
+                timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Channels"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "${CHANNEL_NAME}"
+    timeout: 120000
+- tapOn:
+    text: "${CHANNEL_NAME}"
+- extendedWaitUntil:
+    visible:
+      id: "etMessage"
+    timeout: 60000
+
+# --- Send the keyword ---
+- tapOn:
+    id: "etMessage"
+- inputText: "${KEYWORD}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# The outgoing bubble is optimistic - stored and drawn locally before the
+# network call - so it proves the UI accepted the input, nothing more. The first
+# question coming back is what proves the keyword reached the server.
+- extendedWaitUntil:
+    visible:
+      text: ".*${KEYWORD}.*"
+    timeout: 60000
+
+# --- Question 1, which is the keyword's reply ---
+# device -> ConnectID -> HQ keyword processing -> survey start -> back down over
+# FCM, plus the thread's own 30s poll, so allow several minutes.
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_LABEL}.*"
+    timeout: 420000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q1_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q1_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 2 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q2_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q2_ANSWER}.*"
+    timeout: 60000
+
+# --- Question 3 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q3_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q3_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+# No echo assertion here, for the same reason as the other survey flows: the
+# answer is a bare number and bubbles carry timestamps, so ".*30.*" would match
+# "10:30" on an unrelated row. Question 4 arriving is the stronger proof.
+
+# --- Question 4 ---
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_LABEL}.*"
+    timeout: 300000
+- tapOn:
+    id: "etMessage"
+- inputText: "${Q4_ANSWER}"
+- assertVisible:
+    id: "imgSendMessage"
+- tapOn:
+    id: "imgSendMessage"
+- extendedWaitUntil:
+    visible:
+      text: ".*${Q4_ANSWER}.*"
+    timeout: 60000
+
+- assertVisible:
+    id: "tvChatDate"

@@ -19,6 +19,22 @@ appId: org.commcare.dalvik
 
 # An existing PersonalID user lands on "Welcome back <name>" and authenticates
 # with a backup code; a brand new number skips straight past this.
+# Wait for the backup-code screen before testing for it. Maestro's runFlow
+# `when` is a POINT-IN-TIME check, not a wait: tapping CONTINUE on the phone
+# step starts a server round trip, and this condition used to be evaluated
+# milliseconds later, before "Confirm Backup Code" had rendered. The whole block
+# was then skipped and the flow walked on to later steps while still sitting on
+# the code screen - failing several steps afterwards on an element that never
+# had a chance (prod build 81f3043b, where the screenshot shows the code field
+# empty and the keyboard still up).
+#
+# Safe as an unconditional wait because every flow reaching here signs in as an
+# established account, which always gets this screen. The signup flow, which may
+# not, does not use this block.
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
 - runFlow:
     when:
       visible:
@@ -29,9 +45,36 @@ appId: org.commcare.dalvik
       - inputText: "${BACKUP_CODE}"
       - tapOn:
           id: "connect_backup_code_button"
-      - tapOn:
-          text: "OK"
-          optional: true
+      # The "Account Recovered" dialog lands a moment AFTER the code is
+      # accepted, so a single optional tap can run before it exists, warn, and
+      # leave the modal sitting over every later tap.
+      #
+      # Prod build b238ea98 is that exactly: the optional OK tap ran at
+      # 07:36:01 and WARNED at 07:36:08 having found nothing, the dialog then
+      # arrived, and "More options" FAILED at 07:36:27 with the failure
+      # screenshot showing "Account Recovered" still up and its OK button
+      # unpressed. The tap that mattered had already been spent on an empty
+      # screen.
+      #
+      # Guarded on the dialog actually being present, and repeated so whichever
+      # attempt runs after it appears is the one that dismisses it. Cheap when
+      # the dialog never shows, which is the common case.
+      #
+      # This is the same block the messaging flows already carry. It belonged
+      # here too and did not get copied across when it was written - the reason
+      # this flow kept failing several steps downstream of the real problem.
+      - repeat:
+          times: 3
+          commands:
+            - runFlow:
+                when:
+                  visible:
+                    text: ".*Account Recovered.*"
+                commands:
+                  - tapOn:
+                      text: "OKAY|OK"
+            - waitForAnimationToEnd:
+                timeout: 2500
       - assertNotVisible:
           id: "connect_backup_code_error_message"
 
