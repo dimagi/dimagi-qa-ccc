@@ -310,3 +310,23 @@ MESSAGING:
 # "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.
 OLP_NM_CREATE:
   managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
+
+# Opportunity Dashboard (OD_1-OD_19, read-only tier). One fully-configured
+# opportunity to open. "Demo Opportunity" is the automation-seeded opp (same one
+# OLP_4 uses) and exists on both environments; add an _staging override if the
+# staging seed ever diverges. If the name is not found the test falls back to the
+# first row in the list, so the suite stays runnable without seed coupling.
+OPD:
+  opportunity_name: "Demo Opportunity"
+  # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
+  # tests/test_opd_gaps.py. Each is skipped until its key is filled in; add a
+  # _staging suffix for a staging-specific value.
+  # nm_org: ""            # OD_20: a Network Manager org that can see the opp
+  # viewer_username: ""   # OD_21: a VIEWER-role account
+  # standalone_opp: ""    # OD_22: a standalone (non-program) opportunity name
+  # incomplete_opp: ""    # OD_23: an opportunity with setup not complete
+  # test_opp: ""          # OD_26: an is_test opportunity name
+  # microplanning_opp: "" # OD_28: an opportunity with the MICROPLANNING flag on
+  # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
+  # ended_opp: ""         # OD_37: an ended opportunity name
+  # autoverify_opp: ""    # OD_43: an automatic_visit_verification opportunity
