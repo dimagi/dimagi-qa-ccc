@@ -128,8 +128,8 @@ cases stay readable.
 | SE_01 | After the backup code is set, the Email step is shown, titled "Add your email (optional)" with the account-recovery description |
 | SE_02 | Continue stays disabled until a validly formatted address is entered |
 | SE_03 | An invalid address shows "Please enter a valid email address." |
-| SE_04 | "Skip for now" raises "Skip email?" / "Are you sure you want to skip?"; dismissing it returns to the Email step with the typed value intact |
-| SE_05 | Confirming the skip continues to photo capture |
+| SE_04 | "Skip for now" raises "Skip email?" / "Are you sure you want to skip?"; **NO** returns to the Email step with the typed value intact |
+| SE_05 | **YES** continues to photo capture |
 
 ### 3.2 Signup — `signup_email_verify.yaml` (REGISTRATION)
 
@@ -278,7 +278,19 @@ contained change, not a rewrite.
 | 5 | Fresh signed-in account with no email and no prior offers (for EO_01–03) | **Outstanding** |
 | 6 | An address already bound to another account (for SE_11) | **Outstanding** |
 | 7 | QA mailbox + IMAP credentials in `settings.cfg` | Optional — gates SE_10, RE_03, MP_13 |
-| 8 | Emulator or device on ADB, Maestro CLI, `JAVA_HOME` | Per `maestro_mobile/README.md` |
+| 8 | BrowserStack credentials in `settings.cfg` | **Met** |
+
+**Run on BrowserStack against staging, not a local emulator.** `settings.cfg` sets
+`run_on = browserstack` and `env.yaml` defaults to `stage`, which is where the `+7426` test
+accounts exist. This is not a preference — a local emulator **cannot** register a fresh
+account: Google Play Integrity rejects a side-loaded build, and the only bypass in ConnectID
+is `UserInvite.objects.filter(phone_number=...).exists()`, i.e. the number must already be
+invited to an opportunity on Connect. A real BrowserStack device (Pixel 7 / Android 13, with
+`enableBiometric: true`) clears integrity and needs no such invite for an existing account.
+
+Whether a **fresh** number clears integrity on a real device is still untested, and it is the
+open question behind precondition 3-6. If it does not, registration cases need a pool of
+pre-invited numbers rather than generated ones.
 
 ## 7. Selector appendix (2.64)
 
@@ -330,11 +342,38 @@ All ids are prefixed `org.commcare.dalvik:id/` in Maestro selectors.
 | Countdown / Resend | `personalid_resend_countdown_text` / `personalid_email_resend_button` |
 | Verify | `personalid_email_verify_button` |
 
+**Code entry fields — not plain text inputs**
+
+The backup code and both OTP fields are `org.commcare.views.connect.NumericCodeView`
+(introduced 2.64, commcare-android `3d194096c`): a `LinearLayout` that builds one `EditText`
+per digit at runtime. The children are assigned raw integer ids via `setId(index)`, so they
+carry **no resource-id** and can only be reached by class.
+
+Consequences, both confirmed on a real device:
+
+- Sending a whole string to the container fails — Appium raises
+  `InvalidElementStateException: Cannot set the element to '123456'`. `BasePage.type_code()`
+  fills the child `EditText`s one digit at a time; the Maestro flows need the equivalent
+  rather than a single `inputText` against `backup_code_view`.
+- The registration screen carries **two** such widgets (`backup_code_view` +
+  `confirm_code_view`); recovery carries only `backup_code_view`, alongside
+  `welcome_back_layout`, `user_photo` and `not_me_button`. That difference is the most
+  reliable registration-vs-recovery check — see the collision guard in the plan.
+- Entry auto-submits on the sixth digit (`setCodeCompleteListener`), so no Verify tap is
+  needed after filling an OTP.
+
+**Text casing — two different rules**
+
+Material **buttons** upper-case their labels, so the skip dialog's `Yes`/`No` string
+resources render as **`YES`/`NO`** and must be matched that way. Material **menu items** do
+not, so the overflow entry really is `Forget PersonalID Account`. Both are `@text` matches
+and they behave differently; check a screenshot before trusting a string resource.
+
 **Dialog strings**
 
 | Context | Text |
 |---|---|
-| Skip email | "Skip email?" / "Are you sure you want to skip?" |
+| Skip email | "Skip email?" / "Are you sure you want to skip?" / **YES** / **NO** |
 | OTP failure | "Verification unsuccessful" / "Try again" / "Proceed without email" |
 | Email added | "Email Added" / "Your email has been added successfully." |
 | Email offer | "Add your email address" / "Add email" / "Not now" |

@@ -18,6 +18,43 @@ helper unit tests, Android emulator `Medium_Phone_API_36.0` over ADB.
 
 ---
 
+## Revision 2026-09-08 — read this first
+
+Task 1 has been **superseded**. Ground truth was established by repairing and running the
+existing Appium suite on BrowserStack instead of walking a local emulator, and several
+assumptions below turned out to be wrong. What changed:
+
+**Run on BrowserStack against staging.** Not a local emulator. `settings.cfg` already sets
+`run_on = browserstack`; `env.yaml` defaults to `stage`. A local emulator *cannot* register a
+fresh account — Play Integrity rejects a side-loaded build and the only ConnectID bypass is an
+existing `UserInvite` for that number. A real Pixel 7 clears it. Roughly a day was lost to
+this; do not repeat it.
+
+**Biometrics need no bypass.** BrowserStack's `enableBiometric: true` plus
+`simulate_fingerprint()` handles it. The qaAutomation build's `IS_QA_AUTOMATION` bypasses
+(unlock skip, phone → name shortcut, auto-photo) are real but are **not** what the suite
+relies on, and the shortened signup path described below applies only to that build.
+
+**Code fields are not text inputs.** The backup code and both OTP fields are
+`NumericCodeView` — a `LinearLayout` of one `EditText` per digit, children with raw integer
+ids and no resource-id. Sending a whole string to the container raises
+`InvalidElementStateException`. `BasePage.type_code()` handles this for Appium; **the Maestro
+flows need an equivalent**, so `inputText` against `backup_code_view` in the tasks below will
+not work as written. This is the largest unresolved risk in the plan.
+
+**Confirmed on a real device:** the email step appears after the backup code in the RECOVERY
+journey with all strings as specified, and CONTINUE is disabled on an empty field — SE_02 and
+RE_01 effectively observed. The skip dialog's buttons render as **`YES`/`NO`** (Material
+upper-casing), not `Yes`/`No`.
+
+**Already done** (commit `a61393f`, TC_1 green): the four 2.65 repairs to the existing suite,
+including Task 1 Step 6's Forget-menu fix.
+
+**Still open:** whether a *fresh* number clears integrity on a real device. That decides
+whether Task 5 generates numbers or draws from a pre-invited pool.
+
+---
+
 ## Critical context for the implementer
 
 Read this before Task 1. Getting any of it wrong produces failures that look like app bugs.
