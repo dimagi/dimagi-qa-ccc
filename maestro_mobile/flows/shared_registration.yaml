@@ -1,0 +1,148 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never run standalone (it would fail on
+# BrowserStack, which runs every listed flow directly). Carries no assertions of
+# its own beyond what it needs to make progress.
+#
+# Drives a BRAND NEW PersonalID account from a cleared app to the point just after
+# the backup code is set. On 2.64+ with the email_otp_verification switch active
+# that leaves the app on the email screen; with the switch off it lands on photo
+# capture instead. Callers assert whichever they expect.
+#
+# Registration requires a number with no existing account: an existing one sends
+# the backup code screen down the recovery path, which looks similar but behaves
+# differently. The caller asserts confirm_code_view is present to catch that -
+# see the collision guard below.
+#
+# Inputs (env from the calling flow):
+#   USERNAME     - name to register under
+#   BACKUP_CODE  - 6 digits
+# Outputs:
+#   output.phoneNumber - the generated subscriber number, for the caller to log
+#                        or assert against.
+
+# 129xxxx is the reserved automation block; the tail comes from the clock so
+# repeat runs never collide. Country code +7426 makes this a ConnectID demo user,
+# which bypasses SMS and marks the session phone-validated.
+- evalScript: ${output.phoneNumber = '129' + String(Date.now()).slice(-4)}
+
+- launchApp:
+    clearState: true
+- tapOn:
+    text: "Open navigation drawer"
+- assertVisible:
+    text: "About CommCare"
+- tapOn:
+    id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+- assertVisible:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+
+# The Play Services phone-number hint sheet steals focus on first tap of a
+# phone-adjacent field. It carries no "Cancel" text on every variant, so the tap
+# is optional and the field is re-tapped afterwards.
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- eraseText
+- inputText: "+7426"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- eraseText
+- inputText: ${output.phoneNumber}
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_consent_check"
+- tapOn:
+    text: "CONTINUE"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
+
+# Name. The qaAutomation build goes straight here from the phone screen - no
+# biometric configuration and no phone OTP.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/nameTextValue"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- inputText: "${USERNAME}"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "CONTINUE"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
+
+# Backup code. Both fields are NumericCodeView - a LinearLayout of one EditText
+# per digit. Tapping the container focuses the first box and inputText types six
+# digits that auto-advance, so no per-digit handling is needed.
+#
+# COLLISION GUARD: registration shows a set field AND a confirm field. Recovery
+# shows only backup_code_view, alongside welcome_back and user_photo. If the
+# generated number already had an account, confirm_code_view is absent and this
+# assertion fails loudly rather than quietly exercising recovery.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/backup_code_view"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/confirm_code_view"
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/welcome_back"
+
+# Tap the FIRST BOX, not the container. Maestro taps a container's centre, and
+# The Code field's first box already holds focus when the screen opens, so its
+# digits land correctly with no tap at all. See the note on the Confirm field
+# below for why tapping these boxes cannot be done by selector.
+- inputText: "${BACKUP_CODE}"
+
+# Focusing the Confirm field has to be done by coordinate, and this is why:
+#
+# NumericCodeView builds six EditTexts at runtime with setId(index), so they have
+# raw integer ids - no resource-id, no text, no content description. Nothing for
+# a Maestro selector to match. `childOf` + `index` does NOT reach them: it
+# resolves back to the LinearLayout container and taps its centre, which lands in
+# the gap between box 3 and box 4 and focuses nothing. Verified from the run log:
+#   element bounds: 194,1321 922,1465 android.widget.LinearLayout  TAP AT: 558 1393
+#
+# The Code field survives this because its first box already holds focus when the
+# screen opens; Confirm does not, so its digits went to the full Code field and
+# were silently discarded.
+#
+# 23%,58% is the centre of Confirm's first box on the Pixel 7 (1080x2400) that
+# BrowserStack runs - box centre (254, 1392) from the observed bounds. If this
+# flow starts failing with an empty Confirm field on a different device or after a
+# layout change, this is the line to re-derive.
+- assertVisible:
+    id: "org.commcare.dalvik:id/confirm_code_view"
+- tapOn:
+    point: "23%,58%"
+- inputText: "${BACKUP_CODE}"
+
+# Tapped without hiding the keyboard first: the button sits behind it, but a
+# tapOn resolves by element rather than by what is on top, and this was observed
+# working. Do not assertVisible on it here - that does require it uncovered.
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
