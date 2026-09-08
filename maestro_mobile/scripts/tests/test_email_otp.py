@@ -5,7 +5,7 @@ plumbing is left to integration use, since faking an IMAP server would test the
 fake rather than the mailbox.
 """
 
-from scripts.email_otp import extract_otp
+from utils.email_otp import extract_otp
 
 
 def test_extract_otp_finds_a_six_digit_code():
@@ -35,3 +35,9 @@ def test_extract_otp_returns_none_for_empty_body():
 
 def test_extract_otp_returns_none_for_none_body():
     assert extract_otp(None) is None
+
+
+def test_extract_otp_ignores_the_expiry_minutes_in_the_real_body():
+    # The real PersonalID email carries two numbers - the code and the expiry.
+    body = "Your email verification code is: 481920\nThis code expires in 10 minutes."
+    assert extract_otp(body) == "481920"
