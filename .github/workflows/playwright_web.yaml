@@ -68,6 +68,12 @@ jobs:
       TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
+      # VIEWER-role account for the read-only dashboard test (OD_21). Connect-native
+      # login (no HQ). The test reads these via env, falling back to settings.cfg
+      # [viewer]; without them OD_21 skips. Add repo secrets viewer_username /
+      # viewer_password to enable it in CI.
+      viewer_username: ${{ secrets.viewer_username }}
+      viewer_password: ${{ secrets.viewer_password }}
       # Per-PR runs skip on_demand tests (real-device Maestro builds); a manual
       # workflow_dispatch runs everything.
       PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand' || '' }}
