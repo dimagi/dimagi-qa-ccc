@@ -140,7 +140,7 @@ cases stay readable.
 | SE_08 | A wrong code shows "You have entered the wrong 6-digit passcode. Please try again." |
 | SE_09 | Repeated failures raise "Verification unsuccessful"; "Proceed without email" continues to photo capture |
 | SE_10 | The correct code continues to photo capture, which greets the new user. **Automated in Appium** (`test_tc_11.py`), not Maestro — see §5. There is **no** "Email Added" dialog on this path; that belongs to MP_13 |
-| SE_11 | An address already held by another account shows "This email is already linked to another account. Please use a different email address." |
+| SE_11 | **Moved to Manage Profile - see MP_19.** Not reachable during signup: `verify_email_otp` parks the address on the ConfigurationSession with no uniqueness check when no account exists yet. The error is an `IntegrityError` raised only when writing an email onto an *existing* user, so it needs the `EXISTING_USER` path AND a correct code |
 | SE_12 | Exhausting the verification attempts shows "Maximum verification attempts reached. Please try again later." |
 
 ### 3.3 Recovery — `recovery_email_prompt.yaml` (RECOVERY)
@@ -207,6 +207,7 @@ cases stay readable.
 |---|---|
 | MP_17 | "Forget PersonalID Account" raises "Forget PersonalID?"; Cancel keeps the account signed in |
 | MP_18 | Confirming clears the account and returns the app to its signed-out state |
+| MP_19 | Changing the email to one another account already uses is rejected with "This email is already linked to another account. Please use a different email address." **[needs a real code - Appium]** Moved here from SE_11 |
 
 ## 4. Structure and conventions
 
@@ -308,7 +309,7 @@ contained change, not a rewrite.
 | 3 | Recovery account **with** a verified email | **Outstanding** |
 | 4 | Recovery account **without** an email | **Outstanding** |
 | 5 | Fresh signed-in account with no email and no prior offers (for EO_01–03) | **Outstanding** |
-| 6 | An address already bound to another account (for SE_11) | **Outstanding** |
+| 6 | An address already bound to another account (for MP_19) | **Met** - `automation.user.commcarehq+se101788875825@gmail.com`, bound by a passing SE_10 run |
 | 7 | QA mailbox + IMAP credentials in `settings.cfg` | **Met** — verified reading a real code on a device 2026-09-08 |
 | 8 | BrowserStack credentials in `settings.cfg` | **Met** |
 

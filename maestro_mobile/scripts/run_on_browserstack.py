@@ -15,7 +15,7 @@ FLOWS_DIR = Path(__file__).parent.parent / "flows"
 APK_PATH = PROJECT_ROOT / "app" / "app-cccStaging-release.apk"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
-TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml"]
+TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml", "signup_email_add.yaml", "signup_email_verify.yaml"]
 POLL_INTERVAL_SECONDS = 15
 
 
