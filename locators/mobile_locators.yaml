@@ -209,3 +209,20 @@ messaging:
 otp_page:
   one_time_verification_txt: "org.commcare.dalvik:id/connect_phone_verify_title"
   change_btn: "org.commcare.dalvik:id/connect_phone_verify_change"
+
+  # Email verification screen (2.64+). otp_code_view is a NumericCodeView like
+  # the backup code fields, so it needs type_code rather than send_keys, and it
+  # auto-submits on the sixth digit - no Verify tap required.
+  email_otp_input: "org.commcare.dalvik:id/otp_code_view"
+  email_verify_btn: "org.commcare.dalvik:id/personalid_email_verify_button"
+  email_verify_error: "org.commcare.dalvik:id/personalid_email_verify_error"
+  email_verify_description: "org.commcare.dalvik:id/email_verification_description"
+  email_resend_btn: "org.commcare.dalvik:id/personalid_email_resend_button"
+  email_resend_countdown: "org.commcare.dalvik:id/personalid_resend_countdown_text"
+
+  # Photo capture - where a successful REGISTRATION verify lands. There is no
+  # "Email Added" dialog on this path; that one belongs to the EXISTING_USER
+  # workflow (Manage Profile).
+  photo_capture_title: "org.commcare.dalvik:id/title"
+  take_photo_btn: "org.commcare.dalvik:id/take_photo_button"
+  save_photo_btn: "org.commcare.dalvik:id/save_photo_button"

@@ -62,9 +62,14 @@ class EmailOtpReader:
         self.imap_host = settings.get(
             section="email", key="imap_host", env_var="QA_EMAIL_IMAP_HOST", default="imap.gmail.com"
         )
-        self.imap_user = settings.get(section="email", key="imap_user", env_var="QA_EMAIL_IMAP_USER")
-        self.imap_pass = settings.get(section="email", key="imap_password", env_var="QA_EMAIL_IMAP_PASSWORD")
         self.base_address = settings.get(section="email", key="address", env_var="QA_EMAIL_ADDRESS")
+        # For Gmail the mailbox and the IMAP user are the same, so imap_user is
+        # optional - only set it where they genuinely differ.
+        self.imap_user = (
+            settings.get(section="email", key="imap_user", env_var="QA_EMAIL_IMAP_USER")
+            or self.base_address
+        )
+        self.imap_pass = settings.get(section="email", key="imap_password", env_var="QA_EMAIL_IMAP_PASSWORD")
 
         if not (self.imap_user and self.imap_pass):
             raise RuntimeError(
