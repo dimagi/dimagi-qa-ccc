@@ -24,6 +24,11 @@ class PersonalIDPage(BasePage):
     WRONG_BACKUP_CODE_TXT = locators.get("login_page", "wrong_backup_code_txt")
     NETWORK_ERROR_TXT = locators.get("login_page", "network_connection_err_txt")
     PROGRESS_BAR = locators.get("login_page", "progress_bar")
+    EMAIL_INPUT = locators.get("login_page", "email_input")
+    EMAIL_SKIP_BTN = locators.get("login_page", "email_skip_btn")
+    EMAIL_CONTINUE_BTN = locators.get("login_page", "email_continue_btn")
+    EMAIL_ERROR_TXT = locators.get("login_page", "email_error_txt")
+    EMAIL_SKIP_CONFIRM_YES = locators.get("login_page", "email_skip_confirm_yes")
 
     def enter_phone_number(self, phone_number):
         self.type_element(self.PHONE_INPUT, phone_number)
@@ -94,9 +99,24 @@ class PersonalIDPage(BasePage):
             welcome_text
         )
 
+    def skip_email_if_present(self):
+        """Dismiss the optional email step that 2.64+ adds after the backup code.
+
+        The step only appears when the email_otp_verification switch is active on
+        ConnectID and the account has no verified email, so this is deliberately
+        tolerant of it being absent. Returns True if it was skipped.
+        """
+        if not self.is_displayed(self.EMAIL_SKIP_BTN, timeout=15):
+            return False
+        self.click_element(self.EMAIL_SKIP_BTN)
+        # Confirmation dialog - the buttons reuse the app-linking Yes/No strings.
+        self.click_element(self.EMAIL_SKIP_CONFIRM_YES)
+        return True
+
     def enter_backup_code(self, code):
-        self.type_element(self.BACKUP_CODE_INPUT, code)
+        self.type_code(self.BACKUP_CODE_INPUT, code)
         self.click_when_enabled(self.CONTINUE_BTN)
+        self.skip_email_if_present()
         self.wait_for_element(self.OK_BTN)
         self.click_element(self.OK_BTN)
 
@@ -109,7 +129,7 @@ class PersonalIDPage(BasePage):
         self.enter_backup_code(mobile_backup_code)
 
     def verify_wrong_backup_code_err(self):
-        self.type_element(self.BACKUP_CODE_INPUT, "123456")
+        self.type_code(self.BACKUP_CODE_INPUT, "123456")
         self.click_when_enabled(self.CONTINUE_BTN)
         toast = self.wait_for_element(self.WRONG_BACKUP_CODE_TXT)
         toast_text = toast.text

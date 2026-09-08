@@ -4,7 +4,12 @@ home_page:
   header_username: "org.commcare.dalvik:id/header_user_name"
   about_commcare_txt: "//android.widget.TextView[contains(@text,'About CommCare')]"
   more_option_btn: "//android.view.ViewGroup[@resource-id='org.commcare.dalvik:id/toolbar']//android.widget.ImageView"
-  forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID user')]"
+  # 2.64+ renamed this menu item from "Forget PersonalID user" to
+  # "Forget PersonalID Account" (the string personalid_forget_user was dropped and
+  # the Login menu now reuses personalid_profile_forget_account). Match the stable
+  # prefix so both spellings work. Menu items are not upper-cased, unlike the
+  # Material dialog buttons.
+  forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID')]"
   refresh_opportunities_btn: "//android.widget.TextView[contains(@text,'Refresh Opportunities')]"
   go_to_connect_btn: "//android.widget.Button[contains(@text,'GO TO CONNECT MENU')]"
 
@@ -28,12 +33,30 @@ login_page:
 
   name_input: "org.commcare.dalvik:id/nameTextValue"
   backup_code_welcome_text: "org.commcare.dalvik:id/welcome_back"
-  backup_code_input: "org.commcare.dalvik:id/connect_backup_code_input"
+  # 2.64+ replaced the backup code text inputs with 6-box NumericCodeView
+  # widgets (commcare-android 3d194096c). Registration shows both fields;
+  # recovery shows only backup_code_view.
+  backup_code_input: "org.commcare.dalvik:id/backup_code_view"
+  confirm_code_input: "org.commcare.dalvik:id/confirm_code_view"
+  backup_code_visibility_toggle: "org.commcare.dalvik:id/backup_code_visibility_toggle"
+  backup_code_error_msg: "org.commcare.dalvik:id/connect_backup_code_error_message"
   wrong_backup_code_txt: "//android.widget.TextView[contains(@text, 'You have entered the wrong Backup Code')]"
   popup_msg_txt: "org.commcare.dalvik:id/connect_message_message" # generic
 
   network_connection_err_txt: "//android.widget.TextView[contains(@text, 'network connection')]"
   progress_bar: "org.commcare.dalvik:id/progress_bar"
+
+  # 2.64+ inserts an optional email step after the backup code, in both the
+  # registration and recovery journeys. Gated on the email_otp_verification
+  # switch on ConnectID - when that is off the step does not appear at all.
+  email_input: "org.commcare.dalvik:id/email_text_value"
+  email_skip_btn: "org.commcare.dalvik:id/personalid_email_skip_button"
+  email_continue_btn: "org.commcare.dalvik:id/personalid_email_continue_button"
+  email_error_txt: "org.commcare.dalvik:id/personalid_email_error"
+  # The skip confirmation reuses the app-linking Yes/No strings, not Skip/Cancel,
+  # and Material buttons render them upper-cased - match both spellings.
+  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
+  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
 
 mobile_notifications:
   invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"

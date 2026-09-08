@@ -12,12 +12,12 @@ env:
     id: "org.commcare.dalvik:id/welcome_back"
     text: "Welcome back ${USERNAME}"
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "org.commcare.dalvik:id/backup_code_view"
 - tapOn:
     text: "Cancel"
     optional: true
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "org.commcare.dalvik:id/backup_code_view"
 - inputText: "123456"
 - tapOn:
     text: "Cancel"
@@ -29,12 +29,12 @@ env:
 - tapOn:
     text: "OK"
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "org.commcare.dalvik:id/backup_code_view"
 - tapOn:
     text: "Cancel"
     optional: true
 - tapOn:
-    id: "org.commcare.dalvik:id/connect_backup_code_input"
+    id: "org.commcare.dalvik:id/backup_code_view"
 - inputText: "${BACKUP_CODE}"
 - tapOn:
     text: "Cancel"
