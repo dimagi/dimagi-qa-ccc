@@ -27,9 +27,27 @@ def _login_and_open_workers(page, config, settings):
     return workers
 
 
-def test_pid_56_57_58_personalid_unlink_on_mobile_workers(page, config, settings):
-    """PID_56 + PID_57 + PID_58 as a single login/logout journey."""
-    workers = _login_and_open_workers(page, config, settings)
+@pytest.fixture(scope="module")
+def workers(browser, config, settings):
+    """One CCHQ login for the whole module; each test re-navigates to a clean
+    Mobile Workers list with workers.open(config). Retries the flaky login once."""
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        try:
+            wk = _login_and_open_workers(page, config, settings)
+        except Exception:
+            page.close()
+            page = context.new_page()
+            wk = _login_and_open_workers(page, config, settings)
+        yield wk
+    finally:
+        context.close()
+
+
+def test_pid_56_57_58_personalid_unlink_on_mobile_workers(workers, config):
+    """PID_56 + PID_57 + PID_58 as a single read-only journey (shared session)."""
+    workers.open(config)  # reset to a clean Mobile Workers list
 
     # PID_56 - PersonalID Status column present and showing valid values.
     workers.verify_personalid_status_column_present()
@@ -63,7 +81,7 @@ def _pick_linked_target(workers, config):
     return workers.first_linked_worker_name()
 
 
-def test_pid_59_confirm_unlink_flips_status(page, config, settings):
+def test_pid_59_confirm_unlink_flips_status(workers, config):
     """PID_59 (destructive, self-restoring) - confirming the unlink flips a linked
     worker to Not Linked / Inactive.
 
@@ -72,7 +90,7 @@ def test_pid_59_confirm_unlink_flips_status(page, config, settings):
     no input). Targets the dedicated PID_UNLINK_WORKER, or any other linked worker
     if that one isn't available. Only skips if the domain has no linked worker at
     all (nothing to unlink)."""
-    workers = _login_and_open_workers(page, config, settings)
+    workers.open(config)  # reset to a clean Mobile Workers list
 
     target = _pick_linked_target(workers, config)
     if not target:

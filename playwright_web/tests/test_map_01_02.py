@@ -33,23 +33,43 @@ EXPECTED_GEO_LABELS = [
 
 
 def _open_case_list_map(page, config, settings):
-    # "[AV] Case List Map" has a copy on stage and prod; skip only on an
-    # environment with no known app id (and no MAP_APP_ID override).
-    if not resolve_app_id(config.env):
-        pytest.skip(
-            f"No '[AV] Case List Map' app id for env '{config.env}'. Set MAP_APP_ID to run here."
-        )
     LoginPage(page).valid_login_cchq(config, settings)
     screen = CaseListMapPage(page)
     screen.open(config)
     return screen
 
 
-def test_map_01_add_geo_display_property(page, config, settings):
+@pytest.fixture(scope="module")
+def case_list_map(browser, config, settings):
+    """One CCHQ login for the whole module; each test re-navigates to a clean
+    Case List tab with screen.open(config). The app-id guard runs before any
+    browser is created, so a skip spins up no session. Retries flaky login once."""
+    # "[AV] Case List Map" has a copy on stage and prod; skip only on an
+    # environment with no known app id (and no MAP_APP_ID override).
+    if not resolve_app_id(config.env):
+        pytest.skip(
+            f"No '[AV] Case List Map' app id for env '{config.env}'. Set MAP_APP_ID to run here."
+        )
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        try:
+            screen = _open_case_list_map(page, config, settings)
+        except Exception:
+            page.close()
+            page = context.new_page()
+            screen = _open_case_list_map(page, config, settings)
+        yield screen
+    finally:
+        context.close()
+
+
+def test_map_01_add_geo_display_property(case_list_map, config):
     """Map_01 - the Case List tab exposes the geo formats (plus the Address
     format they need), and adding a property with a geo format is accepted while
     an Address column is present. Restores the app afterwards (no save)."""
-    screen = _open_case_list_map(page, config, settings)
+    screen = case_list_map
+    screen.open(config)  # reset to a clean Case List tab
     try:
         # The Format dropdown offers every geo format plus Address.
         labels = screen.format_option_labels()
@@ -79,11 +99,12 @@ def test_map_01_add_geo_display_property(page, config, settings):
         screen.discard_changes(config)
 
 
-def test_map_02_geo_formats_require_address_column(page, config, settings):
+def test_map_02_geo_formats_require_address_column(case_list_map, config):
     """Map_02 - geo formats depend on an Address column: deleting the
     Address-format property auto-removes every geo-format row. Restores the app
     afterwards (no save)."""
-    screen = _open_case_list_map(page, config, settings)
+    screen = case_list_map
+    screen.open(config)  # reset to a clean Case List tab
     try:
         assert screen.has_address_property(), (
             "Expected an Address-format property to delete for the dependency check"
