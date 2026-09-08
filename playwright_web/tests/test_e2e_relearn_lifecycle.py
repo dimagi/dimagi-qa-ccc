@@ -8,9 +8,12 @@ from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_workers_page import ConnectWorkersPage
 
 
-# Drives a real device via a BrowserStack Maestro build - kept out of the per-PR
-# gate (run on-demand / nightly), per the migration notes in PR #23.
-@pytest.mark.on_demand
+# Drives a real device via a BrowserStack Maestro build. Deliberately NOT marked
+# on_demand: device tests are meant to run on every PR alongside the messaging
+# ones, so problems surface before a merge rather than after. If that turns out
+# to cost too much device time, restoring @pytest.mark.on_demand here (and adding
+# it to test_messaging_hybrid.py) puts the old behaviour back - the pytest.ini
+# marker and the workflow's PYTEST_MARKERS wiring are both still in place.
 def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     """P2-A - assign on web, complete on a real device, verify on web.
 

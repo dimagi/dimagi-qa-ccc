@@ -1,3 +1,5 @@
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -22,18 +24,58 @@ class LoginPage(BasePage):
         self.page.locator(self.PASSWORD_ELE).first.press("Enter")
         self.page.wait_for_timeout(3000)
 
+    # HQ's login page is occasionally slow to render the form; this is a bounded
+    # wait for it to appear, not a guess at how long login takes.
+    LOGIN_FORM_TIMEOUT_MS = 30_000
+
     def valid_login_cchq(self, config, settings):
+        """Log in to CommCare HQ, or confirm an existing session.
+
+        Deliberately NOT wrapped in a blanket try/except. It used to be, and
+        printed "User is already logged in" for *any* exception - a slow page, a
+        renamed field, a network blip - then returned as though authenticated.
+        The caller's next step (verify_home_page_title) would time out on the
+        welcome heading, so the real cause was replaced by a reassuring message
+        and a confusing symptom one step later. Seen intermittently on prod:
+        "User is already logged in" followed by a 30s timeout on
+        //h1[@class='mb-3 mt-5'].
+
+        Being already logged in IS legitimate - the browser context is reused
+        across tests in a file - so it is now detected positively, by the login
+        form being absent, rather than inferred from something having gone
+        wrong. Anything else raises with the URL it actually landed on.
+        """
+        self.page.goto(config.get("cchq_url"))
+        self.page.wait_for_load_state("load")
+
         try:
-            cchq_url = config.get("cchq_url")
-            self.page.goto(cchq_url)
-            self.page.wait_for_load_state("load")
-            self.enter_username_and_password(
-                settings.get(section="creds", key="hq_username", env_var="hq_username"),
-                settings.get(section="creds", key="hq_password", env_var="hq_password"),
+            self.page.locator(self.USERNAME_ELE).first.wait_for(
+                state="visible", timeout=self.LOGIN_FORM_TIMEOUT_MS
             )
-            self.page.wait_for_timeout(3000)
-        except Exception:
-            print("User is already logged in")
+        except PlaywrightTimeoutError:
+            # No login form. Either an existing session (fine) or we are
+            # somewhere unexpected (not fine) - tell the two apart.
+            if "login" in self.page.url:
+                raise AssertionError(
+                    "On a login page but the username field never appeared after "
+                    f"{self.LOGIN_FORM_TIMEOUT_MS // 1000}s: {self.page.url}"
+                ) from None
+            print("Already authenticated - reusing the existing session")
+            return
+
+        self.enter_username_and_password(
+            settings.get(section="creds", key="hq_username", env_var="hq_username"),
+            settings.get(section="creds", key="hq_password", env_var="hq_password"),
+        )
+        self.page.wait_for_timeout(3000)
+
+        # Verify rather than assume: if the form is still up, the credentials or
+        # the submit did not take, and failing here names that instead of
+        # leaving the caller to time out on a heading.
+        if self.page.locator(self.USERNAME_ELE).first.is_visible():
+            raise AssertionError(
+                f"Still on the login page after submitting credentials: {self.page.url}"
+            )
 
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")
