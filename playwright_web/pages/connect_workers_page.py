@@ -389,6 +389,34 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Deliver count columns present: {present}")
         return present
 
+    def verify_passed_assessment_worker(self):
+        """Learn_tab_04 - a worker who passed the assessment shows Assessment
+        'Passed' with 100% modules completed and non-empty Attempts / Completed
+        Learning. Finds any Passed worker on the Learn tab (data-resilient) rather
+        than hard-coding a name. Ported from the Selenium verify_worker_assessment_status."""
+        headers = self._header_texts()
+
+        def col(name):
+            return next((i for i, h in enumerate(headers) if h.strip().lower() == name.lower()), None)
+
+        a_idx, m_idx, at_idx, cl_idx = col("Assessment"), col("Modules completed"), col("Attempts"), col("Completed Learning")
+        assert None not in (a_idx, m_idx, at_idx, cl_idx), f"Learn columns missing: {headers}"
+        table = self.page.locator(self.LV_TABLE).first
+        rows = table.locator("xpath=.//tbody//tr")
+        for i in range(rows.count()):
+            tds = rows.nth(i).locator("xpath=./td")
+            if tds.nth(a_idx).inner_text().strip().lower() != "passed":
+                continue
+            modules = tds.nth(m_idx).inner_text().strip()
+            attempts = tds.nth(at_idx).inner_text().strip()
+            completed = tds.nth(cl_idx).inner_text().strip()
+            assert "100" in modules, f"Passed worker's modules-completed is not 100%: {modules!r}"
+            assert attempts not in ("", "-", "—"), f"Passed worker's Attempts is empty: {attempts!r}"
+            assert completed not in ("", "-", "—"), f"Passed worker's Completed Learning is empty: {completed!r}"
+            self._step(f"Passed-assessment worker verified (modules={modules}, attempts={attempts}, completed={completed})")
+            return
+        raise AssertionError("No worker with a 'Passed' assessment found on the Learn tab")
+
     def click_tab_by_name(self, tab_name):
         """Click a workers-page tab (Learn / Deliver / Connect Workers) and confirm
         it activates. The table re-renders into #table via htmx after the click."""

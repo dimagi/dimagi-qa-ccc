@@ -123,3 +123,20 @@ def test_connect_worker_17_sort_list_by_header(connect, test_data):
     assert "last_active" not in new_sort, (
         f"Sort by '{target}' did not change the sort away from the default: {new_sort!r}"
     )
+
+
+def test_learn_tab_04_assessment_passed(connect, test_data):
+    """Learn_tab_04: a worker who passed the assessment shows Assessment 'Passed'
+    with 100% modules completed and non-empty Attempts / Completed Learning.
+
+    Uses the delivery opportunity (WORKER_LIST_VIEW_8 = covid_opp_test), which has
+    workers who completed learning and passed. Learn_tab_03 (a Failed assessment)
+    needs a seeded failed-assessment worker and is deferred until that data exists."""
+    connect_page, opps_url = connect
+    opp = test_data.get("WORKER_LIST_VIEW_8")["opportunity_name"]
+    workers = ConnectWorkersPage(connect_page)
+
+    open_connect_workers(connect_page, opp, opps_url)
+    workers.click_tab_by_name("Learn")
+    workers.verify_learn_table_headers_present()
+    workers.verify_passed_assessment_worker()
