@@ -443,9 +443,16 @@ class ConnectWorkersPage(BasePage):
     # -- Deliver-tab filters (WLV_8) ---------------------------------------------
 
     def open_filter_modal(self):
+        # Idempotent: the modal is an x-show backdrop that stays open until Apply,
+        # and while open it intercepts pointer events on the filter button, so a
+        # second open-click would hang. Skip the click when it is already showing.
+        modal = self.page.locator(self.LV_FILTER_MODAL).first
+        if modal.is_visible():
+            self._step("Deliver-tab filter modal already open")
+            return
         self._step("Open deliver-tab filter modal")
         self.click(self.LV_FILTER_BUTTON)
-        self.page.locator(self.LV_FILTER_MODAL).first.wait_for(state="visible", timeout=15000)
+        modal.wait_for(state="visible", timeout=15000)
 
     def apply_filters(self):
         self._step("Apply deliver-tab filters")
@@ -477,3 +484,72 @@ class ConnectWorkersPage(BasePage):
         text = badge.inner_text().strip()
         assert text == "1", f"Filter badge value mismatch: expected '1', got {text!r}"
         self._step(f"'Last active: 1 day ago' filter applied (badge={text})")
+
+    # -- Deliver-tab filter modal inspection (Delivery_tab_10/11/13/14/16) --------
+
+    def filter_present(self, selector):
+        return self.page.locator(selector).count() > 0
+
+    def filter_field_options(self, selector):
+        """The option labels of a filter <select> (assumes the modal is open)."""
+        opts = [o.strip() for o in self.page.locator(f"{selector} option").all_inner_texts()]
+        opts = [o for o in opts if o]
+        self._step(f"Options for {selector}: {opts}")
+        return opts
+
+    def filter_badge_count(self):
+        """The number on the filter button's badge, or 0 when no badge is shown."""
+        badge = self.page.locator(self.LV_FILTER_BADGE)
+        if badge.count() == 0:
+            return 0
+        text = badge.first.inner_text().strip()
+        return int(text) if text.isdigit() else 0
+
+    def apply_filter_combination(self, selections):
+        """Open the modal, set several filters at once, apply, and return the badge
+        count. `selections` is a list of (select_selector, label) pairs; a field not
+        present for this opportunity (e.g. review_pending under auto-verify) is
+        skipped so the same combination works on either verification mode."""
+        self.open_filter_modal()
+        applied = 0
+        for selector, label in selections:
+            if self.filter_present(selector):
+                self.select_by_visible_text(selector, label)
+                applied += 1
+            else:
+                self._step(f"Filter {selector} absent for this opportunity - skipped")
+        self.apply_filters()
+        count = self.filter_badge_count()
+        self._step(f"Applied {applied} filter(s); badge shows {count}")
+        return applied, count
+
+    # -- Connect Workers list sorting (Connect_worker_17) ------------------------
+
+    def click_list_column_sort(self, label):
+        """Click a Connect Workers list column header's sort link and return the
+        resulting ?sort= value. django-tables2 renders orderable headers as <a>
+        links that cycle field -> -field; the table HTMX-reloads and mirrors the
+        sort into the page URL (HX-Replace-Url)."""
+        from urllib.parse import parse_qs, urlparse
+
+        table = self.page.locator(self.LV_TABLE).first
+        link = table.locator(
+            f"xpath=.//thead//th[.//a[contains(normalize-space(),'{label}')]]//a"
+        ).first
+        link.wait_for(state="visible", timeout=15000)
+        self._step(f"Sort Connect Workers list by '{label}'")
+        link.click()
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1200)
+        sort = parse_qs(urlparse(self.page.url).query).get("sort", [""])[0]
+        self._step(f"URL sort param after click: {sort!r}")
+        return sort
+
+    def sortable_list_columns(self):
+        """Which Connect Workers list headers expose a sort link."""
+        table = self.page.locator(self.LV_TABLE).first
+        table.wait_for(state="visible", timeout=20000)
+        headers = table.locator("xpath=.//thead//th[.//a]")
+        labels = [h.strip() for h in headers.all_inner_texts() if h.strip()]
+        self._step(f"Sortable list columns: {labels}")
+        return labels

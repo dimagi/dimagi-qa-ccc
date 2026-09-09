@@ -100,3 +100,26 @@ def test_wlv_08_last_active_filter_1_day_ago(connect, test_data):
 
     workers.clear_all_filters_deliver_table()
     workers.apply_and_verify_last_active_1_day_ago()
+
+
+def test_connect_worker_17_sort_list_by_header(connect, test_data):
+    """Connect_worker_17: the Connect Workers list can be sorted by clicking a
+    column header; the sort is reflected in the page's ?sort= param."""
+    connect_page, opps_url = connect
+    data = test_data.get("WORKER_LIST_VIEW_1_2_3")
+    workers = ConnectWorkersPage(connect_page)
+
+    open_connect_workers(connect_page, data["opportunity_name"], opps_url)
+    workers.verify_connect_workers_table_headers_present()
+
+    sortable = workers.sortable_list_columns()
+    assert sortable, "Connect Workers list exposes no sortable column headers"
+
+    # The list loads sorted by -last_active; sorting by a different column must
+    # change the ?sort= param. Pick a sortable header that is not the default.
+    target = next((c for c in sortable if "last active" not in c.lower()), sortable[0])
+    new_sort = workers.click_list_column_sort(target)
+    assert new_sort, f"Sorting by '{target}' produced no ?sort= param"
+    assert "last_active" not in new_sort, (
+        f"Sort by '{target}' did not change the sort away from the default: {new_sort!r}"
+    )
