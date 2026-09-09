@@ -95,6 +95,41 @@ class EmailOtpReader:
         prefix = f"{env}-" if env else ""
         return f"{local}+{prefix}{tag}-{int(time.time())}@{domain}"
 
+    def find_previous_address(self, tag, env=None, before=None):
+        """The most recent address this mailbox has seen for a given tag.
+
+        Used to find an address that a PREVIOUS run bound to an account, so a
+        test needing "an address someone else already uses" can seed itself
+        rather than carrying a hardcoded value that rots when an environment is
+        wiped.
+
+        The tag matters: it says which test created the address, and therefore
+        whether the address is actually bound to an account. An address from a
+        flow that never completes registration is verified but NOT bound - the
+        server holds it only on a configuration session, so it collides with
+        nothing.
+
+        `before` is a unix timestamp; messages at or after it are ignored, so a
+        run never picks up the address it just created itself. Returns None when
+        the mailbox has no such address, which callers should treat as "not
+        seeded on this environment yet".
+        """
+        local, _, domain = self.base_address.partition("@")
+        local = local.partition("+")[0]
+        prefix = f"{local}+{env}-{tag}-" if env else f"{local}+{tag}-"
+
+        with MailBox(self.imap_host).login(self.imap_user, self.imap_pass, "INBOX") as mailbox:
+            messages = mailbox.fetch(
+                AND(subject=OTP_SUBJECT), reverse=True, limit=60, mark_seen=False
+            )
+            for message in messages:
+                if before and message.date and message.date.timestamp() >= before:
+                    continue
+                for recipient in message.to:
+                    if recipient.lower().startswith(prefix.lower()):
+                        return recipient
+        return None
+
     def _find_code(self, target_email, not_before):
         """Newest matching code for target_email, or None.
 
