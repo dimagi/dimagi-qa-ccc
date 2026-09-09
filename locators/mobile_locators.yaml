@@ -57,6 +57,11 @@ login_page:
   # and Material buttons render them upper-cased - match both spellings.
   email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
   email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
+  # StandardAlertDialog renders its message in a plain TextView, NOT in
+  # connect_message_message - that id belongs to the full-screen message
+  # fragment. Match on the text.
+  email_added_msg: "//android.widget.TextView[contains(@text,'email has been added successfully')]"
+  email_in_use_msg: "//android.widget.TextView[contains(@text,'already linked to another account')]"
 
 mobile_notifications:
   invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"
@@ -239,7 +244,11 @@ manage_profile:
   profile_value_phone: "org.commcare.dalvik:id/profile_value_phone"
   profile_value_email: "org.commcare.dalvik:id/profile_value_email"
   forget_account_btn: "org.commcare.dalvik:id/profile_btn_forget_personalid"
-  edit_profile_menu: "//android.widget.TextView[@text='Edit Profile']"
+  # A toolbar menu action rendered as a pencil icon, not a text label - it
+  # carries "Edit Profile" as its content description. Maestro's text matcher
+  # also searches accessibility text, so `tapOn: text: "Edit Profile"` works
+  # there; an Appium XPath has to ask for the id or the content-desc.
+  edit_profile_menu: "//*[@resource-id='org.commcare.dalvik:id/action_profile_edit' or @content-desc='Edit Profile']"
 
   # Edit Profile screen.
   edit_name_input: "org.commcare.dalvik:id/profile_name_edit_text"

@@ -29,6 +29,8 @@ class PersonalIDPage(BasePage):
     EMAIL_CONTINUE_BTN = locators.get("login_page", "email_continue_btn")
     EMAIL_ERROR_TXT = locators.get("login_page", "email_error_txt")
     EMAIL_SKIP_CONFIRM_YES = locators.get("login_page", "email_skip_confirm_yes")
+    EMAIL_ADDED_MSG = locators.get("login_page", "email_added_msg")
+    EMAIL_IN_USE_MSG = locators.get("login_page", "email_in_use_msg")
     CONFIRM_CODE_INPUT = locators.get("login_page", "confirm_code_input")
     EMAIL_OTP_INPUT = locators.get("otp_page", "email_otp_input")
     EMAIL_VERIFY_DESCRIPTION = locators.get("otp_page", "email_verify_description")
@@ -37,6 +39,7 @@ class PersonalIDPage(BasePage):
     EMAIL_RESEND_COUNTDOWN = locators.get("otp_page", "email_resend_countdown")
     PHOTO_CAPTURE_TITLE = locators.get("otp_page", "photo_capture_title")
     TAKE_PHOTO_BTN = locators.get("otp_page", "take_photo_btn")
+    SAVE_PHOTO_BTN = locators.get("otp_page", "save_photo_btn")
 
     def enter_phone_number(self, phone_number):
         self.type_element(self.PHONE_INPUT, phone_number)
@@ -172,6 +175,28 @@ class PersonalIDPage(BasePage):
         """
         self.type_code(self.EMAIL_OTP_INPUT, code)
 
+    def save_photo_and_finish(self):
+        """Save the auto-generated photo, which completes the account.
+
+        The account does not exist until this point - savePhotoButton runs
+        uploadImageAndCompleteProfile. On qaAutomation builds the photo is
+        generated for us, so Save is already enabled.
+        """
+        self.wait_for_element(self.TAKE_PHOTO_BTN)
+        self.click_when_enabled(self.SAVE_PHOTO_BTN)
+        self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+        if self.is_displayed(self.OK_BTN, timeout=10):
+            self.click_element(self.OK_BTN)
+
+    def verify_email_already_in_use(self):
+        """Assert the server refused an address another account already uses.
+
+        The check is an IntegrityError raised when the verified address is
+        written to this user, so it only appears AFTER a correct code - not when
+        the address is first submitted.
+        """
+        self.wait_for_element(self.EMAIL_IN_USE_MSG)
+
     def verify_email_added(self):
         """Confirm the 'Email Added' dialog - EXISTING_USER workflow only.
 
@@ -179,11 +204,7 @@ class PersonalIDPage(BasePage):
         Profile. Registration has no such dialog; a successful verify goes
         straight to photo capture - use verify_photo_capture_screen for that.
         """
-        self.wait_for_element(self.POPUP_MESSAGE_TXT)
-        message = self.get_text(self.POPUP_MESSAGE_TXT)
-        assert "Your email has been added successfully" in message, (
-            f"Expected the email-added confirmation, got: {message!r}"
-        )
+        self.wait_for_element(self.EMAIL_ADDED_MSG)
         self.click_element(self.OK_BTN)
 
     def verify_photo_capture_screen(self, name):
