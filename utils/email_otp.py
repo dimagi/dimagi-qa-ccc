@@ -79,15 +79,21 @@ class EmailOtpReader:
                 "enabled, not the account password."
             )
 
-    def address_for(self, tag):
-        """A unique plus-addressed variant of the QA mailbox, e.g. qa+se10x@...
+    def address_for(self, tag, env=None):
+        """A unique plus-addressed variant of the QA mailbox.
 
-        PersonalID rejects an address already bound to another account, so each
-        test needs its own. They all deliver to the same inbox.
+        e.g. address_for("se10", env="stage") -> qa+stage-se10-1788875825@...
+
+        Each run needs its own address: an address already bound to another
+        account cannot be reused, and a stale one would collide. They all deliver
+        to the same inbox, so the env prefix is what makes a message in that inbox
+        attributable to an environment at a glance - staging and prod addresses
+        must never look alike.
         """
         local, _, domain = self.base_address.partition("@")
         local = local.partition("+")[0]
-        return f"{local}+{tag}{int(time.time())}@{domain}"
+        prefix = f"{env}-" if env else ""
+        return f"{local}+{prefix}{tag}-{int(time.time())}@{domain}"
 
     def _find_code(self, target_email, not_before):
         """Newest matching code for target_email, or None.

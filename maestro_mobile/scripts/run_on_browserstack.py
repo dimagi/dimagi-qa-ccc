@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import json
 import os
@@ -12,7 +13,13 @@ from requests.auth import HTTPBasicAuth
 BASE_URL = "https://api-cloud.browserstack.com/app-automate/maestro/v2"
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 FLOWS_DIR = Path(__file__).parent.parent / "flows"
-APK_PATH = PROJECT_ROOT / "app" / "app-cccStaging-release.apk"
+# Which build each environment uses. stage points at connect-staging.dimagi.com,
+# prod at connect.dimagi.com - the flows are identical, only the server differs.
+APK_BY_ENV = {
+    "stage": PROJECT_ROOT / "app" / "app-cccStaging-release.apk",
+    "prod": PROJECT_ROOT / "app" / "app-commcare-release.apk",
+}
+DEFAULT_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
 TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml", "signup_email_add.yaml", "signup_email_verify.yaml"]
@@ -36,14 +43,17 @@ def get_credentials():
     return HTTPBasicAuth(username, access_key)
 
 
-def upload_app(auth):
-    print(f"Uploading {APK_PATH.name}...")
-    with open(APK_PATH, "rb") as f:
+def upload_app(auth, env=DEFAULT_ENV):
+    apk_path = APK_BY_ENV[env]
+    if not apk_path.exists():
+        sys.exit(f"APK not found for env '{env}': {apk_path}")
+    print(f"Uploading {apk_path.name} for env '{env}'...")
+    with open(apk_path, "rb") as f:
         response = requests.post(
             f"{BASE_URL}/app",
             auth=auth,
             files={"file": f},
-            data={"custom_id": "CCC_Staging"},
+            data={"custom_id": f"CCC_{env}"},
         )
     response.raise_for_status()
     app_url = response.json()["app_url"]
@@ -408,8 +418,18 @@ footer {{ color: var(--muted); font-size: 12px; text-align: center; }}
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Run Connect Maestro flows on BrowserStack")
+    parser.add_argument(
+        "--env",
+        choices=sorted(APK_BY_ENV),
+        default=DEFAULT_ENV,
+        help="Which build to run against (default: %(default)s)",
+    )
+    args = parser.parse_args()
+
     auth = get_credentials()
-    app_url = upload_app(auth)
+    print(f"=== Running against {args.env.upper()} ===")
+    app_url = upload_app(auth, args.env)
     test_suite_url = upload_test_suite(auth)
     build_id = trigger_build(auth, app_url, test_suite_url)
     result = poll_build(auth, build_id)

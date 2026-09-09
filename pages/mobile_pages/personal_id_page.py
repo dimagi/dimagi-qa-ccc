@@ -153,6 +153,17 @@ class PersonalIDPage(BasePage):
         self.type_element(self.EMAIL_INPUT, address)
         self.click_when_enabled(self.EMAIL_CONTINUE_BTN)
 
+    def resend_email_otp(self, timeout=150):
+        """Ask for a new code, waiting for the resend cooldown to expire first.
+
+        The OTP email is not always delivered even when the API reports success -
+        observed on staging 2026-09-09, where send_email_otp returned OK, the app
+        showed no error, and nothing ever arrived in the mailbox. Resending is the
+        same recovery a real user would use.
+        """
+        self.wait_for_element(self.EMAIL_RESEND_BTN, timeout=timeout)
+        self.click_element(self.EMAIL_RESEND_BTN)
+
     def enter_email_otp(self, code):
         """Enter the emailed verification code.
 

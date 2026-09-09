@@ -28,17 +28,20 @@ from utils.test_data_gen import fresh_backup_code, fresh_phone_number
  - an [email] section in settings.cfg (see settings-sample.cfg)
  """)
 @pytest.mark.mobile
-def test_11_signup_email_verification(mobile_driver, settings):
+def test_11_signup_email_verification(mobile_driver, settings, config):
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     mailbox = EmailOtpReader(settings)
+    env = config.env.lower()
 
     phone_number = fresh_phone_number()
     backup_code = fresh_backup_code()
     username = f"QA Email {phone_number}"
-    # A unique address per run: PersonalID rejects one already bound to another
-    # account, and every variant still lands in the same inbox.
-    email_address = mailbox.address_for("se10")
+    # A unique address per run: an address already bound to another account
+    # cannot be reused. All variants deliver to the same inbox, so the
+    # environment is baked into the address - otherwise a staging message and a
+    # prod message are indistinguishable in that shared mailbox.
+    email_address = mailbox.address_for("se10", env=env)
 
     with allure.step("Click on Sign In / Register"):
         home.open_side_menu()
@@ -72,7 +75,21 @@ def test_11_signup_email_verification(mobile_driver, settings):
         pid.enter_email(email_address)
 
     with allure.step("Read the verification code from the QA mailbox"):
-        code = mailbox.get_verification_code(email_address, not_before=requested_at)
+        # The OTP email is not always delivered even when the API reports success.
+        # Observed on staging 2026-09-09: send_email_otp returned OK, the app
+        # showed no error, and nothing ever reached the mailbox - not the inbox,
+        # spam, trash or any folder. Resending is what a real user would do, and
+        # it turns a hard failure into a retry.
+        try:
+            code = mailbox.get_verification_code(email_address, not_before=requested_at)
+        except TimeoutError:
+            allure.attach(
+                "No code arrived for the first request; using Resend.",
+                "first attempt", allure.attachment_type.TEXT,
+            )
+            pid.resend_email_otp()
+            resent_at = time.time()
+            code = mailbox.get_verification_code(email_address, not_before=resent_at)
         allure.attach(code, "verification code", allure.attachment_type.TEXT)
 
     with allure.step("Enter the code and confirm signup continues to photo capture"):
