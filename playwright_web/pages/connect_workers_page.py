@@ -553,3 +553,143 @@ class ConnectWorkersPage(BasePage):
         labels = [h.strip() for h in headers.all_inner_texts() if h.strip()]
         self._step(f"Sortable list columns: {labels}")
         return labels
+
+    # ========================================================================
+    # Payments tab (Payment Processing_1-4) - ported from Selenium. Reaches the
+    # tab via flows.workers_setup.open_payments_tab (dashboard 'Payments' panel).
+    # make_payment imports a payment; the paired rollback restores the worker, so
+    # the flow is self-cleaning on the shared test opportunity.
+    # ========================================================================
+
+    PAYMENT_IMPORT_BTN = locators.get("connect_workers_page", "payment_import_btn")
+    PAYMENT_IMPORT_FILE = locators.get("connect_workers_page", "payment_import_file")
+    PAYMENT_IMPORT_SUBMIT = locators.get("connect_workers_page", "payment_import_submit")
+    ROLLBACK_LAST_PAYMENT_BTN = locators.get("connect_workers_page", "rollback_last_payment_btn")
+    ROLLBACK_POPUP_BTN = locators.get("connect_workers_page", "rollback_popup_btn")
+
+    def verify_payments_table_headers_present(self):
+        """Payment Processing_1 - the Payments tab shows its columns. The currency
+        columns are suffixed with the opportunity currency code (e.g. 'Accrued
+        (INR)'), so match on the stable prefix rather than the exact header."""
+        actual = [h for h in self._header_texts() if h]
+        actual_joined = " | ".join(actual).lower()
+        for token in ["#", "Name", "Last active", "Accrued", "Total Paid", "Last paid", "Confirm"]:
+            assert token.lower() in actual_joined, f"Missing payments column {token!r}. Actual: {actual}"
+        self._step(f"Payments table headers present: {actual}")
+
+    def _payments_row(self, worker):
+        table = self.page.locator(self.LV_TABLE).first
+        return table.locator(f"xpath=.//tbody//tr[.//p[normalize-space()='{worker.strip()}']]").first
+
+    def fetch_username_from_payments(self, worker):
+        """The worker's ConnectID username, shown as a second line under the name.
+        The payment import matches on username, so this is what a row must carry."""
+        row = self._payments_row(worker)
+        row.wait_for(state="visible", timeout=15000)
+        name_cell_ps = row.locator(f"xpath=.//td[.//p[normalize-space()='{worker.strip()}']]//p")
+        assert name_cell_ps.count() >= 2, f"No username line under worker '{worker}'"
+        username = name_cell_ps.nth(name_cell_ps.count() - 1).inner_text().strip()
+        assert username and username != worker.strip(), f"Could not read username for '{worker}'"
+        self._step(f"Worker '{worker}' username: {username}")
+        return username
+
+    def _last_paid_text(self, worker):
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
+        assert idx is not None, f"'Last paid' column not found in {headers}"
+        cell = self._payments_row(worker).locator("xpath=./td").nth(idx)
+        return cell.inner_text().strip()
+
+    def make_payment_for_worker(self, worker, amount=1):
+        """Payment Processing_2 - import a payment for the worker and confirm the
+        success message. Builds a one-row workbook in a temp file (leaving the
+        committed test_data/make_payment.xlsx untouched) with the headers the
+        importer expects; only username/amount/date are used to match and apply."""
+        import os
+        import tempfile
+        from datetime import date
+
+        import openpyxl
+
+        username = self.fetch_username_from_payments(worker)
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["Username", "Phone Number", "Name", "Payment Amount",
+                   "Payment Date (YYYY-MM-DD)", "Payment Method", "Payment Operator"])
+        # Phone is not used for matching (import keys on username); a reserved-block
+        # placeholder keeps the row well-formed.
+        ws.append([username, "+74267426016", worker, str(amount),
+                   date.today().isoformat(), None, None])
+        path = os.path.join(tempfile.mkdtemp(), "make_payment.xlsx")
+        wb.save(path)
+
+        self._step(f"Import a payment of {amount} for '{worker}'")
+        self.click(self.PAYMENT_IMPORT_BTN)
+        file_input = self.page.locator(self.PAYMENT_IMPORT_FILE).first
+        file_input.wait_for(state="attached", timeout=15000)
+        file_input.set_input_files(path)
+        self.click(self.PAYMENT_IMPORT_SUBMIT)
+        # The import is queued asynchronously and the page reloads with the task id
+        # in the URL - that is the acceptance signal. The payment actually applying
+        # is confirmed later by wait_for_last_paid_populated (the history step).
+        self.page.wait_for_url("**payment_import_task_id=**", timeout=30000)
+        self._step(f"Payment import queued: {self.page.url}")
+
+    def wait_for_last_paid_populated(self, worker, timeout_seconds=90):
+        """Reload the Payments tab until the worker's Last paid is no longer '—'."""
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self.page.reload(wait_until="load")
+            self.page.wait_for_timeout(2500)
+            value = self._last_paid_text(worker)
+            self._step(f"Last paid for '{worker}': {value!r}")
+            if value and value != "—":
+                return value
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Last paid for '{worker}' stayed empty after {timeout_seconds}s - "
+                    f"the async payment import may not have applied."
+                )
+            self.page.wait_for_timeout(5000)
+
+    def click_last_paid_and_verify_history(self, worker):
+        """Payment Processing_3 - click the worker's Last paid value and confirm the
+        payment-history breakdown popup opens."""
+        self.wait_for_last_paid_populated(worker)
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
+        span = self._payments_row(worker).locator("xpath=./td").nth(idx).locator("span").first
+        self._step(f"Open payment history for '{worker}'")
+        span.click()
+        self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
+        self._step("Payment history popup shown")
+
+    def rollback_last_payment(self):
+        """Payment Processing_4 (part 1) - roll back the last payment."""
+        self._step("Rollback last payment")
+        self.click(self.ROLLBACK_LAST_PAYMENT_BTN)
+        self.page.locator(self.ROLLBACK_POPUP_BTN).first.wait_for(state="visible", timeout=10000)
+        self.click(self.ROLLBACK_POPUP_BTN)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+
+    def verify_last_paid_empty(self, worker, timeout_seconds=60):
+        """Payment Processing_4 (part 2) - after rollback the Last paid is '—'."""
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self.page.reload(wait_until="load")
+            self.page.wait_for_timeout(2500)
+            value = self._last_paid_text(worker)
+            self._step(f"Last paid for '{worker}' after rollback: {value!r}")
+            if value == "—":
+                self._step(f"Rollback confirmed for '{worker}'")
+                return
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Last paid for '{worker}' is {value!r} after rollback, expected '—'."
+                )
+            self.page.wait_for_timeout(5000)

@@ -378,6 +378,17 @@ connect_workers_page:
   filter_has_overlimit: "id_has_overlimit"
   filter_review_pending: "id_review_pending"
 
+  # --- Payments tab (Payment Processing_1-4) ---
+  # Import icon in the tab toolbar (fa-upload), the hidden file input it reveals,
+  # and the modal's Import submit; the async import surfaces a status link.
+  payment_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  payment_import_file: "//input[@type='file' and @name='payments']"
+  payment_import_submit: "//button[@type='submit' and normalize-space()='Import']"
+  # Rollback lives inside the Last-paid history popup (payment_history.html); its
+  # confirm modal posts to payment_delete.
+  rollback_last_payment_btn: "//button[normalize-space()='Rollback Last Payment']"
+  rollback_popup_btn: "//button[@type='submit' and normalize-space()='Rollback']"
+
 # --- Worker Visit Verification Page (WVVP_1-7) ---
 # The per-worker Visits page reached by clicking a worker on the Deliver tab. Its
 # table is the second base-table on the page (the first is the summary/header one).

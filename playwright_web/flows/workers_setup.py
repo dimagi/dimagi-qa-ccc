@@ -63,3 +63,12 @@ def open_deliver_tab(connect_page, opportunity_name, opps_url=None):
     dashboard.wait_for_stats()
     dashboard.click_stat_panel("services_delivered")
     return dashboard
+
+
+def open_payments_tab(connect_page, opportunity_name, opps_url=None):
+    """Reach the Payments tab via the dashboard's 'Payments Earned' stat panel -
+    Selenium's navigate_to_payments_earned."""
+    dashboard = open_opportunity_dashboard(connect_page, opportunity_name, opps_url)
+    dashboard.wait_for_stats()
+    dashboard.click_stat_panel("payments_earned")
+    return dashboard

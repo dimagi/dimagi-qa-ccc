@@ -88,8 +88,12 @@ WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
   worker_name: "Deb Test 8/12"
 
 PAYMENT_PROCESSING_1_2_3:
-  opportunity_name: "Test Opp 151201"
-  worker_name: "Automation User 10"
+  # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
+  # exists on staging under PM_Automation_01. covid_opp_test has an accepted worker
+  # with accrued payment; the payment import keys on ConnectID username, so the
+  # make-payment + rollback flow is self-cleaning.
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
 
 MESSAGING_4_5_6:
   ########## ORDER OF PARAMS: Name, List of User-Recipients, Content Message ##########
