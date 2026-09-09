@@ -1,0 +1,140 @@
+appId: org.commcare.dalvik
+env:
+  USERNAME: "QA Profile Email"
+  BACKUP_CODE: "742704"
+  INVALID_EMAIL: "not-an-email"
+  NEW_EMAIL: "automation.user.commcarehq+mpedit@gmail.com"
+  RENAMED: "QA Renamed Before OTP"
+---
+# MP_08, MP_10, MP_11, MP_12: changing the email on Manage Profile.
+#
+# MP_09 (clearing an existing address is refused) is NOT here: it needs an
+# account that already has a verified email, which means a real code. It belongs
+# with MP_13 and MP_19 in the Appium suite.
+#
+# MP_13 (entering the correct code) is likewise Appium.
+- runFlow: shared_signed_in.yaml
+
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_email_edit_text"
+    timeout: 30000
+
+# ---------------------------------------------------------------- MP_08
+# A malformed address is rejected and cannot be saved. The email field starts
+# empty on this account, so it can be typed into directly.
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_email_edit_text"
+- inputText: "${INVALID_EMAIL}"
+- assertVisible:
+    text: "Enter a valid email address."
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: false
+
+# ---------------------------------------------------------------- MP_12 (setup)
+# Change the name at the same time as the email. The app commits the name before
+# the OTP step, so abandoning verification later must leave the new name in place
+# and the email unchanged - a documented behaviour, asserted at the end.
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_name_edit_text"
+- eraseText
+- inputText: "${RENAMED}"
+
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_email_edit_text"
+- eraseText
+- inputText: "${NEW_EMAIL}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: true
+
+# ---------------------------------------------------------------- MP_10
+# Saving an email change asks for confirmation first; Cancel returns to the form
+# with the entered values still there.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: "Verify your new email"
+    timeout: 30000
+- assertVisible:
+    text: ".*6-digit code.*"
+- tapOn:
+    text: "Cancel"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_email_edit_text"
+    text: ".*mpedit.*"
+
+# ---------------------------------------------------------------- MP_11
+# Send Code opens the Verify Email screen for the new address.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: "Verify your new email"
+    timeout: 30000
+- tapOn:
+    text: "Send Code"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/otp_code_view"
+    timeout: 30000
+# Matched on a fragment: Maestro text selectors are regular expressions and a
+# plus-addressed email contains "+", which reads as "one or more".
+- assertVisible:
+    text: ".*mpedit.*"
+
+# ---------------------------------------------------------------- MP_12
+# Abandon verification without entering a code.
+#
+# Back from the verification screen returns to Edit Profile with the form still
+# populated - specified behaviour (CCCT-2460), not a bug. The name has already
+# been committed by this point, which is the whole point of the case: the app
+# saves the name before the OTP step, so abandoning verification leaves the new
+# name in place and the email unchanged.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+# The header already reflects the committed name.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name"
+    text: "${RENAMED}"
+
+# Leave the form to check what was actually persisted. The email is still in the
+# form but not on the record, so this counts as an unsaved change.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_cancel"
+- extendedWaitUntil:
+    visible:
+      text: "Discard your changes?"
+    timeout: 30000
+- tapOn:
+    text: "Discard"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+# Name kept, email not.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${RENAMED}"
+- assertNotVisible:
+    text: ".*mpedit.*"

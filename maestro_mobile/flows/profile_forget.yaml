@@ -1,0 +1,68 @@
+appId: org.commcare.dalvik
+env:
+  USERNAME: "QA Profile Forget"
+  BACKUP_CODE: "742705"
+---
+# MP_17 - MP_18: forgetting the PersonalID account from Manage Profile.
+#
+# Destructive - it signs the account out, so this runs last and on its own fresh
+# account. Nothing after it in the same session would still be signed in.
+- runFlow: shared_signed_in.yaml
+
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+    timeout: 30000
+
+# ---------------------------------------------------------------- MP_17
+# The destructive action asks first, and cancelling leaves the account alone.
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+- extendedWaitUntil:
+    visible:
+      text: "Forget PersonalID?"
+    timeout: 30000
+- assertVisible:
+    text: ".*remove your PersonalID account.*"
+- tapOn:
+    text: "Cancel"
+# Still on Profile, still signed in.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"
+
+# ---------------------------------------------------------------- MP_18
+# Confirming clears the account and returns the app to its signed-out state.
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+- extendedWaitUntil:
+    visible:
+      text: "Forget PersonalID?"
+    timeout: 30000
+# The confirm button is OK, not "Forget" - the dialog reuses the standard
+# CANCEL / OK pair rather than naming the action.
+- tapOn:
+    text: "OK"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 45000
+# The drawer no longer carries a signed-in user, and offers sign-in again.
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+    timeout: 45000
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/header_manage_profile"

@@ -22,7 +22,7 @@ APK_BY_ENV = {
 DEFAULT_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
-TEST_FLOWS = ["profile_edit_name.yaml", "profile_discard.yaml"]
+TEST_FLOWS = ["login_signup_success.yaml", "login_account_locked.yaml", "signup_email_add.yaml", "signup_email_verify.yaml", "profile_view.yaml", "profile_edit_name.yaml", "profile_edit_email.yaml", "profile_discard.yaml", "profile_forget.yaml"]
 POLL_INTERVAL_SECONDS = 15
 
 
