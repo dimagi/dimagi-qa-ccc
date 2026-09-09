@@ -1,0 +1,59 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Produces a FULLY SIGNED-IN, brand-new PersonalID account, which is what every
+# Manage Profile flow needs. shared_registration.yaml stops at the email step;
+# the account is not actually created until the photo is saved
+# (savePhotoButton -> uploadImageAndCompleteProfile -> completeProfile).
+#
+# A fresh account per run rather than a shared one, because the Manage Profile
+# cases mutate the profile - they rename it, change its email, and MP_18 forgets
+# it entirely. Sharing an account would make the order of tests matter and leave
+# the next run starting from whatever the last one did.
+#
+# On the qaAutomation build the photo is auto-generated, so Save is enabled
+# without any camera interaction.
+#
+# Inputs (env from the calling flow):
+#   USERNAME     - name to register under
+#   BACKUP_CODE  - 6 digits
+# Outputs:
+#   output.phoneNumber - the generated subscriber number
+- runFlow: shared_registration.yaml
+
+# Skip the optional email step - Manage Profile cases that need an email on the
+# account add one through Edit Profile, which is the behaviour under test.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/personalid_email_skip_button"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+- tapOn:
+    text: "YES"
+
+# Photo capture completes the account.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/save_photo_button"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/save_photo_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 45000
+# A confirmation may appear before the app settles on the Connect home.
+- tapOn:
+    text: "OK"
+    optional: true
+
+# Signed in: the drawer now carries the user's name rather than the signed-out text.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_user_name"
+    timeout: 45000
+- assertVisible:
+    id: "org.commcare.dalvik:id/header_user_name"
+    text: "${USERNAME}"

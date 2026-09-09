@@ -1,0 +1,87 @@
+appId: org.commcare.dalvik
+env:
+  USERNAME: "QA Profile Discard"
+  BACKUP_CODE: "742703"
+  EDITED_NAME: "QA Discarded Name"
+---
+# MP_14 - MP_16: leaving Edit Profile with and without unsaved changes.
+- runFlow: shared_signed_in.yaml
+
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+
+# ---------------------------------------------------------------- MP_16
+# Leaving without changing anything exits immediately, with no warning.
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+- assertNotVisible:
+    text: "Discard your changes?"
+
+# ---------------------------------------------------------------- MP_14
+# With an unsaved change, leaving warns first; Keep editing returns to the form
+# with the edit intact.
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_name_edit_text"
+- eraseText
+- inputText: "${EDITED_NAME}"
+# Cancel rather than back. Typing leaves the keyboard open, and the first back
+# press only dismisses it - the screen never navigates, so no discard prompt
+# appears. Cancel is an equally valid user path (CCCT-2353 documents both) and
+# has no such ambiguity.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_cancel"
+- extendedWaitUntil:
+    visible:
+      text: "Discard your changes?"
+    timeout: 30000
+- assertVisible:
+    text: "Your unsaved changes will be lost."
+- tapOn:
+    text: "Keep editing"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name_edit_text"
+    text: "${EDITED_NAME}"
+
+# ---------------------------------------------------------------- MP_15
+# Discard abandons the edit and Profile still shows the original name.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_cancel"
+- extendedWaitUntil:
+    visible:
+      text: "Discard your changes?"
+    timeout: 30000
+- tapOn:
+    text: "Discard"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"

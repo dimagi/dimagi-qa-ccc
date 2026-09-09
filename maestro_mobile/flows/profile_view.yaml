@@ -1,0 +1,70 @@
+appId: org.commcare.dalvik
+env:
+  USERNAME: "QA Profile View"
+  BACKUP_CODE: "742701"
+---
+# MP_01 - MP_04: reaching Manage Profile and what the Profile screen shows.
+#
+# The drawer link goes through the PersonalID unlock gate, which the qaAutomation
+# build bypasses (PersonalIdUnlocker checks IS_QA_AUTOMATION), so no biometric
+# interaction is needed here.
+- runFlow: shared_signed_in.yaml
+
+# ---------------------------------------------------------------- MP_01
+# The drawer offers Manage Profile beneath the user's name.
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- assertVisible:
+    text: "Manage Profile"
+
+# ---------------------------------------------------------------- MP_02
+# Tapping it opens Profile, showing the photo, name and phone subtitle.
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_user_image"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_phone_subtitle"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name"
+    text: "${USERNAME}"
+
+# ---------------------------------------------------------------- MP_03
+# Personal Information lists the account details.
+- assertVisible:
+    text: "Personal Information"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_phone"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_email"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+
+# ---------------------------------------------------------------- MP_04
+# Edit Profile opens the form with Save unavailable and Phone not editable.
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: false
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_phone_edit_text"
+    enabled: false
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_email_otp_notice"

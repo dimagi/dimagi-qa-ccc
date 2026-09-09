@@ -60,8 +60,18 @@ appId: org.commcare.dalvik
 - inputText: ${output.phoneNumber}
 - tapOn:
     id: "org.commcare.dalvik:id/connect_consent_check"
+# Wait for CONTINUE to actually enable before tapping it. Ticking consent enables
+# the button asynchronously, and a tap landing a moment early is silently
+# swallowed - the flow then sits waiting for a screen that never arrives, which
+# looks like a network failure rather than a mistimed tap. Observed intermittently
+# on 2026-09-09.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+      enabled: true
+    timeout: 20000
 - tapOn:
-    text: "CONTINUE"
+    id: "org.commcare.dalvik:id/personalid_phone_continue_button"
 - extendedWaitUntil:
     notVisible:
       id: "org.commcare.dalvik:id/progress_bar"
