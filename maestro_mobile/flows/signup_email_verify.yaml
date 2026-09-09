@@ -54,6 +54,7 @@ env:
 # way to observe the transition rather than just the initial state.
 - assertVisible:
     id: "org.commcare.dalvik:id/personalid_resend_countdown_text"
+    text: ".*Resend in.*"
 - assertNotVisible:
     id: "org.commcare.dalvik:id/personalid_email_resend_button"
 - extendedWaitUntil:

@@ -226,3 +226,27 @@ otp_page:
   photo_capture_title: "org.commcare.dalvik:id/title"
   take_photo_btn: "org.commcare.dalvik:id/take_photo_button"
   save_photo_btn: "org.commcare.dalvik:id/save_photo_button"
+
+manage_profile:
+  # Drawer entry point (2.64+). The unlock gate in front of it is bypassed on
+  # qaAutomation builds, so no biometric interaction is needed.
+  drawer_manage_profile_link: "org.commcare.dalvik:id/header_manage_profile"
+
+  # Profile screen - read-only.
+  profile_name_header: "org.commcare.dalvik:id/profile_name"
+  profile_phone_subtitle: "org.commcare.dalvik:id/profile_phone_subtitle"
+  profile_value_name: "org.commcare.dalvik:id/profile_value_name"
+  profile_value_phone: "org.commcare.dalvik:id/profile_value_phone"
+  profile_value_email: "org.commcare.dalvik:id/profile_value_email"
+  forget_account_btn: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+  edit_profile_menu: "//android.widget.TextView[@text='Edit Profile']"
+
+  # Edit Profile screen.
+  edit_name_input: "org.commcare.dalvik:id/profile_name_edit_text"
+  edit_phone_input: "org.commcare.dalvik:id/profile_phone_edit_text"
+  edit_email_input: "org.commcare.dalvik:id/profile_email_edit_text"
+  edit_save_btn: "org.commcare.dalvik:id/btn_save"
+  edit_cancel_btn: "org.commcare.dalvik:id/btn_cancel"
+  # The OTP confirmation raised when the email is changed.
+  otp_confirm_send: "//android.widget.Button[contains(@text,'Send Code') or contains(@text,'SEND CODE')]"
+  save_photo_btn: "org.commcare.dalvik:id/save_photo_button"
