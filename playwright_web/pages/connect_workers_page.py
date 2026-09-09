@@ -31,6 +31,21 @@ class ConnectWorkersPage(BasePage):
     INVITE_USERS_TEXTAREA = locators.get("connect_worker_invite_page", "users_textarea")
     INVITE_SUBMIT_BTN = locators.get("connect_worker_invite_page", "submit_btn")
 
+    # -- Worker List View (WLV_1-8): list / Learn / Deliver tables ----------------
+    LV_TABLE = locators.get("connect_workers_page", "lv_table")
+    LV_TAB_ITEM_BY_NAME = locators.get("connect_workers_page", "lv_tab_item_by_name")
+    LV_NAME_IN_TABLE = locators.get("connect_workers_page", "lv_name_item_in_table")
+    COUNT_BREAKDOWN_POPUP = locators.get("connect_workers_page", "count_breakdown_popup")
+    LV_FILTER_BUTTON = locators.get("connect_workers_page", "lv_filter_button")
+    LV_FILTER_BADGE = locators.get("connect_workers_page", "lv_filter_badge")
+    LV_FILTER_MODAL = locators.get("connect_workers_page", "lv_filter_modal")
+    LV_FILTER_APPLY = locators.get("connect_workers_page", "lv_filter_apply_btn")
+    FILTER_LAST_ACTIVE = locators.get("connect_workers_page", "filter_last_active")
+    FILTER_HAS_DUPLICATES = locators.get("connect_workers_page", "filter_has_duplicates")
+    FILTER_HAS_FLAGS = locators.get("connect_workers_page", "filter_has_flags")
+    FILTER_HAS_OVERLIMIT = locators.get("connect_workers_page", "filter_has_overlimit")
+    FILTER_REVIEW_PENDING = locators.get("connect_workers_page", "filter_review_pending")
+
     # -- worker invite -------------------------------------------------------
 
     def invite_workers(self, base_url, org_slug, opp_id, phone_numbers):
@@ -309,3 +324,156 @@ class ConnectWorkersPage(BasePage):
         assert "select a task" not in text.lower(), "Details panel did not load after row click"
         self._step("Task details panel loaded")
         return text
+
+    # ========================================================================
+    # Worker List View (WLV_1-8) - migrated from Selenium ConnectWorkersPage.
+    # These act on the list / Learn / Deliver tables under #table, reached via
+    # flows.workers_setup (dashboard stat panel), not by URL.
+    # ========================================================================
+
+    def _await_list_table(self):
+        """The Learn/Deliver tables htmx-swap into #table after the tab loads."""
+        self.page.locator(self.LV_TABLE).first.wait_for(state="visible", timeout=30000)
+
+    def _header_texts(self):
+        """All <th> texts of the current table, positions preserved (blank headers
+        kept) so a text index lines up with the matching <td> index."""
+        self._await_list_table()
+        return [h.strip() for h in self.page.locator(self.LV_TABLE).locator("thead th").all_inner_texts()]
+
+    def verify_table_headers_present(self, expected_headers):
+        actual = [h for h in self._header_texts() if h]
+        actual_lower = [h.lower() for h in actual]
+        missing = [h for h in expected_headers if h.lower() not in actual_lower]
+        assert not missing, f"Missing headers: {missing}\nActual headers found: {actual}"
+        self._step(f"Table headers present: {actual}")
+
+    def verify_connect_workers_table_headers_present(self):
+        self.verify_table_headers_present([
+            "#", "Status", "Name", "Phone Number", "Invited Date", "Last Active",
+            "Started Learn", "Completed Learn", "Time to Complete Learning",
+            "First Delivery", "Time to Start Deliver",
+        ])
+
+    def verify_learn_table_headers_present(self):
+        self.verify_table_headers_present([
+            "#", "Name", "Last active", "Started Learning", "Modules completed",
+            "Completed Learning", "Assessment", "Attempts", "Learning hours",
+        ])
+
+    # Numeric status columns whose cell values open a count-breakdown popup. Which
+    # of these the Deliver tab shows depends on the opportunity's verification mode:
+    # a manual-review opp exposes 'Pending', while an auto-verify opp shows a
+    # 'Status' column instead and no 'Pending'. So the review-state column is
+    # asserted as "Status or Pending", and callers act only on the columns present.
+    DELIVER_COUNT_COLUMNS = ["Delivered", "Pending", "Approved", "Rejected"]
+
+    def verify_deliver_table_headers_present(self):
+        """The Deliver tab's stable columns, plus a review-state column that is
+        'Pending' on manual-review opportunities and 'Status' on auto-verify ones."""
+        actual = [h for h in self._header_texts() if h]
+        actual_lower = [h.lower() for h in actual]
+        core = ["#", "Name", "Last active", "Payment unit", "Delivery progress",
+                "Delivered", "Approved", "Rejected"]
+        missing = [h for h in core if h.lower() not in actual_lower]
+        assert not missing, f"Missing headers: {missing}\nActual headers found: {actual}"
+        assert "pending" in actual_lower or "status" in actual_lower, (
+            f"Deliver table has neither a 'Pending' nor a 'Status' column: {actual}"
+        )
+        self._step(f"Deliver table headers present: {actual}")
+
+    def present_deliver_count_columns(self):
+        """Which of the numeric status columns this opportunity's Deliver tab shows."""
+        actual_lower = [h.lower() for h in self._header_texts()]
+        present = [c for c in self.DELIVER_COUNT_COLUMNS if c.lower() in actual_lower]
+        self._step(f"Deliver count columns present: {present}")
+        return present
+
+    def click_tab_by_name(self, tab_name):
+        """Click a workers-page tab (Learn / Deliver / Connect Workers) and confirm
+        it activates. The table re-renders into #table via htmx after the click."""
+        self._step(f"Click '{tab_name}' tab")
+        self.click(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name))
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1500)  # table htmx-swaps into #table
+        self.verify_tab_active(tab_name)
+
+    def verify_tab_active(self, tab_name):
+        tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
+        tab.wait_for(state="visible", timeout=15000)
+        cls = tab.get_attribute("class") or ""
+        assert "active" in cls, f"Tab '{tab_name}' is not active (class={cls!r})"
+        self._step(f"Tab '{tab_name}' is active")
+
+    def click_name_in_table(self, name):
+        self._step(f"Open worker '{name}' from the table")
+        self.click(self.LV_NAME_IN_TABLE.format(name=name))
+        self.page.wait_for_load_state("load")
+
+    def navigate_to_worker_visits(self, worker_name):
+        """Deliver tab -> click a worker -> their Visits page (WVVP entry)."""
+        self.click_tab_by_name("Deliver")
+        self.click_name_in_table(worker_name)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1000)
+
+    def click_and_verify_status_count_breakdown_for_item(self, item_name, column_name):
+        """Click a status cell's value (e.g. worker row x 'Delivered', or the Total
+        row) and confirm the breakdown popup opens. WLV_4 / WLV_5."""
+        headers = self._header_texts()  # positions preserved for td alignment
+        idx = next(
+            (i for i, h in enumerate(headers) if h.lower() == column_name.strip().lower()),
+            None,
+        )
+        assert idx is not None, f"Column '{column_name}' not found in {headers}"
+        table = self.page.locator(self.LV_TABLE).first
+        if item_name.strip().lower() == "total":
+            row = table.locator("xpath=.//tbody//tr[td[normalize-space()='Total']]").first
+        else:
+            row = table.locator(
+                f"xpath=.//tbody//tr[.//p[normalize-space()='{item_name.strip()}']]"
+            ).first
+        row.wait_for(state="visible", timeout=15000)
+        span = row.locator("xpath=./td").nth(idx).locator("span").first
+        self._step(f"Click {item_name!r} x {column_name!r} count")
+        span.click()
+        self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
+        self._step(f"Count breakdown popup shown for {item_name!r} / {column_name!r}")
+
+    # -- Deliver-tab filters (WLV_8) ---------------------------------------------
+
+    def open_filter_modal(self):
+        self._step("Open deliver-tab filter modal")
+        self.click(self.LV_FILTER_BUTTON)
+        self.page.locator(self.LV_FILTER_MODAL).first.wait_for(state="visible", timeout=15000)
+
+    def apply_filters(self):
+        self._step("Apply deliver-tab filters")
+        self.click(self.LV_FILTER_APPLY)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1500)
+
+    def _reset_optional_filter(self, selector, value="---------"):
+        """Reset a filter select if it is present (some fields render only when the
+        opportunity has the matching feature enabled, e.g. has_overlimit)."""
+        if self.page.locator(selector).count() > 0:
+            self.select_by_visible_text(selector, value)
+
+    def clear_all_filters_deliver_table(self):
+        self.open_filter_modal()
+        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, "Any time")
+        self._reset_optional_filter(self.FILTER_HAS_DUPLICATES)
+        self._reset_optional_filter(self.FILTER_HAS_FLAGS)
+        self._reset_optional_filter(self.FILTER_HAS_OVERLIMIT)
+        self._reset_optional_filter(self.FILTER_REVIEW_PENDING)
+        self.apply_filters()
+
+    def apply_and_verify_last_active_1_day_ago(self):
+        self.open_filter_modal()
+        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, "1 day ago")
+        self.apply_filters()
+        badge = self.page.locator(self.LV_FILTER_BADGE).first
+        badge.wait_for(state="visible", timeout=10000)
+        text = badge.inner_text().strip()
+        assert text == "1", f"Filter badge value mismatch: expected '1', got {text!r}"
+        self._step(f"'Last active: 1 day ago' filter applied (badge={text})")
