@@ -791,6 +791,42 @@ class ConnectWorkersPage(BasePage):
         )
         self._step(f"Worker '{identifier}' shows status '{expected_status}'")
 
+    def verify_not_found_display(self, phone):
+        """Connect_worker_06 - a not-found (unregistered) worker shows the status
+        'User not found' with no display name (Name column '—'); only the mobile
+        number is visible. Works for a fresh or an old invite once resolved."""
+        self.verify_worker_status(phone, "User not found")
+        row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+        assert phone.lstrip("+") in row.inner_text().replace(" ", ""), (
+            f"Mobile number {phone} not visible on the not-found row"
+        )
+        self._step(f"Not-found user {phone}: status 'User not found', only the mobile shown")
+
+    def verify_not_found_deletable(self, phone):
+        """Connect_worker_13 - a not-found user can be deleted: selecting the row
+        enables the Delete control. The deletion is not executed here, to preserve
+        the seeded not-found worker; _08 already proves delete removes an invite."""
+        self.select_worker_row(phone)
+        deletew = self.page.locator(self.DELETE_WORKERS_BTN).first
+        assert not deletew.is_disabled(), "Delete control not enabled for a selected not-found user"
+        self._step(f"Not-found user {phone} is deletable (Delete control enabled)")
+        # Leave clean.
+        self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first.locator(
+            "input[type=checkbox]"
+        ).first.uncheck()
+
+    def verify_resend_cooldown(self, phone):
+        """Connect_worker_09 - resending a registered invite within 24h is refused
+        with a cooldown message. Uses a real registered number (demo numbers do not
+        enforce the cooldown). The resend is skipped, so no SMS is sent - but this
+        relies on the invite being <24h old; refresh it if the assertion flips."""
+        body = self.resend_worker_and_message(phone)
+        assert "sent in the last 24 hours" in body.lower() and phone in body, (
+            f"Expected a 24h-cooldown skip message naming {phone}; the invite may be "
+            f"older than 24h (resend would then succeed and message the real user)."
+        )
+        self._step(f"Resend of {phone} refused - 24h cooldown")
+
     def _first_pending_invite_row(self):
         return self.page.locator(
             "xpath=//div[@id='table']//table//tbody//tr[.//span[@x-tooltip.raw='Invite pending']]"

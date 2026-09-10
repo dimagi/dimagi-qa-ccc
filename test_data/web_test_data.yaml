@@ -105,6 +105,10 @@ WORKER_LIFECYCLE:
   pending_invite_phone_2: "+74262122230"
   reserved_registered: "+74261291290"
   reserved_not_registered: "+74261291298"
+  # Anshu 2026-09-10: a resolved not-found worker (status "User not found", Name "—")
+  # for _06/_13, and a real registered number for the _09 24h resend cooldown.
+  not_found_phone: "+74261291230"
+  cooldown_phone: "+919000696488"
 
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
