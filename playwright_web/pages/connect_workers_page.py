@@ -703,6 +703,60 @@ class ConnectWorkersPage(BasePage):
         self.page.wait_for_load_state("load")
         self.page.wait_for_timeout(2000)
 
+    # ========================================================================
+    # Invite lifecycle (Connect_worker_02-16) - the Connect Workers (default) tab.
+    # Phase 1 here is zero-mutation (uses an existing pending invite); the
+    # invite/resend/delete helpers below it send SMS and self-clean.
+    # ========================================================================
+
+    ADD_WORKER_BTN = locators.get("connect_workers_page", "add_worker_btn")
+    RESEND_INVITES_BTN = locators.get("connect_workers_page", "resend_invites_btn")
+    DELETE_WORKERS_BTN = locators.get("connect_workers_page", "delete_workers_btn")
+    INVITE_USERS_INPUT = locators.get("connect_workers_page", "invite_users_input")
+    INVITE_SUBMIT_BTN = locators.get("connect_workers_page", "invite_submit_btn")
+    PENDING_INVITE_INDICATOR = locators.get("connect_workers_page", "pending_invite_indicator")
+    WORKER_ROW_BY_PHONE = locators.get("connect_workers_page", "worker_row_by_phone")
+    DELETE_INVITES_CONFIRM_BTN = locators.get("connect_workers_page", "delete_invites_confirm_btn")
+
+    def verify_pending_invite_status_present(self):
+        """Connect_worker_02 - a not-yet-accepted invite shows the 'Invite pending'
+        status (orange clock). Asserts at least one pending invite is displayed."""
+        self._await_list_table()
+        count = self.page.locator(self.PENDING_INVITE_INDICATOR).count()
+        assert count > 0, "No 'Invite pending' status indicator found in the Connect Workers list"
+        self._step(f"'Invite pending' status present ({count} row(s))")
+
+    def _first_pending_invite_row(self):
+        return self.page.locator(
+            "xpath=//div[@id='table']//table//tbody//tr[.//span[@x-tooltip.raw='Invite pending']]"
+        ).first
+
+    def verify_resend_delete_gated_by_selection(self):
+        """Connect_worker_03 - Resend Invite(s) and Delete Worker(s) are disabled
+        with nothing selected and enable once an invite row is selected. Selecting a
+        checkbox mutates nothing, and the row is deselected again at the end."""
+        resend = self.page.locator(self.RESEND_INVITES_BTN).first
+        deletew = self.page.locator(self.DELETE_WORKERS_BTN).first
+        resend.wait_for(state="visible", timeout=15000)
+        assert resend.is_disabled() and deletew.is_disabled(), (
+            "Resend/Delete should be disabled with no invite selected"
+        )
+        row = self._first_pending_invite_row()
+        row.wait_for(state="visible", timeout=15000)
+        checkbox = row.locator("input[type=checkbox]").first
+        checkbox.check()
+        self.page.wait_for_timeout(600)
+        assert not resend.is_disabled() and not deletew.is_disabled(), (
+            "Resend/Delete should enable once an invite is selected"
+        )
+        self._step("Resend/Delete enable when an invite is selected")
+        checkbox.uncheck()
+        self.page.wait_for_timeout(400)
+        assert resend.is_disabled() and deletew.is_disabled(), (
+            "Resend/Delete should disable again when the invite is deselected"
+        )
+        self._step("Resend/Delete disable again when deselected")
+
     def verify_last_paid_empty(self, worker, timeout_seconds=60):
         """Payment Processing_4 (part 2) - after rollback the Last paid is '—'."""
         import time
