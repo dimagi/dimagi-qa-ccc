@@ -860,6 +860,16 @@ class ConnectWorkersPage(BasePage):
         body = self.page.inner_text("body")
         return body
 
+    def resend_worker_and_message(self, phone):
+        """Select the worker row for `phone` and click Resend Invite(s), returning
+        the resulting page text. Navigates back to the workers list first, since a
+        previous resend/delete redirects to the dashboard. Non-destructive: resend
+        of an accepted/suspended worker is skipped, and demo numbers are not
+        actually re-messaged."""
+        self._goto_workers_list()
+        self.select_worker_row(phone)
+        return self.resend_selected_invite()
+
     def delete_worker_invite(self, phone, timeout_seconds=60):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
         confirm modal, and wait for it to disappear."""

@@ -40,7 +40,9 @@ def workers(connect, test_data):
     connect_page, opps_url = connect
     opp = test_data.get("WORKER_LIFECYCLE")["opportunity_name"]
     open_connect_workers(connect_page, opp, opps_url)
-    return ConnectWorkersPage(connect_page)
+    w = ConnectWorkersPage(connect_page)
+    w._workers_url = connect_page.url  # for resend navigation (redirects to dashboard)
+    return w
 
 
 def test_connect_worker_04_accepted_status(workers, test_data):
@@ -53,6 +55,36 @@ def test_connect_worker_07_suspended_status(workers, test_data):
     """Connect_worker_07: a suspended worker shows 'User suspended'."""
     data = test_data.get("WORKER_LIFECYCLE")
     workers.verify_worker_status(data["suspended_worker"], "User suspended")
+
+
+def test_connect_worker_11_resend_skipped_for_accepted(workers, test_data):
+    """Connect_worker_11: resending an accepted worker's invite is skipped."""
+    data = test_data.get("WORKER_LIFECYCLE")
+    body = workers.resend_worker_and_message(data["accepted_worker_phone"])
+    assert "already accepted" in body.lower() and data["accepted_worker_phone"] in body, (
+        "Expected a 'skipped - already accepted' message for the accepted worker"
+    )
+
+
+def test_connect_worker_14_resend_skipped_for_suspended(workers, test_data):
+    """Connect_worker_14: resending a suspended worker's invite is skipped."""
+    data = test_data.get("WORKER_LIFECYCLE")
+    body = workers.resend_worker_and_message(data["suspended_worker_phone"])
+    assert "skipped" in body.lower() and data["suspended_worker_phone"] in body, (
+        "Expected a 'skipped' message for the suspended worker"
+    )
+
+
+def test_connect_worker_10_resend_allowed_for_pending(workers, test_data):
+    """Connect_worker_10: resending a pending invite succeeds.
+
+    (Connect_worker_09 - the 24h resend cooldown - cannot be automated: demo
+    numbers do not enforce the cooldown, so a resend always succeeds.)"""
+    data = test_data.get("WORKER_LIFECYCLE")
+    body = workers.resend_worker_and_message(data["pending_invite_phone"])
+    assert "successfully resent" in body.lower(), (
+        "Expected a 'Successfully resent' message for the pending invite"
+    )
 
 
 def test_learn_tab_03_assessment_failed(workers, test_data):

@@ -96,8 +96,10 @@ WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
 # and _10 (resend pending) can only be tested manually with a real number.
 WORKER_LIFECYCLE:
   opportunity_name: "Worker_Lifecycle_Automation"
-  accepted_worker: "Case_list"          # +74269870654, Invite accepted
-  suspended_worker: "Map_08"            # +74268080808, User suspended
+  accepted_worker: "Case_list"          # Invite accepted
+  accepted_worker_phone: "+74269870654"
+  suspended_worker: "Map_08"            # User suspended
+  suspended_worker_phone: "+74268080808"
   failed_assessment_worker: "Map_09"    # +74269090909, Learn assessment Failed
   pending_invite_phone: "+74262425260"
   pending_invite_phone_2: "+74262122230"
