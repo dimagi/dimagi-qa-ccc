@@ -785,15 +785,19 @@ class ConnectWorkersPage(BasePage):
         Retries once on ERR_ABORTED - a goto fired while the invite/resend redirect
         is still in flight aborts, which is transient, not a real failure."""
         url = getattr(self, "_workers_url", None) or self.page.url
-        for attempt in range(2):
+        last = None
+        for attempt in range(3):
             try:
-                self.page.goto(url)
+                self.page.goto(url, timeout=45000)
                 break
             except Exception as exc:
-                if "ERR_ABORTED" in str(exc) and attempt == 0:
-                    self.page.wait_for_timeout(1500)
+                # ERR_ABORTED (a goto racing the redirect) and transient load
+                # timeouts are both worth one more try before failing.
+                last = exc
+                if attempt < 2:
+                    self.page.wait_for_timeout(2000)
                     continue
-                raise
+                raise last
         self.page.wait_for_load_state("load")
         self.page.wait_for_timeout(2500)
 

@@ -91,3 +91,9 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list):
     # _08 - delete the invite; it disappears.
     workers.delete_worker_invite(RESERVED_INVITE)
     assert not workers.worker_row_present(RESERVED_INVITE), "Invite still present after delete"
+
+# Connect_worker_06 (not-found shows mobile under Name) and _13 (delete not-found)
+# are deferred: a freshly-invited unregistered number renders '—' under Name and
+# only resolves to a terminal "not found" state asynchronously (via the SMS
+# delivery callback), so the mobile-under-name display is not observable
+# synchronously in a test. They need a durable seeded not-found worker.
