@@ -417,6 +417,22 @@ class ConnectWorkersPage(BasePage):
             return
         raise AssertionError("No worker with a 'Passed' assessment found on the Learn tab")
 
+    def verify_assessment_status(self, worker, expected):
+        """Learn_tab_03/_04 - a named worker's Assessment column equals `expected`
+        ('Passed' / 'Failed')."""
+        headers = self._header_texts()
+        a_idx = next((i for i, h in enumerate(headers) if h.strip().lower() == "assessment"), None)
+        assert a_idx is not None, f"No Assessment column on the Learn tab: {headers}"
+        row = self.page.locator(
+            f"xpath=//div[@id='table']//table//tbody//tr[.//p[normalize-space()='{worker}']]"
+        ).first
+        row.wait_for(state="visible", timeout=15000)
+        value = row.locator("xpath=./td").nth(a_idx).inner_text().strip()
+        assert value.lower() == expected.strip().lower(), (
+            f"Assessment for '{worker}' is {value!r}, expected {expected!r}"
+        )
+        self._step(f"Assessment for '{worker}' is '{value}'")
+
     def click_tab_by_name(self, tab_name):
         """Click a workers-page tab (Learn / Deliver / Connect Workers) and confirm
         it activates. The table re-renders into #table via htmx after the click."""
@@ -725,6 +741,21 @@ class ConnectWorkersPage(BasePage):
         count = self.page.locator(self.PENDING_INVITE_INDICATOR).count()
         assert count > 0, "No 'Invite pending' status indicator found in the Connect Workers list"
         self._step(f"'Invite pending' status present ({count} row(s))")
+
+    def verify_worker_status(self, identifier, expected_status):
+        """Connect_worker_04/_07 - the worker row (found by phone or display name)
+        shows `expected_status` (StatusIndicatorColumn x-tooltip.raw, e.g.
+        'Invite accepted', 'User suspended', 'Invite pending')."""
+        self._await_list_table()
+        row = self.page.locator(
+            f"xpath=//div[@id='table']//table//tbody//tr[contains(normalize-space(),'{identifier}')]"
+        ).first
+        row.wait_for(state="visible", timeout=15000)
+        match = row.locator(f"xpath=.//*[@x-tooltip.raw='{expected_status}']")
+        assert match.count() > 0, (
+            f"Worker '{identifier}' does not show status '{expected_status}' (row: {row.inner_text()!r})"
+        )
+        self._step(f"Worker '{identifier}' shows status '{expected_status}'")
 
     def _first_pending_invite_row(self):
         return self.page.locator(

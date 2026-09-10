@@ -87,6 +87,23 @@ WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
+# --- Worker invite lifecycle (Batch C) - dedicated seeded opportunity (Anshu, 2026-09-10) ---
+# Under PM_Automation_01. Statuses read live from the app (x-tooltip.raw):
+# 'Invite accepted' / 'User suspended' / 'Invite pending'. Pending invites carry
+# no display name/ConnectID in web. Reserved numbers: 74261291290-297 registered,
+# 74261291298 not-registered. NOTE: demo numbers do NOT enforce the 24h resend
+# cooldown and cannot be re-invited repeatedly, so Connect_worker_09 (cooldown)
+# and _10 (resend pending) can only be tested manually with a real number.
+WORKER_LIFECYCLE:
+  opportunity_name: "Worker_Lifecycle_Automation"
+  accepted_worker: "Case_list"          # +74269870654, Invite accepted
+  suspended_worker: "Map_08"            # +74268080808, User suspended
+  failed_assessment_worker: "Map_09"    # +74269090909, Learn assessment Failed
+  pending_invite_phone: "+74262425260"
+  pending_invite_phone_2: "+74262122230"
+  reserved_registered: "+74261291290"
+  reserved_not_registered: "+74261291298"
+
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
   # exists on staging under PM_Automation_01. covid_opp_test has an accepted worker
