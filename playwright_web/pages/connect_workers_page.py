@@ -860,6 +860,20 @@ class ConnectWorkersPage(BasePage):
         body = self.page.inner_text("body")
         return body
 
+    def select_worker_rows(self, phones):
+        for p in phones:
+            row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=p)).first
+            row.wait_for(state="visible", timeout=15000)
+            row.locator("input[type=checkbox]").first.check()
+        self.page.wait_for_timeout(500)
+
+    def bulk_resend_and_message(self, phones):
+        """Connect_worker_15 - select several workers of different states and click
+        Resend Invite(s); returns the combined result text. Non-destructive."""
+        self._goto_workers_list()
+        self.select_worker_rows(phones)
+        return self.resend_selected_invite()
+
     def resend_worker_and_message(self, phone):
         """Select the worker row for `phone` and click Resend Invite(s), returning
         the resulting page text. Navigates back to the workers list first, since a

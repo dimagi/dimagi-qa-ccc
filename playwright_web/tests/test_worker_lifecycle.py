@@ -87,6 +87,21 @@ def test_connect_worker_10_resend_allowed_for_pending(workers, test_data):
     )
 
 
+def test_connect_worker_15_bulk_resend_messages(workers, test_data):
+    """Connect_worker_15: bulk-resending a mix of worker states shows the
+    appropriate combined messages - accepted/suspended are skipped while a pending
+    invite is resent. Non-destructive (resend)."""
+    data = test_data.get("WORKER_LIFECYCLE")
+    body = workers.bulk_resend_and_message([
+        data["accepted_worker_phone"],
+        data["suspended_worker_phone"],
+        data["pending_invite_phone"],
+    ])
+    low = body.lower()
+    assert "already accepted" in low, "Bulk resend should skip the accepted/suspended workers"
+    assert "successfully resent" in low, "Bulk resend should resend the pending invite"
+
+
 def test_learn_tab_03_assessment_failed(workers, test_data):
     """Learn_tab_03: a worker who failed the assessment shows Assessment 'Failed'."""
     data = test_data.get("WORKER_LIFECYCLE")
