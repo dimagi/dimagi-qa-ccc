@@ -30,6 +30,7 @@ report.html
 */report.html
 */*.png
 
-# BrowserStack Maestro run artefacts, regenerated on every run.
-maestro_report.json
+# Maestro run artefacts written by run_on_browserstack.py / maestro_report.py
 maestro_report.html
+maestro_report.json
+maestro_history_*.json

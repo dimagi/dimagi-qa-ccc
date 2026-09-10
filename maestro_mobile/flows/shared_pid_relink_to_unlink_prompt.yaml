@@ -1,0 +1,27 @@
+# Shared setup for the unlink cases (PID_52/53/54/55): establish a linked worker,
+# then log out and log back in with the password so the app shows the
+# "Unlink PersonalId?" prompt. Ends with that dialog visible.
+#
+# The link does not survive a fresh install (clearState), so the unlink prompt
+# can only be reached by re-logging within the same session after linking.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_link_base.yaml
+- assertVisible: { text: "Link to PersonalId?" }
+- tapOn: { text: "YES" }                       # link the login (PID_51)
+- extendedWaitUntil:
+    visible: { text: "Logged In: ${MW_USERNAME}" }
+    timeout: 45000
+- tapOn: { text: "Log out of CommCare" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/edit_password" }
+    timeout: 30000
+# Username pre-fills with the last worker; entering the password again (PID_52)
+# triggers the unlink prompt because the login is PersonalId-managed.
+- tapOn: { id: "org.commcare.dalvik:id/edit_password" }
+- inputText: "${MW_PASSWORD}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/login_button" }
+- extendedWaitUntil:
+    visible: { text: "Unlink PersonalId?" }
+    timeout: 45000

@@ -1,0 +1,104 @@
+# Shared base for the Personal ID "Traditional App Install & Login" cases
+# (PID_48-55). Drives, from a clean install, the full sequence that makes the
+# app offer to link a password login to a PersonalId:
+#
+#   1. Sign into PersonalId on the device      (isloggedIn() must be true)
+#   2. Install a traditional (non-Connect) app by code
+#   3. Log in as the mobile worker with username + password
+#
+# After step 3 the app shows the "Link to PersonalId?" dialog (YES / NO). The
+# precondition is enforced in commcare-android PostLoginSideEffects.runOnSuccess:
+# the link check only runs when a PersonalId session exists and the app is not a
+# Connect job app. The worker's own phone number is irrelevant.
+#
+# Selectors verified live (APK app-cccStaging) 2026-08-12. Bare ids so debug
+# builds (.debug applicationId suffix) also match.
+#
+# Env (injected by the runner):
+#   COUNTRY_CODE  PID_PHONE  PID_NAME  PID_BACKUP   - the PersonalId to sign into
+#   APP_CODE                                        - traditional app install code
+#   MW_USERNAME  MW_PASSWORD                        - mobile worker credentials
+appId: org.commcare.dalvik
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+# Google "Location Accuracy" device dialog blocks the first sign-in after a
+# fresh install - accept it if it shows.
+- tapOn: { text: "Turn on", optional: true }
+
+# --- 1. Sign into PersonalId ---
+- tapOn: { text: "Open navigation drawer", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nav_drawer_sign_in_button" }
+- tapOn: { text: "Turn on", optional: true }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+    timeout: 20000
+# Country code + phone. The Google autofill sheet can steal focus on first tap,
+# so dismiss it (Cancel) then re-focus before typing.
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- inputText: "${PID_PHONE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+- tapOn: { text: "CONTINUE" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 20000
+# Name
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- inputText: "${PID_NAME}"
+- hideKeyboard
+- tapOn: { text: "CONTINUE" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 25000
+# Backup code (six-box NumericCodeView - typed into the focused view). Existing
+# accounts show "Welcome back <name>" above it.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 20000
+- inputText: "${PID_BACKUP}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
+- tapOn: { text: "OK", optional: true }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 30000
+
+# --- 2. Install the traditional app by code ---
+# PersonalId sign-in leaves the nav drawer open; tap the scrim to close it.
+- tapOn: { point: "92%,50%" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/enter_app_location" }
+    timeout: 10000
+- tapOn: { id: "org.commcare.dalvik:id/enter_app_location" }
+- tapOn: { id: "org.commcare.dalvik:id/edit_profile_location" }
+- inputText: "${APP_CODE}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/start_install" }
+- tapOn: { id: "org.commcare.dalvik:id/btn_start_install" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/edit_username" }
+    timeout: 120000
+
+# --- 3. Log in as the mobile worker (password login) ---
+- tapOn: { id: "org.commcare.dalvik:id/edit_username" }
+- inputText: "${MW_USERNAME}"
+- tapOn: { id: "org.commcare.dalvik:id/edit_password" }
+- inputText: "${MW_PASSWORD}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/login_button" }
+# After login the app shows a PersonalId dialog: "Link to PersonalId?" when the
+# worker is not yet linked, or "Unlink PersonalId?" when it is. The caller waits
+# for and handles whichever one its case expects.
+- extendedWaitUntil:
+    visible: { text: ".*link this login to.*|.*sever this login from.*" }
+    timeout: 60000

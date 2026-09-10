@@ -1,0 +1,9 @@
+# PID_51 - Selecting Yes links the mobile worker login to the PersonalId account;
+# the worker is logged in and the link is established.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_link_base.yaml
+- tapOn: { text: "YES" }
+- extendedWaitUntil:
+    visible: { text: "Logged In: ${MW_USERNAME}" }
+    timeout: 45000

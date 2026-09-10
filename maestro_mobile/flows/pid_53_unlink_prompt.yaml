@@ -1,0 +1,8 @@
+# PID_52 + PID_53 - A linked worker can still log in with a password, and doing so
+# shows the "Unlink PersonalId?" prompt (Yes/No).
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_relink_to_unlink_prompt.yaml
+- assertVisible: { text: ".*sever this login from PersonalId.*" }
+- assertVisible: { text: "YES" }
+- assertVisible: { text: "NO" }

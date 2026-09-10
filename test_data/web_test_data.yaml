@@ -18,8 +18,9 @@ OLP_1:
   learn_app_domain_staging: "connectqa-automation"
   deliver_app_domain: "connectqa-automation-prod"
   deliver_app_domain_staging: "connectqa-automation"
-  learn_app: "Learn App [Job 1]"
-  deliver_app: "Delivey App [Job 2]"
+  # Master app names are hardcoded in playwright_web/flows/olp_setup.py
+  # ("[Master] Learn App" / "[Master] Delivery App") - the old learn_app/deliver_app
+  # keys here were stale and unread, so they were removed.
   learn_app_description: "This is Learn App"
   passing_score: "40"
 
@@ -120,3 +121,243 @@ Make_Payment:
   worker_name: "Automation User 10"
   country_code: "+7426"
   phone_number: "7426006"
+
+# --- Tasking workflow automation (CCCT-2658) ---
+TASKING:
+  # The live task unit. Its slug is already consumed on both apps by the task
+  # type J2-J4 and the hybrid test assign, so it is only creatable on a fresh
+  # app copy - which is why TC-TTC-002 rides on the per-run OLP opportunity.
+  task_unit_name: "Relearn Task Unit"       # visible label in the Task Unit dropdown
+  task_unit_slug: "relearn_task"            # must match HQ Task Unit ID exactly (case-sensitive)
+  case_property: "relearn_complete"
+  # J1's sandbox type, created once from the second task unit on the static
+  # opportunity and reused forever: a task-type slug is permanently consumed per
+  # app, so J1 must never create a type from task_unit_slug there, and must
+  # never archive the live type either.
+  sandbox_unit_slug: "relearn_task_2"
+  sandbox_unit_name: "Relearn Task Unit 2"
+  # TC-TTC-005 renames the sandbox type on every run. The slug is never rendered
+  # in the table, so the row cannot be found by slug - instead the rename toggles
+  # between these two names, which makes the test stateless and repeatable.
+  sandbox_name_a: "Relearn Sandbox A"
+  sandbox_name_b: "Relearn Sandbox B"
+  # Confirmed on staging: the "Tasks Assigned to Connect Workers" dashboard card
+  # renders and links to .../assigned_tasks/, so the tile assertions (TLV-006 and
+  # IMP-003) can run. Set back to false if the card disappears on an environment.
+  switch_enabled: true
+  # --- Static opportunity for J1/J2/J3/J4 ---
+  # Deliberately long-lived (365-day window) and reused until the LDVP journey
+  # exists, because automation-created opportunities only get a short window and
+  # Connect blocks delivery once it ends.
+  #
+  # Environment-specific values follow the convention OLP_1 already uses for
+  # domains and api keys: the **unsuffixed key is prod**, "<key>_staging" is
+  # staging. Keys that are the same on both environments are given once.
+  static_opp: "Demo Opportunity_04-Aug-2026 : 15:37"           # prod, created 04-Aug-2026
+  static_opp_staging: "Demo Opportunity_31-Jul-2026 : 18:39"   # staging, created 31-Jul-2026
+  static_opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
+  static_opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
+  static_org: "pm_automation_01"     # PM org slug - the same on both environments
+  static_nm_org: "network-manager"   # NM org slug for permission tests
+  static_nm_org_name: "Network Manager"   # NM org display name for the org switcher
+  static_worker: "Relearn Task User"      # enrolled worker (+74263119728)
+  static_task_type: "Relearn Task Unit"   # pre-created task type on the static opp
+
+# --- Phase 2 hybrid web -> mobile -> web (TC-E2E-001/003/006) ---
+TASKING_HYBRID:
+  # Long-lived tasking opportunity created 31-Jul-2026 by
+  # tests/test_setup_tasking_opportunity.py: 365-day delivery window, active
+  # "Relearn Task Unit" task type, worker +74263119728 invited.
+  # Opportunity name: Demo Opportunity_31-Jul-2026 : 18:39
+  # Same suffix convention as TASKING: unsuffixed is prod, "_staging" is staging.
+  # The worker, its backup code and the task type are identical on both, so they are
+  # given once below.
+  org: "pm_automation_01"
+  opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
+  opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
+  task_type: "Relearn Task Unit"
+  opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
+  opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
+  # The mobile worker lives in test_data/mobile_workers.yaml under
+  # MAESTRO_WORKER_RELEARN_TASK - one source shared with the Maestro suite, resolved
+  # per environment. It is deliberately not repeated here: the number differs
+  # between environments, and a copy in two files drifts into a device signing in as
+  # the wrong worker on one of them.
+  # Two device sessions, gated in between by the web side: the blocked visit has to
+  # be seen evaluated by Connect before the task completion is submitted, because the
+  # HQ -> Connect hop lags on staging and the completion can otherwise be processed
+  # first. See the comment in worker_blocked_visit.yaml.
+  flow_blocked_visit: "worker_blocked_visit.yaml"
+  flow: "worker_relearn_task.yaml"
+  # Form submission travels device -> CommCare HQ -> Connect's form receiver,
+  # which is far from instant on staging, so poll generously.
+  completion_timeout_seconds: 900
+
+# Connect messaging (CCCT-2671). Unsuffixed keys are prod, `_staging` overrides
+# them - the same convention the rest of this file uses.
+MESSAGING:
+  # Survey form the Connect Survey content type points at.
+  #
+  # One value for both environments on purpose. These used to differ - prod
+  # pointed at "Delivery App - ETE > Surveys > Survey" and staging at the SMS
+  # app's "Surveys > Survey" - which meant the two environments exercised
+  # different forms and only one of them could be right. A Connect Survey is
+  # meant to be driven from the SMS app, and prod's completed surveys never
+  # appeared in HQ's submit history while it pointed at a Delivery App form.
+  # Whether that is the whole explanation is what TC-BRD-004 has to show; what
+  # is certain is that both environments should ask the same questions, so the
+  # answers below can be one set rather than two.
+  survey_form: "SMS Tests [DO NOT DELETE] > Case List > Registration Form"
+  # HQ user id of the mobile worker every alert and broadcast is addressed to.
+  # It MUST be the user that MAESTRO_MESSAGING_HYBRID signs in as on the device
+  # (prod: CCC- Automationuser1, +74267426121), or the message is delivered to
+  # somebody else's channel and the device waits for something that was never
+  # sent to it.
+  #
+  # One id, not one per content type. Legacy used a second id for broadcasts
+  # (MESSAGING_4_5_6 -> 001b8edd7bc3d3c58a70), which belongs to a different
+  # account entirely - harmless when nothing checked the phone, wrong the moment
+  # a device does.
+  #
+  # Prod value only. The staging id still has to be read off HQ's recipient
+  # picker once "Message Automation User" is enrolled.
+  worker_user_id: "049b54d12e564f418397"
+  # Staging, read off HQ's recipient picker on 2026-08-12 by typing the
+  # worker's name - the widget searches by name and resolves to the id, which
+  # is also how a future version could drop these hardcoded ids entirely.
+  worker_user_id_staging: "924dec685ba0a0dbc895"
+  # The mobile channel is named after the HQ domain - ConnectID stores it as
+  # channel_source and the app renders that as the channel name.
+  channel_name: "connectqa-automation-prod"
+  channel_name_staging: "connectqa-automation"
+  # Maestro flow driving the device half of the broadcast test. The worker is
+  # deliberately not repeated here: it lives in mobile_workers.yaml under
+  # MAESTRO_MESSAGING_HYBRID, the single source the Maestro runner resolves per
+  # environment, so web and device cannot disagree about who signs in.
+  broadcast_flow: "messaging_broadcast.yaml"
+  survey_flow: "messaging_survey.yaml"
+  keyword_flow: "messaging_keyword.yaml"
+  keyword_survey_flow: "messaging_keyword_survey.yaml"
+  consent_flow: "messaging_consent.yaml"
+  subscription_flow: "messaging_subscription.yaml"
+  empty_state_flow: "messaging_empty_state.yaml"
+  # The channel TC-CHN-006 unsubscribes and restores. Deliberately NOT
+  # channel_name: every delivery test sends into that one, and a run that died
+  # between unsubscribe and resubscribe would leave it unsubscribed and break
+  # them all. This one is referenced nowhere else.
+  # Must sort ABOVE channel_name while subscribed, so unsubscribing it is an
+  # observable move rather than a no-op. connetqa-prod was the first choice and
+  # was wrong: it sorts last, so the assertion would have held before the
+  # unsubscribe as well as after it.
+  spare_channel: "connectqa"
+  spare_channel_staging: "connectqa"
+  channel_created_flow: "messaging_channel_created.yaml"
+  push_deeplink_flow: "messaging_push_deeplink.yaml"
+  unsubscribe_flow: "messaging_unsubscribe_only.yaml"
+  # Repair used in a finally by the consent-gating test - see the flow header.
+  resubscribe_flow: "messaging_resubscribe_only.yaml"
+  consent_delivery_flow: "messaging_consent_delivery.yaml"
+  conditional_alert_flow: "messaging_conditional_alert.yaml"
+  conditional_alert_survey_flow: "messaging_conditional_alert_survey.yaml"
+  # The alert cases run as the TASKING worker, which is enrolled and
+  # delivering on the tasking opportunity - the messaging worker is enrolled
+  # nowhere on prod. The alert matches a case property and its recipient is a
+  # user, so submitter and recipient are free to be the same account.
+  alert_worker_user_id: "022fc4d2f72ec5375a24"     # Relearn User 2, prod
+  # Staging, read off HQ's recipient picker on 2026-08-18 by typing the worker's
+  # staging name - the same way the prod id was captured. The ids differ because
+  # the accounts do: prod's tasking worker is "Relearn User 2", staging's is
+  # "Relearn Task User" (mobile_workers.yaml, MAESTRO_WORKER_RELEARN_TASK).
+  alert_worker_user_id_staging: "e9aa6630f447cb3226bb"   # Relearn Task User, staging
+  alert_opportunity: "Demo Opportunity_04-Aug-2026 : 15:37"
+  # Same opportunity the tasking suite uses on staging (TASKING_HYBRID
+  # .opportunity_name_staging) - these alert cases run as the tasking worker, so
+  # they are enrolled on whatever that suite is enrolled on, per environment.
+  alert_opportunity_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
+  # Two mid-build sends for the consent-gating pair. The first must land
+  # after the device has unsubscribed, the second after it has resubscribed.
+  blocked_send_delay_seconds: 260
+  allowed_send_delay_seconds: 500
+  # How long the mid-build web trigger waits before requesting consent. It
+  # must land AFTER the worker has signed in - a push sent earlier reaches a
+  # device not yet registered as that user and is lost - and before the
+  # flow's 600s shade wait runs out. Cold-start sign-in has been running
+  # ~2.5 min on BrowserStack, so this leaves roughly a minute of margin.
+  consent_trigger_delay_seconds: 210
+  # The questions survey_form asks, in order, and what to answer them with.
+  # Kept as data rather than baked into the flow the way legacy's
+  # fill_survey_form() did, so pointing survey_form at another form of the same
+  # shape only means editing this. A form with a different NUMBER of questions
+  # is not just data: each question is an explicit wait-then-answer pair in
+  # messaging_survey.yaml and messaging_conditional_alert_survey.yaml, so those
+  # gain or lose a block too. Registration Form asks four; the previous form
+  # asked two.
+  #
+  # Q1 has no answer here on purpose: the test generates a per-run value so the
+  # resulting submission is attributable to one run when searching HQ, which is
+  # exactly what TC-BRD-004 needs.
+  survey_q1_label: "Enter case name"
+  survey_q2_label: "Define External ID"
+  survey_q2_answer: "101"
+  survey_q3_label: "Enter age"
+  survey_q3_answer: "30"
+  survey_q4_label: "Enter appointment date"
+  # Connect surveys take dates as YYYYMMDD with no separators - not YYYY-MM-DD,
+  # which the survey rejects.
+  survey_q4_answer: "20260901"
+# OLP_02 (NM cannot create an opportunity). The managed opportunity-init view keys
+# off a real program_id (UUID) and denies non-PM orgs with 403. Staging program
+# "OLP Test program" (set up 2026-08-24). No prod value -> the probe skips on prod.
+OLP_NM_CREATE:
+  managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
+
+# Opportunity Dashboard (OD_1-OD_19, read-only tier). One fully-configured
+# opportunity to open. "Demo Opportunity" is the automation-seeded opp (same one
+# OLP_4 uses) and exists on both environments; add an _staging override if the
+# staging seed ever diverges. If the name is not found the test falls back to the
+# first row in the list, so the suite stays runnable without seed coupling.
+OPD:
+  opportunity_name: "Demo Opportunity"
+  # Budget/message cases need an opp with claimed workers; Demo has none.
+  budget_opportunity_name_staging: "OLP_Test_Opp"
+  # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
+  # tests/test_opd_gaps.py. Each is skipped until its key is filled in; add a
+  # _staging suffix for a staging-specific value.
+  # nm_org: ""            # OD_20: a Network Manager org that can see the opp
+  # viewer_username: ""   # OD_21: a VIEWER-role account
+  # standalone_opp: ""    # OD_22: a standalone (non-program) opportunity name
+  # incomplete_opp: ""    # OD_23: an opportunity with setup not complete
+  # test_opp: ""          # OD_26: an is_test opportunity name
+  # microplanning_opp: "" # OD_28: an opportunity with the MICROPLANNING flag on
+  # fresh_delivery_opp: "" # OD_30: an opp with deliveries/payments in last 24h
+  # Gap-case fixtures provided by Anshu (staging, 2026-09-04):
+  # OD_20 NM view: the manual opp seen as Network Manager (org nm_automation).
+  nm_view_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  nm_view_org_slug_staging: "nm_automation"
+  # OD_26 test opp + OD_28 microplanning: "OLP Test opp" (all opps here are is_test;
+  # this one also has the MICROPLANNING flag). Org pm_automation_01.
+  test_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
+  microplanning_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
+  # OD_37 ended opp - end date set to 2026-09-05; only shows as Ended after it
+  # passes, so the test self-skips until the badge reads "Ended". Org pm_automation_01.
+  ended_opp_id_staging: "4c853985-699a-4952-883f-4a91348c9cbe"
+  gap_org_slug_staging: "pm_automation_01"
+  # OD_23 setup-incomplete opp (no payment units) - the dashboard redirects to
+  # payment_units/create. Org pm_automation_01.
+  incomplete_opp_id_staging: "38421ba7-d240-4721-a770-65edf0d90b88"
+  # Still pending: OD_21 (viewer acct), OD_30 (24h data).
+  # OD_22 (standalone) deprecated - no standalone opps exist (migrated to legacy program).
+  # GATE for the budget-MUTATION tests (tests/test_opd_budget_mutations.py,
+  # OD_10/11/12/14/15). Points at the dedicated staging "Add Budget Opp" provided
+  # for this purpose (safe to mutate-then-revert; tests are net-zero). No prod value
+  # -> the module skips on prod (assert-and-skip policy). Open by id (robust).
+  mutation_opportunity_id_staging: "b18288ce-8763-4681-b5e8-d50934bffbd7"
+  # mutation_opportunity_name(_staging): alternative to id, matched in the opp list.
+  # Manual-verification opp (automatic_visit_verification OFF) - the only way to see
+  # the PM "PM Review Sheet" export option (OD_44) and the visit-status import
+  # (OD_46). Lives in the dedicated PM org pm_automation_02 (auto-verify is org-wide,
+  # so it needed a separate org). Staging only; no prod equivalent -> those tests
+  # skip on prod. Do NOT create new opps here - only this one is manual (new opps in
+  # the org revert to auto-approval).
+  manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  manual_verify_org_slug_staging: "pm_automation_02"

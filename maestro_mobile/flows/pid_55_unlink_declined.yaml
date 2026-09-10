@@ -1,0 +1,10 @@
+# PID_55 - Selecting No on the unlink prompt keeps the worker linked; the worker
+# logs in and the link is preserved.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_pid_relink_to_unlink_prompt.yaml
+- tapOn: { text: "NO" }
+- extendedWaitUntil:
+    visible: { text: "Logged In: ${MW_USERNAME}" }
+    timeout: 30000
+- assertNotVisible: { text: "Unlink PersonalId?" }

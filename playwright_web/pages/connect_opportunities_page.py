@@ -182,14 +182,14 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(3000)
         return opp_name
 
-    def create_payment_unit_in_connect_page(self, data):
+    def create_payment_unit_in_connect_page(self, data, days=7):
         self.click_add_payment_unit_button()
         self.enter_name_in_opportunity(data["payment_unit_name"])
         self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
         self.enter_description_in_opportunity(data["description"])
         self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
-        start, end = self.generate_date_range(7)
+        start, end = self.generate_date_range(days)
         self.enter_start_date_in_payment_unit_of_opportunity(start)
         self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
@@ -197,9 +197,9 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(3000)
         self.verify_payment_unit_present(self.opp_full_name)
 
-    def setup_budget_in_connect_page(self, data):
+    def setup_budget_in_connect_page(self, data, days=7):
         self.click_setup_budget_button()
-        start, end = self.generate_date_range(7)
+        start, end = self.generate_date_range(days)
         self.enter_start_date_in_payment_unit_of_opportunity(start)
         self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])

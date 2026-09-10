@@ -19,8 +19,8 @@ on:
         required: false
         default: "true"
 
-  schedule:
-    - cron: "30 18 * * *"   # 12:00 AM IST
+  # schedule:
+  #   - cron: "30 18 * * *"   # 12:00 AM IST
 
 permissions:
   contents: write

@@ -54,6 +54,23 @@ class BasePage:
         self._step(f"select '{text}' in {selector}")
         self._locator(selector).select_option(label=text)
 
+    def select_by_visible_text_ci(self, selector, text):
+        """select_option by label, ignoring case.
+
+        Environments capitalise the same list entry differently - the delivery type
+        is "Wellme" on staging and "WellMe" on prod - and select_option's label match
+        is exact, so a case-sensitive select works on one environment and fails on the
+        other. Resolving the real label first keeps one value in test data. On no
+        match it reports what was actually offered, since "did not find some options"
+        alone gives no way to tell a casing difference from a missing entry.
+        """
+        locator = self._locator(selector)
+        labels = [label.strip() for label in locator.locator("option").all_inner_texts()]
+        match = next((label for label in labels if label.lower() == text.strip().lower()), None)
+        assert match, f"No option matching {text!r} (case-insensitive) in {selector}. Offered: {labels}"
+        self._step(f"select '{match}' in {selector} (asked for '{text}')")
+        locator.select_option(label=match)
+
     def select_by_visible_text_forced(self, selector, text):
         # For selects enhanced by TomSelect the original element fails Playwright's
         # actionability checks, so fall back to setting the value via JS.
@@ -70,6 +87,36 @@ class BasePage:
                 "}",
                 text,
             )
+
+    def click_and_await_redirect(self, selector, timeout=20000):
+        """Click a control whose response is an HX-Redirect, then let it land.
+
+        Connect answers task create/edit/delete with an HX-Redirect header rather
+        than a normal form post, so the reload arrives slightly after the click.
+        Without waiting for it, the next action runs against a page that is about
+        to be replaced. A submission the server rejects is re-rendered in place
+        and never navigates, which is not an error here.
+        """
+        self._step(f"click {selector} and wait for redirect")
+        try:
+            with self.page.expect_navigation(timeout=timeout, wait_until="load"):
+                self._locator(selector).click()
+        except PlaywrightTimeoutError:
+            self._step("no redirect followed - response was re-rendered in place")
+        self.page.wait_for_load_state("load")
+
+    def select_tomselect_by_label(self, select_id, label, scope=None):
+        """Pick an option in a TomSelect-enhanced <select> by driving its UI.
+
+        TomSelect hides the native select and renders a .ts-wrapper sibling;
+        plain select_option() would set the value without updating the widget.
+        scope: optional container selector to disambiguate duplicated ids.
+        """
+        self._step(f"Select '{label}' in TomSelect #{select_id}")
+        root = self.page.locator(scope) if scope else self.page
+        root.locator(f"#{select_id} ~ .ts-wrapper .ts-control").first.click()
+        self.page.locator(f".ts-dropdown .option:has-text('{label}')").first.click()
+        self.page.wait_for_timeout(300)
 
     def wait_for_select_options_loaded(self, selector, timeout=30000):
         self.page.wait_for_function(

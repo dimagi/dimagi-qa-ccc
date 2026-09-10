@@ -1,0 +1,21 @@
+# Map_10 - with multiple geo entities in the list, the map shows the toggle
+# panel with all three toggles (Markers / Polygons / Geopoints), each ON by
+# default. (Map_09 - the panel hiding for a single entity - is a manual case:
+# its data-driven rendering does not reproduce on the BrowserStack device farm.)
+#
+# map_overlay + the three toggle_* switches are real views (verified live
+# 2026-08-18); only the markers themselves render on the Google Map canvas, so
+# their appearance stays a manual check.
+appId: org.commcare.dalvik
+---
+- runFlow: shared_map_open.yaml
+
+# The toggle panel and all three switches are visible for a multi-entity list.
+- assertVisible: { id: "org.commcare.dalvik:id/map_overlay" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_markers" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints" }
+# Each defaults to ON.
+- assertVisible: { text: "Markers ON" }
+- assertVisible: { text: "Polygons ON" }
+- assertVisible: { text: "Geopoints ON" }

@@ -1,0 +1,135 @@
+# Worker side of the hybrid re-learn tasking test (TC-E2E-001, TC-E2E-006).
+#
+# Web assigns a re-learn task, this flow has the worker complete it on a real
+# device, then web polls until the task flips to Complete.
+#
+# A BrowserStack session always begins with a freshly installed app, so this has
+# to run the whole cold start every time: PersonalID sign-in, granting Connect
+# access, then downloading the deliver app. Only the worker's learn/assessment
+# progress survives between runs, because that lives on the server against the
+# worker+opportunity pair.
+#
+# Ids and labels come from commcare-android source and the deliver app CCZ:
+#   backup_code_view / welcome_back / connect_backup_code_button
+#       fragment_recovery_code.xml - 2.63 replaced the old single
+#       connect_backup_code_input field with a six-box NumericCodeView whose
+#       boxes have index ids, so the code is typed into the focused view.
+#   "Refresh Opportunities"
+#       CommCareSetupActivity:500 overflow item. On a fresh install
+#       hasConnectAccess is false and the drawer has no Opportunities entry;
+#       this fetches jobs and calls turnOnConnectAccess when any come back.
+#   connect_login_button    SelectInstallModeFragment - appears once access is on
+#   rvJobList / btn_view_opportunity / btn_start ("Start" is the accept action)
+#   connect_delivery_button / acb_resume - deliver app download and launch
+#   PENDING_WARNING         connect_progress_warning_relearn_tasks_pending
+#   TASK_MODULE / TASK_FORM en/app_strings.txt (modules.m0, forms.m0f5)
+# Ids are bare so the flow also matches debug builds, which add an .debug suffix
+# to the applicationId.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "3119728"
+  USERNAME: "Relearn Task User"
+  BACKUP_CODE: "123456"
+  OPPORTUNITY: "Demo Opportunity"
+  # From the CCZ of the opportunity's OWN deliver app copy (app_id
+  # 6b7240a9db5741f49c5e91bd224b3140), not the master: modules.m1 holds the
+  # re-learn form, whose task block id is relearn_task - the TaskType slug.
+  #
+  # The master and the copy disagree on capitalisation ("Re-Learn Task" vs
+  # "Re-learn Task", "Re-learn form" vs "Re-learn Form"), and Maestro matches
+  # text case-sensitively, so these carry character classes to cover both. Plain
+  # classes rather than an inline (?i) flag, which is unproven on 1.39.13.
+  # Note "Re-learn [Ff]orm" cannot match "Second Relearn Form" - that one has no
+  # hyphen - so the two forms stay distinguishable.
+  TASK_MODULE: "Re-[Ll]earn Task"
+  TASK_FORM: "Re-learn [Ff]orm"
+  TASK_NAME_ANSWER: "Relearn Automation"
+  PENDING_WARNING: "Complete assigned tasks to continue delivering services"
+  # connect_progress_relearn_tasks_completed - only shown for 6h after completion
+  COMPLETED_MESSAGE: "All required tasks have been completed"
+  # Connect's task-completion push (send_task_completion_notification): fired from
+  # transaction.on_commit once the task is marked complete server side, so its
+  # arrival is proof that Connect has processed the submission. The body carries
+  # the task type name, so the runner injects it to keep it in step with
+  # TASKING_HYBRID.task_type.
+  COMPLETION_NOTIFICATION_TITLE: "Task Completed"
+  COMPLETION_NOTIFICATION_BODY: "You have completed the task 'Relearn Task Unit'."
+  # Delivery visits for TC-E2E-002 / TC-E2E-003: Start -> Case List ->
+  # Registration Form -> name -> next -> unique numeric id -> skip the rest.
+  # Casing is tolerated for the same reason as the re-learn labels.
+  VISIT_MODULE: "Case List"
+  VISIT_FORM: "[Rr]egistration [Ff]orm"
+  # The runner injects unique values so each visit is findable by entity name on
+  # web; these defaults only matter when the flow is run by hand.
+  VISIT_NAME_BLOCKED: "Blocked Visit"
+  VISIT_ID_BLOCKED: "911001"
+  VISIT_NAME_ALLOWED: "Allowed Visit"
+  VISIT_ID_ALLOWED: "911002"
+---
+- runFlow: shared_open_deliver_app.yaml
+
+# --- Delivery visit #1, submitted while the task is still pending (TC-E2E-002) ---
+# The app only warns; it does not block the form. Connect's form receiver is what
+# rejects the visit: _has_blocking_pending_task sets status=rejected and adds the
+# "pending_task" flag.
+#
+# This is its own device session, and it ends here on purpose. Submissions reach
+# Connect through CommCare HQ, and on staging that hop lags - so when this visit and
+# the re-learn form were submitted in one session, the completion could be processed
+# first and this visit was then evaluated with nothing pending and came back
+# Approved (2026-08-13). Ordering the submissions is not enough; Connect has to be
+# seen to have evaluated this visit before the completion is submitted at all, and
+# only the web side can see that. So the test runs this flow, polls Connect until
+# the visit has a status, and only then runs worker_relearn_task.yaml.
+#
+# Its counterpart, delivery visit #2, lives in worker_relearn_task.yaml rather than
+# in a shared parameterised subflow: `runFlow` with per-call `env:` is unproven on
+# Maestro 1.39.13, and every experiment here costs a full device run. The two blocks
+# now sit in different files - keep them in step by hand.
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+# Wait on the form's own next arrow rather than a question label: it proves a form
+# is open without depending on how the first question is worded.
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_BLOCKED}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_BLOCKED}"
+- tapOn:
+    id: "nav_btn_next"
+# Whatever remains (picture, GPS) is skippable, so walk past it. Optional taps are
+# WARNED rather than failed once the arrow is gone, which is what ends the walk.
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000

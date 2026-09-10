@@ -20,6 +20,22 @@ cchq_login_page:
   iframe_guide_popup: "//iframe[contains(@class,'userflowjs-bubble__frame')]"
   guide_popup: "//div[contains(@class,'userflowjs-bubble-frame-root') and contains(@class,'appearance-modal')]"
 
+cchq_mobile_workers_page:
+  # Mobile Workers page (Users > Mobile Workers). The main worker table is the
+  # one carrying the "PersonalID Status" header (there are also confirmation /
+  # pending-invite tables on the same page).
+  worker_table: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]"
+  personalid_status_header: "//th[contains(normalize-space(),'PersonalID Status')]"
+  personalid_status_labels: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]//tbody//span[contains(@class,'label')]"
+  # Action-column control per linked worker (Bootstrap modal trigger).
+  unlink_button: "//button[contains(normalize-space(),'Unlink PersonalID')]"
+  link_button: "//button[contains(@data-bind,'activate_personalid_link_')]"
+  # The unlink confirmation modal (one hidden instance per worker, id carries the user id).
+  unlink_modal: "//div[contains(@class,'modal') and contains(@id,'deactivate_personalid_link_')]"
+  unlink_modal_title: "//div[contains(@class,'modal')]//h4[normalize-space()='Unlink PersonalID Account']"
+  unlink_modal_cancel: "//div[contains(@class,'modal')]//button[normalize-space()='Cancel']"
+  unlink_modal_confirm: "//div[contains(@class,'modal')]//button[contains(@class,'btn-danger') and normalize-space()='Unlink']"
+
 cchq_application_page:
   sidebar_settings_icon: "//a[.//i[@aria-label='Application Settings']]"
   settings_tab_by_name: "//ul[contains(@class,'nav-tabs')]//a[normalize-space()='{tab_name}']"
@@ -31,7 +47,10 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
-  authorize_button: "//input[@type='submit' and @name='allow']"
+  authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
+  # CommCare HQ's OAuth consent screen requires at least one project space before
+  # the Authorize button enables; "Select all" grants them all in one click.
+  authorize_select_all: "//a[normalize-space()='Select all'] | //button[normalize-space()='Select all']"
   opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
   programs_navbar_item: "//a[contains(@href, '/program/')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
@@ -69,6 +88,117 @@ connect_opportunities_page:
 
 opportunity_dashboard_page:
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+  # Load signals - the detail page shows the opportunity name (h1) and the bars
+  # menu icon; the list page has neither, so together they distinguish the two
+  # (both live under /opportunity/).
+  opp_title: "//h1"
+  # Summary info cards (dashboard.html basic_details): each card carries an icon
+  # and an <h6> label. Match by the label text.
+  info_card_by_label: "//div[contains(@class,'infocard') or (.//i[contains(@class,'fa-solid')] and .//h6)][.//h6[normalize-space()='{label}']]"
+  status_badge: "//span[contains(@class,'badge') and (contains(@class,'positive') or contains(@class,'warning') or contains(@class,'negative'))]"
+  # is_test badge in the header (OD_26) and the MICROPLANNING-only worker tab (OD_28).
+  test_badge: "//span[contains(@class,'badge') and normalize-space()='Test']"
+  work_areas_tab: "//*[self::li or self::a][contains(normalize-space(),'Work Area')]"
+  # Async HTMX stat sections (skeleton -> swapped). Stored as bare ids: the
+  # locator loader prefixes '#' to any non-xpath value.
+  stats_container: "opp-stats-container"
+  funnel_container: "opp-funnel-container"
+  worker_progress_container: "worker-progress-container"
+  funnel_heading: "//*[normalize-space()='Worker Progress Funnel']"
+  # A stat panel is (optionally) wrapped in an <a href>; match the anchor by an
+  # unambiguous fragment of its target url so the click lands deterministically.
+  panel_link_by_href: "//div[@id='opp-stats-container']//a[contains(@href,'{frag}')]"
+  # Hamburger / kebab menu (opportunity_menu.html), toggled by the bars icon.
+  # Scope the toggle to the bars icon that shares a container with the opp menu -
+  # a bare //i[fa-bars] also matches the site-nav icon and toggles nothing here.
+  hamburger_toggle: "//div[.//div[contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]]//i[contains(@class,'fa-bars')]"
+  hamburger_menu: "//div[contains(@class,'absolute') and contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]"
+  hamburger_menu_items: "//div[contains(@class,'absolute') and contains(@class,'right-0')][.//a[normalize-space()='Send Message'] or .//a[normalize-space()='View Invoices']]//a"
+  hamburger_item_by_text: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='{text}']"
+  # Resource cards that launch the Learn/Deliver/Payment-units modal.
+  resource_card_learn: "//div[contains(@class,'min-w-48')][.//i[contains(@class,'fa-book-open')]]"
+  # Resource modal (opportunity_resource_modal.html): 3 tabs + a table body.
+  resource_modal: "//div[contains(@class,'fixed') and contains(@class,'inset-0')][.//ul[contains(@class,'tabs')]]"
+  resource_modal_tab: "//ul[contains(@class,'tabs')]//li[normalize-space()='{text}']"
+  resource_modal_close: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//i[contains(@class,'fa-xmark')]"
+  resource_modal_table_headers: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//table//th"
+  resource_modal_inputs: "//div[contains(@class,'fixed') and contains(@class,'inset-0')]//input | //div[contains(@class,'fixed') and contains(@class,'inset-0')]//textarea"
+  # Worker sub-page (worker_list_base.html) tabs + swapped table. Bare id -> loader prefixes '#'.
+  worker_tab_by_id: "{tab}-tab"
+  worker_table_headers: "//div[@id='table']//table//th | //table[contains(@class,'base-table')]//th"
+
+  # -- gap-analysis surfaces (OD_20+) ----------------------------------------
+  # Resource card (dashboard.html:58-67): wrapper by app name; count is the card's
+  # last <h3> (the small one holding app.count).
+  resource_card_by_name: "//div[contains(@class,'min-w-48') and contains(@class,'cursor-pointer')][.//h3[normalize-space()='{name}']]"
+  # Worker Progress Funnel (opportunity_funnel_progress.html): 7 stages.
+  funnel_stage_labels: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xs')]"
+  funnel_stage_counts: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xl')]"
+  # Worker-progress bars (opportunity_worker_progress.html): Approved/Rejected/Earned/Paid.
+  worker_progress_labels: "//div[@id='worker-progress-container']//span[contains(@class,'text-sm') and contains(@class,'block')]"
+  worker_progress_bars: "//div[@id='worker-progress-container']//div[contains(@class,'bg-brand-indigo') and contains(@class,'rounded-full')]"
+  # 24h increment badge (opportunity_delivery_stat.html:57): carries the up-arrow.
+  increment_badge: "//div[@id='opp-stats-container']//span[contains(normalize-space(.),'↑')]"
+  stat_panel_by_title: "//div[@id='opp-stats-container']//*[self::h3 or self::p][normalize-space()='{title}']"
+  # Deliver-tab filter modal (components/filter_modal.html + DeliverFilterSet).
+  deliver_filter_button: "//button[.//i[contains(@class,'fa-sliders')]]"
+  deliver_filter_apply: "//button[@form='filterForm' and normalize-space()='Apply']"
+  filter_select_by_name: "//select[@name='{name}']"
+  # Workers tab (workers.html): search, count line, clear, tab label with (N).
+  workers_search_input: "//input[@name='q']"
+  workers_displaying_count: "//span[contains(normalize-space(.),'Displaying') and contains(.,'Connect Workers')]"
+  workers_search_clear: "//div[@id='worker-search']//button[.//i[contains(@class,'fa-xmark')]]"
+  workers_tab_label: "workers-tab"
+  # --- OD Tier 2/3: Add Budget / Send Message / Add Workers pages ---
+  # Add Budget existing-users form (add_visits_existing_users.html): number_of_visits
+  # carries min=1 (OD_13); Increase/Decrease radios; a "Save" button opens an Alpine
+  # confirm modal that shows totalVisits()/calculatedBudget() (OD_16). When the opp
+  # has no claims the form is replaced by a "No Opportunity Claims yet." notice.
+  add_budget_visits_input: "id_number_of_visits"
+  add_budget_adjustment_by_value: "//input[@name='adjustment_type' and @value='{value}']"
+  add_budget_worker_checkboxes: "//input[@name='selected_users' and not(@id='select_all_users')]"
+  add_budget_save_btn: "//button[normalize-space()='Save']"
+  add_budget_no_claims_text: "//*[contains(normalize-space(),'No Opportunity Claims yet')]"
+  add_budget_confirm_modal: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]"
+  # New-workers tab (HTMX-loaded): entering add_users recomputes total_budget via an
+  # oninput handler (OD_17).
+  add_budget_new_tab: "new_workers-tab"
+  add_budget_new_users_input: "id_add_users"
+  add_budget_total_budget_input: "id_total_budget"
+  # Send Message page (send_message.html): worker checkboxes + a Confirm submit.
+  send_message_confirm_btn: "//button[normalize-space()='Confirm']"
+  # Add-budget mutation flow (OD_10/11/12/14/15). The confirm modal's Confirm is a
+  # native submit; on success the view 302-redirects back with a Django flash. The
+  # page's own table carries a "Max Visits" column (total_max_visits summed across
+  # payment units per worker) - the deterministic before/after read surface.
+  add_budget_confirm_submit: "//div[contains(@class,'modal')][.//h2[normalize-space()='Confirm']]//button[@type='submit' and normalize-space()='Confirm']"
+  add_budget_table: "//table[contains(@class,'base-table')]"
+  add_budget_table_headers: "//table[contains(@class,'base-table')]//th"
+  add_budget_table_rows: "//table[contains(@class,'base-table')]//tbody//tr"
+  add_budget_success_msg: "//*[contains(normalize-space(),'Increased visits') or contains(normalize-space(),'Decreased visits')]"
+  add_budget_decrease_error: "//*[contains(normalize-space(),'Cannot decrease the number of visits')]"
+  # Deliver tab progress-bar denominator (= that payment unit's max_visits).
+  deliver_progress_denominators: "//div[@id='table']//table//span[contains(@class,'text-gray-700')]"
+
+  # -- Export / import flows (OD_36/44/46) -----------------------------------
+  # Catchment Areas: hamburger 'Catchment Areas' toggle reveals Import/Export links.
+  catchment_toggle: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Catchment Areas']"
+  catchment_import_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Import']"
+  catchment_export_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Export']"
+  catchment_import_file: "//input[@type='file' and @name='catchments']"
+  # Modal submit buttons (native POST forms). One modal open at a time -> .first visible.
+  modal_export_submit: "//button[@type='submit' and normalize-space()='Export']"
+  modal_import_submit: "//button[@type='submit' and normalize-space()='Import']"
+  # Deliver tab export/import (deliver.html).
+  deliver_export_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-download')]]"
+  deliver_export_radio_by_value: "//input[@name='form_type' and @value='{value}']"
+  export_submit_btn: "export-submit-btn"
+  export_from_date: "id_from_date"
+  deliver_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  deliver_import_file: "//input[@type='file' and @name='visits']"
+  # Payments tab import (payments.html).
+  payment_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  payment_import_file: "//input[@type='file' and @name='payments']"
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
@@ -90,3 +220,283 @@ connect_programs_page:
   apply_to_program_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[contains(., 'Apply to Program')]"
   accept_application_btn_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(), '{program}')]]//button[@value='accept']"
   create_opportunity_link_by_network_manager: "//div[@x-show='showOpp' and not(contains(@style,'display: none;'))]//div[contains(@class,'flex-col gap-5')][.//p[contains(text(), \"{network_manager}\")]]//a[.//p[contains(text(), 'Create Opportunity')]]"
+  # -- Programs List page reads (PLP). The PM list is card-based (pm_home.html),
+  # not a table; each program is a "flex-col p-6" card carrying the summary
+  # infocards, the Invited/Applied/Accepted funnel and (after View Status) the
+  # per-NM application cards with a status badge.
+  all_program_cards: "//div[contains(@class,'flex-col p-6')]"
+  funnel_count_by_program_label: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(),'{program}')]]//h6[normalize-space()='{label}']/following-sibling::p"
+  application_status_badges_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(),'{program}')]]//span[contains(@class,'badge')]"
+  view_opportunities_link_by_program: "//div[contains(@class,'flex-col p-6')][.//p[contains(text(),'{program}')]]//a[.//p[normalize-space()='View Opportunities']]"
+  # Recent Activities right panel (program_base.html). Data-driven category cards
+  # ("Pending Review", "Pending Invoices", ...); each row links to a worker/opp URL.
+  recent_activity_cards: "//div[contains(@class,'activity-comp')]"
+  recent_activity_title: "//div[contains(@class,'activity-comp')]//p[normalize-space(@class)='text-base']"
+  recent_activity_rows_by_title: "//div[contains(@class,'activity-comp')][.//p[normalize-space()='{title}']]//a"
+
+# --- Tasking (CCCT-2658) ---
+
+opportunity_dashboard_page_menu:
+  menu_toggle: "//i[contains(@class,'fa-solid') and contains(@class,'cursor-pointer') and (contains(@class,'fa-bars') or contains(@class,'fa-xmark'))]"
+  configure_task_types_link: "//a[normalize-space()='Configure Task Types']"
+  tasks_assigned_tile: "//a[.//h3[normalize-space()='Tasks Assigned to Connect Workers']]"
+  tasks_assigned_tile_count: "//a[.//h3[normalize-space()='Tasks Assigned to Connect Workers']]//h3[contains(@class,'text-2xl')]"
+
+connect_task_types_page:
+  page_heading: "//h2[contains(@class,'title') and normalize-space()='Configure Task Types']"
+  connected_app_name: "//span[normalize-space()='Connected Delivery App:']/following-sibling::span[1]"
+  add_task_type_btn: "//button[normalize-space()='Add New Task Type']"
+  # New Task Type modal (x-show; scope everything to the backdrop containing its title)
+  create_modal: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]"
+  task_unit_select: "id_task_unit_id"
+  create_name_input: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//input[@id='id_name']"
+  create_description_input: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//textarea[@id='id_description']"
+  case_property_input: "id_case_property"
+  create_save_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[@type='submit'][normalize-space()='Save']"
+  create_cancel_btn: "//div[contains(@class,'modal-backdrop')][.//h2[normalize-space()='New Task Type']]//button[normalize-space()='Cancel']"
+  # Table
+  # Match the Name column only (td[2]; TaskTable order is index, name, description,
+  # linked_task_unit, archived, actions). Matching any cell also matched the Linked
+  # Task Unit column, so a type whose name equals some type's unit name resolved to
+  # two rows - which is precisely the state prod was in.
+  row_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]"
+  row_edit_btn_by_name: "//table[contains(@class,'base-table')]//tr[td[2][normalize-space()='{name}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  empty_table_text: "//td[contains(normalize-space(),'No task types configured for this opportunity')]"
+  # Edit Task Type modal (htmx-loaded form)
+  edit_form: "edit-task-form-el"
+  edit_name_input: "//form[@id='edit-task-form-el']//input[@id='id_name']"
+  edit_description_input: "//form[@id='edit-task-form-el']//textarea[@id='id_description']"
+  archive_checkbox: "id_is_archived"
+  edit_save_btn: "//button[@form='edit-task-form-el'][normalize-space()='Save']"
+
+connect_assigned_tasks_page:
+  page_heading: "//h1[normalize-space()='Task List']"
+  metric_value_by_label: "//div[contains(@class,'metric-card')][.//span[normalize-space()='{label}']]//span[contains(@class,'text-2xl')]"
+  table_wrapper: "task-list-table"
+  create_task_btn: "//div[@id='task-list-table']//button[@x-tooltip.raw='Create Task' or @aria-label='Create Task']"
+  delete_tasks_btn: "//button[@x-tooltip.raw='Delete Task(s)' or @aria-label='Delete Task(s)']"
+  filter_btn: "//div[@id='task-list-table']//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-sliders')]]"
+  column_headers: "//div[@id='task-list-table']//table//th"
+  row_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]"
+  row_checkbox_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//input[@name='row_select']"
+  row_edit_btn_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  status_badge_by_worker: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Scoped to one status as well, because a worker can hold several rows at once -
+  # e.g. a completed task plus a pending one - and assertions about completed rows
+  # must not be satisfied or broken by the others.
+  row_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]"
+  row_edit_btn_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  row_checkbox_by_worker_status: "//div[@id='task-list-table']//table//tr[contains(@class,'group')][.//p[normalize-space()='{worker}']][.//span[normalize-space()='{status}']]//input[@name='row_select']"
+  all_status_badges: "//div[@id='task-list-table']//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  all_row_checkboxes: "//div[@id='task-list-table']//input[@name='row_select']"
+  all_edit_buttons: "//div[@id='task-list-table']//button[.//i[contains(@class,'fa-pen-to-square')]]"
+  # Create Task modal (template x-if - absent from DOM until + clicked)
+  create_task_form: "create-task-form"
+  task_select: "id_task"
+  worker_select: "id_access"
+  due_date_input: "id_due_date"
+  # The modal also holds a hidden "Connect OCS account" submit button that sits
+  # inside this form but belongs to ocs-connect-form via its form attribute, so
+  # exclude buttons that target another form.
+  create_task_save_btn: "//form[@id='create-task-form']//button[@type='submit' and not(@form)]"
+  create_task_cancel_btn: "//div[@id='create-task-form-wrapper']/ancestor::div[contains(@class,'modal-backdrop')]//button[normalize-space()='Cancel']"
+  form_error_text: "//div[@id='create-task-form-wrapper']//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist') or contains(@class,'alert')]"
+  # Edit Assigned Task modal (htmx-loaded form)
+  edit_assigned_form: "edit-assigned-task-form-el"
+  edit_due_date_input: "//form[@id='edit-assigned-task-form-el']//input[@id='id_due_date']"
+  edit_reason_input: "id_reason"
+  edit_assigned_save_btn: "//button[@form='edit-assigned-task-form-el']"
+  # Confirm modal + messages
+  confirm_modal_title: "confirm-modal-title"
+  confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
+  success_message: "//div[contains(@class,'bg-message-success')]"
+  # base.html renders Django messages tagged error/danger with bg-message-error.
+  # A rejected task assignment lands here, not in the form: the view flashes the
+  # message and still answers with HX-Redirect.
+  error_message: "//div[contains(@class,'bg-message-error')]"
+  # Filter modal
+  filter_form: "assignedTaskFilterForm"
+  filter_status_select: "id_task_status"
+  filter_task_type_select: "id_task_type"
+  filter_apply_btn: "//button[@form='assignedTaskFilterForm'][@type='submit']"
+
+connect_workers_page:
+  tasks_tab: "tasks-tab"
+  tab_content: "table"
+  loading_indicator: "loadingIndicator"
+  drilldown_tasks_tab: "//a[contains(@class,'tab') and normalize-space()='Tasks']"
+  task_details_panel: "task-details"
+  drilldown_task_row: "//table//tr[@hx-get or contains(@class,'group')][td]"
+  # grouped_table.html renders one <tbody x-data="{open:false}"> per worker: a
+  # clickable header row carrying only the header_columns, then one
+  # <tr x-show="open" x-cloak> per task. The task columns are therefore invisible
+  # until the header row is clicked.
+  worker_task_group_by_worker: "//tbody[.//td[contains(., '{worker}')]]"
+  # GroupedByWorkerMixin.render_user wraps the worker's name in a link to
+  # user_visits_list?user=<ConnectUser.user_id>. The Delivery tab uses that mixin;
+  # the Tasks tab does not, so this is where the id can be read from.
+  worker_name_link_by_worker: "//a[contains(@href,'user=')][.//p[normalize-space()='{worker}']]"
+  # Per-worker Tasks drill-down (user_tasks.html). Its Create Task / Delete Task(s)
+  # buttons sit outside #task-list-table, so the assigned-task-list locators do not
+  # reach them. WorkerCompletedTaskTable.render_task_type prints "Name (slug)", so a
+  # row is addressable by slug - which survives J1 renaming its sandbox type.
+  worker_tasks_create_btn: "//button[@aria-label='Create Task']"
+  worker_tasks_delete_btn: "//button[@aria-label='Delete Task(s)']"
+  worker_task_row_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]"
+  worker_task_row_checkbox_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//input[@name='row_select']"
+  worker_task_status_by_slug: "//table//tr[.//td[contains(normalize-space(),'({slug})')]]//span[contains(@class,'bg-amber-100') or contains(@class,'bg-green-100')]"
+  # Visits tab of the same worker page. WorkerVisitTable gives every row an hx-get
+  # for its details panel, which is a stable way to pick out data rows without
+  # depending on the column layout (Date, Entity Name, Deliver Unit, Payment Unit,
+  # Last Activity, Status).
+  worker_visit_rows: "//table//tr[@hx-get]"
+  confirm_modal_title: "confirm-modal-title"
+  confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
+
+# --- Worker invite + hybrid (Phase 2) ---
+connect_worker_invite_page:
+  users_textarea: "id_users"
+  submit_btn: "submit-id-submit"
+  form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
+  error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
+
+# CCCT-2671. Originally carried over verbatim from the legacy Selenium locators, then
+# reworked after review (PR #30, kbo001): the positional XPaths are gone. Each control
+# is now anchored on something that IS the control - its destination URL, its Knockout
+# binding, or the custom element that owns it - so a layout change no longer breaks it.
+#
+#   new_conditional_alert / add_broadcast_btn   href to the /add page
+#   case_property_entity_dropdown              scoped by <case-property-input>
+#   case_property_equals_dropdown              data-bind="value: match_type"
+#   case_property_name_input                   data-bind="value: property_value"
+cchq_messaging_page:
+  messaging_tab: "MessagingTab"
+  messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
+
+  # --- Conditional alerts ---
+  new_conditional_alert: "//a[contains(@href, '/messaging/conditional/add')]"
+  conditional_alert_name_input: "id_conditional-alert-name"
+  continue_btn: "//button[contains(text(), 'Continue')]"
+  case_type_input: "id_criteria-case_type"
+  select_a_filter_btn: "//button[.//i[contains(@class,'fa-plus')]]"
+  case_property_filter_option: "//button[.//i[contains(@class,'fa-plus')]]/..//a[normalize-space()='Case property']"
+  case_property_entity_dropdown: "//case-property-input//select"
+  case_property_equals_dropdown: "//select[contains(@data-bind, 'match_type')]"
+  case_property_name_input: "//input[contains(@data-bind, 'property_value')]"
+  alerts_list_table: "conditional-alert-list"
+  alert_row: "//table[contains(@class,'table')]/tbody/tr"
+  search_box: "//form[@class='input-group']/input[@class='form-control']"
+  search_btn: "//button/i[contains(@class,'search')]"
+
+  # --- Shared by alerts and broadcasts ---
+  recipient_input: "//*[@id='div_id_schedule-recipient_types']//textarea"
+  user_recipients_input: "//*[@id='div_id_schedule-user_recipients']//textarea"
+  what_to_send_input: "id_schedule-content"
+  message_input: "(//div[./input[@id='id_content-message']]//textarea)[1]"
+  survey_form_input: "id_content-app_and_form_unique_id"
+  expire_after_input: "id_content-survey_expiration_in_hours"
+  save_btn: "//button[text()='Save']"
+
+  # --- Broadcasts ---
+  add_broadcast_btn: "//a[contains(@href, '/messaging/broadcasts/add')]"
+  broadcast_name_input: "id_schedule-schedule_name"
+  send_broadcast_btn: "//button[normalize-space()='Send Broadcast']"
+  broadcasts_table: "//div[@id='immediate-broadcasts']//table"
+  page_dropdown: "//div[@id='immediate-broadcasts']//select[@class='form-control']"
+
+  # --- Keywords ---
+  # Served from /reminders/keywords/, not /messaging/, and reached from the left
+  # sidebar rather than the Messaging top-nav dropdown.
+  sidebar_link: "//a[normalize-space()='{option}']"
+  add_keyword_btn: "//a[normalize-space()='Add Keyword']"
+  keyword_input: "id_keyword"
+  keyword_description_input: "id_description"
+  keyword_sender_content_type: "id_sender_content_type"
+  keyword_sender_message: "id_sender_message"
+  keyword_survey_form: "id_sender_app_and_form_unique_id"
+  keyword_allow_use_by: "id_allow_keyword_use_by"
+  keywords_table: "//table[contains(@class,'table-striped')]"
+  keywords_row_by_name: "//table[contains(@class,'table-striped')]/tbody/tr[td[contains(normalize-space(), \"{keyword}\")]]"
+  keywords_empty_msg: "//td[contains(normalize-space(), 'You have no keywords')]"
+
+  # --- Connect messaging user consent (sidebar: CONNECT MESSSAGING > User Consent) ---
+  # Served from /sms/connect_messaging_user/. The page is a single bulk action -
+  # there is no per-user picker and no list of existing channels - and it reports
+  # the outcome in a banner.
+  request_consent_btn: "//a[normalize-space()='Request Messaging Consent']"
+  consent_result_banner: "//div[contains(@class,'alert')]"
+# --- Opportunity List page (CCCT-2667) ---
+# Derived from the Connect source (commcare-connect):
+#   template  opportunity/opportunities_list.html  (filter modal, heading)
+#   partial   base_table.html                      (table, sort headers, pagination, page-size)
+#   tables.py OpportunityTable (NM) / ProgramManagerOpportunityTable (PM)
+#   filters.py OpportunityListFilterSet            (is_test / status / program)
+# The role split is server-side: an org with program_manager=True renders the PM
+# table, everyone else the NM table - so column assertions are keyed to the org.
+connect_opportunity_list_page:
+  heading: "//p[normalize-space()='Opportunities List']"
+  table: "//table[contains(@class,'base-table')]"
+  column_headers: "//table[contains(@class,'base-table')]//thead//th"
+  # Data rows only. The empty-state row carries the placeholder text instead.
+  data_rows: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]"
+  empty_text: "//table[contains(@class,'base-table')]//td[contains(normalize-space(),'No Opportunities created yet')]"
+  # A sortable header is an <a href=?sort=...> inside the th (sort_link.sortable_header);
+  # non-sortable columns render a plain <span>, so this only matches the sortable set.
+  sort_header_by_label: "//table[contains(@class,'base-table')]//th//a[contains(normalize-space(.),'{label}')]"
+  # Row addressed by the opportunity-name link in its first data column.
+  row_link_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[contains(normalize-space(.),'{name}')]"
+  # Test/Real column: the icon is present-but-invisible for real opportunities and
+  # visible (no 'invisible' class) for test ones - hence the not(...invisible) guard.
+  test_icon_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//i[contains(@class,'fa-file-circle-exclamation') and not(contains(@class,'invisible'))]"
+
+  # Filter modal (Alpine x-show over .modal-backdrop)
+  filter_button: "//button[.//i[contains(@class,'fa-sliders')]]"
+  filter_badge: "//button[.//i[contains(@class,'fa-sliders')]]//span[normalize-space()!='']"
+  filter_modal: "//div[contains(@class,'modal')][.//h1[normalize-space()='Filters']]"
+  filter_apply_btn: "//button[@form='filterForm' and @type='submit']"
+  filter_close_btn: "//form[@id='filterForm']//button[normalize-space()='Close']"
+  # Django-filter field ids (crispy auto_id id_%s). status/program are TomSelect
+  # multi-selects (data-tomselect); the native <select> still holds the <option>s,
+  # so option labels are read straight off it. is_test is a plain Select.
+  filter_is_test_select: "id_is_test"
+  filter_status_select: "id_status"
+  filter_program_select: "id_program"
+
+  # Pagination + page size live in base_table.html and only render when the row
+  # count exceeds DEFAULT_PAGE_SIZE (20); below that there is no pager at all.
+  page_size_select: "page-size"
+  next_page_btn: "//div[contains(@class,'table-footer')]//button[.//i[contains(@class,'fa-chevron-right')]]"
+  prev_page_btn: "//div[contains(@class,'table-footer')]//button[.//i[contains(@class,'fa-chevron-left')]]"
+  page_number_input: "//div[contains(@class,'table-footer')]//input[@type='number']"
+
+  # Kebab (...) actions column - components/dropdowns/text_button_dropdown.html.
+  kebab_toggle_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//span[contains(@class,'cursor-pointer')]"
+  kebab_menu_items: "//div[contains(@class,'dropdown-content')]//a"
+  kebab_menu_item_by_text: "//div[contains(@class,'dropdown-content')]//a[normalize-space()='{title}']"
+  # Every row's dropdown is present in the DOM (Alpine x-show), so kebab reads must
+  # be scoped to the target row or they return all rows' items.
+  kebab_menu_items_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//div[contains(@class,'dropdown-content')]//a"
+  # Tier 2/3. Status badges on data rows (render_status: Active/Ended/Inactive).
+  status_badges: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//span[contains(@class,'badge')]"
+  # Count cells are links wrapped in a div with the stats_style 'underline' class
+  # (render_worker_list_url_column). Drill-down targets are distinguished by the
+  # sort param the renderer appends, which is stable regardless of URL path naming.
+  stats_links: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//div[contains(@class,'underline')]//a"
+  count_link_by_href: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[contains(@href,'{frag}')]"
+# --- Case List Map: geo Display Properties config (Map_01/Map_02) ---
+# The module's "Case List" tab (pane #case-detail-screen-config-tab) holds a
+# "Display Properties" table. The config panel nests several tables, so the
+# properties table is matched by its column headers, never by position.
+cchq_case_list_map_page:
+  case_list_tab: "//ul[contains(@class,'nav-tabs')]//a[normalize-space()='Case List']"
+  # The one table whose header row carries all three column names.
+  display_properties_table: "//table[.//thead//th[normalize-space()='Property'] and .//thead//th[normalize-space()='Display Text'] and .//thead//th[normalize-space()='Format']]"
+  # Real data rows carry a Format <select> (the trailing knockout template row
+  # does not), so rows are addressed through their Format control.
+  property_rows: "//table[.//thead//th[normalize-space()='Property'] and .//thead//th[normalize-space()='Format']]//tbody/tr[.//select[.//option[normalize-space()='Geo Boundary (Mobile only)']]]"
+  # Row-relative locators (Format/Property/Display Text/Delete within a <tr>) are
+  # not listed here: LocatorLoader only treats '//' and '(' as XPath, so a './/'
+  # value would be mangled into an id. They live as xpath= constants in the page
+  # object instead.
+  add_property_button: "//button[contains(@data-bind,'addProperty')]"
+  save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"
