@@ -53,3 +53,41 @@ def test_connect_worker_03_resend_delete_gated_by_selection(workers_list):
     """Connect_worker_03: Resend/Delete invite buttons are enabled only when an
     invite is selected."""
     workers_list.verify_resend_delete_gated_by_selection()
+
+
+# A reserved, unregistered automation number for the mutating flow (self-cleaned
+# by delete). Being unregistered on PersonalID is what exercises _12.
+RESERVED_INVITE = "+74267426090"
+
+
+def test_connect_worker_05_12_08_invite_resend_delete(workers_list):
+    """Connect_worker_05: pre-invite an unregistered reserved number (appears as an
+      invite even though it is not registered on PersonalID yet).
+    Connect_worker_12: resending an invite for a not-found (unregistered) number is
+      skipped, with a message naming the skipped number.
+    Connect_worker_08: the invite can then be deleted.
+
+    Sends one SMS to a reserved number and self-cleans by deleting the invite.
+    (Connect_worker_09 - the 24h resend cooldown - needs a *registered* pending
+    number, so it is deferred to the seeded data.)"""
+    workers = workers_list
+
+    # Clear any leftover from an interrupted prior run.
+    if workers.worker_row_present(RESERVED_INVITE):
+        workers.delete_worker_invite(RESERVED_INVITE)
+
+    # _05 - pre-invite an unregistered reserved number; it appears as an invite.
+    workers.invite_worker(RESERVED_INVITE)
+    assert workers.worker_row_present(RESERVED_INVITE), "Invited number did not appear as an invite"
+
+    # _12 - resending a not-registered number is skipped with a naming message.
+    workers.select_worker_row(RESERVED_INVITE)
+    body = workers.resend_selected_invite()
+    assert "not registered on personalid" in body.lower() and RESERVED_INVITE in body, (
+        f"Expected a 'skipped - not registered on PersonalID' message naming {RESERVED_INVITE}; "
+        f"body did not contain it."
+    )
+
+    # _08 - delete the invite; it disappears.
+    workers.delete_worker_invite(RESERVED_INVITE)
+    assert not workers.worker_row_present(RESERVED_INVITE), "Invite still present after delete"

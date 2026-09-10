@@ -385,7 +385,7 @@ connect_workers_page:
   resend_invites_btn: "//button[@x-tooltip.raw='Resend Invite(s)']"
   delete_workers_btn: "//button[@x-tooltip.raw='Delete Worker(s)']"
   invite_users_input: "id_users"
-  invite_submit_btn: "//button[@type='submit' and normalize-space()='Submit']"
+  invite_submit_btn: "submit-id-submit"
   # Status indicators shown in the worker row (StatusIndicatorColumn).
   pending_invite_indicator: "//span[@x-tooltip.raw='Invite pending']"
   # A worker row addressed by the phone number it carries.

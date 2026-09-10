@@ -757,6 +757,99 @@ class ConnectWorkersPage(BasePage):
         )
         self._step("Resend/Delete disable again when deselected")
 
+    # -- mutating invite / resend / delete (Connect_worker_05/_08/_09) -----------
+    # These send a real SMS to a reserved automation number and self-clean by
+    # deleting the invite afterwards.
+
+    def worker_row_present(self, phone):
+        return self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).count() > 0
+
+    def invite_worker(self, phone, timeout_seconds=120):
+        """Connect_worker_05 - invite a (possibly unregistered) number via Add Worker
+        and wait for the pending invite to appear. Submitting the invite redirects to
+        the opportunity dashboard, so the poll navigates back to the workers list."""
+        self._workers_url = self.page.url  # we are on /workers/ when inviting
+        self._step(f"Invite worker {phone}")
+        self.click(self.ADD_WORKER_BTN)
+        field = self.page.locator(self.INVITE_USERS_INPUT).first
+        field.wait_for(state="visible", timeout=15000)
+        field.fill(phone)
+        self.click(self.INVITE_SUBMIT_BTN)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+        self.wait_for_worker_row(phone, timeout_seconds)
+
+    def _goto_workers_list(self):
+        """Return to the stored workers-list URL (invite/delete redirect away).
+
+        Retries once on ERR_ABORTED - a goto fired while the invite/resend redirect
+        is still in flight aborts, which is transient, not a real failure."""
+        url = getattr(self, "_workers_url", None) or self.page.url
+        for attempt in range(2):
+            try:
+                self.page.goto(url)
+                break
+            except Exception as exc:
+                if "ERR_ABORTED" in str(exc) and attempt == 0:
+                    self.page.wait_for_timeout(1500)
+                    continue
+                raise
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2500)
+
+    def wait_for_worker_row(self, phone, timeout_seconds=120):
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self._goto_workers_list()
+            if self.worker_row_present(phone):
+                self._step(f"Invite row for {phone} present")
+                return True
+            if time.monotonic() >= deadline:
+                raise AssertionError(f"Invite {phone} did not appear within {timeout_seconds}s")
+            self.page.wait_for_timeout(6000)
+
+    def select_worker_row(self, phone):
+        row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+        row.wait_for(state="visible", timeout=15000)
+        row.locator("input[type=checkbox]").first.check()
+        self.page.wait_for_timeout(400)
+
+    def resend_selected_invite(self):
+        """Click Resend Invite(s) for the selected row and return any message shown
+        (Connect_worker_09 expects a cooldown message within 24h)."""
+        self._step("Resend the selected invite")
+        self.click(self.RESEND_INVITES_BTN)
+        self.page.wait_for_timeout(2500)
+        body = self.page.inner_text("body")
+        return body
+
+    def delete_worker_invite(self, phone, timeout_seconds=60):
+        """Connect_worker_08 - select the invite row, delete it via the toolbar +
+        confirm modal, and wait for it to disappear."""
+        import time
+
+        if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
+            self._goto_workers_list()
+        if not self.worker_row_present(phone):
+            self._step(f"No invite row for {phone} to delete")
+            return
+        self.select_worker_row(phone)
+        self._step(f"Delete invite {phone}")
+        self.click(self.DELETE_WORKERS_BTN)
+        self.page.locator(self.DELETE_INVITES_CONFIRM_BTN).first.wait_for(state="visible", timeout=10000)
+        self.click(self.DELETE_INVITES_CONFIRM_BTN)
+        self.page.wait_for_load_state("load")
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self._goto_workers_list()
+            if not self.worker_row_present(phone):
+                self._step(f"Invite {phone} deleted")
+                return
+            if time.monotonic() >= deadline:
+                raise AssertionError(f"Invite {phone} still present {timeout_seconds}s after delete")
+
     def verify_last_paid_empty(self, worker, timeout_seconds=60):
         """Payment Processing_4 (part 2) - after rollback the Last paid is '—'."""
         import time
