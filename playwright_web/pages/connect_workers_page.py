@@ -742,6 +742,40 @@ class ConnectWorkersPage(BasePage):
         assert count > 0, "No 'Invite pending' status indicator found in the Connect Workers list"
         self._step(f"'Invite pending' status present ({count} row(s))")
 
+    # -- Gap-derived worker-page cases (GAP-SRC-W-46/49/52) ----------------------
+
+    WORKER_KPI_LABELS = ["Total Visits", "Pending Tasks", "Rejected Visits",
+                         "Accrued Amount", "Paid Amount"]
+
+    def verify_worker_profile_kpis(self):
+        """GAP-SRC-W-46 - the per-worker profile page shows the KPI header tiles
+        (Total Visits / Pending Tasks / Rejected Visits / Accrued / Paid)."""
+        body = self.page.inner_text("body")
+        missing = [label for label in self.WORKER_KPI_LABELS if label not in body]
+        assert not missing, f"Worker profile KPI tiles missing: {missing}"
+        self._step(f"Worker profile KPI tiles present: {self.WORKER_KPI_LABELS}")
+
+    def verify_work_area_tab_present(self):
+        """GAP-SRC-W-49 (positive) - the Work Area Assignments tab is present when
+        the MICROPLANNING flag is on, and its page is reachable (HTTP 200). The
+        off-state (tab absent + 404) needs a non-microplanning opportunity."""
+        tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name="Work Area Assignments"))
+        assert tab.count() > 0, "Work Area Assignments tab not present (MICROPLANNING expected on)"
+        url = self.page.url.split("/workers/")[0] + "/workers/work-areas/"
+        status = self.page.request.get(url).status
+        assert status == 200, f"Work areas page returned HTTP {status}, expected 200"
+        self._step(f"Work Area Assignments tab present and reachable (HTTP {status})")
+
+    def verify_payments_currency_suffixed_headers(self):
+        """GAP-SRC-W-52 (partial) - the Accrued / Total Paid / Confirm columns carry
+        a currency-code suffix, e.g. 'Accrued (INR)'."""
+        headers = [h for h in self._header_texts() if h]
+        currency_cols = [h for h in headers if h.startswith(("Accrued", "Total Paid", "Confirm"))]
+        assert currency_cols, f"No currency columns found in payments headers: {headers}"
+        unsuffixed = [h for h in currency_cols if "(" not in h]
+        assert not unsuffixed, f"Currency columns not suffixed with a currency code: {unsuffixed}"
+        self._step(f"Payments currency-suffixed headers: {currency_cols}")
+
     def verify_worker_status(self, identifier, expected_status):
         """Connect_worker_04/_07 - the worker row (found by phone or display name)
         shows `expected_status` (StatusIndicatorColumn x-tooltip.raw, e.g.
