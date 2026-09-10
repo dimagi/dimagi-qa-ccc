@@ -40,6 +40,7 @@ class PersonalIDPage(BasePage):
     PHOTO_CAPTURE_TITLE = locators.get("otp_page", "photo_capture_title")
     TAKE_PHOTO_BTN = locators.get("otp_page", "take_photo_btn")
     SAVE_PHOTO_BTN = locators.get("otp_page", "save_photo_btn")
+    RECOVERY_SUCCESS_TITLE = locators.get("login_page", "recovery_success_title")
 
     def enter_phone_number(self, phone_number):
         self.type_element(self.PHONE_INPUT, phone_number)
@@ -174,6 +175,32 @@ class PersonalIDPage(BasePage):
         (setCodeCompleteListener), so there is no Verify button to press.
         """
         self.type_code(self.EMAIL_OTP_INPUT, code)
+
+    def enter_backup_code_only(self, code):
+        """Confirm an EXISTING account's backup code during recovery.
+
+        Recovery shows one code field; registration shows Code and Confirm Code.
+        Use set_backup_code for registration.
+        """
+        self.type_code(self.BACKUP_CODE_INPUT, code)
+        self.click_when_enabled(self.CONTINUE_BTN)
+
+    def wait_for_email_step(self):
+        self.wait_for_element(self.EMAIL_INPUT, timeout=45)
+
+    def is_email_step_shown(self, timeout=20):
+        """Whether the optional email step was offered."""
+        return self.is_displayed(self.EMAIL_INPUT, timeout=timeout)
+
+    def verify_recovery_success(self):
+        """Assert recovery completed, rather than signup continuing to a photo.
+
+        Registration and recovery share the email screen and diverge only after
+        it, so this checks the recovery-specific message rather than merely that
+        something succeeded.
+        """
+        self.wait_for_element(self.RECOVERY_SUCCESS_TITLE, timeout=45)
+        self.click_element(self.OK_BTN)
 
     def save_photo_and_finish(self):
         """Save the auto-generated photo, which completes the account.

@@ -1,0 +1,149 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Signs the current account out and back in, leaving the app on the screen that
+# follows the backup code. That is where the recovery cases begin.
+#
+# Forget PersonalID clears the account only on the DEVICE - the server account
+# survives - which is what makes the recovery cases self-contained: a test can
+# register its own account, forget it, and recover it, with no fixed test data to
+# provision or keep alive.
+#
+# Inputs (env from the calling flow):
+#   USERNAME     - the name the account was registered under
+#   BACKUP_CODE  - its 6 digits
+# Requires ${output.phoneNumber}, set by shared_registration.
+
+# --- forget, from the Profile screen -----------------------------------------
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+- extendedWaitUntil:
+    visible:
+      text: "Forget PersonalID?"
+    timeout: 30000
+# The confirmation uses the standard CANCEL / OK pair, not a button named Forget.
+- tapOn:
+    text: "OK"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 45000
+
+# --- sign back in ------------------------------------------------------------
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+    timeout: 45000
+- tapOn:
+    id: "org.commcare.dalvik:id/nav_drawer_sign_in_button"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/connect_primary_phone_input"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/countryCode"
+- eraseText
+- inputText: "+7426"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_primary_phone_input"
+- eraseText
+- inputText: ${output.phoneNumber}
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_consent_check"
+# CONTINUE occasionally stays disabled even with a valid number and consent
+# ticked - the app does not always re-evaluate. Re-toggling consent forces it.
+# The legacy Appium suite carries the same workaround in
+# PersonalIDPage.continue_next, which is good evidence this is an app quirk
+# rather than a timing artefact of these flows.
+- runFlow:
+    when:
+      notVisible:
+        id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+        enabled: true
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/connect_consent_check"
+      - tapOn:
+          id: "org.commcare.dalvik:id/connect_consent_check"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+      enabled: true
+    timeout: 20000
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
+
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/nameTextValue"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/nameTextValue"
+- inputText: "${USERNAME}"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "CONTINUE"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 30000
+
+# --- confirm the existing backup code ----------------------------------------
+# This is the RECOVERY path, and the fields are how we know: registration shows
+# Code AND Confirm Code, recovery shows only Code plus the stored photo and a
+# welcome-back greeting. Asserting that here means a flow which accidentally
+# registered a new account fails loudly rather than quietly testing the wrong
+# journey.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/backup_code_view"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/welcome_back"
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/confirm_code_view"
+- inputText: "${BACKUP_CODE}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 45000

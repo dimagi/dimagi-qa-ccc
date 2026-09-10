@@ -281,6 +281,14 @@ password**, not the account password), or `QA_EMAIL_*` environment variables on 
 **Proven on a real device 2026-09-08** (`test_tc_11.py`, ~7 minutes): PersonalID does deliver
 to a plus-addressed Gmail, and the code is read and accepted end to end.
 
+**Retracted 2026-09-10:** an earlier note here claimed the OTP email was sometimes
+not delivered despite the API reporting success. That was wrong - a bug in
+`_find_code`, not in the product. `imap_tools` `reverse=True` orders by UID, not by
+date, and the reader treated the first message older than `not_before` as a
+terminator. Out-of-order messages therefore ended the search before the real code
+was reached, and every supposedly missing email was later confirmed present in the
+inbox. The reader now collects all matches and takes the newest by date.
+
 ### Original design notes
 
 Three of the 37 cases (SE_10, RE_03, MP_13) require reading a 6-digit code from a mailbox.

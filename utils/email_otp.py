@@ -137,6 +137,7 @@ class EmailOtpReader:
         recipient is then checked against the message itself, because the mailbox
         receives codes for every test running against every environment.
         """
+        candidates = []
         with MailBox(self.imap_host).login(self.imap_user, self.imap_pass, "INBOX") as mailbox:
             messages = mailbox.fetch(
                 AND(subject=OTP_SUBJECT, date_gte=datetime.date.today()),
@@ -145,16 +146,27 @@ class EmailOtpReader:
             )
             for message in messages:
                 if not_before and message.date and message.date.timestamp() < not_before:
-                    # Newest first, so everything past here is older still.
-                    return None
+                    # Too old for this request - skip it, but keep looking.
+                    #
+                    # Do NOT stop here. imap_tools' reverse=True reverses UID
+                    # order, not date order, and the two differ in this mailbox -
+                    # observed 07:38, 07:50, 07:48 in a single fetch. Treating the
+                    # first old message as a terminator made the reader miss codes
+                    # that had genuinely arrived, which looked exactly like the
+                    # server failing to send.
+                    continue
                 recipients = " ".join(message.to).lower()
                 body = message.text or message.html or ""
                 if target_email.lower() not in recipients and target_email.lower() not in body.lower():
                     continue
                 code = extract_otp(body)
-                if code:
-                    return code
-        return None
+                if code and message.date:
+                    candidates.append((message.date, code))
+
+        if not candidates:
+            return None
+        # Newest by DATE, not by fetch order.
+        return max(candidates, key=lambda pair: pair[0])[1]
 
     def get_verification_code(
         self,

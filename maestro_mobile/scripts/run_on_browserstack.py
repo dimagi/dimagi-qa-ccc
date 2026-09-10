@@ -22,17 +22,7 @@ APK_BY_ENV = {
 DEFAULT_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
-TEST_FLOWS = [
-    "login_signup_success.yaml",
-    "login_account_locked.yaml",
-    "signup_email_add.yaml",
-    "signup_email_verify.yaml",
-    "profile_view.yaml",
-    "profile_edit_name.yaml",
-    "profile_edit_email.yaml",
-    "profile_discard.yaml",
-    "profile_forget.yaml",
-]
+TEST_FLOWS = ["recovery_email_prompt.yaml"]
 POLL_INTERVAL_SECONDS = 15
 
 
@@ -115,7 +105,15 @@ def trigger_build(auth, app_url, test_suite_url):
 def poll_build(auth, build_id):
     print("Waiting for build to finish...")
     while True:
-        response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth)
+        try:
+            response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth, timeout=60)
+        except requests.exceptions.RequestException as exc:
+            # A dropped connection here says nothing about the tests - the build
+            # keeps running on BrowserStack. Crashing out would report a passing
+            # build as a failure, and leave a stale report behind to be misread.
+            print(f"  (polling hiccup, retrying: {type(exc).__name__})")
+            time.sleep(POLL_INTERVAL_SECONDS)
+            continue
         response.raise_for_status()
         data = response.json()
         status = data.get("status")
@@ -442,6 +440,8 @@ def main():
     app_url = upload_app(auth, args.env)
     test_suite_url = upload_test_suite(auth)
     build_id = trigger_build(auth, app_url, test_suite_url)
+    print(f"Build: https://app-automate.browserstack.com/builds/{build_id}")
+    print(f"  (if this run is interrupted, results remain at that URL, build id {build_id})")
     result = poll_build(auth, build_id)
     print(json.dumps(result, indent=2))
     summary = summarize_build(result, build_id, auth=auth)

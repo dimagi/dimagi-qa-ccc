@@ -60,11 +60,21 @@ appId: org.commcare.dalvik
 - inputText: ${output.phoneNumber}
 - tapOn:
     id: "org.commcare.dalvik:id/connect_consent_check"
-# Wait for CONTINUE to actually enable before tapping it. Ticking consent enables
-# the button asynchronously, and a tap landing a moment early is silently
-# swallowed - the flow then sits waiting for a screen that never arrives, which
-# looks like a network failure rather than a mistimed tap. Observed intermittently
-# on 2026-09-09.
+# CONTINUE occasionally stays disabled even with a valid number and consent
+# ticked - the app does not always re-evaluate. Re-toggling consent forces it.
+# The legacy Appium suite carries the same workaround in
+# PersonalIDPage.continue_next, which is good evidence this is an app quirk
+# rather than a timing artefact of these flows.
+- runFlow:
+    when:
+      notVisible:
+        id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+        enabled: true
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/connect_consent_check"
+      - tapOn:
+          id: "org.commcare.dalvik:id/connect_consent_check"
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/personalid_phone_continue_button"
@@ -118,7 +128,6 @@ appId: org.commcare.dalvik
 - assertNotVisible:
     id: "org.commcare.dalvik:id/welcome_back"
 
-# Tap the FIRST BOX, not the container. Maestro taps a container's centre, and
 # The Code field's first box already holds focus when the screen opens, so its
 # digits land correctly with no tap at all. See the note on the Confirm field
 # below for why tapping these boxes cannot be done by selector.
