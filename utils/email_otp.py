@@ -37,7 +37,15 @@ OTP_SUBJECT = "Your PersonalID verification code"
 # and any reference numbers are never mistaken for the code.
 OTP_PATTERN = re.compile(r"(?<!\d)(\d{6})(?!\d)")
 
-DEFAULT_TIMEOUT_SECONDS = 120
+# 120s was not enough. On staging 2026-09-10 a code was sent inside the window
+# and still could not be fetched during it: the message carried an in-window Date
+# header but did not become visible over IMAP until later, and the same run's
+# resent code did the same. Both were in the mailbox afterwards. The delay is in
+# mail delivery and indexing, not in the product - the codes were sent.
+#
+# 180s costs nothing on the normal path, where a code is found on the first or
+# second poll, and removes a flake that otherwise burns a full ten-minute run.
+DEFAULT_TIMEOUT_SECONDS = 180
 DEFAULT_POLL_SECONDS = 5
 
 

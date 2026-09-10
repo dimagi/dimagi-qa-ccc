@@ -78,8 +78,9 @@ def test_14_recovery_email_verification(mobile_driver, settings, config):
         try:
             code = mailbox.get_verification_code(email_address, not_before=requested_at)
         except TimeoutError:
-            # The OTP email is not always delivered even when the API reports
-            # success - see test_tc_11 for the same fallback.
+            # A code can take longer to become visible over IMAP than the
+            # poll window allows - see test_tc_11 for the full note. Not a
+            # delivery failure.
             pid.resend_email_otp()
             code = mailbox.get_verification_code(email_address, not_before=time.time())
         pid.enter_email_otp(code)

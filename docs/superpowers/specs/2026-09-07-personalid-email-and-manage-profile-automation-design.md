@@ -83,6 +83,23 @@ dialog is shown, so dismissing by back/swipe still consumes an offer.
 
 Accepting launches the PersonalID activity in its existing-user email collection mode.
 
+**EO_01-EO_03 are not automatable, and this is why.** The guards contradict each other in
+any single session:
+
+* An account **with** an email fails the `user.email == null` check.
+* An account **without** one must have passed through the email step to get there - and
+  `PersonalIdBackupCodeFragment.navigateToEmail()` stamps `setLastEmailOfferDate(Date())`
+  before showing it. By the time `StandardHomeActivity` calls `checkEmailCollection`, zero
+  days have elapsed and the 30-day guard suppresses the offer.
+
+The state lives in device `SharedPreferences` (`personalid_prefs`), so `clearState` wipes
+it - but that also signs the user out, and signing back in re-stamps the date. There is no
+route to a signed-in, email-less account with an unstamped offer date.
+
+They remain testable **manually** by anyone who can wait out the 30 days, or who creates the
+account while the switch is off and then enables it. If the app ever grows a debug hook to
+reset the offer state, they become automatable immediately.
+
 ### 2.5 Manage Profile
 
 Drawer profile card → **"Manage Profile"** (`header_manage_profile`) → PersonalID unlock
@@ -117,9 +134,25 @@ per the table in §1.
 
 ## 3. Test inventory
 
-37 cases across 10 test flows (plus one shared sub-flow that carries no cases of its own).
-Case steps are written at UI level; resource IDs live in the selector appendix (§7) so the
-cases stay readable.
+36 cases. **33 are automated and passing on prod and staging**; the three email
+offer cases (EO_01-EO_03) are not automatable - see §2.4. Two originally-listed
+cases were removed with reasons: SE_11 moved to MP_19, and SE_12 belongs to the
+deferred forgot-backup-code flow.
+
+**The 10 signup cases (SE_01-SE_10) are currently skipped**, as of 2026-09-10.
+They pass, on both environments, but only against the 2.65 build they were written
+on - and 2.65 is not released. Keeping them running would pin the whole mobile
+suite to an unreleased APK, and that suite is the stable regression set. So 23 of
+the 33 run today. Nothing else depends on them: every signup case registers its own
+account from a cleared app.
+
+To re-enable when 2.65 ships: restore `signup_email_add.yaml` and
+`signup_email_verify.yaml` to `TEST_FLOWS` in
+`maestro_mobile/scripts/run_on_browserstack.py`, and drop the `@pytest.mark.skip`
+from `tests/mobile_tests/test_tc_11.py`.
+
+Case steps are written at UI level; resource IDs live in the selector appendix (§7)
+so the cases stay readable.
 
 ### 3.1 Signup — `signup_email_add.yaml` (REGISTRATION)
 
@@ -302,21 +335,26 @@ section of the existing root `settings.cfg` (the file the BrowserStack credentia
 use), and from repository secrets on CI. Credentials are supplied by the QA owner and read
 from config; they are never typed into a login form.
 
-**Until that mailbox exists**, the three cases are written as stubs that assert the flow
-reaches the Verify Email screen correctly and then stop, each marked with the blocker.
-The remaining 34 cases — every negative path, every skip path, and everything up to and
-including "Send Code" — are fully automatable without it. Wiring the helper in later is a
-contained change, not a rewrite.
+**The mailbox now exists and is wired in.** SE_10, MP_09, MP_13, MP_19 and RE_03 all
+read real codes and pass on both environments, so none of them are stubs.
+
+One caveat learned in the process: a code can be sent inside the poll window and still
+not be fetchable during it - the message carries an in-window `Date` header but does not
+become visible over IMAP until later. Seen on staging 2026-09-10, where RE_03 timed out
+and passed on retry, with both the original and the resent code sitting in the mailbox
+afterwards, stamped inside the windows that had missed them. The read timeout is now 180s
+and each OTP case resends once before giving up. This is mail delivery latency, not the
+product failing to send.
 
 ## 6. Preconditions
 
 | # | Requirement | Status |
 |---|---|---|
 | 1 | Staging APK at `app/app-cccStaging-release.apk` | **Met** — 2.65 staging build in place as of 2026-09-07 |
-| 2 | `email_otp_verification` toggle active for all test accounts | **Outstanding** — server-side |
-| 3 | Recovery account **with** a verified email | **Outstanding** |
-| 4 | Recovery account **without** an email | **Outstanding** |
-| 5 | Fresh signed-in account with no email and no prior offers (for EO_01–03) | **Outstanding** |
+| 2 | `email_otp_verification` toggle active for all test accounts | **Met** — enabled on prod and staging |
+| 3 | Recovery account **with** a verified email | **Not needed** — RE_03 leaves the account with one, and RE_04 reuses it |
+| 4 | Recovery account **without** an email | **Not needed** — each RE case registers, forgets and recovers its own account |
+| 5 | Fresh signed-in account with no email and no prior offers (for EO_01–03) | **Unobtainable** — see §2.4; EO_01–03 stay manual |
 | 6 | An address already bound to another account (for MP_19) | **Met** - `automation.user.commcarehq+se101788875825@gmail.com`, bound by a passing SE_10 run |
 | 7 | QA mailbox + IMAP credentials in `settings.cfg` | **Met** — verified reading a real code on a device 2026-09-08 |
 | 8 | BrowserStack credentials in `settings.cfg` | **Met** |

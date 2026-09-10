@@ -22,7 +22,28 @@ APK_BY_ENV = {
 DEFAULT_ENV = "stage"
 DEVICE = "Google Pixel 7-13.0"
 PROJECT_NAME = "Connect Mobile Automation"
-TEST_FLOWS = ["recovery_email_prompt.yaml"]
+# SKIPPED, 2026-09-10: signup_email_add.yaml and signup_email_verify.yaml are
+# held out of this list until the 2.65 APK ships. They cover SE_08 and SE_09 -
+# adding and verifying an email DURING signup - and both pass, but only against
+# the unreleased 2.65 build that was used to write them. Running the suite on
+# 2.65 to keep them green would put every other flow on an unreleased build too,
+# which is a worse trade: those flows are the stable regression set.
+#
+# Nothing else depends on them. Each flow registers its own account from a
+# cleared app, so removing them changes no other flow's starting state.
+#
+# TO RE-ENABLE once 2.65 is released: add the two names back below and drop
+# @pytest.mark.skip from tests/mobile_tests/test_tc_11.py (SE_10, the same gap).
+TEST_FLOWS = [
+    "login_signup_success.yaml",
+    "login_account_locked.yaml",
+    "profile_view.yaml",
+    "profile_edit_name.yaml",
+    "profile_edit_email.yaml",
+    "profile_discard.yaml",
+    "profile_forget.yaml",
+    "recovery_email_prompt.yaml",
+]
 POLL_INTERVAL_SECONDS = 15
 
 

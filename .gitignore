@@ -29,3 +29,7 @@ allure-report/
 report.html
 */report.html
 */*.png
+
+# BrowserStack Maestro run artefacts, regenerated on every run.
+maestro_report.json
+maestro_report.html

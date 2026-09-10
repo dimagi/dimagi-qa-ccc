@@ -62,6 +62,9 @@ login_page:
   # fragment. Match on the text.
   email_added_msg: "//android.widget.TextView[contains(@text,'email has been added successfully')]"
   email_in_use_msg: "//android.widget.TextView[contains(@text,'already linked to another account')]"
+  # Recovery completes on this screen. Registration goes to photo capture
+  # instead - the two share the email step and diverge only afterwards.
+  recovery_success_title: "//android.widget.TextView[contains(@text,'Account Recovered')]"
 
 mobile_notifications:
   invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"

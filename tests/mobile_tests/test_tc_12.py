@@ -92,8 +92,9 @@ def test_12_manage_profile_email(mobile_driver, settings, config):
         try:
             code = mailbox.get_verification_code(new_email, not_before=requested_at)
         except TimeoutError:
-            # The OTP email is not always delivered even when the API reports
-            # success - see test_tc_11 for the same fallback.
+            # A code can take longer to become visible over IMAP than the
+            # poll window allows - see test_tc_11 for the full note. Not a
+            # delivery failure.
             pid.resend_email_otp()
             code = mailbox.get_verification_code(new_email, not_before=time.time())
         pid.enter_email_otp(code)
