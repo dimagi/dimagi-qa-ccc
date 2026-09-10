@@ -20,10 +20,6 @@ from flows.tasking_static import login_to_connect
 from flows.workers_setup import open_deliver_tab
 from pages.connect_workers_page import ConnectWorkersPage
 
-LAST_ACTIVE_OPTIONS = ["Any time", "1 day ago", "3 days ago", "7 days ago"]
-YES_NO_OPTIONS = ["---------", "Yes", "No"]
-
-
 @pytest.fixture(scope="module")
 def connect(browser, config, settings):
     context = browser.new_context(ignore_https_errors=True)
@@ -45,7 +41,7 @@ def connect(browser, config, settings):
 def workers_on_deliver(connect, test_data):
     """Open the Deliver tab of the manual-review opportunity once for the module."""
     connect_page, opps_url = connect
-    opp = test_data.get("WORKER_LIST_VIEW_8")["opportunity_name"]
+    opp = test_data.get("WORKER_DELIVER_FILTERS")["opportunity_name"]
     open_deliver_tab(connect_page, opp, opps_url)
     workers = ConnectWorkersPage(connect_page)
     workers.verify_deliver_table_headers_present()
@@ -62,28 +58,31 @@ def test_delivery_tab_10_filter_modal_opens(workers_on_deliver):
     assert workers.filter_present(workers.FILTER_HAS_OVERLIMIT), "Has-overlimit filter missing"
 
 
-def test_delivery_tab_11_last_active_options(workers_on_deliver):
+def test_delivery_tab_11_last_active_options(workers_on_deliver, test_data):
     """Delivery_tab_11: Last Active dropdown offers Any time / 1 / 3 / 7 days ago."""
     workers = workers_on_deliver
+    expected = test_data.get("WORKER_DELIVER_FILTERS")["last_active_options"]
     workers.open_filter_modal()
     options = workers.filter_field_options(workers.FILTER_LAST_ACTIVE)
-    assert options == LAST_ACTIVE_OPTIONS, f"Last Active options mismatch: {options}"
+    assert options == expected, f"Last Active options mismatch: {options}"
 
 
-def test_delivery_tab_13_deliveries_with_flags_options(workers_on_deliver):
+def test_delivery_tab_13_deliveries_with_flags_options(workers_on_deliver, test_data):
     """Delivery_tab_13: Deliveries-with-flags dropdown offers ---------/Yes/No."""
     workers = workers_on_deliver
+    expected = test_data.get("WORKER_DELIVER_FILTERS")["yes_no_options"]
     workers.open_filter_modal()
     options = workers.filter_field_options(workers.FILTER_HAS_FLAGS)
-    assert options == YES_NO_OPTIONS, f"Deliveries-with-flags options mismatch: {options}"
+    assert options == expected, f"Deliveries-with-flags options mismatch: {options}"
 
 
-def test_delivery_tab_14_has_overlimit_options(workers_on_deliver):
+def test_delivery_tab_14_has_overlimit_options(workers_on_deliver, test_data):
     """Delivery_tab_14: Has-overlimit dropdown offers ---------/Yes/No."""
     workers = workers_on_deliver
+    expected = test_data.get("WORKER_DELIVER_FILTERS")["yes_no_options"]
     workers.open_filter_modal()
     options = workers.filter_field_options(workers.FILTER_HAS_OVERLIMIT)
-    assert options == YES_NO_OPTIONS, f"Has-overlimit options mismatch: {options}"
+    assert options == expected, f"Has-overlimit options mismatch: {options}"
 
 
 def test_delivery_tab_16_filter_combination_applies(workers_on_deliver):

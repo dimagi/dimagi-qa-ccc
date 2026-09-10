@@ -21,8 +21,9 @@ from flows.workers_setup import (
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from pages.connect_workers_page import ConnectWorkersPage
 
-OPP = "covid_opp_test"
-WORKER = "Deb Test 8/12"
+@pytest.fixture(scope="module")
+def gaps(test_data):
+    return test_data.get("WORKER_GAPS")
 
 
 @pytest.fixture(scope="module")
@@ -42,31 +43,31 @@ def connect(browser, config, settings):
         context.close()
 
 
-def test_src_w_46_worker_profile_kpis(connect):
+def test_src_w_46_worker_profile_kpis(connect, gaps):
     """GAP-SRC-W-46: the per-worker profile page shows the KPI header tiles."""
     connect_page, opps_url = connect
     workers = ConnectWorkersPage(connect_page)
-    open_deliver_tab(connect_page, OPP, opps_url)
-    workers.navigate_to_worker_visits(WORKER)
+    open_deliver_tab(connect_page, gaps["opportunity_name"], opps_url)
+    workers.navigate_to_worker_visits(gaps["worker_name"])
     workers.verify_worker_profile_kpis()
 
 
-def test_src_w_49_work_area_tab_present(connect):
+def test_src_w_49_work_area_tab_present(connect, gaps):
     """GAP-SRC-W-49: the Work Area Assignments tab is present and reachable when
     MICROPLANNING is on."""
     connect_page, opps_url = connect
     workers = ConnectWorkersPage(connect_page)
-    open_connect_workers(connect_page, OPP, opps_url)
+    open_connect_workers(connect_page, gaps["opportunity_name"], opps_url)
     workers.verify_work_area_tab_present()
 
 
-def test_src_w_50_cross_tab_filter_persistence(connect):
+def test_src_w_50_cross_tab_filter_persistence(connect, gaps):
     """GAP-SRC-W-50: a Deliver-tab filter persists when navigating between worker
     tabs, but is cleared when the Deliver tab is entered from an unrelated page."""
     connect_page, opps_url = connect
     workers = ConnectWorkersPage(connect_page)
 
-    open_deliver_tab(connect_page, OPP, opps_url)
+    open_deliver_tab(connect_page, gaps["opportunity_name"], opps_url)
     workers.clear_all_filters_deliver_table()
     workers.open_filter_modal()
     workers.select_by_visible_text(workers.FILTER_LAST_ACTIVE, "3 days ago")
@@ -81,17 +82,17 @@ def test_src_w_50_cross_tab_filter_persistence(connect):
     assert persisted == 1, "Filter did not persist across worker-tab navigation"
 
     # Re-enter the Deliver tab from the dashboard (unrelated) - filter cleared.
-    open_deliver_tab(connect_page, OPP, opps_url)
+    open_deliver_tab(connect_page, gaps["opportunity_name"], opps_url)
     cleared = workers.filter_badge_count()
     print("BADGE AFTER DASHBOARD RE-ENTRY:", cleared)
     assert cleared == 0, "Filter should be cleared when entering from an unrelated page"
 
 
-def test_src_w_52_payments_currency_headers(connect):
+def test_src_w_52_payments_currency_headers(connect, gaps):
     """GAP-SRC-W-52: the Payments tab currency columns carry a currency-code suffix."""
     connect_page, opps_url = connect
     workers = ConnectWorkersPage(connect_page)
-    open_payments_tab(connect_page, OPP, opps_url)
+    open_payments_tab(connect_page, gaps["opportunity_name"], opps_url)
     workers.verify_tab_active("Payments")
     workers.verify_payments_currency_suffixed_headers()
 

@@ -87,6 +87,24 @@ WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
+# Deliver-tab filter option sets (Delivery_tab_10/11/13/14/16). Expected values
+# match the product source (DeliverFilterSet / YesNoFilter in opportunity/filters.py).
+WORKER_DELIVER_FILTERS:
+  opportunity_name: "covid_opp_test"
+  last_active_options: ["Any time", "1 day ago", "3 days ago", "7 days ago"]
+  yes_no_options: ["---------", "Yes", "No"]
+
+# Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite
+# is an unregistered reserved automation number; the test invites and deletes it.
+WORKER_INVITES:
+  opportunity_name: "covid_opp_test"
+  reserved_invite: "+74267426090"
+
+# Gap-derived worker-page cases (GAP-SRC-W-46/47/48/49/50/51/52).
+WORKER_GAPS:
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
+
 # --- Worker invite lifecycle (Batch C) - dedicated seeded opportunity (Anshu, 2026-09-10) ---
 # Under PM_Automation_01. Statuses read live from the app (x-tooltip.raw):
 # 'Invite accepted' / 'User suspended' / 'Invite pending'. Pending invites carry

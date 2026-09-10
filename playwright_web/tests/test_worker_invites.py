@@ -1,13 +1,15 @@
-"""Connect Workers invite lifecycle (Connect_worker_02, _03).
+"""Connect Workers invite lifecycle (Connect_worker_02/_03/_05/_08/_12).
 
-Phase 1: the zero-mutation cases that read an existing pending invite on the
-Connect Workers tab (no SMS sent):
   Connect_worker_02 - a not-yet-accepted invite shows the 'Invite pending' status
   Connect_worker_03 - Resend/Delete buttons enable only when an invite is selected
+  Connect_worker_05 - pre-invite an unregistered reserved number
+  Connect_worker_12 - resending a not-registered number is skipped (naming message)
+  Connect_worker_08 - the invite can then be deleted
 
-Runs against covid_opp_test, which keeps a reserved pending invite (+74267426006).
-The mutating invite cases (_05/_08/_09, which send an SMS and self-clean) are in a
-separate module once the seeded accepted/suspended data lands for the full tab.
+_02/_03 are zero-mutation (they read an existing pending invite); _05/_12/_08 send
+one SMS to a reserved number and self-clean by deleting it. The opportunity and the
+reserved number come from test_data (WORKER_INVITES). The seeded-data cases
+(_04/_06/_07/_09/_10/_11/_13/_14/_15) live in test_worker_lifecycle.py.
 """
 
 import pytest
@@ -38,7 +40,7 @@ def connect(browser, config, settings):
 @pytest.fixture(scope="module")
 def workers_list(connect, test_data):
     connect_page, opps_url = connect
-    opp = test_data.get("WORKER_LIST_VIEW_8")["opportunity_name"]  # covid_opp_test
+    opp = test_data.get("WORKER_INVITES")["opportunity_name"]
     open_connect_workers(connect_page, opp, opps_url)
     return ConnectWorkersPage(connect_page)
 
@@ -55,12 +57,7 @@ def test_connect_worker_03_resend_delete_gated_by_selection(workers_list):
     workers_list.verify_resend_delete_gated_by_selection()
 
 
-# A reserved, unregistered automation number for the mutating flow (self-cleaned
-# by delete). Being unregistered on PersonalID is what exercises _12.
-RESERVED_INVITE = "+74267426090"
-
-
-def test_connect_worker_05_12_08_invite_resend_delete(workers_list):
+def test_connect_worker_05_12_08_invite_resend_delete(workers_list, test_data):
     """Connect_worker_05: pre-invite an unregistered reserved number (appears as an
       invite even though it is not registered on PersonalID yet).
     Connect_worker_12: resending an invite for a not-found (unregistered) number is
@@ -71,29 +68,24 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list):
     (Connect_worker_09 - the 24h resend cooldown - needs a *registered* pending
     number, so it is deferred to the seeded data.)"""
     workers = workers_list
+    reserved = test_data.get("WORKER_INVITES")["reserved_invite"]
 
     # Clear any leftover from an interrupted prior run.
-    if workers.worker_row_present(RESERVED_INVITE):
-        workers.delete_worker_invite(RESERVED_INVITE)
+    if workers.worker_row_present(reserved):
+        workers.delete_worker_invite(reserved)
 
     # _05 - pre-invite an unregistered reserved number; it appears as an invite.
-    workers.invite_worker(RESERVED_INVITE)
-    assert workers.worker_row_present(RESERVED_INVITE), "Invited number did not appear as an invite"
+    workers.invite_worker(reserved)
+    assert workers.worker_row_present(reserved), "Invited number did not appear as an invite"
 
     # _12 - resending a not-registered number is skipped with a naming message.
-    workers.select_worker_row(RESERVED_INVITE)
+    workers.select_worker_row(reserved)
     body = workers.resend_selected_invite()
-    assert "not registered on personalid" in body.lower() and RESERVED_INVITE in body, (
-        f"Expected a 'skipped - not registered on PersonalID' message naming {RESERVED_INVITE}; "
+    assert "not registered on personalid" in body.lower() and reserved in body, (
+        f"Expected a 'skipped - not registered on PersonalID' message naming {reserved}; "
         f"body did not contain it."
     )
 
     # _08 - delete the invite; it disappears.
-    workers.delete_worker_invite(RESERVED_INVITE)
-    assert not workers.worker_row_present(RESERVED_INVITE), "Invite still present after delete"
-
-# Connect_worker_06 (not-found shows mobile under Name) and _13 (delete not-found)
-# are deferred: a freshly-invited unregistered number renders '—' under Name and
-# only resolves to a terminal "not found" state asynchronously (via the SMS
-# delivery callback), so the mobile-under-name display is not observable
-# synchronously in a test. They need a durable seeded not-found worker.
+    workers.delete_worker_invite(reserved)
+    assert not workers.worker_row_present(reserved), "Invite still present after delete"
