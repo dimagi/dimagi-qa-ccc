@@ -2,11 +2,14 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, TestDataLoader
 
 from pages.base_page import BasePage
 
 locators = LocatorLoader()
+# Expected table headers / labels / condition values live in the test data yaml,
+# not hardcoded here.
+worker_ref = TestDataLoader().get("WORKER_PAGE_REFERENCE")
 
 
 class ConnectWorkersPage(BasePage):
@@ -30,6 +33,21 @@ class ConnectWorkersPage(BasePage):
     TASK_SELECT = locators.get("connect_assigned_tasks_page", "task_select")
     INVITE_USERS_TEXTAREA = locators.get("connect_worker_invite_page", "users_textarea")
     INVITE_SUBMIT_BTN = locators.get("connect_worker_invite_page", "submit_btn")
+
+    # -- Worker List View (WLV_1-8): list / Learn / Deliver tables ----------------
+    LV_TABLE = locators.get("connect_workers_page", "lv_table")
+    LV_TAB_ITEM_BY_NAME = locators.get("connect_workers_page", "lv_tab_item_by_name")
+    LV_NAME_IN_TABLE = locators.get("connect_workers_page", "lv_name_item_in_table")
+    COUNT_BREAKDOWN_POPUP = locators.get("connect_workers_page", "count_breakdown_popup")
+    LV_FILTER_BUTTON = locators.get("connect_workers_page", "lv_filter_button")
+    LV_FILTER_BADGE = locators.get("connect_workers_page", "lv_filter_badge")
+    LV_FILTER_MODAL = locators.get("connect_workers_page", "lv_filter_modal")
+    LV_FILTER_APPLY = locators.get("connect_workers_page", "lv_filter_apply_btn")
+    FILTER_LAST_ACTIVE = locators.get("connect_workers_page", "filter_last_active")
+    FILTER_HAS_DUPLICATES = locators.get("connect_workers_page", "filter_has_duplicates")
+    FILTER_HAS_FLAGS = locators.get("connect_workers_page", "filter_has_flags")
+    FILTER_HAS_OVERLIMIT = locators.get("connect_workers_page", "filter_has_overlimit")
+    FILTER_REVIEW_PENDING = locators.get("connect_workers_page", "filter_review_pending")
 
     # -- worker invite -------------------------------------------------------
 
@@ -145,7 +163,7 @@ class ConnectWorkersPage(BasePage):
         skipped a leftover cleanup and left a task assigned.
         """
         try:
-            self.page.locator("//table[not(contains(@class,'animate-pulse'))]").first.wait_for(
+            self.page.locator(self.REAL_TABLE).first.wait_for(
                 state="visible", timeout=20000
             )
         except Exception:
@@ -309,3 +327,673 @@ class ConnectWorkersPage(BasePage):
         assert "select a task" not in text.lower(), "Details panel did not load after row click"
         self._step("Task details panel loaded")
         return text
+
+    # ========================================================================
+    # Worker List View (WLV_1-8) - migrated from Selenium ConnectWorkersPage.
+    # These act on the list / Learn / Deliver tables under #table, reached via
+    # flows.workers_setup (dashboard stat panel), not by URL.
+    # ========================================================================
+
+    def _await_list_table(self):
+        """The Learn/Deliver tables htmx-swap into #table after the tab loads."""
+        self.page.locator(self.LV_TABLE).first.wait_for(state="visible", timeout=30000)
+
+    def _header_texts(self):
+        """All <th> texts of the current table, positions preserved (blank headers
+        kept) so a text index lines up with the matching <td> index."""
+        self._await_list_table()
+        return [h.strip() for h in self.page.locator(self.LV_TABLE).locator("thead th").all_inner_texts()]
+
+    def verify_table_headers_present(self, expected_headers):
+        actual = [h for h in self._header_texts() if h]
+        actual_lower = [h.lower() for h in actual]
+        missing = [h for h in expected_headers if h.lower() not in actual_lower]
+        assert not missing, f"Missing headers: {missing}\nActual headers found: {actual}"
+        self._step(f"Table headers present: {actual}")
+
+    def verify_connect_workers_table_headers_present(self):
+        self.verify_table_headers_present(worker_ref["connect_workers_table_headers"])
+
+    def verify_learn_table_headers_present(self):
+        self.verify_table_headers_present(worker_ref["learn_table_headers"])
+
+    # Numeric status columns whose cell values open a count-breakdown popup. Which
+    # of these the Deliver tab shows depends on the opportunity's verification mode:
+    # a manual-review opp exposes 'Pending', while an auto-verify opp shows a
+    # 'Status' column instead and no 'Pending'. So the review-state column is
+    # asserted as "Status or Pending", and callers act only on the columns present.
+    DELIVER_COUNT_COLUMNS = worker_ref["deliver_count_columns"]
+
+    def verify_deliver_table_headers_present(self):
+        """The Deliver tab's stable columns, plus a review-state column that is
+        'Pending' on manual-review opportunities and 'Status' on auto-verify ones."""
+        actual = [h for h in self._header_texts() if h]
+        actual_lower = [h.lower() for h in actual]
+        core = worker_ref["deliver_core_headers"]
+        missing = [h for h in core if h.lower() not in actual_lower]
+        assert not missing, f"Missing headers: {missing}\nActual headers found: {actual}"
+        assert "pending" in actual_lower or "status" in actual_lower, (
+            f"Deliver table has neither a 'Pending' nor a 'Status' column: {actual}"
+        )
+        self._step(f"Deliver table headers present: {actual}")
+
+    def present_deliver_count_columns(self):
+        """Which of the numeric status columns this opportunity's Deliver tab shows."""
+        actual_lower = [h.lower() for h in self._header_texts()]
+        present = [c for c in self.DELIVER_COUNT_COLUMNS if c.lower() in actual_lower]
+        self._step(f"Deliver count columns present: {present}")
+        return present
+
+    def verify_passed_assessment_worker(self):
+        """Learn_tab_04 - a worker who passed the assessment shows Assessment
+        'Passed' with 100% modules completed and non-empty Attempts / Completed
+        Learning. Finds any Passed worker on the Learn tab (data-resilient) rather
+        than hard-coding a name. Ported from the Selenium verify_worker_assessment_status."""
+        headers = self._header_texts()
+
+        def col(name):
+            return next((i for i, h in enumerate(headers) if h.strip().lower() == name.lower()), None)
+
+        a_idx, m_idx, at_idx, cl_idx = col("Assessment"), col("Modules completed"), col("Attempts"), col("Completed Learning")
+        assert None not in (a_idx, m_idx, at_idx, cl_idx), f"Learn columns missing: {headers}"
+        table = self.page.locator(self.LV_TABLE).first
+        rows = table.locator(self.DATA_ROWS)
+        for i in range(rows.count()):
+            tds = rows.nth(i).locator(self.ROW_CELLS)
+            if tds.nth(a_idx).inner_text().strip().lower() != "passed":
+                continue
+            modules = tds.nth(m_idx).inner_text().strip()
+            attempts = tds.nth(at_idx).inner_text().strip()
+            completed = tds.nth(cl_idx).inner_text().strip()
+            assert "100" in modules, f"Passed worker's modules-completed is not 100%: {modules!r}"
+            assert attempts not in ("", "-", "—"), f"Passed worker's Attempts is empty: {attempts!r}"
+            assert completed not in ("", "-", "—"), f"Passed worker's Completed Learning is empty: {completed!r}"
+            self._step(f"Passed-assessment worker verified (modules={modules}, attempts={attempts}, completed={completed})")
+            return
+        raise AssertionError("No worker with a 'Passed' assessment found on the Learn tab")
+
+    def verify_assessment_status(self, worker, expected):
+        """Learn_tab_03/_04 - a named worker's Assessment column equals `expected`
+        ('Passed' / 'Failed')."""
+        headers = self._header_texts()
+        a_idx = next((i for i, h in enumerate(headers) if h.strip().lower() == "assessment"), None)
+        assert a_idx is not None, f"No Assessment column on the Learn tab: {headers}"
+        row = self.page.locator(
+            self.DATA_ROW_BY_P_TEXT.format(text=worker)
+        ).first
+        row.wait_for(state="visible", timeout=15000)
+        value = row.locator(self.ROW_CELLS).nth(a_idx).inner_text().strip()
+        assert value.lower() == expected.strip().lower(), (
+            f"Assessment for '{worker}' is {value!r}, expected {expected!r}"
+        )
+        self._step(f"Assessment for '{worker}' is '{value}'")
+
+    def click_tab_by_name(self, tab_name):
+        """Click a workers-page tab (Learn / Deliver / Connect Workers) and confirm
+        it activates. The table re-renders into #table via htmx after the click."""
+        self._step(f"Click '{tab_name}' tab")
+        self.click(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name))
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1500)  # table htmx-swaps into #table
+        self.verify_tab_active(tab_name)
+
+    def verify_tab_active(self, tab_name):
+        tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
+        tab.wait_for(state="visible", timeout=15000)
+        cls = tab.get_attribute("class") or ""
+        assert "active" in cls, f"Tab '{tab_name}' is not active (class={cls!r})"
+        self._step(f"Tab '{tab_name}' is active")
+
+    def click_name_in_table(self, name):
+        self._step(f"Open worker '{name}' from the table")
+        self.click(self.LV_NAME_IN_TABLE.format(name=name))
+        self.page.wait_for_load_state("load")
+
+    def navigate_to_worker_visits(self, worker_name):
+        """Deliver tab -> click a worker -> their Visits page (WVVP entry)."""
+        self.click_tab_by_name("Deliver")
+        self.click_name_in_table(worker_name)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1000)
+
+    def click_and_verify_status_count_breakdown_for_item(self, item_name, column_name):
+        """Click a status cell's value (e.g. worker row x 'Delivered', or the Total
+        row) and confirm the breakdown popup opens. WLV_4 / WLV_5."""
+        headers = self._header_texts()  # positions preserved for td alignment
+        idx = next(
+            (i for i, h in enumerate(headers) if h.lower() == column_name.strip().lower()),
+            None,
+        )
+        assert idx is not None, f"Column '{column_name}' not found in {headers}"
+        table = self.page.locator(self.LV_TABLE).first
+        if item_name.strip().lower() == "total":
+            row = table.locator(self.TOTAL_ROW).first
+        else:
+            row = table.locator(self.ROW_BY_P_TEXT.format(text=item_name.strip())).first
+        row.wait_for(state="visible", timeout=15000)
+        span = row.locator(self.ROW_CELLS).nth(idx).locator("span").first
+        self._step(f"Click {item_name!r} x {column_name!r} count")
+        span.click()
+        self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
+        self._step(f"Count breakdown popup shown for {item_name!r} / {column_name!r}")
+
+    # -- Deliver-tab filters (WLV_8) ---------------------------------------------
+
+    def open_filter_modal(self):
+        # Idempotent: the modal is an x-show backdrop that stays open until Apply,
+        # and while open it intercepts pointer events on the filter button, so a
+        # second open-click would hang. Skip the click when it is already showing.
+        modal = self.page.locator(self.LV_FILTER_MODAL).first
+        if modal.is_visible():
+            self._step("Deliver-tab filter modal already open")
+            return
+        self._step("Open deliver-tab filter modal")
+        self.click(self.LV_FILTER_BUTTON)
+        modal.wait_for(state="visible", timeout=15000)
+
+    def apply_filters(self):
+        self._step("Apply deliver-tab filters")
+        self.click(self.LV_FILTER_APPLY)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1500)
+
+    def _reset_optional_filter(self, selector, value="---------"):
+        """Reset a filter select if it is present (some fields render only when the
+        opportunity has the matching feature enabled, e.g. has_overlimit)."""
+        if self.page.locator(selector).count() > 0:
+            self.select_by_visible_text(selector, value)
+
+    def clear_all_filters_deliver_table(self):
+        self.open_filter_modal()
+        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, "Any time")
+        self._reset_optional_filter(self.FILTER_HAS_DUPLICATES)
+        self._reset_optional_filter(self.FILTER_HAS_FLAGS)
+        self._reset_optional_filter(self.FILTER_HAS_OVERLIMIT)
+        self._reset_optional_filter(self.FILTER_REVIEW_PENDING)
+        self.apply_filters()
+
+    def apply_and_verify_last_active_1_day_ago(self):
+        self.open_filter_modal()
+        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, worker_ref["last_active_one_day_value"])
+        self.apply_filters()
+        badge = self.page.locator(self.LV_FILTER_BADGE).first
+        badge.wait_for(state="visible", timeout=10000)
+        text = badge.inner_text().strip()
+        assert text == "1", f"Filter badge value mismatch: expected '1', got {text!r}"
+        self._step(f"'Last active: 1 day ago' filter applied (badge={text})")
+
+    # -- Deliver-tab filter modal inspection (Delivery_tab_10/11/13/14/16) --------
+
+    def filter_present(self, selector):
+        return self.page.locator(selector).count() > 0
+
+    def filter_field_options(self, selector):
+        """The option labels of a filter <select> (assumes the modal is open)."""
+        opts = [o.strip() for o in self.page.locator(f"{selector} option").all_inner_texts()]
+        opts = [o for o in opts if o]
+        self._step(f"Options for {selector}: {opts}")
+        return opts
+
+    def filter_badge_count(self):
+        """The number on the filter button's badge, or 0 when no badge is shown."""
+        badge = self.page.locator(self.LV_FILTER_BADGE)
+        if badge.count() == 0:
+            return 0
+        text = badge.first.inner_text().strip()
+        return int(text) if text.isdigit() else 0
+
+    def apply_filter_combination(self, selections):
+        """Open the modal, set several filters at once, apply, and return the badge
+        count. `selections` is a list of (select_selector, label) pairs; a field not
+        present for this opportunity (e.g. review_pending under auto-verify) is
+        skipped so the same combination works on either verification mode."""
+        self.open_filter_modal()
+        applied = 0
+        for selector, label in selections:
+            if self.filter_present(selector):
+                self.select_by_visible_text(selector, label)
+                applied += 1
+            else:
+                self._step(f"Filter {selector} absent for this opportunity - skipped")
+        self.apply_filters()
+        count = self.filter_badge_count()
+        self._step(f"Applied {applied} filter(s); badge shows {count}")
+        return applied, count
+
+    # -- Connect Workers list sorting (Connect_worker_17) ------------------------
+
+    def click_list_column_sort(self, label):
+        """Click a Connect Workers list column header's sort link and return the
+        resulting ?sort= value. django-tables2 renders orderable headers as <a>
+        links that cycle field -> -field; the table HTMX-reloads and mirrors the
+        sort into the page URL (HX-Replace-Url)."""
+        from urllib.parse import parse_qs, urlparse
+
+        table = self.page.locator(self.LV_TABLE).first
+        link = table.locator(self.SORT_LINK_BY_LABEL.format(label=label)).first
+        link.wait_for(state="visible", timeout=15000)
+        self._step(f"Sort Connect Workers list by '{label}'")
+        link.click()
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(1200)
+        sort = parse_qs(urlparse(self.page.url).query).get("sort", [""])[0]
+        self._step(f"URL sort param after click: {sort!r}")
+        return sort
+
+    def sortable_list_columns(self):
+        """Which Connect Workers list headers expose a sort link."""
+        table = self.page.locator(self.LV_TABLE).first
+        table.wait_for(state="visible", timeout=20000)
+        headers = table.locator(self.SORTABLE_HEADER_THS)
+        labels = [h.strip() for h in headers.all_inner_texts() if h.strip()]
+        self._step(f"Sortable list columns: {labels}")
+        return labels
+
+    # ========================================================================
+    # Payments tab (Payment Processing_1-4) - ported from Selenium. Reaches the
+    # tab via flows.workers_setup.open_payments_tab (dashboard 'Payments' panel).
+    # make_payment imports a payment; the paired rollback restores the worker, so
+    # the flow is self-cleaning on the shared test opportunity.
+    # ========================================================================
+
+    PAYMENT_IMPORT_BTN = locators.get("connect_workers_page", "payment_import_btn")
+    PAYMENT_IMPORT_FILE = locators.get("connect_workers_page", "payment_import_file")
+    PAYMENT_IMPORT_SUBMIT = locators.get("connect_workers_page", "payment_import_submit")
+    ROLLBACK_LAST_PAYMENT_BTN = locators.get("connect_workers_page", "rollback_last_payment_btn")
+    ROLLBACK_POPUP_BTN = locators.get("connect_workers_page", "rollback_popup_btn")
+
+    def verify_payments_table_headers_present(self):
+        """Payment Processing_1 - the Payments tab shows its columns. The currency
+        columns are suffixed with the opportunity currency code (e.g. 'Accrued
+        (INR)'), so match on the stable prefix rather than the exact header."""
+        actual = [h for h in self._header_texts() if h]
+        actual_joined = " | ".join(actual).lower()
+        for token in worker_ref["payments_header_tokens"]:
+            assert token.lower() in actual_joined, f"Missing payments column {token!r}. Actual: {actual}"
+        self._step(f"Payments table headers present: {actual}")
+
+    def _payments_row(self, worker):
+        table = self.page.locator(self.LV_TABLE).first
+        return table.locator(self.ROW_BY_P_TEXT.format(text=worker.strip())).first
+
+    def fetch_username_from_payments(self, worker):
+        """The worker's ConnectID username, shown as a second line under the name.
+        The payment import matches on username, so this is what a row must carry."""
+        row = self._payments_row(worker)
+        row.wait_for(state="visible", timeout=15000)
+        name_cell_ps = row.locator(self.NAME_CELL_PS_BY_WORKER.format(worker=worker.strip()))
+        assert name_cell_ps.count() >= 2, f"No username line under worker '{worker}'"
+        username = name_cell_ps.nth(name_cell_ps.count() - 1).inner_text().strip()
+        assert username and username != worker.strip(), f"Could not read username for '{worker}'"
+        self._step(f"Worker '{worker}' username: {username}")
+        return username
+
+    def _last_paid_text(self, worker):
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
+        assert idx is not None, f"'Last paid' column not found in {headers}"
+        cell = self._payments_row(worker).locator(self.ROW_CELLS).nth(idx)
+        return cell.inner_text().strip()
+
+    def make_payment_for_worker(self, worker, amount=1):
+        """Payment Processing_2 - import a payment for the worker and confirm the
+        success message. Builds a one-row workbook in a temp file (leaving the
+        committed test_data/make_payment.xlsx untouched) with the headers the
+        importer expects; only username/amount/date are used to match and apply."""
+        import os
+        import tempfile
+        from datetime import date
+
+        import openpyxl
+
+        username = self.fetch_username_from_payments(worker)
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["Username", "Phone Number", "Name", "Payment Amount",
+                   "Payment Date (YYYY-MM-DD)", "Payment Method", "Payment Operator"])
+        # Phone is not used for matching (import keys on username); a reserved-block
+        # placeholder keeps the row well-formed.
+        ws.append([username, worker_ref["payment_import_placeholder_phone"], worker, str(amount),
+                   date.today().isoformat(), None, None])
+        path = os.path.join(tempfile.mkdtemp(), "make_payment.xlsx")
+        wb.save(path)
+
+        self._step(f"Import a payment of {amount} for '{worker}'")
+        self.click(self.PAYMENT_IMPORT_BTN)
+        file_input = self.page.locator(self.PAYMENT_IMPORT_FILE).first
+        file_input.wait_for(state="attached", timeout=15000)
+        file_input.set_input_files(path)
+        self.click(self.PAYMENT_IMPORT_SUBMIT)
+        # The import is queued asynchronously and the page reloads with the task id
+        # in the URL - that is the acceptance signal. The payment actually applying
+        # is confirmed later by wait_for_last_paid_populated (the history step).
+        self.page.wait_for_url("**payment_import_task_id=**", timeout=30000)
+        self._step(f"Payment import queued: {self.page.url}")
+
+    def wait_for_last_paid_populated(self, worker, timeout_seconds=90):
+        """Reload the Payments tab until the worker's Last paid is no longer '—'."""
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self.page.reload(wait_until="load")
+            self.page.wait_for_timeout(2500)
+            value = self._last_paid_text(worker)
+            self._step(f"Last paid for '{worker}': {value!r}")
+            if value and value != "—":
+                return value
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Last paid for '{worker}' stayed empty after {timeout_seconds}s - "
+                    f"the async payment import may not have applied."
+                )
+            self.page.wait_for_timeout(5000)
+
+    def click_last_paid_and_verify_history(self, worker):
+        """Payment Processing_3 - click the worker's Last paid value and confirm the
+        payment-history breakdown popup opens."""
+        self.wait_for_last_paid_populated(worker)
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
+        span = self._payments_row(worker).locator(self.ROW_CELLS).nth(idx).locator("span").first
+        self._step(f"Open payment history for '{worker}'")
+        span.click()
+        self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
+        self._step("Payment history popup shown")
+
+    def rollback_last_payment(self):
+        """Payment Processing_4 (part 1) - roll back the last payment."""
+        self._step("Rollback last payment")
+        self.click(self.ROLLBACK_LAST_PAYMENT_BTN)
+        self.page.locator(self.ROLLBACK_POPUP_BTN).first.wait_for(state="visible", timeout=10000)
+        self.click(self.ROLLBACK_POPUP_BTN)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+
+    # ========================================================================
+    # Invite lifecycle (Connect_worker_02-16) - the Connect Workers (default) tab.
+    # Phase 1 here is zero-mutation (uses an existing pending invite); the
+    # invite/resend/delete helpers below it send SMS and self-clean.
+    # ========================================================================
+
+    ADD_WORKER_BTN = locators.get("connect_workers_page", "add_worker_btn")
+    RESEND_INVITES_BTN = locators.get("connect_workers_page", "resend_invites_btn")
+    DELETE_WORKERS_BTN = locators.get("connect_workers_page", "delete_workers_btn")
+    INVITE_USERS_INPUT = locators.get("connect_workers_page", "invite_users_input")
+    INVITE_SUBMIT_BTN = locators.get("connect_workers_page", "invite_submit_btn")
+    PENDING_INVITE_INDICATOR = locators.get("connect_workers_page", "pending_invite_indicator")
+    WORKER_ROW_BY_PHONE = locators.get("connect_workers_page", "worker_row_by_phone")
+    DELETE_INVITES_CONFIRM_BTN = locators.get("connect_workers_page", "delete_invites_confirm_btn")
+
+    # Structural / dynamic row + cell locators (from the yaml, not inline xpaths).
+    DATA_ROWS = locators.get("connect_workers_page", "data_rows")
+    ROW_CELLS = locators.get("connect_workers_page", "row_cells")
+    TOTAL_ROW = locators.get("connect_workers_page", "total_row")
+    ROW_BY_P_TEXT = locators.get("connect_workers_page", "row_by_p_text")
+    SORTABLE_HEADER_THS = locators.get("connect_workers_page", "sortable_header_ths")
+    SORT_LINK_BY_LABEL = locators.get("connect_workers_page", "sort_link_by_label")
+    NAME_CELL_PS_BY_WORKER = locators.get("connect_workers_page", "name_cell_ps_by_worker")
+    STATUS_TOOLTIP_BY_VALUE = locators.get("connect_workers_page", "status_tooltip_by_value")
+    DATA_ROW_BY_P_TEXT = locators.get("connect_workers_page", "data_row_by_p_text")
+    DATA_ROW_BY_TEXT = locators.get("connect_workers_page", "data_row_by_text")
+    PENDING_INVITE_ROW = locators.get("connect_workers_page", "pending_invite_row")
+    REAL_TABLE = locators.get("connect_workers_page", "real_table")
+
+    def verify_pending_invite_status_present(self):
+        """Connect_worker_02 - a not-yet-accepted invite shows the 'Invite pending'
+        status (orange clock). Asserts at least one pending invite is displayed."""
+        self._await_list_table()
+        count = self.page.locator(self.PENDING_INVITE_INDICATOR).count()
+        assert count > 0, "No 'Invite pending' status indicator found in the Connect Workers list"
+        self._step(f"'Invite pending' status present ({count} row(s))")
+
+    # -- Gap-derived worker-page cases (GAP-SRC-W-46/49/52) ----------------------
+
+    WORKER_KPI_LABELS = worker_ref["worker_kpi_labels"]
+
+    def verify_worker_profile_kpis(self):
+        """GAP-SRC-W-46 - the per-worker profile page shows the KPI header tiles
+        (Total Visits / Pending Tasks / Rejected Visits / Accrued / Paid)."""
+        body = self.page.inner_text("body")
+        missing = [label for label in self.WORKER_KPI_LABELS if label not in body]
+        assert not missing, f"Worker profile KPI tiles missing: {missing}"
+        self._step(f"Worker profile KPI tiles present: {self.WORKER_KPI_LABELS}")
+
+    def verify_work_area_tab_present(self):
+        """GAP-SRC-W-49 (positive) - the Work Area Assignments tab is present when
+        the MICROPLANNING flag is on, and its page is reachable (HTTP 200). The
+        off-state (tab absent + 404) needs a non-microplanning opportunity."""
+        tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name="Work Area Assignments"))
+        assert tab.count() > 0, "Work Area Assignments tab not present (MICROPLANNING expected on)"
+        url = self.page.url.split("/workers/")[0] + "/workers/work-areas/"
+        status = self.page.request.get(url).status
+        assert status == 200, f"Work areas page returned HTTP {status}, expected 200"
+        self._step(f"Work Area Assignments tab present and reachable (HTTP {status})")
+
+    def verify_payments_currency_suffixed_headers(self):
+        """GAP-SRC-W-52 (partial) - the Accrued / Total Paid / Confirm columns carry
+        a currency-code suffix, e.g. 'Accrued (INR)'."""
+        headers = [h for h in self._header_texts() if h]
+        currency_cols = [h for h in headers if h.startswith(("Accrued", "Total Paid", "Confirm"))]
+        assert currency_cols, f"No currency columns found in payments headers: {headers}"
+        unsuffixed = [h for h in currency_cols if "(" not in h]
+        assert not unsuffixed, f"Currency columns not suffixed with a currency code: {unsuffixed}"
+        self._step(f"Payments currency-suffixed headers: {currency_cols}")
+
+    def verify_worker_status(self, identifier, expected_status):
+        """Connect_worker_04/_07 - the worker row (found by phone or display name)
+        shows `expected_status` (StatusIndicatorColumn x-tooltip.raw, e.g.
+        'Invite accepted', 'User suspended', 'Invite pending')."""
+        self._await_list_table()
+        row = self.page.locator(self.DATA_ROW_BY_TEXT.format(text=identifier)).first
+        row.wait_for(state="visible", timeout=15000)
+        match = row.locator(self.STATUS_TOOLTIP_BY_VALUE.format(status=expected_status))
+        assert match.count() > 0, (
+            f"Worker '{identifier}' does not show status '{expected_status}' (row: {row.inner_text()!r})"
+        )
+        self._step(f"Worker '{identifier}' shows status '{expected_status}'")
+
+    def verify_not_found_display(self, phone):
+        """Connect_worker_06 - a not-found (unregistered) worker shows the status
+        'User not found' with no display name (Name column '—'); only the mobile
+        number is visible. Works for a fresh or an old invite once resolved."""
+        self.verify_worker_status(phone, "User not found")
+        row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+        assert phone.lstrip("+") in row.inner_text().replace(" ", ""), (
+            f"Mobile number {phone} not visible on the not-found row"
+        )
+        self._step(f"Not-found user {phone}: status 'User not found', only the mobile shown")
+
+    def verify_not_found_deletable(self, phone):
+        """Connect_worker_13 - a not-found user can be deleted: selecting the row
+        enables the Delete control. The deletion is not executed here, to preserve
+        the seeded not-found worker; _08 already proves delete removes an invite."""
+        self.select_worker_row(phone)
+        deletew = self.page.locator(self.DELETE_WORKERS_BTN).first
+        assert not deletew.is_disabled(), "Delete control not enabled for a selected not-found user"
+        self._step(f"Not-found user {phone} is deletable (Delete control enabled)")
+        # Leave clean.
+        self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first.locator(
+            "input[type=checkbox]"
+        ).first.uncheck()
+
+    def verify_resend_cooldown(self, phone):
+        """Connect_worker_09 - resending a registered invite within 24h is refused
+        with a cooldown message. Uses a real registered number (demo numbers do not
+        enforce the cooldown). The resend is skipped, so no SMS is sent - but this
+        relies on the invite being <24h old; refresh it if the assertion flips."""
+        body = self.resend_worker_and_message(phone)
+        assert "sent in the last 24 hours" in body.lower() and phone in body, (
+            f"Expected a 24h-cooldown skip message naming {phone}; the invite may be "
+            f"older than 24h (resend would then succeed and message the real user)."
+        )
+        self._step(f"Resend of {phone} refused - 24h cooldown")
+
+    def _first_pending_invite_row(self):
+        return self.page.locator(self.PENDING_INVITE_ROW).first
+
+    def verify_resend_delete_gated_by_selection(self):
+        """Connect_worker_03 - Resend Invite(s) and Delete Worker(s) are disabled
+        with nothing selected and enable once an invite row is selected. Selecting a
+        checkbox mutates nothing, and the row is deselected again at the end."""
+        resend = self.page.locator(self.RESEND_INVITES_BTN).first
+        deletew = self.page.locator(self.DELETE_WORKERS_BTN).first
+        resend.wait_for(state="visible", timeout=15000)
+        assert resend.is_disabled() and deletew.is_disabled(), (
+            "Resend/Delete should be disabled with no invite selected"
+        )
+        row = self._first_pending_invite_row()
+        row.wait_for(state="visible", timeout=15000)
+        checkbox = row.locator("input[type=checkbox]").first
+        checkbox.check()
+        self.page.wait_for_timeout(600)
+        assert not resend.is_disabled() and not deletew.is_disabled(), (
+            "Resend/Delete should enable once an invite is selected"
+        )
+        self._step("Resend/Delete enable when an invite is selected")
+        checkbox.uncheck()
+        self.page.wait_for_timeout(400)
+        assert resend.is_disabled() and deletew.is_disabled(), (
+            "Resend/Delete should disable again when the invite is deselected"
+        )
+        self._step("Resend/Delete disable again when deselected")
+
+    # -- mutating invite / resend / delete (Connect_worker_05/_08/_09) -----------
+    # These send a real SMS to a reserved automation number and self-clean by
+    # deleting the invite afterwards.
+
+    def worker_row_present(self, phone):
+        return self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).count() > 0
+
+    def invite_worker(self, phone, timeout_seconds=120):
+        """Connect_worker_05 - invite a (possibly unregistered) number via Add Worker
+        and wait for the pending invite to appear. Submitting the invite redirects to
+        the opportunity dashboard, so the poll navigates back to the workers list."""
+        self._workers_url = self.page.url  # we are on /workers/ when inviting
+        self._step(f"Invite worker {phone}")
+        self.click(self.ADD_WORKER_BTN)
+        field = self.page.locator(self.INVITE_USERS_INPUT).first
+        field.wait_for(state="visible", timeout=15000)
+        field.fill(phone)
+        self.click(self.INVITE_SUBMIT_BTN)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+        self.wait_for_worker_row(phone, timeout_seconds)
+
+    def _goto_workers_list(self):
+        """Return to the stored workers-list URL (invite/delete redirect away).
+
+        Retries once on ERR_ABORTED - a goto fired while the invite/resend redirect
+        is still in flight aborts, which is transient, not a real failure."""
+        url = getattr(self, "_workers_url", None) or self.page.url
+        last = None
+        for attempt in range(3):
+            try:
+                self.page.goto(url, timeout=45000)
+                break
+            except Exception as exc:
+                # ERR_ABORTED (a goto racing the redirect) and transient load
+                # timeouts are both worth one more try before failing.
+                last = exc
+                if attempt < 2:
+                    self.page.wait_for_timeout(2000)
+                    continue
+                raise last
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2500)
+
+    def wait_for_worker_row(self, phone, timeout_seconds=120):
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self._goto_workers_list()
+            if self.worker_row_present(phone):
+                self._step(f"Invite row for {phone} present")
+                return True
+            if time.monotonic() >= deadline:
+                raise AssertionError(f"Invite {phone} did not appear within {timeout_seconds}s")
+            self.page.wait_for_timeout(6000)
+
+    def select_worker_row(self, phone):
+        row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+        row.wait_for(state="visible", timeout=15000)
+        row.locator("input[type=checkbox]").first.check()
+        self.page.wait_for_timeout(400)
+
+    def resend_selected_invite(self):
+        """Click Resend Invite(s) for the selected row and return any message shown
+        (Connect_worker_09 expects a cooldown message within 24h)."""
+        self._step("Resend the selected invite")
+        self.click(self.RESEND_INVITES_BTN)
+        self.page.wait_for_timeout(2500)
+        body = self.page.inner_text("body")
+        return body
+
+    def select_worker_rows(self, phones):
+        for p in phones:
+            row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=p)).first
+            row.wait_for(state="visible", timeout=15000)
+            row.locator("input[type=checkbox]").first.check()
+        self.page.wait_for_timeout(500)
+
+    def bulk_resend_and_message(self, phones):
+        """Connect_worker_15 - select several workers of different states and click
+        Resend Invite(s); returns the combined result text. Non-destructive."""
+        self._goto_workers_list()
+        self.select_worker_rows(phones)
+        return self.resend_selected_invite()
+
+    def resend_worker_and_message(self, phone):
+        """Select the worker row for `phone` and click Resend Invite(s), returning
+        the resulting page text. Navigates back to the workers list first, since a
+        previous resend/delete redirects to the dashboard. Non-destructive: resend
+        of an accepted/suspended worker is skipped, and demo numbers are not
+        actually re-messaged."""
+        self._goto_workers_list()
+        self.select_worker_row(phone)
+        return self.resend_selected_invite()
+
+    def delete_worker_invite(self, phone, timeout_seconds=60):
+        """Connect_worker_08 - select the invite row, delete it via the toolbar +
+        confirm modal, and wait for it to disappear."""
+        import time
+
+        if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
+            self._goto_workers_list()
+        if not self.worker_row_present(phone):
+            self._step(f"No invite row for {phone} to delete")
+            return
+        self.select_worker_row(phone)
+        self._step(f"Delete invite {phone}")
+        self.click(self.DELETE_WORKERS_BTN)
+        self.page.locator(self.DELETE_INVITES_CONFIRM_BTN).first.wait_for(state="visible", timeout=10000)
+        self.click(self.DELETE_INVITES_CONFIRM_BTN)
+        self.page.wait_for_load_state("load")
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self._goto_workers_list()
+            if not self.worker_row_present(phone):
+                self._step(f"Invite {phone} deleted")
+                return
+            if time.monotonic() >= deadline:
+                raise AssertionError(f"Invite {phone} still present {timeout_seconds}s after delete")
+
+    def verify_last_paid_empty(self, worker, timeout_seconds=60):
+        """Payment Processing_4 (part 2) - after rollback the Last paid is '—'."""
+        import time
+
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            self.page.reload(wait_until="load")
+            self.page.wait_for_timeout(2500)
+            value = self._last_paid_text(worker)
+            self._step(f"Last paid for '{worker}' after rollback: {value!r}")
+            if value == "—":
+                self._step(f"Rollback confirmed for '{worker}'")
+                return
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Last paid for '{worker}' is {value!r} after rollback, expected '—'."
+                )
+            self.page.wait_for_timeout(5000)

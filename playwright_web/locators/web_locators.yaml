@@ -26,6 +26,7 @@ cchq_mobile_workers_page:
   # pending-invite tables on the same page).
   worker_table: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]"
   personalid_status_header: "//th[contains(normalize-space(),'PersonalID Status')]"
+  unlink_personalid_btn: ".//button[contains(normalize-space(),'Unlink PersonalID')]"
   personalid_status_labels: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]//tbody//span[contains(@class,'label')]"
   # Action-column control per linked worker (Bootstrap modal trigger).
   unlink_button: "//button[contains(normalize-space(),'Unlink PersonalID')]"
@@ -47,6 +48,8 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
+  org_list_item_by_name: ".//li[(.//p)[1][normalize-space()='{organization_name}']]"
+  org_list_items: ".//li"
   authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
   # CommCare HQ's OAuth consent screen requires at least one project space before
   # the Authorize button enables; "Select all" grants them all in one click.
@@ -59,6 +62,9 @@ connect_home_page:
 
 connect_opportunities_page:
   name_input: "id_name"
+  label_by_text: ".//label[normalize-space(.) = '{required_text}']"
+  data_rows_no_detail: ".//tbody/tr[not(contains(@class,'detail-row'))]"
+  row_second_cell: "./td[2]"
   currency_input: "id_currency"
   country_input: "id_country"
   short_description_input: "id_short_description"
@@ -88,6 +94,12 @@ connect_opportunities_page:
 
 opportunity_dashboard_page:
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+  # Relative sub-locators used on an already-located card / row element.
+  card_count_h3: ".//h3[contains(@class,'text-2xl')]"
+  card_h3: ".//h3"
+  card_p: ".//p"
+  row_cells: "./td"
+  active_tab: "//ul[contains(@class,'tabs')]//li[contains(@class,'active')]"
   # Load signals - the detail page shows the opportunity name (h1) and the bars
   # menu icon; the list page has neither, so together they distinguish the two
   # (both live under /opportunity/).
@@ -202,6 +214,7 @@ opportunity_dashboard_page:
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
+  card_title_p: ".//p[contains(@class,'card_title')]"
   program_add_form: "program-add-form"
   program_name_input: "id_name"
   program_description_input: "id_description"
@@ -353,6 +366,99 @@ connect_workers_page:
   confirm_modal_title: "confirm-modal-title"
   confirm_delete_btn: "//div[contains(@class,'modal-backdrop')][.//h2[@id='confirm-modal-title']]//button[.//span[normalize-space()='Delete'] or normalize-space()='Delete']"
 
+  # --- Worker List View (WLV_1-8): the workers list / Learn / Deliver tables ---
+  # The three tabs share the #table container (htmx-swapped); base-table is the
+  # rendered table inside it. Ported from the Selenium locators, re-anchored on
+  # #table so a sibling table (e.g. a worker-visits table) is never picked up.
+  lv_table: "//div[@id='table']//table[contains(@class,'base-table')]"
+  # tabs are <li> carrying a <span> label; the active one gains an 'active' class.
+  lv_tab_item_by_name: "//ul[@id='tabs']//li[.//span[normalize-space()='{tab_name}']]"
+  # A worker's name cell (its <p>) - clicking it opens that worker's Visits page.
+  lv_name_item_in_table: "//div[@id='table']//td[.//p[normalize-space()='{name}']]"
+  # The count-breakdown popup shown when a Delivered/Pending/Approved/Rejected cell
+  # value is clicked (an x-ref='menu' fixed panel, visible only while not display:none).
+  count_breakdown_popup: "//div[@x-ref='menu' and contains(@class,'fixed') and not(contains(@style,'display: none'))]"
+  # Deliver-tab filter modal (opportunity filters.py -> #filterForm). The toolbar
+  # button carries the sliders icon and a count badge; each field keeps its Django
+  # select id; Apply submits filterForm. Anchored on the control, not on position.
+  lv_filter_button: "//div[@id='tab-options']//button[.//i[contains(@class,'fa-sliders')]]"
+  lv_filter_badge: "//div[@id='tab-options']//button[.//i[contains(@class,'fa-sliders')]]//span[normalize-space()]"
+  lv_filter_modal: "//form[@id='filterForm']"
+  lv_filter_apply_btn: "//button[@form='filterForm' and normalize-space()='Apply']"
+  filter_last_active: "id_last_active"
+  filter_has_duplicates: "id_has_duplicates"
+  filter_has_flags: "id_has_flags"
+  filter_has_overlimit: "id_has_overlimit"
+  filter_review_pending: "id_review_pending"
+
+  # --- Invite lifecycle (Connect_worker_02-16) ---
+  # Toolbar controls on the Connect Workers (default) tab. Resend/Delete are
+  # disabled until at least one invite row is selected.
+  add_worker_btn: "//a[@x-tooltip.raw='Add Worker'] | //button[@x-tooltip.raw='Add Worker']"
+  resend_invites_btn: "//button[@x-tooltip.raw='Resend Invite(s)']"
+  delete_workers_btn: "//button[@x-tooltip.raw='Delete Worker(s)']"
+  invite_users_input: "id_users"
+  invite_submit_btn: "submit-id-submit"
+  # Status indicators shown in the worker row (StatusIndicatorColumn).
+  pending_invite_indicator: "//span[@x-tooltip.raw='Invite pending']"
+  # A worker row addressed by the phone number it carries.
+  worker_row_by_phone: "//div[@id='table']//table//tbody//tr[.//td[contains(normalize-space(),'{phone}')]]"
+  # Delete-invite confirm modal button.
+  delete_invites_confirm_btn: "//button[contains(@class,'bg-red') and contains(normalize-space(),'Delete Invite')]"
+
+  # --- Payments tab (Payment Processing_1-4) ---
+  # Import icon in the tab toolbar (fa-upload), the hidden file input it reveals,
+  # and the modal's Import submit; the async import surfaces a status link.
+  payment_import_btn: "//button[contains(@class,'button-icon')][.//i[contains(@class,'fa-upload')]]"
+  payment_import_file: "//input[@type='file' and @name='payments']"
+  payment_import_submit: "//button[@type='submit' and normalize-space()='Import']"
+  # Rollback lives inside the Last-paid history popup (payment_history.html); its
+  # confirm modal posts to payment_delete.
+  rollback_last_payment_btn: "//button[normalize-space()='Rollback Last Payment']"
+  rollback_popup_btn: "//button[@type='submit' and normalize-space()='Rollback']"
+
+  # --- Structural / dynamic row + cell locators (relative unless noted) ---
+  # Relative ones (.//, ./) are applied to an already-located table/row element;
+  # the absolute ones are used at page level. Dynamic parts use .format(...).
+  data_rows: ".//tbody//tr"
+  row_cells: "./td"
+  total_row: ".//tbody//tr[td[normalize-space()='Total']]"
+  row_by_p_text: ".//tbody//tr[.//p[normalize-space()='{text}']]"
+  sortable_header_ths: ".//thead//th[.//a]"
+  sort_link_by_label: ".//thead//th[.//a[contains(normalize-space(),'{label}')]]//a"
+  name_cell_ps_by_worker: ".//td[.//p[normalize-space()='{worker}']]//p"
+  status_tooltip_by_value: ".//*[@x-tooltip.raw='{status}']"
+  # Absolute (page-level) row locators under #table.
+  data_row_by_p_text: "//div[@id='table']//table//tbody//tr[.//p[normalize-space()='{text}']]"
+  data_row_by_text: "//div[@id='table']//table//tbody//tr[contains(normalize-space(),'{text}')]"
+  pending_invite_row: "//div[@id='table']//table//tbody//tr[.//span[@x-tooltip.raw='Invite pending']]"
+  # The real (non-skeleton) htmx table, once it replaces the animate-pulse placeholder.
+  real_table: "//table[not(contains(@class,'animate-pulse'))]"
+
+# --- Worker Visit Verification Page (WVVP_1-7) ---
+# The per-worker Visits page reached by clicking a worker on the Deliver tab. Its
+# table is the second base-table on the page (the first is the summary/header one).
+# Ported from the Selenium worker_visits_page locators; the individual-row checkbox
+# is re-anchored on the first data row rather than a hard-coded entity name.
+worker_visits_page:
+  visits_table: "(//table[contains(@class,'base-table')])[2]"
+  select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
+  first_row_checkbox: "(//table[contains(@class,'base-table')])[2]//tbody//tr//input[@type='checkbox']"
+  approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
+  approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
+  reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
+  reject_popup_button: "(//button[contains(normalize-space(), 'Reject') and @type='submit'])[1]"
+  approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
+  reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
+  tabs_container: "//div[contains(@class,'tabs')]"
+  tab_item_by_name: "//a[contains(@class,'tab')][normalize-space()='{tab_name}'] | //label[contains(@class,'tab')][normalize-space()='{tab_name}']"
+  visit_details_container: "visit-details"
+  username_section: "//div[contains(@class,'profile-card')]"
+  suspend_button: "//button[contains(normalize-space(),'Suspend')][not(@type='submit')]"
+  suspend_reason_input: "reason"
+  suspend_popup_button: "//button[contains(text(), 'Suspend') and @type='submit']"
+  revoke_suspend_button: "//*[@id='content']//button[contains(text(), 'Revoke Suspension')]"
+
 # --- Worker invite + hybrid (Phase 2) ---
 connect_worker_invite_page:
   users_textarea: "id_users"
@@ -371,6 +477,9 @@ connect_worker_invite_page:
 #   case_property_name_input                   data-bind="value: property_value"
 cchq_messaging_page:
   messaging_tab: "MessagingTab"
+  schedule_ancestor_div: "xpath=ancestor::div[starts-with(@id,'div_id_schedule')][1]"
+  broadcast_link_by_name: '//table//td//a[contains(normalize-space(), "{name}")]'
+  broadcast_row_link_by_name: '//tr//td//a[normalize-space()="{name}"]'
   messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
 
   # --- Conditional alerts ---
@@ -435,6 +544,7 @@ cchq_messaging_page:
 # table, everyone else the NM table - so column assertions are keyed to the org.
 connect_opportunity_list_page:
   heading: "//p[normalize-space()='Opportunities List']"
+  row_first_link: ".//a"
   table: "//table[contains(@class,'base-table')]"
   column_headers: "//table[contains(@class,'base-table')]//thead//th"
   # Data rows only. The empty-state row carries the placeholder text instead.

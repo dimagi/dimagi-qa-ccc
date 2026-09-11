@@ -16,7 +16,12 @@ class LocatorLoader:
 
     def get(self, page, element):
         locator_value = self.data[page][element]
-        if locator_value.startswith("//") or locator_value.startswith("("):
+        # Values already prefixed with 'xpath=' pass through (covers axis-based
+        # locators like ancestor::). Absolute (//, () and relative (.//, ./) XPaths
+        # get the prefix added; anything else is treated as a bare element id.
+        if locator_value.startswith("xpath="):
+            return locator_value
+        if locator_value.startswith(("//", "(", ".//", "./")):
             return f"xpath={locator_value}"
         return f"#{locator_value}"
 

@@ -117,7 +117,7 @@ class ConnectOpportunityListPage(BasePage):
         row.wait_for(state="visible", timeout=15000)
         # The name cell also carries the NM org as a subtitle line; keep only the
         # opportunity name (first line) for matching.
-        name = row.locator("xpath=.//a").first.inner_text().strip().split("\n")[0].strip()
+        name = row.locator(locators.get("connect_opportunity_list_page", "row_first_link")).first.inner_text().strip().split("\n")[0].strip()
         self._step(f"First opportunity in list: {name!r}")
         return name
 

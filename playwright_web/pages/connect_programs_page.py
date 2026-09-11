@@ -121,7 +121,7 @@ class ConnectProgramsPage(BasePage):
     def first_program_name(self):
         card = self.program_cards().first
         card.wait_for(state="visible", timeout=30000)
-        return card.locator("xpath=.//p[contains(@class,'card_title')]").first.inner_text().strip()
+        return card.locator(locators.get("connect_programs_page", "card_title_p")).first.inner_text().strip()
 
     def verify_card_summary_fields(self, program_name):
         """PLP_03/10 - the summary infocards every program card carries."""
