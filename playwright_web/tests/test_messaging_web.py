@@ -75,18 +75,38 @@ def _skip_while_staging_drops_messages(config):
         )
 
 
-@pytest.fixture
-def messaging(page, config, settings):
-    """Logged in to HQ, sitting on the Conditional Alerts page."""
-    login_page = LoginPage(page)
-    home_page = CCHQHomePage(page)
-
-    login_page.valid_login_cchq(config, settings)
-    home_page.verify_home_page_title("Welcome")
-
+def _open_messaging(page, config, settings):
+    LoginPage(page).valid_login_cchq(config, settings)
+    CCHQHomePage(page).verify_home_page_title("Welcome")
     messaging_page = CCHQMessagingPage(page)
     messaging_page.open_messaging_option("Conditional Alerts")
     return messaging_page
+
+
+@pytest.fixture(scope="module")
+def messaging(browser, config, settings):
+    """One HQ login for the whole module, parked on Conditional Alerts; each test
+    re-navigates to the messaging page it needs (cheap open_*, no re-login).
+
+    Prod-only (the autouse fixture skips the suite on staging, CCCT-2671), so the
+    stage guard here short-circuits before a browser is ever created. The login
+    is flaky, so it is retried once.
+    """
+    if config.env == "stage":
+        pytest.skip("Messaging suite is prod-only while staging drops messages (CCCT-2671).")
+
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        try:
+            messaging_page = _open_messaging(page, config, settings)
+        except Exception:
+            page.close()
+            page = context.new_page()
+            messaging_page = _open_messaging(page, config, settings)
+        yield messaging_page
+    finally:
+        context.close()
 
 
 @pytest.fixture
@@ -110,6 +130,7 @@ def test_conditional_alert_offers_connect_content_types(messaging):
     Walks into the wizard far enough for the content step to render; nothing is
     saved, so this leaves no alert behind.
     """
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     options = messaging.open_new_alert_and_read_what_to_send_options()
     missing = [option for option in CONNECT_CONTENT_OPTIONS if option not in options]
     assert not missing, f"Conditional alert 'What to Send' is missing {missing}. Offered: {options}"
@@ -117,6 +138,7 @@ def test_conditional_alert_offers_connect_content_types(messaging):
 
 def test_broadcast_offers_connect_content_types(messaging):
     """TC-BRD-001 - both Connect options are offered on Broadcasts."""
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     messaging.open_messaging_option("Broadcasts")
     options = messaging.open_new_broadcast_and_read_what_to_send_options()
     missing = [option for option in CONNECT_CONTENT_OPTIONS if option not in options]
@@ -130,6 +152,7 @@ def test_create_connect_message_conditional_alert(messaging, messaging_data):
     otherwise accumulate on the domain, and the delete is also what keeps this
     re-runnable.
     """
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     entity_id = str(int(time.time() * 1000) % 1_000_000)
     messaging.delete_existing_alerts(messaging.MESSAGE_ALERT_NAME)
     try:
@@ -149,6 +172,7 @@ def test_keyword_offers_connect_content_types(messaging):
     The keyword counterpart of TC-CAL-001 / TC-BRD-001. Nothing is saved, so no
     keyword is left behind.
     """
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     messaging.open_keywords()
     messaging.click_add_keyword_btn()
     options = messaging.keyword_content_type_options()
@@ -158,6 +182,7 @@ def test_keyword_offers_connect_content_types(messaging):
 
 def test_create_keyword_with_connect_message(messaging):
     """TC-KWD-001 - a keyword replying with a Connect Message can be created."""
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     messaging.delete_existing_keywords()
     try:
         keyword, message = messaging.create_keyword_with_connect_message()
@@ -169,6 +194,7 @@ def test_create_keyword_with_connect_message(messaging):
 
 def test_create_keyword_with_connect_survey(messaging, messaging_data):
     """TC-KWD-003 - a keyword replying with a Connect Survey can be created."""
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     messaging.delete_existing_keywords()
     try:
         keyword = messaging.create_keyword_with_connect_survey(
@@ -195,6 +221,7 @@ def test_repeat_consent_request_creates_no_duplicate(messaging):
     for workers who had none - a legitimate one-off - so it skips rather than
     failing, and the next run is the real assertion.
     """
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     messaging.open_user_consent()
     banner = messaging.request_messaging_consent()
 
@@ -209,6 +236,7 @@ def test_repeat_consent_request_creates_no_duplicate(messaging):
 
 def test_create_connect_survey_conditional_alert(messaging, messaging_data):
     """TC-CAL-004 - a Connect Survey alert saves and appears in the list."""
+    messaging.open_messaging_option("Conditional Alerts")  # shared session: reset to a known page
     entity_id = str(int(time.time() * 1000) % 1_000_000)
     messaging.delete_existing_alerts(messaging.SURVEY_ALERT_NAME)
     try:
