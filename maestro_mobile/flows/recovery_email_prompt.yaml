@@ -1,7 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  USERNAME: "QA Recovery Skip"
-  BACKUP_CODE: "742801"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_RECOVERY_EMAIL.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # RE_01, RE_02: the email step during ACCOUNT RECOVERY.
 #

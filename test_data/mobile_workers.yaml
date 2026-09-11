@@ -220,3 +220,105 @@ MAESTRO_MAP_CASE_LIST:
   phone_number: "9870654"
   username: "Case_list"
   backup_code: "123456"
+
+# --- PersonalID email + Manage Profile (CCCT-2784) ----------------------------
+#
+# These entries carry NO phone_number, and that is deliberate. Every flow below
+# registers a brand-new account from a cleared app, so the number is generated at
+# runtime by shared_registration.yaml ('129' + the clock's last four digits, in
+# the reserved 129xxxx automation block). A fixed number would be wrong here: the
+# second run would find the account already exists and silently exercise recovery
+# instead of registration.
+#
+# Same reason there is no *_staging override: the account is created during the
+# run, so it exists on whichever environment the run targets.
+#
+# Which worker serves which case:
+#
+#   MAESTRO_PROFILE_VIEW         -> MP_01-MP_04  reaching Manage Profile and the
+#                                   Profile screen's contents
+#   MAESTRO_PROFILE_EDIT_NAME    -> MP_05-MP_07  renaming, and the blank-name guard
+#   MAESTRO_PROFILE_EDIT_EMAIL   -> MP_08-MP_13, MP_19  email validation, the
+#                                   confirm prompt, and verification
+#   MAESTRO_PROFILE_DISCARD      -> MP_14-MP_16  unsaved-changes warning
+#   MAESTRO_PROFILE_FORGET       -> MP_17, MP_18  Forget PersonalID Account
+#   MAESTRO_RECOVERY_EMAIL       -> RE_01, RE_02  the email step during recovery
+#   MAESTRO_SIGNUP_EMAIL_ADD     -> SE_01-SE_05, SE_11  the email step during signup
+#   MAESTRO_SIGNUP_EMAIL_VERIFY  -> SE_06-SE_10, SE_12  verifying the emailed code
+#   MAESTRO_INTEGRITY_PROBE      -> no case; the one-off probe that proved a fresh
+#                                   number registers on a real device without a
+#                                   Connect invite
+#
+# The usernames differ per flow so a failed run's account is identifiable in the
+# admin, and the backup codes differ so one flow's account cannot be opened with
+# another's code by accident.
+
+MAESTRO_PROFILE_VIEW:
+  country_code: "+7426"
+  username: "QA Profile View"
+  backup_code: "742701"
+
+MAESTRO_PROFILE_EDIT_NAME:
+  country_code: "+7426"
+  username: "QA Profile Name"
+  backup_code: "742702"
+  # The name the flow renames the account to, asserted on Profile and in the drawer.
+  new_name: "QA Renamed User"
+
+MAESTRO_PROFILE_EDIT_EMAIL:
+  country_code: "+7426"
+  username: "QA Profile Email"
+  backup_code: "742704"
+  # MP_08: rejected for having no @ or domain, so Save stays disabled.
+  invalid_email: "not-an-email"
+  # The address the flow changes to. Plus-addressed off the QA mailbox so the
+  # verification code is readable; see utils/email_otp.py.
+  new_email: "automation.user.commcarehq+mpedit@gmail.com"
+  # MP_12: the name commits before the OTP step, so it survives an abandoned verify.
+  renamed: "QA Renamed Before OTP"
+
+MAESTRO_PROFILE_DISCARD:
+  country_code: "+7426"
+  username: "QA Profile Discard"
+  backup_code: "742703"
+  # Typed, then discarded - the flow asserts it is NOT kept.
+  edited_name: "QA Discarded Name"
+
+MAESTRO_PROFILE_FORGET:
+  country_code: "+7426"
+  username: "QA Profile Forget"
+  backup_code: "742705"
+
+MAESTRO_RECOVERY_EMAIL:
+  country_code: "+7426"
+  username: "QA Recovery Skip"
+  backup_code: "742801"
+
+MAESTRO_SIGNUP_EMAIL_ADD:
+  country_code: "+7426"
+  username: "QA Email Add"
+  backup_code: "742692"
+  # SE_03: malformed, so CONTINUE stays disabled.
+  invalid_email: "not-an-email"
+  # SE_02: well-formed, so CONTINUE enables. Never receives mail - the flow only
+  # checks the button state, so this must NOT be a real QA-mailbox address.
+  valid_email: "qa.connect.add@example.com"
+
+MAESTRO_SIGNUP_EMAIL_VERIFY:
+  country_code: "+7426"
+  username: "QA Email Verify"
+  backup_code: "742693"
+  # Real mailbox address: this flow reaches the Verify Email screen.
+  valid_email: "automation.user.commcarehq+severify@gmail.com"
+  # SE_08: rejected. Must not collide with a real code, which is why it is data
+  # and not a literal - see WRONG_BACKUP_CODES in run_on_browserstack.py for the
+  # same trap on backup codes.
+  wrong_otp: "123456"
+
+MAESTRO_INTEGRITY_PROBE:
+  country_code: "+7426"
+  # The one entry here WITH a fixed number: the probe's whole point was that this
+  # specific never-invited number clears Play Integrity. Deliberately outside the
+  # 1292950-1292999 batch put forward for invites.
+  phone_number: "1293501"
+  username: "QA Integrity Probe"

@@ -48,7 +48,7 @@ appId: org.commcare.dalvik
 - tapOn:
     id: "org.commcare.dalvik:id/countryCode"
 - eraseText
-- inputText: "+7426"
+- inputText: "${COUNTRY_CODE}"
 - tapOn:
     id: "org.commcare.dalvik:id/connect_primary_phone_input"
 - tapOn:

@@ -1,9 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  USERNAME: "QA Email Add"
-  BACKUP_CODE: "742692"
-  INVALID_EMAIL: "not-an-email"
-  VALID_EMAIL: "qa.connect.add@example.com"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_SIGNUP_EMAIL_ADD.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # SE_01 - SE_05: the email step in the REGISTRATION journey.
 #

@@ -252,8 +252,14 @@ class PersonalIDPage(BasePage):
         self.enter_name(username)
         self.enter_backup_code(mobile_backup_code)
 
-    def verify_wrong_backup_code_err(self):
-        self.type_code(self.BACKUP_CODE_INPUT, "123456")
+    def verify_wrong_backup_code_err(self, wrong_code):
+        """Assert the wrong-code error. wrong_code MUST NOT be the real one.
+
+        Derive it with utils.test_data_gen.wrong_backup_code(real_code) rather
+        than passing a literal - a literal can collide with the account's actual
+        code, which signs the user in and the asserted error never appears.
+        """
+        self.type_code(self.BACKUP_CODE_INPUT, wrong_code)
         self.click_when_enabled(self.CONTINUE_BTN)
         toast = self.wait_for_element(self.WRONG_BACKUP_CODE_TXT)
         toast_text = toast.text

@@ -1,8 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  USERNAME: "QA Profile Discard"
-  BACKUP_CODE: "742703"
-  EDITED_NAME: "QA Discarded Name"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_PROFILE_DISCARD.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # MP_14 - MP_16: leaving Edit Profile with and without unsaved changes.
 - runFlow: shared_signed_in.yaml

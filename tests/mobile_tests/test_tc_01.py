@@ -2,6 +2,7 @@ import allure
 import pytest
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from pages.mobile_pages.home_page import HomePage
+from utils.test_data_gen import wrong_backup_code
 
 @allure.feature("PID & CONNECT")
 @allure.story("Login related validations")
@@ -47,7 +48,7 @@ def test_01_login_and_home_page(mobile_driver, test_data):
         pid.verify_backup_code_screen(username)
 
     with allure.step("Verify wrong backup code entered error"):
-        pid.verify_wrong_backup_code_err()
+        pid.verify_wrong_backup_code_err(wrong_backup_code(data["backup_code"]))
 
     with allure.step("Complete Sign In with correct backup code and Continue"):
         pid.enter_backup_code(data["backup_code"])

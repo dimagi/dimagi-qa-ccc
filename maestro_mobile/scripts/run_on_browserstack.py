@@ -97,6 +97,20 @@ WORKER_BY_FLOW = {
     # flow and inherited by the shared_map_open subflow via runFlow.
     "map_10_toggle_panel_visible.yaml": "MAESTRO_MAP_CASE_LIST",
     "map_11_toggle_switches.yaml": "MAESTRO_MAP_CASE_LIST",
+    # CCCT-2784. One worker per flow rather than one shared entry: each registers
+    # its own account, and distinct names and codes keep a failed run's account
+    # identifiable. The sub-flows they call (shared_registration.yaml,
+    # shared_signed_in.yaml, shared_forget_and_recover.yaml) need no entry - they
+    # inherit env through runFlow.
+    "profile_view.yaml": "MAESTRO_PROFILE_VIEW",
+    "profile_edit_name.yaml": "MAESTRO_PROFILE_EDIT_NAME",
+    "profile_edit_email.yaml": "MAESTRO_PROFILE_EDIT_EMAIL",
+    "profile_discard.yaml": "MAESTRO_PROFILE_DISCARD",
+    "profile_forget.yaml": "MAESTRO_PROFILE_FORGET",
+    "recovery_email_prompt.yaml": "MAESTRO_RECOVERY_EMAIL",
+    "signup_email_add.yaml": "MAESTRO_SIGNUP_EMAIL_ADD",
+    "signup_email_verify.yaml": "MAESTRO_SIGNUP_EMAIL_VERIFY",
+    "probe_fresh_registration.yaml": "MAESTRO_INTEGRITY_PROBE",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
@@ -134,6 +148,17 @@ def resolve_worker(entry, app_env=None):
             value = entry.get(data_key)
         if value is not None:
             resolved[env_key] = str(value)
+
+    # Anything else on the entry becomes an env value under its upper-cased name,
+    # so a flow needing its own data (a new name to save, an address to reject)
+    # declares it in mobile_workers.yaml rather than hardcoding it in the flow.
+    # Without this, only the four keys above could live in the data file and the
+    # rest would have to stay in the YAML headers.
+    for data_key, value in entry.items():
+        if data_key in WORKER_ENV_KEYS or data_key.endswith(STAGING_SUFFIX):
+            continue
+        override = entry.get(f"{data_key}{STAGING_SUFFIX}") if app_env == STAGING_ENV else None
+        resolved[data_key.upper()] = str(override if override is not None else value)
 
     first, second = WRONG_BACKUP_CODES
     resolved["WRONG_BACKUP_CODE"] = second if resolved.get("BACKUP_CODE") == first else first

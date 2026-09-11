@@ -1,9 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  USERNAME: "QA Email Verify"
-  BACKUP_CODE: "742693"
-  VALID_EMAIL: "automation.user.commcarehq+severify@gmail.com"
-  WRONG_OTP: "123456"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_SIGNUP_EMAIL_VERIFY.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # SE_06 - SE_09: the email verification screen in the REGISTRATION journey.
 #

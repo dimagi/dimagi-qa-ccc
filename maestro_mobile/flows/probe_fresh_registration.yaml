@@ -1,11 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  COUNTRY_CODE: "+7426"
-  # A number in the 129xxxx automation block that has never been used or invited.
-  # Deliberately outside the 1292950-1292999 batch put forward for invites, so a
-  # pass here means integrity cleared WITHOUT an invite.
-  PHONE_NUMBER: "1293501"
-  USERNAME: "QA Integrity Probe"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_INTEGRITY_PROBE.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # PROBE - not a test case. Answers one question: can a fresh, un-invited +7426
 # number get past Google Play Integrity on a real BrowserStack device?

@@ -41,3 +41,17 @@ def fresh_phone_number():
 def fresh_backup_code():
     """A 6-digit backup code. Value is arbitrary; it only has to be consistent."""
     return f"{int(time.time()) % 1000000:06d}"
+
+
+# Codes used to exercise the wrong-backup-code error path. Derived from the
+# account's real code rather than written literally, because a literal can BE the
+# real one: prod's signup account genuinely uses "123456", so a hardcoded wrong
+# code logged straight in and the expected error never appeared. The Maestro side
+# carries the same pair in run_on_browserstack.py (WRONG_BACKUP_CODES).
+WRONG_BACKUP_CODES = ("000000", "111111")
+
+
+def wrong_backup_code(actual_code):
+    """A 6-digit code guaranteed not to be actual_code."""
+    first, second = WRONG_BACKUP_CODES
+    return second if str(actual_code) == first else first

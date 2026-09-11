@@ -1,8 +1,12 @@
 appId: org.commcare.dalvik
-env:
-  USERNAME: "QA Profile Name"
-  BACKUP_CODE: "742702"
-  NEW_NAME: "QA Renamed User"
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_PROFILE_EDIT_NAME.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
 ---
 # MP_05 - MP_07: editing the name on Manage Profile.
 - runFlow: shared_signed_in.yaml
