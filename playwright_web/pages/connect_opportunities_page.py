@@ -123,16 +123,16 @@ class ConnectOpportunitiesPage(BasePage):
 
     def select_required_deliver_units_checkbox(self, required_text):
         section = self.page.locator(self.REQUIRED_DELIVER_UNITS_SECTION).first
-        label = section.locator(f"xpath=.//label[normalize-space(.) = '{required_text}']")
+        label = section.locator(locators.get("connect_opportunities_page", "label_by_text").format(required_text=required_text))
         checkbox = label.locator("input")
         if not checkbox.is_checked():
             label.click()
 
     def verify_payment_unit_present(self, payment_unit_name):
         table = self.page.locator(self.PAYMENT_UNITS_TABLE).first
-        rows = table.locator("xpath=.//tbody/tr[not(contains(@class,'detail-row'))]")
+        rows = table.locator(locators.get("connect_opportunities_page", "data_rows_no_detail"))
         for i in range(rows.count()):
-            unit_name_cell = rows.nth(i).locator("xpath=./td[2]")
+            unit_name_cell = rows.nth(i).locator(locators.get("connect_opportunities_page", "row_second_cell"))
             if unit_name_cell.inner_text().strip() == payment_unit_name:
                 return
         raise AssertionError(f"Payment Unit '{payment_unit_name}' not found in UI table")

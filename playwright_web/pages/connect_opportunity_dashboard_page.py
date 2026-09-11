@@ -100,7 +100,7 @@ class OpportunityDashboardPage(BasePage):
             self.scroll_into_view(selector)
             card = self.page.locator(selector).first
             card.wait_for(state="visible", timeout=15000)
-            count = card.locator("xpath=.//h3[contains(@class,'text-2xl')]").first.inner_text().strip()
+            count = card.locator(locators.get("opportunity_dashboard_page", "card_count_h3")).first.inner_text().strip()
             assert count != "", f"{title} / {subtitle} count is empty"
             self._step(f"Stat panel '{title} / {subtitle}' -> {count}")
 
@@ -377,7 +377,7 @@ class OpportunityDashboardPage(BasePage):
         assert "Max Visits" in headers, f"'Max Visits' column not found in {headers}"
         col = headers.index("Max Visits")
         row = self.page.locator(self.ADD_BUDGET_TABLE_ROWS).nth(row_index)
-        cell = row.locator("xpath=./td").nth(col).inner_text().strip()
+        cell = row.locator(locators.get("opportunity_dashboard_page", "row_cells")).nth(col).inner_text().strip()
         value = int("".join(ch for ch in cell if ch.isdigit()) or "0")
         self._step(f"Add-budget row {row_index} Max Visits = {value}")
         return value
@@ -559,7 +559,7 @@ class OpportunityDashboardPage(BasePage):
     def summary_card_value(self, label):
         card = self.page.locator(self.INFO_CARD_BY_LABEL.format(label=label)).first
         card.wait_for(state="visible", timeout=15000)
-        value = card.locator("xpath=.//p").first.inner_text().strip()
+        value = card.locator(locators.get("opportunity_dashboard_page", "card_p")).first.inner_text().strip()
         self._step(f"Summary card '{label}' value: {value!r}")
         return value
 
@@ -609,7 +609,7 @@ class OpportunityDashboardPage(BasePage):
         card = self.page.locator(self.RESOURCE_CARD_BY_NAME.format(name=name)).first
         card.wait_for(state="visible", timeout=15000)
         # The card holds two <h3> (name, then the count); take the last.
-        count = card.locator("xpath=.//h3").last.inner_text().strip()
+        count = card.locator(locators.get("opportunity_dashboard_page", "card_h3")).last.inner_text().strip()
         self._step(f"Resource card '{name}' count: {count!r}")
         return count
 
@@ -619,7 +619,7 @@ class OpportunityDashboardPage(BasePage):
         self.page.locator(self.RESOURCE_MODAL).first.wait_for(state="visible", timeout=10000)
 
     def active_resource_tab(self):
-        tab = self.page.locator("//ul[contains(@class,'tabs')]//li[contains(@class,'active')]").first
+        tab = self.page.locator(locators.get("opportunity_dashboard_page", "active_tab")).first
         tab.wait_for(state="visible", timeout=10000)
         return tab.inner_text().strip()
 
@@ -701,7 +701,7 @@ class OpportunityDashboardPage(BasePage):
         card = self.page.locator(selector).first
         card.wait_for(state="visible")
         if count_section:
-            count = card.locator("xpath=.//h3[contains(@class,'text-2xl')]").inner_text().strip()
+            count = card.locator(locators.get("opportunity_dashboard_page", "card_count_h3")).inner_text().strip()
             assert count != "", f"{title} {subtitle} count is empty"
             print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
 

@@ -26,6 +26,7 @@ cchq_mobile_workers_page:
   # pending-invite tables on the same page).
   worker_table: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]"
   personalid_status_header: "//th[contains(normalize-space(),'PersonalID Status')]"
+  unlink_personalid_btn: ".//button[contains(normalize-space(),'Unlink PersonalID')]"
   personalid_status_labels: "//table[.//th[contains(normalize-space(),'PersonalID Status')]]//tbody//span[contains(@class,'label')]"
   # Action-column control per linked worker (Bootstrap modal trigger).
   unlink_button: "//button[contains(normalize-space(),'Unlink PersonalID')]"
@@ -47,6 +48,8 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
+  org_list_item_by_name: ".//li[(.//p)[1][normalize-space()='{organization_name}']]"
+  org_list_items: ".//li"
   authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
   # CommCare HQ's OAuth consent screen requires at least one project space before
   # the Authorize button enables; "Select all" grants them all in one click.
@@ -59,6 +62,9 @@ connect_home_page:
 
 connect_opportunities_page:
   name_input: "id_name"
+  label_by_text: ".//label[normalize-space(.) = '{required_text}']"
+  data_rows_no_detail: ".//tbody/tr[not(contains(@class,'detail-row'))]"
+  row_second_cell: "./td[2]"
   currency_input: "id_currency"
   country_input: "id_country"
   short_description_input: "id_short_description"
@@ -88,6 +94,12 @@ connect_opportunities_page:
 
 opportunity_dashboard_page:
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
+  # Relative sub-locators used on an already-located card / row element.
+  card_count_h3: ".//h3[contains(@class,'text-2xl')]"
+  card_h3: ".//h3"
+  card_p: ".//p"
+  row_cells: "./td"
+  active_tab: "//ul[contains(@class,'tabs')]//li[contains(@class,'active')]"
   # Load signals - the detail page shows the opportunity name (h1) and the bars
   # menu icon; the list page has neither, so together they distinguish the two
   # (both live under /opportunity/).
@@ -202,6 +214,7 @@ opportunity_dashboard_page:
 
 connect_programs_page:
   add_program_btn: "//button[.//p[contains(text(), 'Add Programs')]]"
+  card_title_p: ".//p[contains(@class,'card_title')]"
   program_add_form: "program-add-form"
   program_name_input: "id_name"
   program_description_input: "id_description"
@@ -464,6 +477,9 @@ connect_worker_invite_page:
 #   case_property_name_input                   data-bind="value: property_value"
 cchq_messaging_page:
   messaging_tab: "MessagingTab"
+  schedule_ancestor_div: "xpath=ancestor::div[starts-with(@id,'div_id_schedule')][1]"
+  broadcast_link_by_name: '//table//td//a[contains(normalize-space(), "{name}")]'
+  broadcast_row_link_by_name: '//tr//td//a[normalize-space()="{name}"]'
   messaging_menu_link: "//li//a[contains(normalize-space(), '{option}')]"
 
   # --- Conditional alerts ---
@@ -528,6 +544,7 @@ cchq_messaging_page:
 # table, everyone else the NM table - so column assertions are keyed to the org.
 connect_opportunity_list_page:
   heading: "//p[normalize-space()='Opportunities List']"
+  row_first_link: ".//a"
   table: "//table[contains(@class,'base-table')]"
   column_headers: "//table[contains(@class,'base-table')]//thead//th"
   # Data rows only. The empty-state row carries the placeholder text instead.
