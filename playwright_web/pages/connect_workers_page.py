@@ -2,11 +2,14 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, TestDataLoader
 
 from pages.base_page import BasePage
 
 locators = LocatorLoader()
+# Expected table headers / labels / condition values live in the test data yaml,
+# not hardcoded here.
+worker_ref = TestDataLoader().get("WORKER_PAGE_REFERENCE")
 
 
 class ConnectWorkersPage(BasePage):
@@ -160,7 +163,7 @@ class ConnectWorkersPage(BasePage):
         skipped a leftover cleanup and left a task assigned.
         """
         try:
-            self.page.locator("//table[not(contains(@class,'animate-pulse'))]").first.wait_for(
+            self.page.locator(self.REAL_TABLE).first.wait_for(
                 state="visible", timeout=20000
             )
         except Exception:
@@ -349,32 +352,24 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Table headers present: {actual}")
 
     def verify_connect_workers_table_headers_present(self):
-        self.verify_table_headers_present([
-            "#", "Status", "Name", "Phone Number", "Invited Date", "Last Active",
-            "Started Learn", "Completed Learn", "Time to Complete Learning",
-            "First Delivery", "Time to Start Deliver",
-        ])
+        self.verify_table_headers_present(worker_ref["connect_workers_table_headers"])
 
     def verify_learn_table_headers_present(self):
-        self.verify_table_headers_present([
-            "#", "Name", "Last active", "Started Learning", "Modules completed",
-            "Completed Learning", "Assessment", "Attempts", "Learning hours",
-        ])
+        self.verify_table_headers_present(worker_ref["learn_table_headers"])
 
     # Numeric status columns whose cell values open a count-breakdown popup. Which
     # of these the Deliver tab shows depends on the opportunity's verification mode:
     # a manual-review opp exposes 'Pending', while an auto-verify opp shows a
     # 'Status' column instead and no 'Pending'. So the review-state column is
     # asserted as "Status or Pending", and callers act only on the columns present.
-    DELIVER_COUNT_COLUMNS = ["Delivered", "Pending", "Approved", "Rejected"]
+    DELIVER_COUNT_COLUMNS = worker_ref["deliver_count_columns"]
 
     def verify_deliver_table_headers_present(self):
         """The Deliver tab's stable columns, plus a review-state column that is
         'Pending' on manual-review opportunities and 'Status' on auto-verify ones."""
         actual = [h for h in self._header_texts() if h]
         actual_lower = [h.lower() for h in actual]
-        core = ["#", "Name", "Last active", "Payment unit", "Delivery progress",
-                "Delivered", "Approved", "Rejected"]
+        core = worker_ref["deliver_core_headers"]
         missing = [h for h in core if h.lower() not in actual_lower]
         assert not missing, f"Missing headers: {missing}\nActual headers found: {actual}"
         assert "pending" in actual_lower or "status" in actual_lower, (
@@ -402,9 +397,9 @@ class ConnectWorkersPage(BasePage):
         a_idx, m_idx, at_idx, cl_idx = col("Assessment"), col("Modules completed"), col("Attempts"), col("Completed Learning")
         assert None not in (a_idx, m_idx, at_idx, cl_idx), f"Learn columns missing: {headers}"
         table = self.page.locator(self.LV_TABLE).first
-        rows = table.locator("xpath=.//tbody//tr")
+        rows = table.locator(self.DATA_ROWS)
         for i in range(rows.count()):
-            tds = rows.nth(i).locator("xpath=./td")
+            tds = rows.nth(i).locator(self.ROW_CELLS)
             if tds.nth(a_idx).inner_text().strip().lower() != "passed":
                 continue
             modules = tds.nth(m_idx).inner_text().strip()
@@ -424,10 +419,10 @@ class ConnectWorkersPage(BasePage):
         a_idx = next((i for i, h in enumerate(headers) if h.strip().lower() == "assessment"), None)
         assert a_idx is not None, f"No Assessment column on the Learn tab: {headers}"
         row = self.page.locator(
-            f"xpath=//div[@id='table']//table//tbody//tr[.//p[normalize-space()='{worker}']]"
+            self.DATA_ROW_BY_P_TEXT.format(text=worker)
         ).first
         row.wait_for(state="visible", timeout=15000)
-        value = row.locator("xpath=./td").nth(a_idx).inner_text().strip()
+        value = row.locator(self.ROW_CELLS).nth(a_idx).inner_text().strip()
         assert value.lower() == expected.strip().lower(), (
             f"Assessment for '{worker}' is {value!r}, expected {expected!r}"
         )
@@ -472,13 +467,11 @@ class ConnectWorkersPage(BasePage):
         assert idx is not None, f"Column '{column_name}' not found in {headers}"
         table = self.page.locator(self.LV_TABLE).first
         if item_name.strip().lower() == "total":
-            row = table.locator("xpath=.//tbody//tr[td[normalize-space()='Total']]").first
+            row = table.locator(self.TOTAL_ROW).first
         else:
-            row = table.locator(
-                f"xpath=.//tbody//tr[.//p[normalize-space()='{item_name.strip()}']]"
-            ).first
+            row = table.locator(self.ROW_BY_P_TEXT.format(text=item_name.strip())).first
         row.wait_for(state="visible", timeout=15000)
-        span = row.locator("xpath=./td").nth(idx).locator("span").first
+        span = row.locator(self.ROW_CELLS).nth(idx).locator("span").first
         self._step(f"Click {item_name!r} x {column_name!r} count")
         span.click()
         self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
@@ -521,7 +514,7 @@ class ConnectWorkersPage(BasePage):
 
     def apply_and_verify_last_active_1_day_ago(self):
         self.open_filter_modal()
-        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, "1 day ago")
+        self.select_by_visible_text(self.FILTER_LAST_ACTIVE, worker_ref["last_active_one_day_value"])
         self.apply_filters()
         badge = self.page.locator(self.LV_FILTER_BADGE).first
         badge.wait_for(state="visible", timeout=10000)
@@ -577,9 +570,7 @@ class ConnectWorkersPage(BasePage):
         from urllib.parse import parse_qs, urlparse
 
         table = self.page.locator(self.LV_TABLE).first
-        link = table.locator(
-            f"xpath=.//thead//th[.//a[contains(normalize-space(),'{label}')]]//a"
-        ).first
+        link = table.locator(self.SORT_LINK_BY_LABEL.format(label=label)).first
         link.wait_for(state="visible", timeout=15000)
         self._step(f"Sort Connect Workers list by '{label}'")
         link.click()
@@ -593,7 +584,7 @@ class ConnectWorkersPage(BasePage):
         """Which Connect Workers list headers expose a sort link."""
         table = self.page.locator(self.LV_TABLE).first
         table.wait_for(state="visible", timeout=20000)
-        headers = table.locator("xpath=.//thead//th[.//a]")
+        headers = table.locator(self.SORTABLE_HEADER_THS)
         labels = [h.strip() for h in headers.all_inner_texts() if h.strip()]
         self._step(f"Sortable list columns: {labels}")
         return labels
@@ -617,20 +608,20 @@ class ConnectWorkersPage(BasePage):
         (INR)'), so match on the stable prefix rather than the exact header."""
         actual = [h for h in self._header_texts() if h]
         actual_joined = " | ".join(actual).lower()
-        for token in ["#", "Name", "Last active", "Accrued", "Total Paid", "Last paid", "Confirm"]:
+        for token in worker_ref["payments_header_tokens"]:
             assert token.lower() in actual_joined, f"Missing payments column {token!r}. Actual: {actual}"
         self._step(f"Payments table headers present: {actual}")
 
     def _payments_row(self, worker):
         table = self.page.locator(self.LV_TABLE).first
-        return table.locator(f"xpath=.//tbody//tr[.//p[normalize-space()='{worker.strip()}']]").first
+        return table.locator(self.ROW_BY_P_TEXT.format(text=worker.strip())).first
 
     def fetch_username_from_payments(self, worker):
         """The worker's ConnectID username, shown as a second line under the name.
         The payment import matches on username, so this is what a row must carry."""
         row = self._payments_row(worker)
         row.wait_for(state="visible", timeout=15000)
-        name_cell_ps = row.locator(f"xpath=.//td[.//p[normalize-space()='{worker.strip()}']]//p")
+        name_cell_ps = row.locator(self.NAME_CELL_PS_BY_WORKER.format(worker=worker.strip()))
         assert name_cell_ps.count() >= 2, f"No username line under worker '{worker}'"
         username = name_cell_ps.nth(name_cell_ps.count() - 1).inner_text().strip()
         assert username and username != worker.strip(), f"Could not read username for '{worker}'"
@@ -641,7 +632,7 @@ class ConnectWorkersPage(BasePage):
         headers = self._header_texts()
         idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
         assert idx is not None, f"'Last paid' column not found in {headers}"
-        cell = self._payments_row(worker).locator("xpath=./td").nth(idx)
+        cell = self._payments_row(worker).locator(self.ROW_CELLS).nth(idx)
         return cell.inner_text().strip()
 
     def make_payment_for_worker(self, worker, amount=1):
@@ -662,7 +653,7 @@ class ConnectWorkersPage(BasePage):
                    "Payment Date (YYYY-MM-DD)", "Payment Method", "Payment Operator"])
         # Phone is not used for matching (import keys on username); a reserved-block
         # placeholder keeps the row well-formed.
-        ws.append([username, "+74267426016", worker, str(amount),
+        ws.append([username, worker_ref["payment_import_placeholder_phone"], worker, str(amount),
                    date.today().isoformat(), None, None])
         path = os.path.join(tempfile.mkdtemp(), "make_payment.xlsx")
         wb.save(path)
@@ -704,7 +695,7 @@ class ConnectWorkersPage(BasePage):
         self.wait_for_last_paid_populated(worker)
         headers = self._header_texts()
         idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
-        span = self._payments_row(worker).locator("xpath=./td").nth(idx).locator("span").first
+        span = self._payments_row(worker).locator(self.ROW_CELLS).nth(idx).locator("span").first
         self._step(f"Open payment history for '{worker}'")
         span.click()
         self.page.locator(self.COUNT_BREAKDOWN_POPUP).first.wait_for(state="visible", timeout=10000)
@@ -734,6 +725,20 @@ class ConnectWorkersPage(BasePage):
     WORKER_ROW_BY_PHONE = locators.get("connect_workers_page", "worker_row_by_phone")
     DELETE_INVITES_CONFIRM_BTN = locators.get("connect_workers_page", "delete_invites_confirm_btn")
 
+    # Structural / dynamic row + cell locators (from the yaml, not inline xpaths).
+    DATA_ROWS = locators.get("connect_workers_page", "data_rows")
+    ROW_CELLS = locators.get("connect_workers_page", "row_cells")
+    TOTAL_ROW = locators.get("connect_workers_page", "total_row")
+    ROW_BY_P_TEXT = locators.get("connect_workers_page", "row_by_p_text")
+    SORTABLE_HEADER_THS = locators.get("connect_workers_page", "sortable_header_ths")
+    SORT_LINK_BY_LABEL = locators.get("connect_workers_page", "sort_link_by_label")
+    NAME_CELL_PS_BY_WORKER = locators.get("connect_workers_page", "name_cell_ps_by_worker")
+    STATUS_TOOLTIP_BY_VALUE = locators.get("connect_workers_page", "status_tooltip_by_value")
+    DATA_ROW_BY_P_TEXT = locators.get("connect_workers_page", "data_row_by_p_text")
+    DATA_ROW_BY_TEXT = locators.get("connect_workers_page", "data_row_by_text")
+    PENDING_INVITE_ROW = locators.get("connect_workers_page", "pending_invite_row")
+    REAL_TABLE = locators.get("connect_workers_page", "real_table")
+
     def verify_pending_invite_status_present(self):
         """Connect_worker_02 - a not-yet-accepted invite shows the 'Invite pending'
         status (orange clock). Asserts at least one pending invite is displayed."""
@@ -744,8 +749,7 @@ class ConnectWorkersPage(BasePage):
 
     # -- Gap-derived worker-page cases (GAP-SRC-W-46/49/52) ----------------------
 
-    WORKER_KPI_LABELS = ["Total Visits", "Pending Tasks", "Rejected Visits",
-                         "Accrued Amount", "Paid Amount"]
+    WORKER_KPI_LABELS = worker_ref["worker_kpi_labels"]
 
     def verify_worker_profile_kpis(self):
         """GAP-SRC-W-46 - the per-worker profile page shows the KPI header tiles
@@ -781,11 +785,9 @@ class ConnectWorkersPage(BasePage):
         shows `expected_status` (StatusIndicatorColumn x-tooltip.raw, e.g.
         'Invite accepted', 'User suspended', 'Invite pending')."""
         self._await_list_table()
-        row = self.page.locator(
-            f"xpath=//div[@id='table']//table//tbody//tr[contains(normalize-space(),'{identifier}')]"
-        ).first
+        row = self.page.locator(self.DATA_ROW_BY_TEXT.format(text=identifier)).first
         row.wait_for(state="visible", timeout=15000)
-        match = row.locator(f"xpath=.//*[@x-tooltip.raw='{expected_status}']")
+        match = row.locator(self.STATUS_TOOLTIP_BY_VALUE.format(status=expected_status))
         assert match.count() > 0, (
             f"Worker '{identifier}' does not show status '{expected_status}' (row: {row.inner_text()!r})"
         )
@@ -828,9 +830,7 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Resend of {phone} refused - 24h cooldown")
 
     def _first_pending_invite_row(self):
-        return self.page.locator(
-            "xpath=//div[@id='table']//table//tbody//tr[.//span[@x-tooltip.raw='Invite pending']]"
-        ).first
+        return self.page.locator(self.PENDING_INVITE_ROW).first
 
     def verify_resend_delete_gated_by_selection(self):
         """Connect_worker_03 - Resend Invite(s) and Delete Worker(s) are disabled

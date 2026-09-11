@@ -404,6 +404,24 @@ connect_workers_page:
   rollback_last_payment_btn: "//button[normalize-space()='Rollback Last Payment']"
   rollback_popup_btn: "//button[@type='submit' and normalize-space()='Rollback']"
 
+  # --- Structural / dynamic row + cell locators (relative unless noted) ---
+  # Relative ones (.//, ./) are applied to an already-located table/row element;
+  # the absolute ones are used at page level. Dynamic parts use .format(...).
+  data_rows: ".//tbody//tr"
+  row_cells: "./td"
+  total_row: ".//tbody//tr[td[normalize-space()='Total']]"
+  row_by_p_text: ".//tbody//tr[.//p[normalize-space()='{text}']]"
+  sortable_header_ths: ".//thead//th[.//a]"
+  sort_link_by_label: ".//thead//th[.//a[contains(normalize-space(),'{label}')]]//a"
+  name_cell_ps_by_worker: ".//td[.//p[normalize-space()='{worker}']]//p"
+  status_tooltip_by_value: ".//*[@x-tooltip.raw='{status}']"
+  # Absolute (page-level) row locators under #table.
+  data_row_by_p_text: "//div[@id='table']//table//tbody//tr[.//p[normalize-space()='{text}']]"
+  data_row_by_text: "//div[@id='table']//table//tbody//tr[contains(normalize-space(),'{text}')]"
+  pending_invite_row: "//div[@id='table']//table//tbody//tr[.//span[@x-tooltip.raw='Invite pending']]"
+  # The real (non-skeleton) htmx table, once it replaces the animate-pulse placeholder.
+  real_table: "//table[not(contains(@class,'animate-pulse'))]"
+
 # --- Worker Visit Verification Page (WVVP_1-7) ---
 # The per-worker Visits page reached by clicking a worker on the Deliver tab. Its
 # table is the second base-table on the page (the first is the summary/header one).

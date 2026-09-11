@@ -105,6 +105,25 @@ WORKER_GAPS:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
+# Reference data for the Connect Workers page object (expected table headers,
+# KPI labels, filter/condition values) - kept here instead of hardcoded in pages/.
+WORKER_PAGE_REFERENCE:
+  connect_workers_table_headers:
+    ["#", "Status", "Name", "Phone Number", "Invited Date", "Last Active",
+     "Started Learn", "Completed Learn", "Time to Complete Learning",
+     "First Delivery", "Time to Start Deliver"]
+  learn_table_headers:
+    ["#", "Name", "Last active", "Started Learning", "Modules completed",
+     "Completed Learning", "Assessment", "Attempts", "Learning hours"]
+  deliver_core_headers:
+    ["#", "Name", "Last active", "Payment unit", "Delivery progress",
+     "Delivered", "Approved", "Rejected"]
+  deliver_count_columns: ["Delivered", "Pending", "Approved", "Rejected"]
+  payments_header_tokens: ["#", "Name", "Last active", "Accrued", "Total Paid", "Last paid", "Confirm"]
+  worker_kpi_labels: ["Total Visits", "Pending Tasks", "Rejected Visits", "Accrued Amount", "Paid Amount"]
+  last_active_one_day_value: "1 day ago"
+  payment_import_placeholder_phone: "+74267426016"
+
 # --- Worker invite lifecycle (Batch C) - dedicated seeded opportunity (Anshu, 2026-09-10) ---
 # Under PM_Automation_01. Statuses read live from the app (x-tooltip.raw):
 # 'Invite accepted' / 'User suspended' / 'Invite pending'. Pending invites carry
