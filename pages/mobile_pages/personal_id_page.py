@@ -24,6 +24,23 @@ class PersonalIDPage(BasePage):
     WRONG_BACKUP_CODE_TXT = locators.get("login_page", "wrong_backup_code_txt")
     NETWORK_ERROR_TXT = locators.get("login_page", "network_connection_err_txt")
     PROGRESS_BAR = locators.get("login_page", "progress_bar")
+    EMAIL_INPUT = locators.get("login_page", "email_input")
+    EMAIL_SKIP_BTN = locators.get("login_page", "email_skip_btn")
+    EMAIL_CONTINUE_BTN = locators.get("login_page", "email_continue_btn")
+    EMAIL_ERROR_TXT = locators.get("login_page", "email_error_txt")
+    EMAIL_SKIP_CONFIRM_YES = locators.get("login_page", "email_skip_confirm_yes")
+    EMAIL_ADDED_MSG = locators.get("login_page", "email_added_msg")
+    EMAIL_IN_USE_MSG = locators.get("login_page", "email_in_use_msg")
+    CONFIRM_CODE_INPUT = locators.get("login_page", "confirm_code_input")
+    EMAIL_OTP_INPUT = locators.get("otp_page", "email_otp_input")
+    EMAIL_VERIFY_DESCRIPTION = locators.get("otp_page", "email_verify_description")
+    EMAIL_VERIFY_ERROR = locators.get("otp_page", "email_verify_error")
+    EMAIL_RESEND_BTN = locators.get("otp_page", "email_resend_btn")
+    EMAIL_RESEND_COUNTDOWN = locators.get("otp_page", "email_resend_countdown")
+    PHOTO_CAPTURE_TITLE = locators.get("otp_page", "photo_capture_title")
+    TAKE_PHOTO_BTN = locators.get("otp_page", "take_photo_btn")
+    SAVE_PHOTO_BTN = locators.get("otp_page", "save_photo_btn")
+    RECOVERY_SUCCESS_TITLE = locators.get("login_page", "recovery_success_title")
 
     def enter_phone_number(self, phone_number):
         self.type_element(self.PHONE_INPUT, phone_number)
@@ -94,11 +111,138 @@ class PersonalIDPage(BasePage):
             welcome_text
         )
 
+    def skip_email_if_present(self):
+        """Dismiss the optional email step that 2.64+ adds after the backup code.
+
+        The step only appears when the email_otp_verification switch is active on
+        ConnectID and the account has no verified email, so this is deliberately
+        tolerant of it being absent. Returns True if it was skipped.
+        """
+        if not self.is_displayed(self.EMAIL_SKIP_BTN, timeout=15):
+            return False
+        self.click_element(self.EMAIL_SKIP_BTN)
+        # Confirmation dialog - the buttons reuse the app-linking Yes/No strings.
+        self.click_element(self.EMAIL_SKIP_CONFIRM_YES)
+        return True
+
     def enter_backup_code(self, code):
-        self.type_element(self.BACKUP_CODE_INPUT, code)
+        self.type_code(self.BACKUP_CODE_INPUT, code)
         self.click_when_enabled(self.CONTINUE_BTN)
+        self.skip_email_if_present()
         self.wait_for_element(self.OK_BTN)
         self.click_element(self.OK_BTN)
+
+
+    def set_backup_code(self, code):
+        """Set a NEW account's backup code - fills both Code and Confirm Code.
+
+        Registration shows two NumericCodeView fields; recovery shows only one.
+        Use enter_backup_code for recovery, this for registration.
+        """
+        self.type_code(self.BACKUP_CODE_INPUT, code)
+        self.type_code(self.CONFIRM_CODE_INPUT, code)
+        self.click_when_enabled(self.CONTINUE_BTN)
+
+    def is_registration_backup_screen(self):
+        """True when this is the registration backup code screen, not recovery.
+
+        An existing phone number silently routes to recovery, which reaches the
+        same-looking screen through the same steps. The confirm field is the
+        reliable tell: registration has it, recovery does not.
+        """
+        return self.is_displayed(self.CONFIRM_CODE_INPUT, timeout=20)
+
+    def enter_email(self, address):
+        """Type an address on the optional email step and continue."""
+        self.type_element(self.EMAIL_INPUT, address)
+        self.click_when_enabled(self.EMAIL_CONTINUE_BTN)
+
+    def resend_email_otp(self, timeout=150):
+        """Ask for a new code, waiting for the resend cooldown to expire first.
+
+        Used when a code has not become visible over IMAP within the poll
+        window. That is a mailbox-visibility delay, not the product failing to
+        send - see test_tc_11 for the evidence. Resending is the same recovery a
+        real user would use, and it buys another window.
+        """
+        self.wait_for_element(self.EMAIL_RESEND_BTN, timeout=timeout)
+        self.click_element(self.EMAIL_RESEND_BTN)
+
+    def enter_email_otp(self, code):
+        """Enter the emailed verification code.
+
+        otp_code_view is a NumericCodeView and auto-submits on the sixth digit
+        (setCodeCompleteListener), so there is no Verify button to press.
+        """
+        self.type_code(self.EMAIL_OTP_INPUT, code)
+
+    def enter_backup_code_only(self, code):
+        """Confirm an EXISTING account's backup code during recovery.
+
+        Recovery shows one code field; registration shows Code and Confirm Code.
+        Use set_backup_code for registration.
+        """
+        self.type_code(self.BACKUP_CODE_INPUT, code)
+        self.click_when_enabled(self.CONTINUE_BTN)
+
+    def wait_for_email_step(self):
+        self.wait_for_element(self.EMAIL_INPUT, timeout=45)
+
+    def is_email_step_shown(self, timeout=20):
+        """Whether the optional email step was offered."""
+        return self.is_displayed(self.EMAIL_INPUT, timeout=timeout)
+
+    def verify_recovery_success(self):
+        """Assert recovery completed, rather than signup continuing to a photo.
+
+        Registration and recovery share the email screen and diverge only after
+        it, so this checks the recovery-specific message rather than merely that
+        something succeeded.
+        """
+        self.wait_for_element(self.RECOVERY_SUCCESS_TITLE, timeout=45)
+        self.click_element(self.OK_BTN)
+
+    def save_photo_and_finish(self):
+        """Save the auto-generated photo, which completes the account.
+
+        The account does not exist until this point - savePhotoButton runs
+        uploadImageAndCompleteProfile. On qaAutomation builds the photo is
+        generated for us, so Save is already enabled.
+        """
+        self.wait_for_element(self.TAKE_PHOTO_BTN)
+        self.click_when_enabled(self.SAVE_PHOTO_BTN)
+        self.wait_for_element_to_disappear(self.PROGRESS_BAR)
+        if self.is_displayed(self.OK_BTN, timeout=10):
+            self.click_element(self.OK_BTN)
+
+    def verify_email_already_in_use(self):
+        """Assert the server refused an address another account already uses.
+
+        The check is an IntegrityError raised when the verified address is
+        written to this user, so it only appears AFTER a correct code - not when
+        the address is first submitted.
+        """
+        self.wait_for_element(self.EMAIL_IN_USE_MSG)
+
+    def verify_email_added(self):
+        """Confirm the 'Email Added' dialog - EXISTING_USER workflow only.
+
+        Only shown to an already-signed-in user adding an email through Manage
+        Profile. Registration has no such dialog; a successful verify goes
+        straight to photo capture - use verify_photo_capture_screen for that.
+        """
+        self.wait_for_element(self.EMAIL_ADDED_MSG)
+        self.click_element(self.OK_BTN)
+
+    def verify_photo_capture_screen(self, name):
+        """Confirm registration reached photo capture, which greets the user.
+
+        Reaching this screen is the observable proof that the email verification
+        succeeded: the app only advances here once the server accepts the code.
+        """
+        self.wait_for_element(self.TAKE_PHOTO_BTN)
+        title = self.get_text(self.PHOTO_CAPTURE_TITLE)
+        assert name in title, f"Expected a welcome for {name!r}, got: {title!r}"
 
     def signin_existing_user(self, mobile_country_code, mobile_num, username, mobile_backup_code):
         self.start_signup(mobile_country_code, mobile_num)
@@ -108,8 +252,14 @@ class PersonalIDPage(BasePage):
         self.enter_name(username)
         self.enter_backup_code(mobile_backup_code)
 
-    def verify_wrong_backup_code_err(self):
-        self.type_element(self.BACKUP_CODE_INPUT, "123456")
+    def verify_wrong_backup_code_err(self, wrong_code):
+        """Assert the wrong-code error. wrong_code MUST NOT be the real one.
+
+        Derive it with utils.test_data_gen.wrong_backup_code(real_code) rather
+        than passing a literal - a literal can collide with the account's actual
+        code, which signs the user in and the asserted error never appears.
+        """
+        self.type_code(self.BACKUP_CODE_INPUT, wrong_code)
         self.click_when_enabled(self.CONTINUE_BTN)
         toast = self.wait_for_element(self.WRONG_BACKUP_CODE_TXT)
         toast_text = toast.text

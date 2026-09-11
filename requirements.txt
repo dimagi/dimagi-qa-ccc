@@ -35,3 +35,5 @@ openai>=1.0.0
 matplotlib
 Pillow
 slack_sdk
+# Reading PersonalID email verification codes from the QA mailbox (utils/email_otp.py)
+imap_tools

@@ -37,6 +37,16 @@ env:
 - inputText: "${BACKUP_CODE}"
 - tapOn:
     id: "connect_backup_code_button"
+# 2.64+ offers an optional email step here, but only while the account has no
+# verified email and the email_otp_verification switch is on - so both steps are
+# optional rather than asserted. The confirm dialog's buttons are Material
+# buttons, which upper-case their labels: YES, not Yes.
+- tapOn:
+    id: "personalid_email_skip_button"
+    optional: true
+- tapOn:
+    text: "YES"
+    optional: true
 - tapOn:
     text: "OK"
 - assertVisible:
@@ -63,8 +73,11 @@ env:
     text: "More options"
 - tapOn:
     text: "More options"
+# Renamed in 2.64 from "Forget PersonalID user" - the Login menu now reuses
+# personalid_profile_forget_account. Matched loosely so both spellings work;
+# Maestro text selectors are full matches, hence the wildcards.
 - tapOn:
-    text: "Forget PersonalID user"
+    text: ".*Forget PersonalID.*"
 - tapOn:
     text: "Open navigation drawer"
 - tapOn:

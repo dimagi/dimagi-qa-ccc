@@ -1,0 +1,109 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_SIGNUP_EMAIL_VERIFY.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# SE_06 - SE_09: the email verification screen in the REGISTRATION journey.
+#
+# None of these need a real code. SE_10 (the correct code) is an Appium test -
+# tests/mobile_tests/test_tc_11.py - because reading a mailbox mid-test needs
+# Python holding the session, which Maestro cannot do.
+#
+# SE_12 ("Maximum verification attempts reached") is NOT reachable here.
+# canSkipEmailVerification() is true in PersonalIdEmailVerificationFragment and
+# only PersonalIdEmailVerificationForgotBackupCodeFragment overrides it to false,
+# so three failures during signup give the "Verification unsuccessful" dialog
+# instead. SE_12 belongs to the deferred forgot-backup-code scope.
+#
+# The address here is fixed rather than generated: it is never verified, so it is
+# never bound to an account, and nothing accumulates.
+- runFlow: shared_registration.yaml
+
+# ---------------------------------------------------------------- SE_06
+# A valid address opens Verify Email, showing the address the code went to.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/email_text_value"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/email_text_value"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/email_text_value"
+- inputText: "${VALID_EMAIL}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_continue_button"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/otp_code_view"
+    timeout: 30000
+# Matched on a distinctive fragment, not the whole address. Maestro text
+# selectors are regular expressions, and a plus-addressed email contains "+",
+# which regex reads as "one or more of the preceding character" - so the full
+# address never matches literally.
+- assertVisible:
+    text: ".*severify.*"
+
+# ---------------------------------------------------------------- SE_07
+# Resend sits behind a countdown, then becomes available. The cooldown is two
+# minutes (resendCooldownMillis), so this step alone costs that - it is the only
+# way to observe the transition rather than just the initial state.
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_resend_countdown_text"
+    text: ".*Resend in.*"
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/personalid_email_resend_button"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/personalid_email_resend_button"
+    timeout: 140000
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/personalid_resend_countdown_text"
+
+# ---------------------------------------------------------------- SE_08
+# A wrong code is rejected. The field auto-submits on the sixth digit
+# (setCodeCompleteListener), so there is no Verify tap.
+- inputText: "${WRONG_OTP}"
+- extendedWaitUntil:
+    visible:
+      text: ".*wrong 6-digit passcode.*"
+    timeout: 30000
+
+# ---------------------------------------------------------------- SE_09
+# Three failures in total raise the failure dialog (maxOtpAttempts = 3).
+# The app does not clear the field after a rejection, so it has to be erased
+# before the next attempt - eraseText sends backspaces, and NumericCodeView walks
+# focus back a box per backspace, clearing the whole code.
+- eraseText
+- inputText: "${WRONG_OTP}"
+- extendedWaitUntil:
+    visible:
+      text: ".*wrong 6-digit passcode.*"
+    timeout: 30000
+- eraseText
+- inputText: "${WRONG_OTP}"
+- extendedWaitUntil:
+    visible:
+      text: "Verification unsuccessful"
+    timeout: 30000
+- assertVisible:
+    text: "Try again"
+- assertVisible:
+    text: "Proceed without email"
+
+# Proceeding without email completes signup and continues to photo capture.
+- tapOn:
+    text: "Proceed without email"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/take_photo_button"
+    timeout: 30000
+- assertVisible:
+    text: "Please take a photo of yourself to complete your account setup"

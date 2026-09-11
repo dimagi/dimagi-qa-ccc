@@ -79,6 +79,26 @@ class BasePage:
         el.clear()
         el.send_keys(text)
 
+    def type_code(self, locator, code):
+        """Type into a NumericCodeView - one EditText per digit.
+
+        From 2.64 the backup code and OTP fields are
+        org.commcare.views.connect.NumericCodeView, a LinearLayout that builds one
+        EditText per digit at runtime. The children are given raw integer ids
+        (setId(index)), so they carry no resource-id and can only be reached by
+        class. send_keys against the container itself raises
+        InvalidElementStateException, so each digit goes to its own box.
+        """
+        container = self.wait.until(EC.visibility_of_element_located(locator))
+        boxes = container.find_elements(AppiumBy.CLASS_NAME, "android.widget.EditText")
+        if len(boxes) < len(code):
+            raise AssertionError(
+                f"{locator} has {len(boxes)} code boxes but {len(code)} digits were given"
+            )
+        for box, digit in zip(boxes, code):
+            box.clear()
+            box.send_keys(digit)
+
     def click_when_enabled(self, locator):
         self.wait.until(lambda d: d.find_element(*locator).is_enabled())
         self.driver.find_element(*locator).click()

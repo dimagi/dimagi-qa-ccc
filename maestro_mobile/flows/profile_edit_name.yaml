@@ -1,0 +1,83 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_PROFILE_EDIT_NAME.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# MP_05 - MP_07: editing the name on Manage Profile.
+- runFlow: shared_signed_in.yaml
+
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+
+# ---------------------------------------------------------------- MP_07
+# A blank name cannot be saved. Done first, while the field still holds the
+# original short name - eraseText deletes backwards from the cursor, and a tap
+# lands the cursor mid-text on longer values, so clearing is only reliable here.
+- tapOn:
+    id: "org.commcare.dalvik:id/profile_name_edit_text"
+- eraseText
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: false
+
+# ---------------------------------------------------------------- MP_05
+# Entering a different name enables Save.
+- inputText: "${NEW_NAME}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: true
+
+# ---------------------------------------------------------------- MP_06
+# Saving reports success and the new name shows on Profile and in the drawer.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: ".*profile has been updated successfully.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${NEW_NAME}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name"
+    text: "${NEW_NAME}"
+
+# The drawer header is a separate copy of the name, refreshed from the same
+# record - worth asserting because it is where a stale cache would show.
+- back
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_user_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/header_user_name"
+    text: "${NEW_NAME}"

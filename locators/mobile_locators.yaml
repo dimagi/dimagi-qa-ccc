@@ -4,7 +4,12 @@ home_page:
   header_username: "org.commcare.dalvik:id/header_user_name"
   about_commcare_txt: "//android.widget.TextView[contains(@text,'About CommCare')]"
   more_option_btn: "//android.view.ViewGroup[@resource-id='org.commcare.dalvik:id/toolbar']//android.widget.ImageView"
-  forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID user')]"
+  # 2.64+ renamed this menu item from "Forget PersonalID user" to
+  # "Forget PersonalID Account" (the string personalid_forget_user was dropped and
+  # the Login menu now reuses personalid_profile_forget_account). Match the stable
+  # prefix so both spellings work. Menu items are not upper-cased, unlike the
+  # Material dialog buttons.
+  forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID')]"
   refresh_opportunities_btn: "//android.widget.TextView[contains(@text,'Refresh Opportunities')]"
   go_to_connect_btn: "//android.widget.Button[contains(@text,'GO TO CONNECT MENU')]"
 
@@ -28,12 +33,38 @@ login_page:
 
   name_input: "org.commcare.dalvik:id/nameTextValue"
   backup_code_welcome_text: "org.commcare.dalvik:id/welcome_back"
-  backup_code_input: "org.commcare.dalvik:id/connect_backup_code_input"
+  # 2.64+ replaced the backup code text inputs with 6-box NumericCodeView
+  # widgets (commcare-android 3d194096c). Registration shows both fields;
+  # recovery shows only backup_code_view.
+  backup_code_input: "org.commcare.dalvik:id/backup_code_view"
+  confirm_code_input: "org.commcare.dalvik:id/confirm_code_view"
+  backup_code_visibility_toggle: "org.commcare.dalvik:id/backup_code_visibility_toggle"
+  backup_code_error_msg: "org.commcare.dalvik:id/connect_backup_code_error_message"
   wrong_backup_code_txt: "//android.widget.TextView[contains(@text, 'You have entered the wrong Backup Code')]"
   popup_msg_txt: "org.commcare.dalvik:id/connect_message_message" # generic
 
   network_connection_err_txt: "//android.widget.TextView[contains(@text, 'network connection')]"
   progress_bar: "org.commcare.dalvik:id/progress_bar"
+
+  # 2.64+ inserts an optional email step after the backup code, in both the
+  # registration and recovery journeys. Gated on the email_otp_verification
+  # switch on ConnectID - when that is off the step does not appear at all.
+  email_input: "org.commcare.dalvik:id/email_text_value"
+  email_skip_btn: "org.commcare.dalvik:id/personalid_email_skip_button"
+  email_continue_btn: "org.commcare.dalvik:id/personalid_email_continue_button"
+  email_error_txt: "org.commcare.dalvik:id/personalid_email_error"
+  # The skip confirmation reuses the app-linking Yes/No strings, not Skip/Cancel,
+  # and Material buttons render them upper-cased - match both spellings.
+  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
+  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
+  # StandardAlertDialog renders its message in a plain TextView, NOT in
+  # connect_message_message - that id belongs to the full-screen message
+  # fragment. Match on the text.
+  email_added_msg: "//android.widget.TextView[contains(@text,'email has been added successfully')]"
+  email_in_use_msg: "//android.widget.TextView[contains(@text,'already linked to another account')]"
+  # Recovery completes on this screen. Registration goes to photo capture
+  # instead - the two share the email step and diverge only afterwards.
+  recovery_success_title: "//android.widget.TextView[contains(@text,'Account Recovered')]"
 
 mobile_notifications:
   invite_opp_title_txt: "(//android.widget.TextView[contains(@text, 'You have been invited to a CommCare Connect opportunity')])[1]"
@@ -186,3 +217,48 @@ messaging:
 otp_page:
   one_time_verification_txt: "org.commcare.dalvik:id/connect_phone_verify_title"
   change_btn: "org.commcare.dalvik:id/connect_phone_verify_change"
+
+  # Email verification screen (2.64+). otp_code_view is a NumericCodeView like
+  # the backup code fields, so it needs type_code rather than send_keys, and it
+  # auto-submits on the sixth digit - no Verify tap required.
+  email_otp_input: "org.commcare.dalvik:id/otp_code_view"
+  email_verify_btn: "org.commcare.dalvik:id/personalid_email_verify_button"
+  email_verify_error: "org.commcare.dalvik:id/personalid_email_verify_error"
+  email_verify_description: "org.commcare.dalvik:id/email_verification_description"
+  email_resend_btn: "org.commcare.dalvik:id/personalid_email_resend_button"
+  email_resend_countdown: "org.commcare.dalvik:id/personalid_resend_countdown_text"
+
+  # Photo capture - where a successful REGISTRATION verify lands. There is no
+  # "Email Added" dialog on this path; that one belongs to the EXISTING_USER
+  # workflow (Manage Profile).
+  photo_capture_title: "org.commcare.dalvik:id/title"
+  take_photo_btn: "org.commcare.dalvik:id/take_photo_button"
+  save_photo_btn: "org.commcare.dalvik:id/save_photo_button"
+
+manage_profile:
+  # Drawer entry point (2.64+). The unlock gate in front of it is bypassed on
+  # qaAutomation builds, so no biometric interaction is needed.
+  drawer_manage_profile_link: "org.commcare.dalvik:id/header_manage_profile"
+
+  # Profile screen - read-only.
+  profile_name_header: "org.commcare.dalvik:id/profile_name"
+  profile_phone_subtitle: "org.commcare.dalvik:id/profile_phone_subtitle"
+  profile_value_name: "org.commcare.dalvik:id/profile_value_name"
+  profile_value_phone: "org.commcare.dalvik:id/profile_value_phone"
+  profile_value_email: "org.commcare.dalvik:id/profile_value_email"
+  forget_account_btn: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+  # A toolbar menu action rendered as a pencil icon, not a text label - it
+  # carries "Edit Profile" as its content description. Maestro's text matcher
+  # also searches accessibility text, so `tapOn: text: "Edit Profile"` works
+  # there; an Appium XPath has to ask for the id or the content-desc.
+  edit_profile_menu: "//*[@resource-id='org.commcare.dalvik:id/action_profile_edit' or @content-desc='Edit Profile']"
+
+  # Edit Profile screen.
+  edit_name_input: "org.commcare.dalvik:id/profile_name_edit_text"
+  edit_phone_input: "org.commcare.dalvik:id/profile_phone_edit_text"
+  edit_email_input: "org.commcare.dalvik:id/profile_email_edit_text"
+  edit_save_btn: "org.commcare.dalvik:id/btn_save"
+  edit_cancel_btn: "org.commcare.dalvik:id/btn_cancel"
+  # The OTP confirmation raised when the email is changed.
+  otp_confirm_send: "//android.widget.Button[contains(@text,'Send Code') or contains(@text,'SEND CODE')]"
+  save_photo_btn: "org.commcare.dalvik:id/save_photo_button"
