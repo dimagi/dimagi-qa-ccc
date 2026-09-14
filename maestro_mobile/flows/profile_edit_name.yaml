@@ -9,6 +9,12 @@ appId: org.commcare.dalvik
 # run directly, the variables below are undefined.
 ---
 # MP_05 - MP_07: editing the name on Manage Profile.
+# The account is a long-lived fixture now, so the new name must DIFFER from
+# whatever the last run left on it - Save only enables on an actual change, and a
+# fixed target name would work once and then silently no-op. The clock makes it
+# unique per run. Nothing asserts the account's original name: recovery checks
+# welcome_back by id, never by text.
+- evalScript: ${output.newName = NEW_NAME + ' ' + String(Date.now()).slice(-5)}
 - runFlow: shared_signed_in.yaml
 
 - tapOn:
@@ -44,7 +50,7 @@ appId: org.commcare.dalvik
 
 # ---------------------------------------------------------------- MP_05
 # Entering a different name enables Save.
-- inputText: "${NEW_NAME}"
+- inputText: "${output.newName}"
 - assertVisible:
     id: "org.commcare.dalvik:id/btn_save"
     enabled: true
@@ -63,10 +69,10 @@ appId: org.commcare.dalvik
     timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_value_name"
-    text: "${NEW_NAME}"
+    text: "${output.newName}"
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_name"
-    text: "${NEW_NAME}"
+    text: "${output.newName}"
 
 # The drawer header is a separate copy of the name, refreshed from the same
 # record - worth asserting because it is where a stale cache would show.
@@ -80,4 +86,4 @@ appId: org.commcare.dalvik
     timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/header_user_name"
-    text: "${NEW_NAME}"
+    text: "${output.newName}"

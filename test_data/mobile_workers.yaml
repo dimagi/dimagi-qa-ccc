@@ -253,46 +253,11 @@ MAESTRO_MAP_CASE_LIST:
 # admin, and the backup codes differ so one flow's account cannot be opened with
 # another's code by accident.
 
-MAESTRO_PROFILE_VIEW:
-  country_code: "+7426"
-  username: "QA Profile View"
-  backup_code: "742701"
 
-MAESTRO_PROFILE_EDIT_NAME:
-  country_code: "+7426"
-  username: "QA Profile Name"
-  backup_code: "742702"
-  # The name the flow renames the account to, asserted on Profile and in the drawer.
-  new_name: "QA Renamed User"
 
-MAESTRO_PROFILE_EDIT_EMAIL:
-  country_code: "+7426"
-  username: "QA Profile Email"
-  backup_code: "742704"
-  # MP_08: rejected for having no @ or domain, so Save stays disabled.
-  invalid_email: "not-an-email"
-  # The address the flow changes to. Plus-addressed off the QA mailbox so the
-  # verification code is readable; see utils/email_otp.py.
-  new_email: "automation.user.commcarehq+mpedit@gmail.com"
-  # MP_12: the name commits before the OTP step, so it survives an abandoned verify.
-  renamed: "QA Renamed Before OTP"
 
-MAESTRO_PROFILE_DISCARD:
-  country_code: "+7426"
-  username: "QA Profile Discard"
-  backup_code: "742703"
-  # Typed, then discarded - the flow asserts it is NOT kept.
-  edited_name: "QA Discarded Name"
 
-MAESTRO_PROFILE_FORGET:
-  country_code: "+7426"
-  username: "QA Profile Forget"
-  backup_code: "742705"
 
-MAESTRO_RECOVERY_EMAIL:
-  country_code: "+7426"
-  username: "QA Recovery Skip"
-  backup_code: "742801"
 
 MAESTRO_SIGNUP_EMAIL_ADD:
   country_code: "+7426"
@@ -322,3 +287,92 @@ MAESTRO_INTEGRITY_PROBE:
   # 1292950-1292999 batch put forward for invites.
   phone_number: "1293501"
   username: "QA Integrity Probe"
+
+# --- CCCT-2784 fixture accounts (recovery-based) ------------------------------
+#
+# Long-lived accounts the Manage Profile and recovery flows RECOVER into, rather
+# than registering a new account per run. The reason is concrete: an automated
+# signup cannot complete on 2.64. The account is not created until the photo is
+# saved, Save Photo is enabled only by a real camera capture, and Maestro on
+# BrowserStack cannot drive the camera. The placeholder photo that makes signup
+# automatable arrived in commcare-android 1e14ed79b (27-Aug-2026), after 2.64.
+# Recovering an existing account needs no photo, so these flows run on 2.64 and
+# on 2.65 alike.
+#
+# SEEDING: created by the seed_*.yaml flows, which must be run on a 2.65 build
+# (they register, so they need the placeholder photo). Run once per environment:
+#   python maestro_mobile/scripts/run_on_browserstack.py --app-env stage \
+#     --flows seed_profile_fixture.yaml seed_profile_rename_fixture.yaml \
+#             seed_profile_email_fixture.yaml seed_recovery_fixture.yaml
+# Re-run if an environment is wiped. Seeding an account that already exists
+# fails loudly on the confirm_code_view guard rather than silently recovering.
+#
+# Numbers differ per environment on purpose, matching the convention above: one
+# PersonalID number cannot hold a session on two environments at once, and a
+# local run can drive stage and prod concurrently.
+#
+# These four numbers are also listed in utils/test_data_gen.py's
+# RESERVED_PHONE_NUMBERS so the Appium generator can never pick one and register
+# over a fixture.
+
+# Email-less by design. profile_view (MP_03) asserts no address is rendered
+# anywhere on the Profile screen, so NOTHING may ever add an email to this
+# account - that is why the email cases have their own fixture below.
+#   -> profile_view (MP_01-MP_04), profile_discard (MP_14-MP_16),
+#      profile_forget (MP_17, MP_18)
+# profile_forget forgets the account, but Forget PersonalID clears device state
+# only; the server account survives and is recovered again next run.
+MAESTRO_PROFILE_FIXTURE:
+  country_code: "+7426"
+  phone_number: "1290101"
+  username: "QA Profile Fixture"
+  backup_code: "129101"
+  phone_number_staging: "1290201"
+  backup_code_staging: "129201"
+  # MP_14-MP_16: typed into the name field, then discarded. Never saved, so it
+  # leaves no trace on the account.
+  edited_name: "QA Discarded Name"
+
+# MP_05/MP_06 rename this account, and the new name persists. That is fine:
+# recovery asserts welcome_back by id, never by text, so a drifted name breaks
+# nothing. The flow renames to a timestamped value so the typed name always
+# differs from the current one - Save only enables on an actual change.
+#   -> profile_edit_name (MP_05-MP_07)
+MAESTRO_PROFILE_RENAME_FIXTURE:
+  country_code: "+7426"
+  phone_number: "1290102"
+  username: "QA Rename Fixture"
+  backup_code: "129102"
+  phone_number_staging: "1290202"
+  backup_code_staging: "129202"
+  # The flow appends a per-run suffix to this, so the typed name always differs
+  # from whatever the last run left on the account.
+  new_name: "QA Renamed User"
+
+# Its own account because MP_13 binds a verified email PERMANENTLY, which would
+# break MP_03's "no address rendered" assertion forever. Nothing here asserts the
+# account starts email-less, so it is free to keep whatever address the last run
+# left on it.
+#   -> profile_edit_email (MP_08-MP_13, MP_19)
+MAESTRO_PROFILE_EMAIL_FIXTURE:
+  country_code: "+7426"
+  phone_number: "1290103"
+  username: "QA Email Fixture"
+  backup_code: "129103"
+  phone_number_staging: "1290203"
+  backup_code_staging: "129203"
+  invalid_email: "not-an-email"
+  new_email: "automation.user.commcarehq+mpedit@gmail.com"
+  renamed: "QA Renamed Before OTP"
+
+# Must stay email-less: RE_01 asserts the email step is OFFERED, which only
+# happens while the account has no verified email. RE_02 skips it, so the account
+# stays clean.
+#   -> recovery_email_prompt (RE_01, RE_02)
+MAESTRO_RECOVERY_FIXTURE:
+  country_code: "+7426"
+  phone_number: "1290104"
+  username: "QA Recovery Fixture"
+  backup_code: "129104"
+  phone_number_staging: "1290204"
+  backup_code_staging: "129204"

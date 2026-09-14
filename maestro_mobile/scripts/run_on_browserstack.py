@@ -102,12 +102,21 @@ WORKER_BY_FLOW = {
     # identifiable. The sub-flows they call (shared_registration.yaml,
     # shared_signed_in.yaml, shared_forget_and_recover.yaml) need no entry - they
     # inherit env through runFlow.
-    "profile_view.yaml": "MAESTRO_PROFILE_VIEW",
-    "profile_edit_name.yaml": "MAESTRO_PROFILE_EDIT_NAME",
-    "profile_edit_email.yaml": "MAESTRO_PROFILE_EDIT_EMAIL",
-    "profile_discard.yaml": "MAESTRO_PROFILE_DISCARD",
-    "profile_forget.yaml": "MAESTRO_PROFILE_FORGET",
-    "recovery_email_prompt.yaml": "MAESTRO_RECOVERY_EMAIL",
+    # These recover long-lived fixture accounts rather than registering, so an
+    # automated run works on 2.64 where signup cannot complete. Which flows share
+    # an account, and why the email cases cannot, is set out in mobile_workers.yaml.
+    "profile_view.yaml": "MAESTRO_PROFILE_FIXTURE",
+    "profile_discard.yaml": "MAESTRO_PROFILE_FIXTURE",
+    "profile_forget.yaml": "MAESTRO_PROFILE_FIXTURE",
+    "profile_edit_name.yaml": "MAESTRO_PROFILE_RENAME_FIXTURE",
+    "profile_edit_email.yaml": "MAESTRO_PROFILE_EMAIL_FIXTURE",
+    "recovery_email_prompt.yaml": "MAESTRO_RECOVERY_FIXTURE",
+    # Seeding only - creates the four accounts above. Never in TEST_FLOWS; run by
+    # hand on a 2.65 build when an environment needs re-seeding.
+    "seed_profile_fixture.yaml": "MAESTRO_PROFILE_FIXTURE",
+    "seed_profile_rename_fixture.yaml": "MAESTRO_PROFILE_RENAME_FIXTURE",
+    "seed_profile_email_fixture.yaml": "MAESTRO_PROFILE_EMAIL_FIXTURE",
+    "seed_recovery_fixture.yaml": "MAESTRO_RECOVERY_FIXTURE",
     "signup_email_add.yaml": "MAESTRO_SIGNUP_EMAIL_ADD",
     "signup_email_verify.yaml": "MAESTRO_SIGNUP_EMAIL_VERIFY",
     "probe_fresh_registration.yaml": "MAESTRO_INTEGRITY_PROBE",

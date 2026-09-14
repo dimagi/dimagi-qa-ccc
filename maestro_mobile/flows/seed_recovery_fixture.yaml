@@ -1,0 +1,6 @@
+appId: org.commcare.dalvik
+---
+# One-off: seeds the recovery_fixture account. Run on a 2.65 build only - see
+# shared_seed_registration.yaml and test_data/mobile_workers.yaml.
+# NOT in TEST_FLOWS: seeding is not a test and must not run every build.
+- runFlow: shared_seed_registration.yaml

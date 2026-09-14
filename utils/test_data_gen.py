@@ -23,8 +23,16 @@ import time
 
 AUTOMATION_BLOCK = "129"
 
-# Committed to test_data for the existing recovery cases.
-RESERVED_PHONE_NUMBERS = frozenset({"7426000", "7426005"})
+# Committed to test_data, so generation must never hand one out. The 129xxxx
+# entries are the Manage Profile / recovery fixture accounts in
+# mobile_workers.yaml: registering over one would destroy the account those
+# flows recover into, and the damage would show up as an unrelated failure days
+# later.
+RESERVED_PHONE_NUMBERS = frozenset({
+    "7426000", "7426005",
+    "1290101", "1290102", "1290103", "1290104",   # prod fixtures
+    "1290201", "1290202", "1290203", "1290204",   # staging fixtures
+})
 
 _counter = itertools.count()
 

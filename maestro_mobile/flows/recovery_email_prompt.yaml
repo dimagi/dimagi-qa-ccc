@@ -1,6 +1,6 @@
 appId: org.commcare.dalvik
 # This flow's data (name, backup code, any addresses) lives in
-# test_data/mobile_workers.yaml under MAESTRO_RECOVERY_EMAIL.
+# test_data/mobile_workers.yaml under MAESTRO_RECOVERY_FIXTURE.
 # run_on_browserstack.py resolves it for the target environment and writes
 # the env: block into this file at upload time, so nothing is hardcoded
 # here and one account's details live in exactly one place.
@@ -10,12 +10,20 @@ appId: org.commcare.dalvik
 ---
 # RE_01, RE_02: the email step during ACCOUNT RECOVERY.
 #
-# Self-contained. It registers its own account (skipping the signup email step so
-# the account has none), forgets it, and recovers it - Forget PersonalID clears
-# the account only on the device, so the server account survives to be recovered.
-# No fixed test data.
-- runFlow: shared_signed_in.yaml
-- runFlow: shared_forget_and_recover.yaml
+# Recovers the MAESTRO_RECOVERY_FIXTURE account from a cleared app. Clearing app
+# state IS the forget - Forget PersonalID only clears the device, so a cleared
+# install and a forgotten account are the same starting point, and signing in
+# again is a recovery either way.
+#
+# It used to register its own account and forget it, which made the case depend
+# on signup working. That is unavailable on 2.64 (no placeholder photo, and
+# Maestro cannot drive the camera), and it was never needed: recovery is what the
+# case is about.
+#
+# The fixture MUST have no verified email - RE_01 asserts the step is offered,
+# which the server only does when it holds no verified address. RE_02 skips it,
+# so the account stays clean for the next run.
+- runFlow: shared_recover_account.yaml
 
 # ---------------------------------------------------------------- RE_01
 # Recovering an account with no stored email offers the email step.

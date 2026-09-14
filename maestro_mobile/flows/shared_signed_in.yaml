@@ -2,58 +2,60 @@ appId: org.commcare.dalvik
 ---
 # Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
 #
-# Produces a FULLY SIGNED-IN, brand-new PersonalID account, which is what every
-# Manage Profile flow needs. shared_registration.yaml stops at the email step;
-# the account is not actually created until the photo is saved
-# (savePhotoButton -> uploadImageAndCompleteProfile -> completeProfile).
+# Produces a FULLY SIGNED-IN PersonalID account, which is what every Manage
+# Profile flow needs.
 #
-# A fresh account per run rather than a shared one, because the Manage Profile
-# cases mutate the profile - they rename it, change its email, and MP_18 forgets
-# it entirely. Sharing an account would make the order of tests matter and leave
-# the next run starting from whatever the last one did.
+# It RECOVERS a long-lived fixture account rather than registering a new one.
+# That changed on 2026-09-14 and the reason is not preference: an automated
+# signup cannot complete on 2.64. The account is not created until the photo is
+# saved, Save Photo is enabled only by a real camera capture, and Maestro on
+# BrowserStack cannot drive the camera. The qaAutomation placeholder photo that
+# makes signup automatable arrived in commcare-android 1e14ed79b (27-Aug-2026),
+# after 2.64 was cut. Recovery needs no photo, so these flows now run on the
+# released build instead of waiting for 2.65.
 #
-# On the qaAutomation build the photo is auto-generated, so Save is enabled
-# without any camera interaction.
+# The trade is state: the fixture persists between runs, where a fresh account
+# did not. Handled per fixture in test_data/mobile_workers.yaml - the email cases
+# have their own account because MP_13 binds an address permanently, and the
+# rename cases use a timestamped name so Save always sees a real change.
+#
+# The account must already exist; seed it with the seed_*.yaml flows on 2.65.
 #
 # Inputs (env from the calling flow):
-#   USERNAME     - name to register under
-#   BACKUP_CODE  - 6 digits
-# Outputs:
-#   output.phoneNumber - the generated subscriber number
-- runFlow: shared_registration.yaml
+#   COUNTRY_CODE, PHONE_NUMBER, USERNAME, BACKUP_CODE
+- runFlow: shared_recover_account.yaml
 
-# Skip the optional email step - Manage Profile cases that need an email on the
-# account add one through Edit Profile, which is the behaviour under test.
-- extendedWaitUntil:
-    visible:
-      id: "org.commcare.dalvik:id/personalid_email_skip_button"
-    timeout: 30000
+# Skip the optional email step. Only offered while the account has no verified
+# email, so it is optional rather than asserted - the email fixture keeps an
+# address from the previous run and will not be asked. Manage Profile cases that
+# need an email add one through Edit Profile, which is the behaviour under test.
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
+    optional: true
 - tapOn:
     text: "YES"
-
-# Photo capture completes the account.
-- extendedWaitUntil:
-    visible:
-      id: "org.commcare.dalvik:id/save_photo_button"
-    timeout: 30000
-- tapOn:
-    id: "org.commcare.dalvik:id/save_photo_button"
-- extendedWaitUntil:
-    notVisible:
-      id: "org.commcare.dalvik:id/progress_bar"
-    timeout: 45000
-# A confirmation may appear before the app settles on the Connect home.
-- tapOn:
-    text: "OK"
     optional: true
 
-# Signed in: the drawer now carries the user's name rather than the signed-out text.
+# Recovering an existing account raises "Account Recovered". It lands a moment
+# AFTER the code is accepted, so a single optional tap can run before it exists
+# and leave the modal covering every later tap. Guarded on the dialog actually
+# being present and repeated, the way shared_open_deliver_app.yaml does it.
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            visible:
+              text: ".*Account Recovered.*"
+          commands:
+            - tapOn:
+                text: "OKAY|OK"
+
+# Signed in: the drawer carries the user's name rather than the signed-out text.
+# Asserted by id, not text: profile_edit_name renames this account and the stored
+# name persists, so the text is not stable across runs. Flows that care about the
+# name assert it on the Profile screen itself.
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/header_user_name"
     timeout: 45000
-- assertVisible:
-    id: "org.commcare.dalvik:id/header_user_name"
-    text: "${USERNAME}"
