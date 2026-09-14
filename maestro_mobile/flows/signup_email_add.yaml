@@ -1,0 +1,94 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_SIGNUP_EMAIL_ADD.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# SE_01 - SE_05: the email step in the REGISTRATION journey.
+#
+# Requires the email_otp_verification switch to be active on ConnectID. With it
+# off the email step never appears and SE_01 fails immediately - check the switch
+# before debugging this flow.
+- runFlow: shared_registration.yaml
+
+# ---------------------------------------------------------------- SE_01
+# The email step is shown, with its title and the account-recovery rationale.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/email_text_value"
+    timeout: 30000
+- assertVisible:
+    text: "Add your email (optional)"
+- assertVisible:
+    text: ".*Your email helps you recover your account.*"
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+
+# ---------------------------------------------------------------- SE_02
+# CONTINUE is disabled until a validly formatted address is entered.
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_email_continue_button"
+    enabled: false
+
+# ---------------------------------------------------------------- SE_03
+# An invalid address leaves CONTINUE disabled.
+#
+# Note: the app gates the button as you type rather than showing an inline error,
+# and personalid_email_error is only populated by server-side rejections (see
+# SE_11). So the observable behaviour for a badly formatted address is the button
+# staying disabled - asserting an error message here would be asserting something
+# the UI never shows.
+- tapOn:
+    id: "org.commcare.dalvik:id/email_text_value"
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "org.commcare.dalvik:id/email_text_value"
+- inputText: "${INVALID_EMAIL}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_email_continue_button"
+    enabled: false
+
+# A valid address enables it - the positive half of SE_02.
+- tapOn:
+    id: "org.commcare.dalvik:id/email_text_value"
+- eraseText
+- inputText: "${VALID_EMAIL}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_email_continue_button"
+    enabled: true
+
+# ---------------------------------------------------------------- SE_04
+# "Skip for now" raises the confirmation; NO returns to the email step.
+# The buttons are Material buttons, which upper-case their labels: YES/NO, even
+# though the string resources read Yes/No.
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+- assertVisible:
+    text: "Skip email?"
+- assertVisible:
+    text: "Are you sure you want to skip?"
+- tapOn:
+    text: "NO"
+- assertVisible:
+    text: "Add your email (optional)"
+
+# ---------------------------------------------------------------- SE_05
+# YES continues to photo capture - the account is created regardless.
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+- assertVisible:
+    text: "Skip email?"
+- tapOn:
+    text: "YES"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/take_photo_button"
+    timeout: 30000
+- assertVisible:
+    text: "Please take a photo of yourself to complete your account setup"

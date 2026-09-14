@@ -1,0 +1,52 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_RECOVERY_EMAIL.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# RE_01, RE_02: the email step during ACCOUNT RECOVERY.
+#
+# Self-contained. It registers its own account (skipping the signup email step so
+# the account has none), forgets it, and recovers it - Forget PersonalID clears
+# the account only on the device, so the server account survives to be recovered.
+# No fixed test data.
+- runFlow: shared_signed_in.yaml
+- runFlow: shared_forget_and_recover.yaml
+
+# ---------------------------------------------------------------- RE_01
+# Recovering an account with no stored email offers the email step.
+#
+# The server decides this: ConfirmBackupCodeResponseParser only returns an email
+# when it already holds a VERIFIED one, and the app shows this step only when
+# that came back empty.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/email_text_value"
+    timeout: 45000
+- assertVisible:
+    text: "Add your email (optional)"
+- assertVisible:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+
+# ---------------------------------------------------------------- RE_02
+# Skipping completes RECOVERY - the success message, not photo capture. Photo
+# capture is where the registration journey goes, and confirming the difference
+# is the point of this case.
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_skip_button"
+- assertVisible:
+    text: "Skip email?"
+- tapOn:
+    text: "YES"
+- extendedWaitUntil:
+    visible:
+      text: "Account Recovered"
+    timeout: 45000
+- assertVisible:
+    text: ".*resume using PersonalID.*"
+- assertNotVisible:
+    id: "org.commcare.dalvik:id/take_photo_button"

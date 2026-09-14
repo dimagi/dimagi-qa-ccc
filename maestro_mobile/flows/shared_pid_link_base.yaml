@@ -68,6 +68,13 @@ appId: org.commcare.dalvik
     timeout: 20000
 - inputText: "${PID_BACKUP}"
 - tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
+# 2.64+ offers an optional email step after the backup code, but only while the
+# account has no verified email and the email_otp_verification switch is on -
+# so both taps are optional rather than asserted. Without them this flow stops
+# on "Add your email (optional)" and every later step fails. The confirm
+# dialog's buttons are Material buttons, which upper-case their labels: YES.
+- tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
+- tapOn: { text: "YES", optional: true }
 - tapOn: { text: "OK", optional: true }
 - extendedWaitUntil:
     notVisible: { id: "org.commcare.dalvik:id/backup_code_view" }

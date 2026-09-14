@@ -36,6 +36,29 @@ TEST_FLOWS = [
     # does not appear on the BrowserStack device farm - the map opens at a
     # default world view with the default toggle panel and no geo overlay, while
     # it renders correctly on a physical device. See docs/manual for details.
+    #
+    # CCCT-2784 - Manage Profile and the recovery email step. These need no
+    # WORKER_BY_FLOW entry: each registers its own account from a cleared app and
+    # carries its own USERNAME / BACKUP_CODE in its env: header.
+    "profile_view.yaml",
+    "profile_edit_name.yaml",
+    "profile_edit_email.yaml",
+    "profile_discard.yaml",
+    "profile_forget.yaml",
+    "recovery_email_prompt.yaml",
+    # SKIPPED, 2026-09-10: signup_email_add.yaml and signup_email_verify.yaml are
+    # held out until the 2.65 APK ships. Between them they cover SE_01-SE_09 and
+    # SE_12 - adding and verifying an email DURING signup - and they pass, but
+    # only against the unreleased 2.65 build they were written on. Running the
+    # suite on 2.65 to keep them green would put every other flow on an
+    # unreleased build too, which is the worse trade: those flows are the stable
+    # regression set.
+    #
+    # Nothing else depends on them. Each registers its own account from a cleared
+    # app, so holding them out changes no other flow's starting state.
+    #
+    # TO RE-ENABLE once 2.65 is released: add the two names here, and drop
+    # @pytest.mark.skip from tests/mobile_tests/test_tc_11.py (SE_10, same gap).
 ]
 POLL_INTERVAL_SECONDS = 15
 
@@ -74,6 +97,20 @@ WORKER_BY_FLOW = {
     # flow and inherited by the shared_map_open subflow via runFlow.
     "map_10_toggle_panel_visible.yaml": "MAESTRO_MAP_CASE_LIST",
     "map_11_toggle_switches.yaml": "MAESTRO_MAP_CASE_LIST",
+    # CCCT-2784. One worker per flow rather than one shared entry: each registers
+    # its own account, and distinct names and codes keep a failed run's account
+    # identifiable. The sub-flows they call (shared_registration.yaml,
+    # shared_signed_in.yaml, shared_forget_and_recover.yaml) need no entry - they
+    # inherit env through runFlow.
+    "profile_view.yaml": "MAESTRO_PROFILE_VIEW",
+    "profile_edit_name.yaml": "MAESTRO_PROFILE_EDIT_NAME",
+    "profile_edit_email.yaml": "MAESTRO_PROFILE_EDIT_EMAIL",
+    "profile_discard.yaml": "MAESTRO_PROFILE_DISCARD",
+    "profile_forget.yaml": "MAESTRO_PROFILE_FORGET",
+    "recovery_email_prompt.yaml": "MAESTRO_RECOVERY_EMAIL",
+    "signup_email_add.yaml": "MAESTRO_SIGNUP_EMAIL_ADD",
+    "signup_email_verify.yaml": "MAESTRO_SIGNUP_EMAIL_VERIFY",
+    "probe_fresh_registration.yaml": "MAESTRO_INTEGRITY_PROBE",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
@@ -111,6 +148,17 @@ def resolve_worker(entry, app_env=None):
             value = entry.get(data_key)
         if value is not None:
             resolved[env_key] = str(value)
+
+    # Anything else on the entry becomes an env value under its upper-cased name,
+    # so a flow needing its own data (a new name to save, an address to reject)
+    # declares it in mobile_workers.yaml rather than hardcoding it in the flow.
+    # Without this, only the four keys above could live in the data file and the
+    # rest would have to stay in the YAML headers.
+    for data_key, value in entry.items():
+        if data_key in WORKER_ENV_KEYS or data_key.endswith(STAGING_SUFFIX):
+            continue
+        override = entry.get(f"{data_key}{STAGING_SUFFIX}") if app_env == STAGING_ENV else None
+        resolved[data_key.upper()] = str(override if override is not None else value)
 
     first, second = WRONG_BACKUP_CODES
     resolved["WRONG_BACKUP_CODE"] = second if resolved.get("BACKUP_CODE") == first else first
