@@ -9,12 +9,14 @@ appId: org.commcare.dalvik
 # run directly, the variables below are undefined.
 ---
 # MP_05 - MP_07: editing the name on Manage Profile.
-# The account is a long-lived fixture now, so the new name must DIFFER from
-# whatever the last run left on it - Save only enables on an actual change, and a
-# fixed target name would work once and then silently no-op. The clock makes it
-# unique per run. Nothing asserts the account's original name: recovery checks
-# welcome_back by id, never by text.
-- evalScript: ${output.newName = NEW_NAME + ' ' + String(Date.now()).slice(-5)}
+# Renames to NEW_NAME and restores USERNAME at the end, so the account is left at
+# the resting name mobile_workers.yaml records for it.
+#
+# That restore is not tidiness. Recovery is matched on phone number AND name: a
+# materially different name makes the server treat sign-in as a NEW signup, and
+# the app shows the create-backup-code screen instead of the recovery one. An
+# earlier version renamed to a timestamped value and did not restore, which left
+# these fixtures unrecoverable under a name nobody could reconstruct.
 - runFlow: shared_signed_in.yaml
 
 - tapOn:
@@ -41,16 +43,36 @@ appId: org.commcare.dalvik
 # A blank name cannot be saved. Done first, while the field still holds the
 # original short name - eraseText deletes backwards from the cursor, and a tap
 # lands the cursor mid-text on longer values, so clearing is only reliable here.
-- tapOn:
-    id: "org.commcare.dalvik:id/profile_name_edit_text"
-- eraseText
+# Clear the field by erasing REPEATEDLY, which converges regardless of how long
+# the stored name is.
+#
+# eraseText only deletes backwards from the caret, and tapping a field puts the
+# caret where the tap landed - the centre, which falls INSIDE a long value. One
+# round therefore leaves the tail behind: "QA Renamed User 52048" became "48",
+# Save stayed enabled, and MP_07's disabled-Save assertion failed.
+#
+# Repeating fixes it because each round removes everything left of the caret, so
+# the value shrinks; once it is short enough the centre tap lands PAST the end and
+# the next round clears what is left. Two rounds suffice for any plausible name,
+# three is margin.
+#
+# An earlier attempt tapped the field's right edge by coordinate instead. Do not
+# go back to that: the Name field sits at ~43% of screen height with the keyboard
+# raised and ~49% without it, so the tap silently missed the field whenever the
+# keyboard happened to be down, and the rename was never typed at all.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_name_edit_text"
+      - eraseText: 60
 - assertVisible:
     id: "org.commcare.dalvik:id/btn_save"
     enabled: false
 
 # ---------------------------------------------------------------- MP_05
 # Entering a different name enables Save.
-- inputText: "${output.newName}"
+- inputText: "${NEW_NAME}"
 - assertVisible:
     id: "org.commcare.dalvik:id/btn_save"
     enabled: true
@@ -69,10 +91,10 @@ appId: org.commcare.dalvik
     timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_value_name"
-    text: "${output.newName}"
+    text: "${NEW_NAME}"
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_name"
-    text: "${output.newName}"
+    text: "${NEW_NAME}"
 
 # The drawer header is a separate copy of the name, refreshed from the same
 # record - worth asserting because it is where a stale cache would show.
@@ -86,4 +108,62 @@ appId: org.commcare.dalvik
     timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/header_user_name"
-    text: "${output.newName}"
+    text: "${NEW_NAME}"
+
+# ---------------------------------------------------------- restore (not a case)
+# Put the name back. Without this the account is left as NEW_NAME and the next
+# run's recovery types USERNAME, which no longer matches - see the header.
+# The drawer is already open - the MP_06 assertion above left it that way.
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+# Clear the field by erasing REPEATEDLY, which converges regardless of how long
+# the stored name is.
+#
+# eraseText only deletes backwards from the caret, and tapping a field puts the
+# caret where the tap landed - the centre, which falls INSIDE a long value. One
+# round therefore leaves the tail behind: "QA Renamed User 52048" became "48",
+# Save stayed enabled, and MP_07's disabled-Save assertion failed.
+#
+# Repeating fixes it because each round removes everything left of the caret, so
+# the value shrinks; once it is short enough the centre tap lands PAST the end and
+# the next round clears what is left. Two rounds suffice for any plausible name,
+# three is margin.
+#
+# An earlier attempt tapped the field's right edge by coordinate instead. Do not
+# go back to that: the Name field sits at ~43% of screen height with the keyboard
+# raised and ~49% without it, so the tap silently missed the field whenever the
+# keyboard happened to be down, and the rename was never typed at all.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_name_edit_text"
+      - eraseText: 60
+- inputText: "${USERNAME}"
+- hideKeyboard
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: ".*profile has been updated successfully.*"
+    timeout: 30000
+# Confirm the account really is back at its resting name - if this assertion ever
+# fails, fix the account or update username in mobile_workers.yaml before the
+# next run, or the fixture becomes unrecoverable.
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"

@@ -252,6 +252,48 @@ class PersonalIDPage(BasePage):
         self.enter_name(username)
         self.enter_backup_code(mobile_backup_code)
 
+    def recover_existing_account(self, country_code, phone_number, username, backup_code):
+        """Sign into an EXISTING account, stopping once the code is accepted.
+
+        The Appium counterpart of shared_recover_account.yaml, and it exists for
+        the same reason: an automated registration cannot complete on 2.64. The
+        account is not created until the photo is saved, Save Photo is enabled
+        only by a real camera capture, and the placeholder photo that makes
+        signup automatable landed after 2.64. Recovery needs no photo.
+
+        Deliberately stops before the email step and the "Account Recovered"
+        dialog - callers differ on what they want there. RE_04 asserts the email
+        step is NOT offered; the Manage Profile tests skip past it.
+
+        The account must already exist; the fixtures live in
+        test_data/mobile_workers.yaml and are seeded by the seed_*.yaml flows.
+        """
+        self.start_signup(country_code, phone_number)
+        self.click_configure_fingerprint()
+        self.handle_fingerprint_auth()
+        self.demo_user_confirm()
+        self.enter_name(username)
+        # GUARD: recovery shows one code field, registration shows a confirm one
+        # too. If the confirm field is here the account does not exist on this
+        # environment and this is quietly registering instead - fail now rather
+        # than several steps downstream. Re-seed the fixture.
+        assert not self.is_registration_backup_screen(), (
+            f"{country_code} {phone_number} has no account on this environment - "
+            "this is registration, not recovery. Re-seed the fixture with the "
+            "seed_*.yaml flows on a 2.65 build."
+        )
+        self.enter_backup_code_only(backup_code)
+
+    def dismiss_recovery_dialog(self):
+        """Clear the 'Account Recovered' dialog if it appears.
+
+        It lands a moment after the code is accepted, so it is waited for rather
+        than tapped blind - an early tap finds nothing and leaves the modal over
+        every later interaction.
+        """
+        if self.is_displayed(self.RECOVERY_SUCCESS_TITLE, timeout=30):
+            self.click_element(self.OK_BTN)
+
     def verify_wrong_backup_code_err(self, wrong_code):
         """Assert the wrong-code error. wrong_code MUST NOT be the real one.
 

@@ -333,21 +333,34 @@ MAESTRO_PROFILE_FIXTURE:
   # leaves no trace on the account.
   edited_name: "QA Discarded Name"
 
-# MP_05/MP_06 rename this account, and the new name persists. That is fine:
-# recovery asserts welcome_back by id, never by text, so a drifted name breaks
-# nothing. The flow renames to a timestamped value so the typed name always
-# differs from the current one - Save only enables on an actual change.
+# THE USERNAME HERE IS THE ACCOUNT'S RESTING NAME AS STORED ON THE SERVER, and it
+# must stay in step with reality. Recovery is matched on phone number AND name: if
+# the name typed at sign-in differs materially from the stored one, the server
+# treats it as a NEW signup and the app shows the create-backup-code screen
+# instead of the recovery one. Confirmed 2026-09-15, after MP_06's rename left
+# these accounts unrecoverable under their old names.
+#
+# So the rule for every fixture: username == what is actually in the database.
+#
+# MP_05/MP_06 rename this account, which is exactly the hazard above. The flow now
+# renames to `new_name` and then renames BACK to `username`, leaving the account
+# at its resting name. `new_name` is a fixed value, deliberately: an earlier
+# version used a timestamp, and when a run left the account renamed, the stored
+# name was unguessable and the fixture was stranded. A fixed value means the worst
+# case is a one-line edit here.
 #   -> profile_edit_name (MP_05-MP_07)
 MAESTRO_PROFILE_RENAME_FIXTURE:
   country_code: "+7426"
   phone_number: "1290102"
-  username: "QA Rename Fixture"
+  # Prod and staging drifted to different names before the restore step existed.
+  username: "QA Renamed User 34136"
   backup_code: "129102"
   phone_number_staging: "1290202"
+  username_staging: "QA Renamed User 52048"
   backup_code_staging: "129202"
-  # The flow appends a per-run suffix to this, so the typed name always differs
-  # from whatever the last run left on the account.
-  new_name: "QA Renamed User"
+  # Renamed TO this, then restored. Must differ from username or Save never
+  # enables - the button only reacts to a real change.
+  new_name: "QA Rename Check"
 
 # Its own account because MP_13 binds a verified email PERMANENTLY, which would
 # break MP_03's "no address rendered" assertion forever. Nothing here asserts the
@@ -357,13 +370,19 @@ MAESTRO_PROFILE_RENAME_FIXTURE:
 MAESTRO_PROFILE_EMAIL_FIXTURE:
   country_code: "+7426"
   phone_number: "1290103"
-  username: "QA Email Fixture"
+  # Resting name on BOTH environments: MP_12 renamed these before the restore
+  # step existed, and this is what the database holds.
+  username: "QA Renamed Before OTP"
   backup_code: "129103"
   phone_number_staging: "1290203"
   backup_code_staging: "129203"
   invalid_email: "not-an-email"
   new_email: "automation.user.commcarehq+mpedit@gmail.com"
-  renamed: "QA Renamed Before OTP"
+  # MP_12 renames the account and abandons the OTP step, proving the name commits
+  # before the email does. That leaves the account renamed, so the flow restores
+  # it afterwards - see the note on MAESTRO_PROFILE_RENAME_FIXTURE for why a
+  # drifted name makes an account unrecoverable. Must differ from username.
+  renamed: "QA Email Edit Check"
 
 # Must stay email-less: RE_01 asserts the email step is OFFERED, which only
 # happens while the account has no verified email. RE_02 skips it, so the account

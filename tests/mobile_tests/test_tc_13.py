@@ -7,7 +7,6 @@ from pages.mobile_pages.home_page import HomePage
 from pages.mobile_pages.manage_profile_page import ManageProfilePage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from utils.email_otp import EmailOtpReader
-from utils.test_data_gen import fresh_backup_code, fresh_phone_number
 
 
 @allure.feature("PID & CONNECT")
@@ -27,39 +26,50 @@ from utils.test_data_gen import fresh_backup_code, fresh_phone_number
  photo capture and never creates the account.
  """)
 @pytest.mark.mobile
-def test_13_manage_profile_email_already_used(mobile_driver, settings, config):
+def test_13_manage_profile_email_already_used(mobile_driver, settings, config, test_data):
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     profile = ManageProfilePage(mobile_driver)
     mailbox = EmailOtpReader(settings)
     env = config.env.lower()
 
-    already_used = mailbox.find_previous_address("mp13", env=env, before=time.time())
+    # Deliberately ignore anything bound in the last few minutes. test_tc_12 runs
+    # immediately before this in a full suite run and binds a fresh address, and
+    # picking that one races two things at once: the server finishing the binding,
+    # and the verification mail becoming visible over IMAP. That is exactly how
+    # this failed on prod 2026-09-15 - a 180s timeout on an address bound ten
+    # minutes earlier, which then passed on retry. An older address is settled.
+    SETTLE_SECONDS = 300
+    already_used = mailbox.find_previous_address(
+        "mp13", env=env, before=time.time() - SETTLE_SECONDS
+    )
     if not already_used:
         pytest.skip(
-            f"No address bound by an MP_13 run on {env!r} yet - run test_tc_12 "
-            "there once and this will have data."
+            f"No settled address bound by an MP_13 run on {env!r} - run test_tc_12 "
+            f"there, wait {SETTLE_SECONDS // 60} minutes, and this will have data."
         )
 
-    phone_number = fresh_phone_number()
-    backup_code = fresh_backup_code()
-    username = f"QA MP19 {phone_number}"
+    # Recovers a fixture rather than registering: registration cannot complete on
+    # 2.64, and this case does not need a new account - only one that is NOT the
+    # account holding `already_used`.
+    #
+    # The rename fixture, deliberately. Not the email fixture, which is the very
+    # account that bound the address MP_19 tries to claim. Not the shared profile
+    # fixture either: MP_19 leaves no email behind (the claim is refused), but if
+    # it ever partially succeeded it would break MP_03's "no address rendered"
+    # assertion permanently. The rename fixture's only constraint is its name,
+    # which this case never touches.
+    fixture = test_data.get_for_env("MAESTRO_PROFILE_RENAME_FIXTURE", env)
 
-    with allure.step("Register a new account and complete signup"):
+    with allure.step("Recover the fixture account"):
         home.open_side_menu()
         home.click_signup()
-        pid.start_signup("+7426", phone_number)
-        pid.click_configure_fingerprint()
-        pid.handle_fingerprint_auth()
-        pid.demo_user_confirm()
-        pid.enter_name(username)
-        assert pid.is_registration_backup_screen(), (
-            f"+7426 {phone_number} already has an account - this ran recovery, "
-            "not registration. Re-run to get a new number."
+        pid.recover_existing_account(
+            fixture["country_code"], fixture["phone_number"],
+            fixture["username"], fixture["backup_code"],
         )
-        pid.set_backup_code(backup_code)
         pid.skip_email_if_present()
-        pid.save_photo_and_finish()
+        pid.dismiss_recovery_dialog()
 
     with allure.step(f"Try to claim {already_used}, which another account holds"):
         home.open_side_menu()

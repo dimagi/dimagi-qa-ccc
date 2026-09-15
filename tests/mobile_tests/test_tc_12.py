@@ -7,7 +7,6 @@ from pages.mobile_pages.home_page import HomePage
 from pages.mobile_pages.manage_profile_page import ManageProfilePage
 from pages.mobile_pages.personal_id_page import PersonalIDPage
 from utils.email_otp import EmailOtpReader
-from utils.test_data_gen import fresh_backup_code, fresh_phone_number
 
 # MP_19 needs an address genuinely bound to ANOTHER account on this environment.
 # It seeds itself from the mailbox rather than carrying a hardcoded value, which
@@ -43,38 +42,38 @@ from utils.test_data_gen import fresh_backup_code, fresh_phone_number
  MP_10-MP_12, MP_14-MP_18) is covered by the Maestro flows.
  """)
 @pytest.mark.mobile
-def test_12_manage_profile_email(mobile_driver, settings, config):
+def test_12_manage_profile_email(mobile_driver, settings, config, test_data):
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)
     profile = ManageProfilePage(mobile_driver)
     mailbox = EmailOtpReader(settings)
     env = config.env.lower()
 
-    phone_number = fresh_phone_number()
-    backup_code = fresh_backup_code()
-    username = f"QA MP {phone_number}"
+    # Recovers a long-lived fixture rather than registering. Registration cannot
+    # complete on 2.64 - Save Photo is enabled only by a real camera capture, and
+    # the placeholder photo that makes an automated signup possible landed after
+    # 2.64 was cut - and nothing here needs a brand-new account.
+    #
+    # This fixture is the one that may already carry a verified email from a
+    # previous run. That suits both cases: MP_13 changes whatever address is
+    # there, and MP_09 needs an existing one to try to clear.
+    fixture = test_data.get_for_env("MAESTRO_PROFILE_EMAIL_FIXTURE", env)
     new_email = mailbox.address_for("mp13", env=env)
     # Anything this run creates must not be mistaken for a previous run's
     # address when MP_19 goes looking for one.
     started_at = time.time()
 
-    with allure.step("Register a new account and complete signup"):
+    with allure.step("Recover the Manage Profile email fixture"):
         home.open_side_menu()
         home.click_signup()
-        pid.start_signup("+7426", phone_number)
-        pid.click_configure_fingerprint()
-        pid.handle_fingerprint_auth()
-        pid.demo_user_confirm()
-        pid.enter_name(username)
-        assert pid.is_registration_backup_screen(), (
-            f"+7426 {phone_number} already has an account - this ran recovery, "
-            "not registration. Re-run to get a new number."
+        pid.recover_existing_account(
+            fixture["country_code"], fixture["phone_number"],
+            fixture["username"], fixture["backup_code"],
         )
-        pid.set_backup_code(backup_code)
-        # Skip the signup email step; the point of this test is adding one later
-        # through Manage Profile.
+        # The fixture keeps an address between runs, so the signup email step is
+        # usually not offered - hence optional rather than asserted.
         pid.skip_email_if_present()
-        pid.save_photo_and_finish()
+        pid.dismiss_recovery_dialog()
 
     with allure.step("Open Manage Profile"):
         home.open_side_menu()
