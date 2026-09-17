@@ -1,0 +1,238 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_PROFILE_EDIT_EMAIL.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# MP_08, MP_10, MP_11, MP_12: changing the email on Manage Profile.
+#
+# MP_09 (clearing an existing address is refused) is NOT here: it needs an
+# account that already has a verified email, which means a real code. It belongs
+# with MP_13 and MP_19 in the Appium suite.
+#
+# MP_13 (entering the correct code) is likewise Appium.
+- runFlow: shared_signed_in.yaml
+
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_email_edit_text"
+    timeout: 30000
+
+# ---------------------------------------------------------------- MP_08
+# A malformed address is rejected and cannot be saved.
+#
+# CLEAR THE FIELD FIRST. This used to type straight in, on the basis that the
+# field "starts empty on this account" - true when every run registered a fresh
+# account, false now that this is a long-lived fixture carrying whatever address
+# the last run left. Typing into the existing value merged the two into something
+# that still looked like an address, no validation error appeared, and MP_08
+# failed in CI on both environments while passing locally, depending purely on
+# what had run before.
+#
+# Same repeat-to-converge erase as the name field: eraseText only deletes
+# backwards from the caret, and a tap lands the caret inside a long value, so one
+# round leaves a tail. Each round shortens the value until the centre tap falls
+# past its end.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_email_edit_text"
+      - eraseText: 60
+- inputText: "${INVALID_EMAIL}"
+- assertVisible:
+    text: "Enter a valid email address."
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: false
+
+# ---------------------------------------------------------------- MP_12 (setup)
+# Change the name at the same time as the email. The app commits the name before
+# the OTP step, so abandoning verification later must leave the new name in place
+# and the email unchanged - a documented behaviour, asserted at the end.
+# Clear the field by erasing REPEATEDLY, which converges regardless of how long
+# the stored name is.
+#
+# eraseText only deletes backwards from the caret, and tapping a field puts the
+# caret where the tap landed - the centre, which falls INSIDE a long value. One
+# round therefore leaves the tail behind: "QA Renamed User 52048" became "48",
+# Save stayed enabled, and MP_07's disabled-Save assertion failed.
+#
+# Repeating fixes it because each round removes everything left of the caret, so
+# the value shrinks; once it is short enough the centre tap lands PAST the end and
+# the next round clears what is left. Two rounds suffice for any plausible name,
+# three is margin.
+#
+# An earlier attempt tapped the field's right edge by coordinate instead. Do not
+# go back to that: the Name field sits at ~43% of screen height with the keyboard
+# raised and ~49% without it, so the tap silently missed the field whenever the
+# keyboard happened to be down, and the rename was never typed at all.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_name_edit_text"
+      - eraseText: 60
+- inputText: "${RENAMED}"
+
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_email_edit_text"
+      - eraseText: 60
+- inputText: "${NEW_EMAIL}"
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: true
+
+# ---------------------------------------------------------------- MP_10
+# Saving an email change asks for confirmation first; Cancel returns to the form
+# with the entered values still there.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: "Verify your new email"
+    timeout: 30000
+- assertVisible:
+    text: ".*6-digit code.*"
+- tapOn:
+    text: "Cancel"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_email_edit_text"
+    text: ".*mpedit.*"
+
+# ---------------------------------------------------------------- MP_11
+# Send Code opens the Verify Email screen for the new address.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: "Verify your new email"
+    timeout: 30000
+- tapOn:
+    text: "Send Code"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/otp_code_view"
+    timeout: 30000
+# Matched on a fragment: Maestro text selectors are regular expressions and a
+# plus-addressed email contains "+", which reads as "one or more".
+- assertVisible:
+    text: ".*mpedit.*"
+
+# ---------------------------------------------------------------- MP_12
+# Abandon verification without entering a code.
+#
+# Back from the verification screen returns to Edit Profile with the form still
+# populated - specified behaviour (CCCT-2460), not a bug. The name has already
+# been committed by this point, which is the whole point of the case: the app
+# saves the name before the OTP step, so abandoning verification leaves the new
+# name in place and the email unchanged.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+# The header already reflects the committed name.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name"
+    text: "${RENAMED}"
+
+# Leave the form to check what was actually persisted. The email is still in the
+# form but not on the record, so this counts as an unsaved change.
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_cancel"
+- extendedWaitUntil:
+    visible:
+      text: "Discard your changes?"
+    timeout: 30000
+- tapOn:
+    text: "Discard"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+# Name kept, email not.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${RENAMED}"
+- assertNotVisible:
+    text: ".*mpedit.*"
+
+# ---------------------------------------------------------- restore (not a case)
+# MP_12 proves the name commits before the email does, which means it leaves this
+# account renamed to RENAMED. Put it back to its resting name.
+#
+# Not tidiness: recovery is matched on phone number AND name, so an account left
+# under a different name is treated as a new signup on the next run and the app
+# shows the create-backup-code screen instead of the recovery one. That is exactly
+# how this fixture was lost on 2026-09-15.
+#
+# The Profile screen is already showing - the MP_12 assertion above left it there.
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+# Clear the field by erasing REPEATEDLY, which converges regardless of how long
+# the stored name is.
+#
+# eraseText only deletes backwards from the caret, and tapping a field puts the
+# caret where the tap landed - the centre, which falls INSIDE a long value. One
+# round therefore leaves the tail behind: "QA Renamed User 52048" became "48",
+# Save stayed enabled, and MP_07's disabled-Save assertion failed.
+#
+# Repeating fixes it because each round removes everything left of the caret, so
+# the value shrinks; once it is short enough the centre tap lands PAST the end and
+# the next round clears what is left. Two rounds suffice for any plausible name,
+# three is margin.
+#
+# An earlier attempt tapped the field's right edge by coordinate instead. Do not
+# go back to that: the Name field sits at ~43% of screen height with the keyboard
+# raised and ~49% without it, so the tap silently missed the field whenever the
+# keyboard happened to be down, and the rename was never typed at all.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_name_edit_text"
+      - eraseText: 60
+- inputText: "${USERNAME}"
+- hideKeyboard
+- tapOn:
+    id: "org.commcare.dalvik:id/btn_save"
+- extendedWaitUntil:
+    visible:
+      text: ".*profile has been updated successfully.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_value_name"
+    timeout: 30000
+# If this ever fails, fix the account or update username in mobile_workers.yaml
+# before the next run - otherwise the fixture becomes unrecoverable.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"

@@ -124,3 +124,22 @@ class TestDataLoader:
         if tc_id not in self.data:
             raise KeyError(f"No test data found for {tc_id}")
         return self.data[tc_id]
+
+    def get_for_env(self, tc_id, env):
+        """An entry with its "_staging" overrides applied for `env`.
+
+        Same convention the Maestro runner uses (resolve_worker in
+        run_on_browserstack.py) and the one these YAML files already follow:
+        unsuffixed keys are prod, a "<key>_staging" key replaces its base key on
+        staging. get() returns the raw entry, which silently hands a caller prod's
+        phone number on a staging run - fine for entries that are identical on
+        both, wrong for the fixtures, which deliberately differ.
+        """
+        entry = self.get(tc_id)
+        suffix = "_staging"
+        resolved = {k: v for k, v in entry.items() if not k.endswith(suffix)}
+        if str(env).lower() in ("stage", "staging"):
+            for key, value in entry.items():
+                if key.endswith(suffix):
+                    resolved[key[: -len(suffix)]] = value
+        return resolved
