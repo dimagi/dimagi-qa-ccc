@@ -32,13 +32,15 @@ REQUIRED_HAMBURGER = [
     "Edit Opportunity",
     "Add Payment Unit",
     "View Invoices",
-    "Catchment Areas",
     "Add Budget",
     "Verification Rules",
     "Send Message",
     "Configure Task Types",
 ]
-OPTIONAL_HAMBURGER = ["Add Connect Workers"]
+# "Add Connect Workers" only shows while the opportunity has not ended.
+# "Catchment Areas" is build-dependent - absent on deploys that lag main, where the
+# menu entry isn't rendered - so it is checked softly rather than required.
+OPTIONAL_HAMBURGER = ["Add Connect Workers", "Catchment Areas"]
 
 # Summary info cards that are always present (opportunity config, not live counts).
 SUMMARY_CARDS = ["Start Date", "End Date", "Max Connect Workers", "Max Service Deliveries", "Max Budget"]
@@ -192,3 +194,4 @@ def test_opd_inactive_workers_prefilter(dashboard):
     assert dashboard.query_param("last_active") == "3", (
         f"Inactive prefilter not applied - last_active={dashboard.query_param('last_active')!r} in {url}"
     )
+

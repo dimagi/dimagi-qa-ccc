@@ -425,6 +425,16 @@ class OpportunityDashboardPage(BasePage):
         "failed:",
     )
 
+    def catchment_menu_available(self):
+        """Whether the hamburger exposes the 'Catchment Areas' item. It is absent on
+        builds where that menu entry is not deployed (staging has lagged main here),
+        so the catchment import/export tests skip rather than time out clicking a
+        missing item."""
+        self.open_hamburger()
+        present = self.page.locator(self.CATCHMENT_TOGGLE).count() > 0
+        self._step(f"'Catchment Areas' hamburger item available: {present}")
+        return present
+
     def open_catchment_submenu(self):
         self.open_hamburger()
         self.click(self.CATCHMENT_TOGGLE)

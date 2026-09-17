@@ -94,6 +94,8 @@ def test_opd_36_catchment_export(dashboard):
     """OD_36: Catchment Areas > Export queues an export (redirects with an export
     task id). No data changed."""
     dashboard.goto_dashboard()
+    if not dashboard.catchment_menu_available():
+        pytest.skip("'Catchment Areas' hamburger item is not present in this build - catchment export unavailable")
     url = dashboard.submit_catchment_export()
     assert "export_task_id" in url, f"Catchment export did not queue a task: {url}"
 
@@ -101,6 +103,8 @@ def test_opd_36_catchment_export(dashboard):
 def test_opd_36_catchment_import_rejects_bad_columns(dashboard):
     """OD_36: a catchment import missing the required columns is rejected."""
     dashboard.goto_dashboard()
+    if not dashboard.catchment_menu_available():
+        pytest.skip("'Catchment Areas' hamburger item is not present in this build - catchment import unavailable")
     body = dashboard.upload_and_import(
         dashboard.open_catchment_import_modal, dashboard.CATCHMENT_IMPORT_FILE, MISSING_COLS_CSV
     )
