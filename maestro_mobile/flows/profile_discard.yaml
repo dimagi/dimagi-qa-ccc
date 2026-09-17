@@ -50,9 +50,16 @@ appId: org.commcare.dalvik
     visible:
       id: "org.commcare.dalvik:id/profile_name_edit_text"
     timeout: 30000
-- tapOn:
-    id: "org.commcare.dalvik:id/profile_name_edit_text"
-- eraseText
+# Repeat-to-converge erase, same as the other profile flows: eraseText deletes
+# backwards from the caret, a tap lands the caret inside a long value, and one
+# round leaves a tail. This case passes today only because the fixture's name is
+# short; it is the same latent bug that broke MP_07 and MP_08.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_name_edit_text"
+      - eraseText: 60
 - inputText: "${EDITED_NAME}"
 # Cancel rather than back. Typing leaves the keyboard open, and the first back
 # press only dismisses it - the screen never navigates, so no discard prompt

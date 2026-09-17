@@ -38,10 +38,26 @@ appId: org.commcare.dalvik
     timeout: 30000
 
 # ---------------------------------------------------------------- MP_08
-# A malformed address is rejected and cannot be saved. The email field starts
-# empty on this account, so it can be typed into directly.
-- tapOn:
-    id: "org.commcare.dalvik:id/profile_email_edit_text"
+# A malformed address is rejected and cannot be saved.
+#
+# CLEAR THE FIELD FIRST. This used to type straight in, on the basis that the
+# field "starts empty on this account" - true when every run registered a fresh
+# account, false now that this is a long-lived fixture carrying whatever address
+# the last run left. Typing into the existing value merged the two into something
+# that still looked like an address, no validation error appeared, and MP_08
+# failed in CI on both environments while passing locally, depending purely on
+# what had run before.
+#
+# Same repeat-to-converge erase as the name field: eraseText only deletes
+# backwards from the caret, and a tap lands the caret inside a long value, so one
+# round leaves a tail. Each round shortens the value until the centre tap falls
+# past its end.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_email_edit_text"
+      - eraseText: 60
 - inputText: "${INVALID_EMAIL}"
 - assertVisible:
     text: "Enter a valid email address."
@@ -78,9 +94,12 @@ appId: org.commcare.dalvik
       - eraseText: 60
 - inputText: "${RENAMED}"
 
-- tapOn:
-    id: "org.commcare.dalvik:id/profile_email_edit_text"
-- eraseText
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/profile_email_edit_text"
+      - eraseText: 60
 - inputText: "${NEW_EMAIL}"
 - assertVisible:
     id: "org.commcare.dalvik:id/btn_save"

@@ -47,8 +47,29 @@ env:
 - tapOn:
     text: "YES"
     optional: true
-- tapOn:
-    text: "OK"
+
+# "Account Recovered" lands a moment AFTER the code is accepted, so a single tap
+# can run before the dialog exists and then fail - or worse, warn and leave the
+# modal covering everything after it. Observed failing here on prod 2026-09-17.
+#
+# Guarded on the dialog actually being present and repeated, so whichever attempt
+# runs after it appears is the one that dismisses it. Cheap when it never shows.
+# This is the block shared_open_deliver_app.yaml and shared_signed_in.yaml already
+# carry; it belonged here too.
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            visible:
+              text: ".*Account Recovered.*"
+          commands:
+            - tapOn:
+                text: "OKAY|OK"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_user_name"
+    timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/header_user_name"
     text: "${USERNAME}"
