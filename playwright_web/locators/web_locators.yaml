@@ -458,6 +458,36 @@ worker_visits_page:
   suspend_reason_input: "reason"
   suspend_popup_button: "//button[contains(text(), 'Suspend') and @type='submit']"
   revoke_suspend_button: "//*[@id='content']//button[contains(text(), 'Revoke Suspension')]"
+  # --- Single-visit details panel (VV_9 / VV_3) ---
+  # Every visit <tr> carries hx-get -> user_visit_details, hx-target="#visit-details"
+  # (WorkerVisitTable.Meta.row_attrs), so clicking the row loads the details panel
+  # in place. Rows are tagged data-visit-id / data-visit-status.
+  visit_row_any: "(//table[contains(@class,'base-table')])[2]//tbody//tr[@data-visit-id]"
+  visit_row_by_status: "(//table[contains(@class,'base-table')])[2]//tbody//tr[@data-visit-status='{status}']"
+  # Section headings ("Information" / "Media" / "Verification Parameters" / "Map")
+  # are <p> inside #visit-details; field labels ("Payment Unit" / "Entity Name" /
+  # "Entity ID" / "Form Duration") are <div class="text-brand-blue-light">.
+  visit_details_section: "//div[@id='visit-details']//p[normalize-space()='{label}']"
+  visit_details_field_label: "//div[@id='visit-details']//div[normalize-space()='{label}']"
+  visit_details_map: "user-visit-map"
+  # Media / image carousel (VV_3): a thumbnail (.imageopen) opens the .popup-content modal.
+  visit_image_thumbnail: "//div[@id='visit-details']//img[contains(@class,'imageopen')]"
+  visit_image_popup: "//div[contains(@class,'popup-content')]"
+  visit_image_popup_close: "//div[contains(@class,'popup-content')]//button[.//i[contains(@class,'fa-xmark')]]"
+  # --- Review action bar #visit-actions (VV_31/32 NM, VV_33/34 PM) ---
+  # user_visit_details.html: the bar shows NM Reject/Approve (open modals) OR PM
+  # Agree/Disagree (post directly, name="review_status"); hidden under auto-verify.
+  # Row lookup by product-tagged data-visit-id / data-visit-status.
+  visit_row_by_id: "(//table[contains(@class,'base-table')])[2]//tbody//tr[@data-visit-id='{visit_id}']"
+  # Action-bar buttons live directly under #visit-actions (not inside a .modal).
+  visit_action_reject: "//div[@id='visit-actions']//button[normalize-space()='Reject'][not(ancestor::div[contains(@class,'modal')])]"
+  visit_action_approve: "//div[@id='visit-actions']//button[normalize-space()='Approve'][not(ancestor::div[contains(@class,'modal')])]"
+  visit_reject_modal_reason: "//div[contains(@class,'modal')]//textarea[@name='reason']"
+  visit_reject_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Reject']"
+  visit_approve_modal_justification: "//div[contains(@class,'modal')]//textarea[@name='justification']"
+  visit_approve_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Approve']"
+  visit_pm_agree: "//div[@id='visit-actions']//button[@name='review_status'][normalize-space()='Agree']"
+  visit_pm_disagree: "//div[@id='visit-actions']//button[@name='review_status'][normalize-space()='Disagree']"
 
 # --- Worker invite + hybrid (Phase 2) ---
 connect_worker_invite_page:

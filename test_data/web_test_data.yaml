@@ -74,16 +74,59 @@ WORKER_LIST_VIEW_5:
 WORKER_LIST_VIEW_8:
   opportunity_name: "covid_opp_test"
 
-WORKER_VISIT_VERIFICATION_PAGE_1_2:
+# Worker Visit Verification keys are numbered by current MTP VV id (Visit
+# verification page sheet). Old Selenium-tree keys (PAGE_1_2 / _4_5_6_7) were
+# renamed to match - the retiring Selenium suite is not maintained.
+
+# VV_1 - land on the Visits page + individual/bulk approve.
+WORKER_VISIT_VERIFICATION_PAGE_1:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
+# VV_3 - image carousel. Needs a worker whose visit has a photo attachment; the
+# test skips when no scanned visit has a Media section. Point at a seeded
+# with-image visit once Anshu confirms one on staging.
 WORKER_VISIT_VERIFICATION_PAGE_3:
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
+
+# VV_4 - suspend a worker + revoke.
+WORKER_VISIT_VERIFICATION_PAGE_4:
   opportunity_name: "Suspend Opp"
   worker_name: "Deb Test 8/12"
   reason: "Suspend user reason"
 
-WORKER_VISIT_VERIFICATION_PAGE_4_5_6_7:
+# VV_5 - Visits/Tasks tabs (and NM-review tab-set on manual-review opps).
+WORKER_VISIT_VERIFICATION_PAGE_5:
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
+
+# VV_9 - clicking a visit opens the details panel (Information / Verification
+# Parameters / Map). Any worker with at least one visit works.
+WORKER_VISIT_VERIFICATION_PAGE_9:
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
+
+# VV_31/32 (NM reject/approve) + VV_33/34 (PM agree/disagree). Needs a MANUAL-review
+# opportunity (automatic visit verification OFF) where PM=PM_Automation_01 and
+# NM=Network Manager (the automation account is a member of both orgs). Needs seeded
+# submitted visits: >=2 pending/unreviewed (NM approve + reject) and >=2 NM-approved
+# with PM review pending (PM agree + disagree). Actions are one-way and deplete the
+# pool, so seed a buffer. Set opportunity_name/worker_name once Anshu provides them -
+# while they start with "TBD" the four review tests skip.
+WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
+  opportunity_name: "TBD - Anshu manual-review opp"
+  worker_name: "TBD - seeded worker"
+  network_manager: "Network Manager"
+  reject_reason: "Automation NM reject reason"
+  approve_justification: "Automation NM approve justification"
+
+# GAP-SRC-W-44 (individual action-bar gating) + GAP-SRC-W-45 (manual-verify endpoints
+# return 403 + HX-Trigger:reload_table under auto-verify). Any opportunity/worker with
+# >=1 visit works: GAP-44 asserts the bar is gated to one consistent set; GAP-45 only
+# runs when the bar is empty (auto-verify inferred) and skips otherwise. covid_opp_test
+# is the standing auto-verify opp; repoint if it changes.
+WORKER_VISIT_ACTION_GATING:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 

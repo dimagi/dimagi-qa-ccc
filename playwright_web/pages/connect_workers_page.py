@@ -450,7 +450,7 @@ class ConnectWorkersPage(BasePage):
         self.page.wait_for_load_state("load")
 
     def navigate_to_worker_visits(self, worker_name):
-        """Deliver tab -> click a worker -> their Visits page (WVVP entry)."""
+        """Deliver tab -> click a worker -> their Visits page (VV entry)."""
         self.click_tab_by_name("Deliver")
         self.click_name_in_table(worker_name)
         self.page.wait_for_load_state("load")
