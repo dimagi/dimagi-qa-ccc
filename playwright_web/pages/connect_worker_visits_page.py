@@ -207,9 +207,8 @@ class WorkerVisitsPage(BasePage):
         if not self._details_panel_loaded():
             self._step(
                 "Visit details panel did not populate after clicking a row - the "
-                "user_visit_details endpoint appears to be erroring for this opportunity "
-                "(seen as HTTP 500 on covid_opp_test, likely a missing verification-flags "
-                "config; views.py user_visit_details reads opportunity.opportunityverificationflags)"
+                "user_visit_details endpoint returned an error for this visit (it 500s when "
+                "the opportunity has no OpportunityVerificationFlags row; views.py:user_visit_details)"
             )
             return False
         self._step("Opened visit details panel")

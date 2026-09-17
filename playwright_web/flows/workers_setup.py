@@ -8,8 +8,25 @@ these helpers keep that path (list row -> dashboard -> stat panel) so the panel
 links themselves stay exercised, rather than deep-linking by URL.
 """
 
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
+
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
+
+# The opportunity list paginates (default ~20 rows) and has no search. Staging's
+# list is flooded with leftover "Demo Opportunity" rows (the weekly cleanup job has
+# been failing), which push standing opps onto later pages - e.g. covid_opp_test sits
+# at ~#22, off page 1 - so a first-page-only row lookup can't find them. Loading the
+# list with a large page_size puts every opp on one page.
+OPP_LIST_PAGE_SIZE = 100
+
+
+def _with_page_size(url, size=OPP_LIST_PAGE_SIZE):
+    """Return `url` with page_size set to `size` (added or replaced)."""
+    parts = urlsplit(url)
+    query = parse_qs(parts.query)
+    query["page_size"] = [str(size)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
 
 
 def goto_opportunity_list(connect_page, opps_url):
@@ -20,9 +37,11 @@ def goto_opportunity_list(connect_page, opps_url):
     is the list URL captured by the module fixture right after login/org-select.
     """
     olp = ConnectOpportunityListPage(connect_page)
-    if "/opportunity" not in connect_page.url or connect_page.locator(olp.HEADING).count() == 0:
-        connect_page.goto(opps_url)
-        connect_page.wait_for_load_state("load")
+    # Always reload the list at a large page_size so every opportunity is on one page
+    # (see OPP_LIST_PAGE_SIZE) - a smaller default page hides opps pushed down by the
+    # Demo-Opportunity flood, which is what makes an existing opp look "not in the list".
+    connect_page.goto(_with_page_size(opps_url))
+    connect_page.wait_for_load_state("load")
     olp.verify_loaded()
     return olp
 

@@ -191,7 +191,7 @@ def test_vv_09_visit_details_panel(connect, test_data):
         pytest.skip(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - either no visits, or the user_visit_details "
-            "endpoint is erroring for this opportunity (covid_opp_test currently 500s; "
+            "endpoint is erroring for this opportunity (user_visit_details can 500 when the opp lacks a verification-flags row; "
             "point WORKER_VISIT_VERIFICATION_PAGE_9 at an opp whose details panel renders)."
         )
     visits.verify_visit_details_panel()
@@ -304,7 +304,7 @@ def test_gap_w_44_visit_action_bar_gating(connect, test_data):
         pytest.skip(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - no visits or the user_visit_details endpoint "
-            "is erroring (covid_opp_test currently 500s); cannot inspect action-bar gating."
+            "is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); cannot inspect action-bar gating."
         )
 
     present = visits.action_bar_button_set()
@@ -336,7 +336,7 @@ def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
     if not visits.open_first_visit_details():
         pytest.skip(
             f"Details panel did not open for '{data['worker_name']}' - no visits or the "
-            "user_visit_details endpoint is erroring (covid_opp_test currently 500s); "
+            "user_visit_details endpoint is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); "
             "cannot probe the guard."
         )
     if visits.action_bar_button_set():
