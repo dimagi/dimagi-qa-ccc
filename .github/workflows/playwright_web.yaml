@@ -332,13 +332,11 @@ jobs:
               f"{timing_line}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
-          # The detailed breakdown posted as a threaded reply under the kickoff.
+          # Threaded reply: anchors the detail without repeating the summary's
+          # counts/bar/messaging/timer lines - the donut below carries the
+          # breakdown and this just states the result and links the full report.
           detail = (
               f"{icon} Result: {status}\n"
-              f"✅ Passed: {passed}   ❌ Failed: {failed}   ⏭ Skipped: {skipped}"
-              f"{messaging_line}"
-              f"{bar}"
-              f"{timing_line}\n"
               f"📎 Report: <{artifact_url}|Download here>"
           )
 
