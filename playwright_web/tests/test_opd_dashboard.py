@@ -22,6 +22,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
+from utils.helpers import with_page_size
 
 # PM hamburger items. NB the UI labels differ from the manual test case wording:
 # "Verification Flags" renders as "Verification Rules" (the URL is still
@@ -50,14 +51,20 @@ def _open_dashboard(page, test_data, config, settings):
     """Log in as PM, open a configured opportunity, return its dashboard page."""
     connect_page = login_to_connect(page, config, settings, PM_ORG)
 
+    # Load the whole list on one page so the flood of "Demo Opportunity_<date>" rows
+    # doesn't hide the target, then open the configured opp by EXACT name so we don't
+    # land on a look-alike dated row.
+    connect_page.goto(with_page_size(connect_page.url))
+    connect_page.wait_for_load_state("load")
     olp = ConnectOpportunityListPage(connect_page)
     olp.verify_loaded()
 
     name = env_value(test_data.get("OPD"), "opportunity_name", config)
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-        olp._step(f"Configured opportunity {name!r} not in list - falling back to first row")
-        name = olp.first_row_name()
-    olp.open_opportunity(name)
+    if name and olp.has_opportunity(name, exact=True):
+        olp.open_opportunity(name, exact=True)
+    else:
+        olp._step(f"Exact opportunity {name!r} not found - falling back to first row (non-deterministic)")
+        olp.open_opportunity(olp.first_row_name(), exact=True)
 
     dashboard = OpportunityDashboardPage(connect_page)
     dashboard.verify_loaded()

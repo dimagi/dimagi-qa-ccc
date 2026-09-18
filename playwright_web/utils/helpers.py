@@ -2,11 +2,26 @@ import configparser
 import os
 import re
 from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 import yaml
 
 PLAYWRIGHT_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The Connect opportunity list paginates (default ~20 rows) with no search. Staging
+# is flooded with leftover "Demo Opportunity" rows (weekly cleanup has been failing),
+# which push standing opps onto later pages where a first-page row lookup can't see
+# them. Loading the list with a large page_size puts every opp on one page.
+OPP_LIST_PAGE_SIZE = 100
+
+
+def with_page_size(url, size=OPP_LIST_PAGE_SIZE):
+    """Return `url` with the page_size query param set to `size` (added or replaced)."""
+    parts = urlsplit(url)
+    query = parse_qs(parts.query)
+    query["page_size"] = [str(size)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
 
 
 class LocatorLoader:
