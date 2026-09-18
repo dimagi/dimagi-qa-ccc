@@ -585,6 +585,10 @@ connect_opportunity_list_page:
   sort_header_by_label: "//table[contains(@class,'base-table')]//th//a[contains(normalize-space(.),'{label}')]"
   # Row addressed by the opportunity-name link in its first data column.
   row_link_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[contains(normalize-space(.),'{name}')]"
+  # Exact-name variant: the name link has a descendant element (or is itself) whose
+  # text is exactly {name}, so "Demo Opportunity" no longer matches "Demo
+  # Opportunity_17-Sep-...". Use when the target must be a single deterministic opp.
+  row_link_by_exact_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')]//a[.//*[normalize-space()='{name}'] or normalize-space()='{name}']"
   # Test/Real column: the icon is present-but-invisible for real opportunities and
   # visible (no 'invisible' class) for test ones - hence the not(...invisible) guard.
   test_icon_by_name: "//table[contains(@class,'base-table')]//tbody//tr[contains(@class,'even') or contains(@class,'odd')][.//a[contains(normalize-space(.),'{name}')]]//i[contains(@class,'fa-file-circle-exclamation') and not(contains(@class,'invisible'))]"
