@@ -65,11 +65,11 @@ class ConnectHomePage(BasePage):
         # any paragraph also matches the role line underneath it, and on prod three
         # organisations hold the role "Network Manager" while one is *named* "Network
         # Manager" - so the looser form is ambiguous and fails strict mode.
-        item = container.locator(f"xpath=.//li[(.//p)[1][normalize-space()='{organization_name}']]")
+        item = container.locator(locators.get("connect_home_page", "org_list_item_by_name").format(organization_name=organization_name))
         try:
             item.wait_for(state="visible", timeout=15000)
         except Exception:
-            offered = [t.replace("\n", " / ").strip() for t in container.locator("xpath=.//li").all_inner_texts()]
+            offered = [t.replace("\n", " / ").strip() for t in container.locator(locators.get("connect_home_page", "org_list_items")).all_inner_texts()]
             raise AssertionError(
                 f"Organisation '{organization_name}' is not in the switcher. Offered: {offered or 'none'}"
             ) from None

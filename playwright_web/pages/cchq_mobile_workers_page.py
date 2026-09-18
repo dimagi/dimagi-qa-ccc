@@ -116,7 +116,7 @@ class MobileWorkersPage(BasePage):
         so an automated unlink never touches an unrelated worker."""
         self._step(f"click 'Unlink PersonalID' for worker '{identifier}'")
         row = self._worker_row(identifier)
-        row.locator("xpath=.//button[contains(normalize-space(),'Unlink PersonalID')]").first.click()
+        row.locator(locators.get("cchq_mobile_workers_page", "unlink_personalid_btn")).first.click()
         self.page.locator(self.UNLINK_MODAL_TITLE).locator("visible=true").first.wait_for(
             state="visible", timeout=10000
         )

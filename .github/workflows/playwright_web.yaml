@@ -90,6 +90,55 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Slack Start Notify
+        id: slack_start
+        # Post an "in progress" kickoff message as early as possible so the channel
+        # shows a run is running. The result step (Slack Notify) updates this same
+        # message with the final status and threads the detailed breakdown under it,
+        # so each run is one collapsible entry per environment. Never fail the job on
+        # a Slack hiccup - the ts output stays empty and the result posts standalone.
+        if: ${{ always() && env.SEND_SLACK == 'true' }}
+        continue-on-error: true
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
+        shell: bash
+        run: |
+          pip install --quiet slack_sdk
+          python - <<'PY'
+          import os
+          import time
+          from slack_sdk import WebClient
+
+          token = os.environ.get("SLACK_TOKEN", "")
+          channel = os.environ.get("SLACK_CHANNEL", "")
+          if not token or not channel:
+              print("Slack token/channel not configured - skipping kickoff")
+              raise SystemExit(0)
+
+          env_name = os.environ.get("TEST_ENV", "stage").upper()
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
+          actor = os.environ.get("GITHUB_ACTOR", "")
+          start_epoch = int(time.time())
+          # Slack renders <!date^EPOCH^{format}|fallback> in each viewer's timezone.
+          started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
+          message = (
+              f"⏳ 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
+              f"👤 Triggered by: {actor}\n"
+              f"🚧 Status: In progress…\n"
+              f"🕒 Started: {started_at}\n"
+              f"🔗 Run: <{run_url}|View on GitHub>"
+          )
+          resp = WebClient(token=token).chat_postMessage(channel=channel, text=message)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"ts={resp['ts']}\n")
+              out.write(f"channel={resp['channel']}\n")
+              out.write(f"start_epoch={start_epoch}\n")
+          print(f"Kickoff posted (ts={resp['ts']}, start_epoch={start_epoch})")
+          PY
+
       - name: Install dependencies
         run: pip install -r playwright_web/requirements.txt pytest-html
 
@@ -103,6 +152,7 @@ jobs:
         run: python -m pytest tests/unit --tb=short
 
       - name: Run Playwright Web Tests
+        id: run_tests
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
         run: |
@@ -139,30 +189,61 @@ jobs:
         id: aggregate
         if: always()
         shell: bash
+        env:
+          # 'cancelled' when the run was superseded by a newer push (concurrency)
+          # or manually cancelled - distinguished from a genuine test FAILURE.
+          RUN_CONCLUSION: ${{ steps.run_tests.conclusion }}
+          JOB_STATUS: ${{ job.status }}
         run: |
-          file="playwright_web/reports/playwright-web-${TEST_ENV}.xml"
-          total=0; failed=0; errors=0; skipped=0
-          if [ -f "$file" ]; then
-            t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            total=${t:-0}; failed=${f:-0}; errors=${e:-0}; skipped=${s:-0}
-          fi
-          total_failed=$((failed + errors))
-          passed=$((total - total_failed - skipped))
-          if [ "$total_failed" -gt 0 ] || [ "$total" -eq 0 ]; then
-            status="FAILURE"
-          else
-            status="SUCCESS"
-          fi
-          {
-            echo "status=$status"
-            echo "passed=$passed"
-            echo "failed=$total_failed"
-            echo "errors=$errors"
-            echo "skipped=$skipped"
-          } >> $GITHUB_OUTPUT
+          # Parse the JUnit XML per-testcase (not via attribute greps): pytest emits
+          # the report as effectively one line, so line-based counting is unreliable.
+          # A skipped test whose file is a messaging suite is reported as "not
+          # included" (messaging disabled on this env) rather than as a genuine skip.
+          python - <<'PY'
+          import os, glob
+          import xml.etree.ElementTree as ET
+
+          env = os.environ["TEST_ENV"]
+          path = f"playwright_web/reports/playwright-web-{env}.xml"
+          passed = failed = errors = skipped = messaging_excluded = 0
+          if os.path.exists(path):
+              root = ET.parse(path).getroot()
+              for tc in root.iter("testcase"):
+                  cls = tc.attrib.get("classname", "")
+                  if tc.find("failure") is not None:
+                      failed += 1
+                  elif tc.find("error") is not None:
+                      errors += 1
+                  elif tc.find("skipped") is not None:
+                      # Count by test FILE, so every messaging skip is caught
+                      # regardless of which fixture skipped it or its wording.
+                      if "test_messaging" in cls:
+                          messaging_excluded += 1
+                      else:
+                          skipped += 1
+                  else:
+                      passed += 1
+
+          total_failed = failed + errors
+          total = passed + total_failed + skipped + messaging_excluded
+          cancelled = "cancelled" in (
+              os.environ.get("RUN_CONCLUSION", ""), os.environ.get("JOB_STATUS", ""))
+          if cancelled:
+              status = "CANCELLED"
+          elif total_failed == 0 and total > 0:
+              status = "SUCCESS"
+          else:
+              status = "FAILURE"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"status={status}\n")
+              out.write(f"passed={passed}\n")
+              out.write(f"failed={total_failed}\n")
+              out.write(f"errors={errors}\n")
+              out.write(f"skipped={skipped}\n")
+              out.write(f"messaging_excluded={messaging_excluded}\n")
+          print(f"status={status} passed={passed} failed={total_failed} "
+                f"skipped={skipped} messaging_excluded={messaging_excluded}")
+          PY
 
       - name: Send Email Report
         if: ${{ always() && env.SEND_EMAIL == 'true' }}
@@ -190,6 +271,7 @@ jobs:
               <li><b>Errors:</b> ${{ steps.aggregate.outputs.errors }}</li>
               <li><b>Skipped:</b> ${{ steps.aggregate.outputs.skipped }}</li>
             </ul>
+            ${{ steps.aggregate.outputs.messaging_excluded != '0' && '<p><b>Messaging tests not included</b> (messaging disabled on this environment).</p>' || '' }}
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
@@ -205,12 +287,21 @@ jobs:
           PASSED: ${{ steps.aggregate.outputs.passed }}
           FAILED: ${{ steps.aggregate.outputs.failed }}
           SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+          MESSAGING_EXCLUDED: ${{ steps.aggregate.outputs.messaging_excluded }}
           ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
+          # ts/channel of the kickoff message posted by Slack Start Notify. Empty if
+          # that step could not post - we then fall back to a standalone message.
+          START_TS: ${{ steps.slack_start.outputs.ts }}
+          START_CHANNEL: ${{ steps.slack_start.outputs.channel }}
+          START_EPOCH: ${{ steps.slack_start.outputs.start_epoch }}
         shell: bash
         run: |
-          pip install --quiet slack_sdk
+          # matplotlib is only needed for the donut chart; the run still reports if
+          # it (or the files:write scope) is unavailable - the chart is best-effort.
+          pip install --quiet slack_sdk matplotlib
           python - <<'PY'
           import os
+          import time
           from slack_sdk import WebClient
 
           token = os.environ.get("SLACK_TOKEN", "")
@@ -221,20 +312,137 @@ jobs:
 
           env_name = os.environ.get("TEST_ENV", "stage").upper()
           status = os.environ.get("STATUS", "FAILURE")
-          icon = "✅" if status == "SUCCESS" else "❌"
+          cancelled = status == "CANCELLED"
+          icon = {"SUCCESS": "✅", "CANCELLED": "🚫"}.get(status, "❌")
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
           actor = os.environ.get("GITHUB_ACTOR", "")
-          message = (
-              f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
-              f"👤 Triggered by: {actor}\n"
-              f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
-              f"📎 Report: <{artifact_url}|Download here>\n"
-              f"🔗 Run: <{run_url}|View on GitHub>"
-          )
-          WebClient(token=token).chat_postMessage(channel=channel, text=message)
-          print("Slack notification sent")
+          passed = int(os.environ.get("PASSED", "0") or "0")
+          failed = int(os.environ.get("FAILED", "0") or "0")
+          skipped = int(os.environ.get("SKIPPED", "0") or "0")
+          messaging_excluded = int(os.environ.get("MESSAGING_EXCLUDED", "0") or "0")
+          messaging_line = "\n📵 Messaging tests not included" if messaging_excluded else ""
+
+          # Timing: start epoch comes from the kickoff step; end is now. If the
+          # kickoff could not post (no start epoch), fall back to just the end time.
+          end_epoch = int(time.time())
+          start_epoch = int(os.environ.get("START_EPOCH", "0") or "0")
+          ended_at = f"<!date^{end_epoch}^{{date_short_pretty}} at {{time}}|ended>"
+          if start_epoch:
+              secs = max(0, end_epoch - start_epoch)
+              elapsed = f"{secs // 3600}h {secs % 3600 // 60}m {secs % 60}s" if secs >= 3600 \
+                  else f"{secs // 60}m {secs % 60}s"
+              started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
+              timing_line = f"\n🕒 {started_at} → {ended_at}  (⏱ {elapsed})"
+          else:
+              timing_line = f"\n🕒 Ended: {ended_at}"
+
+          def emoji_bar(width=20):
+              """A proportional pass/fail/skip ratio bar (Option A)."""
+              total = passed + failed + skipped
+              if total == 0:
+                  return ""
+              g = round(width * passed / total)
+              r = round(width * failed / total)
+              y = max(0, width - g - r)  # skipped fills the remainder
+              pct = round(100 * passed / total)
+              return f"\n{'🟩' * g}{'🟥' * r}{'⬜' * y}  {pct}% passed"
+
+          bar = "" if cancelled else emoji_bar()
+
+          header = f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}"
+          if cancelled:
+              # No test outcomes to report - the run was superseded/stopped, not run.
+              # Skip the counts, ratio bar and donut; just say so plus the timing.
+              summary = (
+                  f"{header}\n"
+                  f"👤 Triggered by: {actor}\n"
+                  f"🚫 Status: Cancelled (superseded by a newer run)"
+                  f"{timing_line}\n"
+                  f"🔗 Run: <{run_url}|View on GitHub>"
+              )
+              detail = f"{icon} Result: CANCELLED — no tests were completed."
+          else:
+              # The top-line summary that replaces the "in progress" kickoff message.
+              summary = (
+                  f"{header}\n"
+                  f"👤 Triggered by: {actor}\n"
+                  f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
+                  f"{messaging_line}"
+                  f"{bar}"
+                  f"{timing_line}\n"
+                  f"🔗 Run: <{run_url}|View on GitHub>"
+              )
+              # Threaded reply: anchors the detail without repeating the summary's
+              # counts/bar/messaging/timer lines - the donut below carries the
+              # breakdown and this just states the result and links the full report.
+              detail = (
+                  f"{icon} Result: {status}\n"
+                  f"📎 Report: <{artifact_url}|Download here>"
+              )
+
+          def build_donut():
+              """Render a pass/fail/skip donut PNG (Option B). Best-effort."""
+              segs = [("Passed", passed, "#2eb67d"),
+                      ("Failed", failed, "#e01e5a"),
+                      ("Skipped", skipped, "#9aa0a6")]
+              if messaging_excluded:
+                  segs.append(("Msg excluded", messaging_excluded, "#ecb22e"))
+              segs = [(lbl, val, col) for lbl, val, col in segs if val > 0]
+              total = sum(val for _, val, _ in segs)
+              if total == 0:
+                  return None
+              import matplotlib
+              matplotlib.use("Agg")
+              import matplotlib.pyplot as plt
+              fig, ax = plt.subplots(figsize=(4.2, 4.2))
+              ax.pie([v for _, v, _ in segs],
+                     labels=[f"{l} ({v})" for l, v, _ in segs],
+                     colors=[c for _, _, c in segs],
+                     startangle=90, counterclock=False,
+                     wedgeprops={"width": 0.42, "edgecolor": "white"},
+                     textprops={"fontsize": 10})
+              ax.text(0, 0, f"{total}\ntests", ha="center", va="center",
+                      fontsize=15, fontweight="bold")
+              ax.set_title(f"[{env_name}] Run #{run_number} — {status}", fontsize=12)
+              path = "/tmp/run-result.png"
+              fig.savefig(path, bbox_inches="tight", dpi=110)
+              plt.close(fig)
+              return path
+
+          client = WebClient(token=token)
+          start_ts = os.environ.get("START_TS", "")
+          start_channel = os.environ.get("START_CHANNEL", "") or channel
+
+          if start_ts:
+              # Flip the kickoff message to the final status, then thread the detail.
+              client.chat_update(channel=start_channel, ts=start_ts, text=summary)
+              client.chat_postMessage(channel=start_channel, thread_ts=start_ts, text=detail)
+              print(f"Kickoff {start_ts} updated and result threaded")
+              chart_ts, chart_channel = start_ts, start_channel
+          else:
+              # No kickoff to attach to - post the full result standalone.
+              posted = client.chat_postMessage(channel=channel, text=summary + "\n" + detail)
+              print("Slack notification sent (standalone - no kickoff ts)")
+              chart_ts, chart_channel = posted["ts"], channel
+
+          # Upload the donut into the thread. Never fail the build on chart problems
+          # (missing files:write scope, matplotlib import, etc.). Skipped entirely
+          # for a cancelled run - there is no breakdown to chart.
+          try:
+              path = None if cancelled else build_donut()
+              if path:
+                  client.files_upload_v2(
+                      channel=chart_channel, thread_ts=chart_ts, file=path,
+                      title=f"{env_name} Run #{run_number} results",
+                      filename="run-result.png",
+                  )
+                  print("Donut chart uploaded to thread")
+              else:
+                  print("No tests to chart - skipping donut")
+          except Exception as exc:  # noqa: BLE001
+              print(f"Chart upload skipped: {exc}")
           PY
