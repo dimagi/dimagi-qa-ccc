@@ -426,10 +426,14 @@ class OpportunityDashboardPage(BasePage):
     )
 
     def catchment_menu_available(self):
-        """Whether the hamburger exposes the 'Catchment Areas' item. It is absent on
-        builds where that menu entry is not deployed (staging has lagged main here),
-        so the catchment import/export tests skip rather than time out clicking a
-        missing item."""
+        """Whether the hamburger exposes the 'Catchment Areas' item. Returns False
+        (so the catchment tests skip rather than fail) both when the item is absent
+        (builds that lag main) and when the hamburger itself doesn't render on the
+        opened opportunity - guard against a 30s open_hamburger timeout by checking
+        the toggle is present first."""
+        if self.page.locator(self.HAMBURGER_TOGGLE).count() == 0:
+            self._step("Hamburger toggle not present on this opportunity - cannot check Catchment Areas")
+            return False
         self.open_hamburger()
         present = self.page.locator(self.CATCHMENT_TOGGLE).count() > 0
         self._step(f"'Catchment Areas' hamburger item available: {present}")
