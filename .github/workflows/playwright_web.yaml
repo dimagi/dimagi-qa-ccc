@@ -183,37 +183,48 @@ jobs:
         if: always()
         shell: bash
         run: |
-          file="playwright_web/reports/playwright-web-${TEST_ENV}.xml"
-          total=0; failed=0; errors=0; skipped=0; messaging_excluded=0
-          if [ -f "$file" ]; then
-            t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
-            total=${t:-0}; failed=${f:-0}; errors=${e:-0}; skipped=${s:-0}
-            # Messaging tests skipped because messaging is disabled on this env
-            # carry a sentinel in their skip reason - report them as "not included"
-            # rather than lumping them into the genuine skipped count (per QA lead).
-            messaging_excluded=$(grep -c 'MESSAGING-EXCLUDED' "$file" || true)
-          fi
-          # Keep Skipped for genuine skips only.
-          skipped=$((skipped - messaging_excluded))
-          [ "$skipped" -lt 0 ] && skipped=0
-          total_failed=$((failed + errors))
-          passed=$((total - total_failed - skipped - messaging_excluded))
-          if [ "$total_failed" -gt 0 ] || [ "$total" -eq 0 ]; then
-            status="FAILURE"
-          else
-            status="SUCCESS"
-          fi
-          {
-            echo "status=$status"
-            echo "passed=$passed"
-            echo "failed=$total_failed"
-            echo "errors=$errors"
-            echo "skipped=$skipped"
-            echo "messaging_excluded=$messaging_excluded"
-          } >> $GITHUB_OUTPUT
+          # Parse the JUnit XML per-testcase (not via attribute greps): pytest emits
+          # the report as effectively one line, so line-based counting is unreliable.
+          # A skipped test whose file is a messaging suite is reported as "not
+          # included" (messaging disabled on this env) rather than as a genuine skip.
+          python - <<'PY'
+          import os, glob
+          import xml.etree.ElementTree as ET
+
+          env = os.environ["TEST_ENV"]
+          path = f"playwright_web/reports/playwright-web-{env}.xml"
+          passed = failed = errors = skipped = messaging_excluded = 0
+          if os.path.exists(path):
+              root = ET.parse(path).getroot()
+              for tc in root.iter("testcase"):
+                  cls = tc.attrib.get("classname", "")
+                  if tc.find("failure") is not None:
+                      failed += 1
+                  elif tc.find("error") is not None:
+                      errors += 1
+                  elif tc.find("skipped") is not None:
+                      # Count by test FILE, so every messaging skip is caught
+                      # regardless of which fixture skipped it or its wording.
+                      if "test_messaging" in cls:
+                          messaging_excluded += 1
+                      else:
+                          skipped += 1
+                  else:
+                      passed += 1
+
+          total_failed = failed + errors
+          total = passed + total_failed + skipped + messaging_excluded
+          status = "SUCCESS" if (total_failed == 0 and total > 0) else "FAILURE"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"status={status}\n")
+              out.write(f"passed={passed}\n")
+              out.write(f"failed={total_failed}\n")
+              out.write(f"errors={errors}\n")
+              out.write(f"skipped={skipped}\n")
+              out.write(f"messaging_excluded={messaging_excluded}\n")
+          print(f"status={status} passed={passed} failed={total_failed} "
+                f"skipped={skipped} messaging_excluded={messaging_excluded}")
+          PY
 
       - name: Send Email Report
         if: ${{ always() && env.SEND_EMAIL == 'true' }}
