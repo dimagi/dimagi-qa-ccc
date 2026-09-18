@@ -70,8 +70,9 @@ def _skip_while_staging_drops_messages(config):
     """
     if config.env == "stage":
         pytest.skip(
-            "Messaging is prod-only while staging drops Connect messages (CCCT-2671) - HQ reports "
-            "them sent and they never reach the device. Dispatch a staging run to re-test."
+            "[MESSAGING-EXCLUDED] Messaging is prod-only while staging drops Connect messages "
+            "(CCCT-2671) - HQ reports them sent and they never reach the device. Dispatch a "
+            "staging run to re-test."
         )
 
 

@@ -135,16 +135,23 @@ jobs:
         shell: bash
         run: |
           file="playwright_web/reports/playwright-web-${TEST_ENV}.xml"
-          total=0; failed=0; errors=0; skipped=0
+          total=0; failed=0; errors=0; skipped=0; messaging_excluded=0
           if [ -f "$file" ]; then
             t=$(grep -o 'tests="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
             f=$(grep -o 'failures="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
             e=$(grep -o 'errors="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
             s=$(grep -o 'skipped="[0-9]*"' "$file" | grep -o '[0-9]*' | head -1)
             total=${t:-0}; failed=${f:-0}; errors=${e:-0}; skipped=${s:-0}
+            # Messaging tests skipped because messaging is disabled on this env
+            # carry a sentinel in their skip reason - report them as "not included"
+            # rather than lumping them into the genuine skipped count (per QA lead).
+            messaging_excluded=$(grep -c 'MESSAGING-EXCLUDED' "$file" || true)
           fi
+          # Keep Skipped for genuine skips only.
+          skipped=$((skipped - messaging_excluded))
+          [ "$skipped" -lt 0 ] && skipped=0
           total_failed=$((failed + errors))
-          passed=$((total - total_failed - skipped))
+          passed=$((total - total_failed - skipped - messaging_excluded))
           if [ "$total_failed" -gt 0 ] || [ "$total" -eq 0 ]; then
             status="FAILURE"
           else
@@ -156,6 +163,7 @@ jobs:
             echo "failed=$total_failed"
             echo "errors=$errors"
             echo "skipped=$skipped"
+            echo "messaging_excluded=$messaging_excluded"
           } >> $GITHUB_OUTPUT
 
       - name: Send Email Report
@@ -184,6 +192,7 @@ jobs:
               <li><b>Errors:</b> ${{ steps.aggregate.outputs.errors }}</li>
               <li><b>Skipped:</b> ${{ steps.aggregate.outputs.skipped }}</li>
             </ul>
+            ${{ steps.aggregate.outputs.messaging_excluded != '0' && '<p><b>Messaging tests not included</b> (messaging disabled on this environment).</p>' || '' }}
             <br>
             <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">
             View Full Run
@@ -199,6 +208,7 @@ jobs:
           PASSED: ${{ steps.aggregate.outputs.passed }}
           FAILED: ${{ steps.aggregate.outputs.failed }}
           SKIPPED: ${{ steps.aggregate.outputs.skipped }}
+          MESSAGING_EXCLUDED: ${{ steps.aggregate.outputs.messaging_excluded }}
           ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
         shell: bash
         run: |
@@ -222,10 +232,13 @@ jobs:
 
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
           actor = os.environ.get("GITHUB_ACTOR", "")
+          messaging_excluded = int(os.environ.get("MESSAGING_EXCLUDED", "0") or "0")
+          messaging_line = "\n📵 Messaging tests not included" if messaging_excluded else ""
           message = (
               f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
               f"👤 Triggered by: {actor}\n"
-              f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}\n"
+              f"🌐 Web → ✅ {os.environ.get('PASSED', 0)} | ❌ {os.environ.get('FAILED', 0)} | ⏭ {os.environ.get('SKIPPED', 0)}"
+              f"{messaging_line}\n"
               f"📎 Report: <{artifact_url}|Download here>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
