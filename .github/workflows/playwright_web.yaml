@@ -146,6 +146,7 @@ jobs:
         run: python -m pytest tests/unit --tb=short
 
       - name: Run Playwright Web Tests
+        id: run_tests
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
         run: |
@@ -182,6 +183,11 @@ jobs:
         id: aggregate
         if: always()
         shell: bash
+        env:
+          # 'cancelled' when the run was superseded by a newer push (concurrency)
+          # or manually cancelled - distinguished from a genuine test FAILURE.
+          RUN_CONCLUSION: ${{ steps.run_tests.conclusion }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           # Parse the JUnit XML per-testcase (not via attribute greps): pytest emits
           # the report as effectively one line, so line-based counting is unreliable.
@@ -214,7 +220,14 @@ jobs:
 
           total_failed = failed + errors
           total = passed + total_failed + skipped + messaging_excluded
-          status = "SUCCESS" if (total_failed == 0 and total > 0) else "FAILURE"
+          cancelled = "cancelled" in (
+              os.environ.get("RUN_CONCLUSION", ""), os.environ.get("JOB_STATUS", ""))
+          if cancelled:
+              status = "CANCELLED"
+          elif total_failed == 0 and total > 0:
+              status = "SUCCESS"
+          else:
+              status = "FAILURE"
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"status={status}\n")
               out.write(f"passed={passed}\n")
@@ -293,7 +306,8 @@ jobs:
 
           env_name = os.environ.get("TEST_ENV", "stage").upper()
           status = os.environ.get("STATUS", "FAILURE")
-          icon = "✅" if status == "SUCCESS" else "❌"
+          cancelled = status == "CANCELLED"
+          icon = {"SUCCESS": "✅", "CANCELLED": "🚫"}.get(status, "❌")
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
@@ -331,25 +345,38 @@ jobs:
               pct = round(100 * passed / total)
               return f"\n{'🟩' * g}{'🟥' * r}{'⬜' * y}  {pct}% passed"
 
-          bar = emoji_bar()
+          bar = "" if cancelled else emoji_bar()
 
-          # The top-line summary that replaces the "in progress" kickoff message.
-          summary = (
-              f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
-              f"👤 Triggered by: {actor}\n"
-              f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
-              f"{messaging_line}"
-              f"{bar}"
-              f"{timing_line}\n"
-              f"🔗 Run: <{run_url}|View on GitHub>"
-          )
-          # Threaded reply: anchors the detail without repeating the summary's
-          # counts/bar/messaging/timer lines - the donut below carries the
-          # breakdown and this just states the result and links the full report.
-          detail = (
-              f"{icon} Result: {status}\n"
-              f"📎 Report: <{artifact_url}|Download here>"
-          )
+          header = f"{icon} 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}"
+          if cancelled:
+              # No test outcomes to report - the run was superseded/stopped, not run.
+              # Skip the counts, ratio bar and donut; just say so plus the timing.
+              summary = (
+                  f"{header}\n"
+                  f"👤 Triggered by: {actor}\n"
+                  f"🚫 Status: Cancelled (superseded by a newer run)"
+                  f"{timing_line}\n"
+                  f"🔗 Run: <{run_url}|View on GitHub>"
+              )
+              detail = f"{icon} Result: CANCELLED — no tests were completed."
+          else:
+              # The top-line summary that replaces the "in progress" kickoff message.
+              summary = (
+                  f"{header}\n"
+                  f"👤 Triggered by: {actor}\n"
+                  f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
+                  f"{messaging_line}"
+                  f"{bar}"
+                  f"{timing_line}\n"
+                  f"🔗 Run: <{run_url}|View on GitHub>"
+              )
+              # Threaded reply: anchors the detail without repeating the summary's
+              # counts/bar/messaging/timer lines - the donut below carries the
+              # breakdown and this just states the result and links the full report.
+              detail = (
+                  f"{icon} Result: {status}\n"
+                  f"📎 Report: <{artifact_url}|Download here>"
+              )
 
           def build_donut():
               """Render a pass/fail/skip donut PNG (Option B). Best-effort."""
@@ -397,9 +424,10 @@ jobs:
               chart_ts, chart_channel = posted["ts"], channel
 
           # Upload the donut into the thread. Never fail the build on chart problems
-          # (missing files:write scope, matplotlib import, etc.).
+          # (missing files:write scope, matplotlib import, etc.). Skipped entirely
+          # for a cancelled run - there is no breakdown to chart.
           try:
-              path = build_donut()
+              path = None if cancelled else build_donut()
               if path:
                   client.files_upload_v2(
                       channel=chart_channel, thread_ts=chart_ts, file=path,
