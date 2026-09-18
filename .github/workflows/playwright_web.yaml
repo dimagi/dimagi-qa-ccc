@@ -101,6 +101,7 @@ jobs:
           pip install --quiet slack_sdk
           python - <<'PY'
           import os
+          import time
           from slack_sdk import WebClient
 
           token = os.environ.get("SLACK_TOKEN", "")
@@ -114,17 +115,22 @@ jobs:
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
           actor = os.environ.get("GITHUB_ACTOR", "")
+          start_epoch = int(time.time())
+          # Slack renders <!date^EPOCH^{format}|fallback> in each viewer's timezone.
+          started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
           message = (
               f"⏳ 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
               f"👤 Triggered by: {actor}\n"
               f"🚧 Status: In progress…\n"
+              f"🕒 Started: {started_at}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
           resp = WebClient(token=token).chat_postMessage(channel=channel, text=message)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"ts={resp['ts']}\n")
               out.write(f"channel={resp['channel']}\n")
-          print(f"Kickoff posted (ts={resp['ts']})")
+              out.write(f"start_epoch={start_epoch}\n")
+          print(f"Kickoff posted (ts={resp['ts']}, start_epoch={start_epoch})")
           PY
 
       - name: Install dependencies
@@ -257,6 +263,7 @@ jobs:
           # that step could not post - we then fall back to a standalone message.
           START_TS: ${{ steps.slack_start.outputs.ts }}
           START_CHANNEL: ${{ steps.slack_start.outputs.channel }}
+          START_EPOCH: ${{ steps.slack_start.outputs.start_epoch }}
         shell: bash
         run: |
           # matplotlib is only needed for the donut chart; the run still reports if
@@ -264,6 +271,7 @@ jobs:
           pip install --quiet slack_sdk matplotlib
           python - <<'PY'
           import os
+          import time
           from slack_sdk import WebClient
 
           token = os.environ.get("SLACK_TOKEN", "")
@@ -287,6 +295,20 @@ jobs:
           messaging_excluded = int(os.environ.get("MESSAGING_EXCLUDED", "0") or "0")
           messaging_line = "\n📵 Messaging tests not included" if messaging_excluded else ""
 
+          # Timing: start epoch comes from the kickoff step; end is now. If the
+          # kickoff could not post (no start epoch), fall back to just the end time.
+          end_epoch = int(time.time())
+          start_epoch = int(os.environ.get("START_EPOCH", "0") or "0")
+          ended_at = f"<!date^{end_epoch}^{{date_short_pretty}} at {{time}}|ended>"
+          if start_epoch:
+              secs = max(0, end_epoch - start_epoch)
+              elapsed = f"{secs // 3600}h {secs % 3600 // 60}m {secs % 60}s" if secs >= 3600 \
+                  else f"{secs // 60}m {secs % 60}s"
+              started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
+              timing_line = f"\n🕒 {started_at} → {ended_at}  (⏱ {elapsed})"
+          else:
+              timing_line = f"\n🕒 Ended: {ended_at}"
+
           def emoji_bar(width=20):
               """A proportional pass/fail/skip ratio bar (Option A)."""
               total = passed + failed + skipped
@@ -306,7 +328,8 @@ jobs:
               f"👤 Triggered by: {actor}\n"
               f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
               f"{messaging_line}"
-              f"{bar}\n"
+              f"{bar}"
+              f"{timing_line}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
           # The detailed breakdown posted as a threaded reply under the kickoff.
@@ -314,7 +337,8 @@ jobs:
               f"{icon} Result: {status}\n"
               f"✅ Passed: {passed}   ❌ Failed: {failed}   ⏭ Skipped: {skipped}"
               f"{messaging_line}"
-              f"{bar}\n"
+              f"{bar}"
+              f"{timing_line}\n"
               f"📎 Report: <{artifact_url}|Download here>"
           )
 
