@@ -448,3 +448,117 @@ def test_gap_w_43_bulk_controls_visible_for_nm(connect, test_data):
     finally:
         home.select_organization_from_list(PM_ORG)
 
+
+def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data):
+    """GAP-SRC-W-40: the verification tab-set is a function of mode x role. On a
+    manual-review opportunity, the PM sees its own pending queue (Pending PM Review)
+    but not the NM's, while the NM sees both pending queues; every role's set ends
+    with 'All'. Asserts those mode/role invariants for PM (module session) then NM,
+    rather than the exact role-sensitive labels (agree/disagree render as
+    Agree/Approved and Disagree/Revalidate depending on role).
+
+    Skips until the manual-review opportunity is seeded, and when the WORKER_VISITS_TASKS
+    switch is ON (the plain table shows Visits/Tasks, not the verification tab-set)."""
+    connect_page, opps_url = connect
+    data = _require_review_data(test_data)
+    home = ConnectHomePage(connect_page)
+
+    # PM (the module's session): manual+PM tab-set.
+    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+    if visits.has_visits_tasks_tabs() or not visits.has_review_tabs():
+        pytest.skip(
+            f"'{data['opportunity_name']}' does not render the verification tab-set "
+            "(WORKER_VISITS_TASKS switch ON or no NM-review tabs) - GAP-SRC-W-40 needs "
+            "the tabbed verification table."
+        )
+    pm_labels = visits.review_tab_labels()
+    assert pm_labels and pm_labels[-1] == "All", f"PM tab-set should end with 'All': {pm_labels}"
+    assert "Pending PM Review" in pm_labels, f"PM should see 'Pending PM Review': {pm_labels}"
+    assert "Pending NM Review" not in pm_labels, (
+        f"PM should NOT see the NM queue 'Pending NM Review': {pm_labels}"
+    )
+
+    # NM: manual+NM tab-set exposes BOTH pending queues.
+    try:
+        home.select_organization_from_list(data["network_manager"])
+        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+        nm_labels = visits.review_tab_labels()
+        assert nm_labels and nm_labels[-1] == "All", f"NM tab-set should end with 'All': {nm_labels}"
+        assert "Pending NM Review" in nm_labels, f"NM should see 'Pending NM Review': {nm_labels}"
+        assert "Pending PM Review" in nm_labels, f"NM should see 'Pending PM Review': {nm_labels}"
+    finally:
+        home.select_organization_from_list(PM_ORG)
+
+
+def test_gap_w_42_reject_requires_reason(connect, test_data):
+    """GAP-SRC-W-42 (partial): the in-UI Reject action requires a reason - submitting
+    the Reject modal with an empty reason is blocked and the visit stays unreviewed.
+    Runs as the NM on the manual-review opp; skips until seeded or when no rejectable
+    visit is present. (The 100-visit bulk cap needs >100 seeded visits and is not
+    covered here.)"""
+    connect_page, opps_url = connect
+    data = _require_review_data(test_data)
+    home = ConnectHomePage(connect_page)
+    try:
+        home.select_organization_from_list(data["network_manager"])
+        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+        blocked = visits.nm_reject_blocked_without_reason()
+        if blocked is None:
+            pytest.skip(
+                f"No rejectable visit for '{data['worker_name']}' - seed a pending visit "
+                "to cover the reject-requires-reason rule (GAP-SRC-W-42)."
+            )
+        assert blocked, "Reject was accepted with an empty reason - the reason should be mandatory"
+    finally:
+        home.select_organization_from_list(PM_ORG)
+
+
+def test_gap_w_42_approve_requires_justification(connect, test_data):
+    """GAP-SRC-W-42 (partial): the in-UI Approve action requires a justification -
+    submitting the Approve modal with an empty justification is blocked and the visit
+    stays unreviewed. Runs as the NM on the manual-review opp; skips until seeded or
+    when no approvable visit is present."""
+    connect_page, opps_url = connect
+    data = _require_review_data(test_data)
+    home = ConnectHomePage(connect_page)
+    try:
+        home.select_organization_from_list(data["network_manager"])
+        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+        blocked = visits.nm_approve_blocked_without_justification()
+        if blocked is None:
+            pytest.skip(
+                f"No approvable visit for '{data['worker_name']}' - seed a pending visit "
+                "to cover the approve-requires-justification rule (GAP-SRC-W-42)."
+            )
+        assert blocked, (
+            "Approve was accepted with an empty justification - the justification should be mandatory"
+        )
+    finally:
+        home.select_organization_from_list(PM_ORG)
+
+
+def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data):
+    """VV_35 (Worker Visit Verification Page_35): a visit the PM has disagreed cannot
+    then be agreed, and vice versa. As the PM, disagree a reviewable visit and confirm
+    Agree is no longer actionable on it; if a second reviewable visit is available,
+    also agree one and confirm Disagree is no longer actionable. Skips until the
+    manual-review opp is seeded or when no PM-reviewable visit is present."""
+    connect_page, opps_url = connect
+    data = _require_review_data(test_data)
+    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+
+    cannot_agree = visits.pm_disagree_then_cannot_agree()
+    if cannot_agree is None:
+        pytest.skip(
+            f"No PM-reviewable visit with an enabled Disagree for '{data['worker_name']}' "
+            "- seed an NM-approved / PM-review-pending visit to cover VV_35."
+        )
+    assert cannot_agree, "A disagreed visit could still be agreed - agree/disagree must be exclusive"
+
+    # Best-effort reverse direction on another visit; only assert if one was available.
+    cannot_disagree = visits.pm_agree_then_cannot_disagree()
+    if cannot_disagree is not None:
+        assert cannot_disagree, (
+            "An agreed visit could still be disagreed - agree/disagree must be exclusive"
+        )
+

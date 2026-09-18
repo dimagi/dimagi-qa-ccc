@@ -50,6 +50,7 @@ class WorkerVisitsPage(BasePage):
     VISIT_APPROVE_MODAL_SUBMIT = locators.get("worker_visits_page", "visit_approve_modal_submit")
     VISIT_PM_AGREE = locators.get("worker_visits_page", "visit_pm_agree")
     VISIT_PM_DISAGREE = locators.get("worker_visits_page", "visit_pm_disagree")
+    ALL_TABS = locators.get("worker_visits_page", "all_tabs")
 
     # -- table / tabs ------------------------------------------------------------
 
@@ -89,6 +90,18 @@ class WorkerVisitsPage(BasePage):
         self._step(f"Worker visits tabs present: {expected_tabs}")
 
     REVIEW_TABS = ["Pending NM Review", "Approved", "Rejected", "All"]
+
+    def review_tab_labels(self):
+        """Ordered list of the tab labels currently rendered in the tab bar. Used to
+        assert the mode x role verification tab-set (GAP-SRC-W-40): auto+PM=[All];
+        auto+NM=[Approved,Rejected,All]; manual+PM=[Pending PM Review,Disagree/Agree,
+        All]; manual+NM=[Pending NM Review,Pending PM Review,...,Rejected,All]. Labels
+        are role-sensitive, so callers assert the mode/role-invariant parts (which
+        Pending tab is present, that the set ends with All) rather than exact labels."""
+        self.page.locator(self.TABS_CONTAINER).first.wait_for(state="visible", timeout=15000)
+        labels = [t.strip() for t in self.page.locator(self.ALL_TABS).all_inner_texts() if t.strip()]
+        self._step(f"Verification tab labels: {labels}")
+        return labels
 
     def has_review_tabs(self):
         """Whether this worker's Visits page exposes the NM-review sub-tabs
@@ -464,3 +477,87 @@ class WorkerVisitsPage(BasePage):
         )
         self._step(f"PM disagreed visit {visit_id} (Disagree now disabled)")
         return True
+
+    # -- bulk-op validation rules (GAP-SRC-W-42) --------------------------------
+    # In-UI reject requires a reason and approve requires a justification; the
+    # mandatory field blocks an empty submission (client-side `required`, and the
+    # server rejects it too). These probe that guard without leaving the visit
+    # reviewed.
+
+    def _visit_status(self, visit_id):
+        return self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
+            "data-visit-status"
+        )
+
+    def nm_reject_blocked_without_reason(self, max_rows=15):
+        """Open a rejectable visit, submit the Reject modal with an EMPTY reason, and
+        report whether that was blocked (modal stayed open, or the visit did not
+        become rejected). Returns None when no scanned visit is rejectable."""
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_REJECT, max_rows)
+        if visit_id is None:
+            return None
+        self.click(self.VISIT_ACTION_REJECT)
+        self.page.locator(self.VISIT_REJECT_MODAL_REASON).first.wait_for(state="visible", timeout=10000)
+        self.click(self.VISIT_REJECT_MODAL_SUBMIT)
+        self.page.wait_for_timeout(1500)
+        if self.page.locator(self.VISIT_REJECT_MODAL_REASON).first.is_visible():
+            self._step("Reject blocked client-side (reason required, modal stayed open)")
+            return True
+        # Modal closed - the reason must still have been rejected server-side, so the
+        # visit must NOT be rejected.
+        self._open_row_by_id(visit_id)
+        blocked = self._visit_status(visit_id) != "rejected"
+        self._step(f"Reject-without-reason blocked (visit not rejected): {blocked}")
+        return blocked
+
+    def nm_approve_blocked_without_justification(self, max_rows=15):
+        """Counterpart of nm_reject_blocked_without_reason for the Approve modal's
+        mandatory justification. Returns None when no scanned visit is approvable."""
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows)
+        if visit_id is None:
+            return None
+        self.click(self.VISIT_ACTION_APPROVE)
+        self.page.locator(self.VISIT_APPROVE_MODAL_JUSTIFICATION).first.wait_for(state="visible", timeout=10000)
+        self.click(self.VISIT_APPROVE_MODAL_SUBMIT)
+        self.page.wait_for_timeout(1500)
+        if self.page.locator(self.VISIT_APPROVE_MODAL_JUSTIFICATION).first.is_visible():
+            self._step("Approve blocked client-side (justification required, modal stayed open)")
+            return True
+        self._open_row_by_id(visit_id)
+        blocked = self._visit_status(visit_id) != "approved"
+        self._step(f"Approve-without-justification blocked (visit not approved): {blocked}")
+        return blocked
+
+    # -- agree/disagree are mutually exclusive (VV_35) --------------------------
+
+    def pm_disagree_then_cannot_agree(self, max_rows=15):
+        """VV_35: disagree a PM-reviewable visit, then confirm Agree is no longer
+        actionable on it (a disagreed visit cannot be agreed). Returns None when no
+        scanned visit offers an enabled Disagree."""
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_PM_DISAGREE, max_rows)
+        if visit_id is None:
+            return None
+        self.click(self.VISIT_PM_DISAGREE)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+        self._open_row_by_id(visit_id)
+        agree = self.page.locator(self.VISIT_PM_AGREE).first
+        can_agree = agree.count() > 0 and agree.is_enabled()
+        self._step(f"After disagree, Agree actionable on visit {visit_id}: {can_agree}")
+        return not can_agree
+
+    def pm_agree_then_cannot_disagree(self, max_rows=15):
+        """VV_35 (reverse): agree a PM-reviewable visit, then confirm Disagree is no
+        longer actionable on it. Returns None when no scanned visit offers an enabled
+        Agree."""
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_PM_AGREE, max_rows)
+        if visit_id is None:
+            return None
+        self.click(self.VISIT_PM_AGREE)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+        self._open_row_by_id(visit_id)
+        disagree = self.page.locator(self.VISIT_PM_DISAGREE).first
+        can_disagree = disagree.count() > 0 and disagree.is_enabled()
+        self._step(f"After agree, Disagree actionable on visit {visit_id}: {can_disagree}")
+        return not can_disagree

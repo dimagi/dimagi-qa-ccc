@@ -452,6 +452,9 @@ worker_visits_page:
   reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
   tabs_container: "//div[contains(@class,'tabs')]"
   tab_item_by_name: "//a[contains(@class,'tab')][normalize-space()='{tab_name}'] | //label[contains(@class,'tab')][normalize-space()='{tab_name}']"
+  # Every tab in the bar, in document order - used to assert the mode x role
+  # verification tab-set (GAP-SRC-W-40).
+  all_tabs: "//div[contains(@class,'tabs')]//a[contains(@class,'tab')] | //div[contains(@class,'tabs')]//label[contains(@class,'tab')]"
   visit_details_container: "visit-details"
   username_section: "//div[contains(@class,'profile-card')]"
   suspend_button: "//button[contains(normalize-space(),'Suspend')][not(@type='submit')]"
