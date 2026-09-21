@@ -317,7 +317,13 @@ OLP_NM_CREATE:
 # staging seed ever diverges. If the name is not found the test falls back to the
 # first row in the list, so the suite stays runnable without seed coupling.
 OPD:
-  opportunity_name: "Demo Opportunity"
+  # "Case List Opportunity" is a stable, uniquely-named opp present on BOTH envs
+  # (Anshu, 2026-09-21; org pm_automation_01 - prod c2345254-b139-4b8b-aebc-13ffc4dd918a,
+  # stage a58539ee-3dd0-479f-b218-9ab196e78fac). It replaces "Demo Opportunity",
+  # which had no exact match (only dated "Demo Opportunity_<date>" flood variants)
+  # and so selected a varying first-row opp - the non-determinism behind the OPD
+  # flakiness. Exact-name selection now makes OPD deterministic on both envs.
+  opportunity_name: "Case List Opportunity"
   # Budget/message cases need an opp with claimed workers; Demo has none.
   budget_opportunity_name_staging: "OLP_Test_Opp"
   # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
