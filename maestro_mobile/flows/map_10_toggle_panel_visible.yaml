@@ -6,6 +6,12 @@
 # map_overlay + the three toggle_* switches are real views (verified live
 # 2026-08-18); only the markers themselves render on the Google Map canvas, so
 # their appearance stays a manual check.
+#
+# Toggle STATE is asserted via the switch's `checked` trait, not its label text.
+# On 2.65 the labels are the bare layer names (Markers / Polygons / Geopoints)
+# and the ON/OFF state lives in the switch itself - the earlier "<layer> ON"
+# label text no longer exists, so a text assertion breaks on 2.65 while the
+# checked state stays true across builds.
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml
@@ -16,6 +22,6 @@ appId: org.commcare.dalvik
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints" }
 # Each defaults to ON.
-- assertVisible: { text: "Markers ON" }
-- assertVisible: { text: "Polygons ON" }
-- assertVisible: { text: "Geopoints ON" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_markers", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: true }

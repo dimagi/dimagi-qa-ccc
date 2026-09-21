@@ -1,36 +1,39 @@
 # Map_11 - the polygon and geopoint toggles can be switched ON/OFF. This asserts
-# the toggle STATE (the switch label flips "<layer> ON" <-> "<layer> OFF"), which
-# is the deterministic, automatable part. The RENDERING effect on the map (the
-# boundary/point actually showing or hiding) is drawn on the Google Map canvas
-# with no accessibility nodes, so that half of Map_11 stays a manual check.
+# the toggle STATE via the switch's `checked` trait, which is the deterministic,
+# automatable part. The RENDERING effect on the map (the boundary/point actually
+# showing or hiding) is drawn on the Google Map canvas with no accessibility
+# nodes, so that half of Map_11 stays a manual check.
 #
-# Toggle ids/labels verified live 2026-08-18: tapping toggle_polygons flips
-# "Polygons ON" -> "Polygons OFF" while the others are unchanged.
+# Toggle ids verified live 2026-08-18: tapping toggle_polygons flips its switch
+# state while the others are unchanged. State is read from the switch's `checked`
+# accessibility trait rather than a "<layer> ON"/"<layer> OFF" label: on 2.65 the
+# labels are the bare layer names (Markers / Polygons / Geopoints) and the ON/OFF
+# state moved into the switch, so the old text assertions no longer match.
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml
 
 # All three start ON.
-- assertVisible: { text: "Markers ON" }
-- assertVisible: { text: "Polygons ON" }
-- assertVisible: { text: "Geopoints ON" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_markers", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: true }
 
 # Turn polygons OFF (geopoints/markers stay ON).
 - tapOn: { id: "org.commcare.dalvik:id/toggle_polygons" }
-- assertVisible: { text: "Polygons OFF" }
-- assertVisible: { text: "Geopoints ON" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: false }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: true }
 
 # Turn geopoints OFF too (both boundary and points now off).
 - tapOn: { id: "org.commcare.dalvik:id/toggle_geopoints" }
-- assertVisible: { text: "Geopoints OFF" }
-- assertVisible: { text: "Polygons OFF" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: false }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: false }
 
 # Turn polygons back ON (points off, boundary on) - the reverse combination.
 - tapOn: { id: "org.commcare.dalvik:id/toggle_polygons" }
-- assertVisible: { text: "Polygons ON" }
-- assertVisible: { text: "Geopoints OFF" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: false }
 
 # Restore both to ON so the switch state is left as it was found.
 - tapOn: { id: "org.commcare.dalvik:id/toggle_geopoints" }
-- assertVisible: { text: "Geopoints ON" }
-- assertVisible: { text: "Polygons ON" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: true }
