@@ -167,7 +167,10 @@ jobs:
               failed = d.get("failed", 0)
               skipped = d.get("skipped", 0)
               url = d.get("build_url") or "https://app-automate.browserstack.com/"
-          except (OSError, ValueError):
+          except Exception:
+              # Best-effort reporting step: a missing/unreadable report, or one
+              # that parses to a non-dict (AttributeError on .get), must not fail
+              # this step and leave every aggregate output empty.
               status, passed, failed, skipped = "FAILURE", 0, 0, 0
               url = "https://app-automate.browserstack.com/"
           if "cancelled" in (os.environ.get("RUN_CONCLUSION", ""),
@@ -201,7 +204,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: Send Email Report
-        if: ${{ always() && env.SEND_EMAIL == 'true' }}
+        # Suppress on CANCELLED (superseded/stopped run) the same way the Slack
+        # card does - otherwise it mails a CANCELLED report with 0/0/0 counts.
+        if: ${{ always() && env.SEND_EMAIL == 'true' && steps.aggregate.outputs.status != 'CANCELLED' }}
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -235,6 +240,11 @@ jobs:
 
       - name: Slack Notify
         if: ${{ always() && env.SEND_SLACK == 'true' }}
+        # Never fail the job on a Slack hiccup: chat_update + the threaded
+        # chat_postMessage are not wrapped, so a transient SlackApiError here
+        # would otherwise fail an already-passing job AND strand the "In
+        # progress…" kickoff card with no final state - worse than pre-PR.
+        continue-on-error: true
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
@@ -266,13 +276,13 @@ jobs:
               raise SystemExit(0)
 
           env_name = os.environ.get("APP_ENV", "stage").upper()
-          status = os.environ.get("STATUS", "FAILURE")
+          status = os.environ.get("STATUS") or "FAILURE"
           cancelled = status == "CANCELLED"
           icon = {"SUCCESS": "✅", "CANCELLED": "🚫"}.get(status, "❌")
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
-          bs_url = os.environ.get("BS_URL", "https://app-automate.browserstack.com/")
+          bs_url = os.environ.get("BS_URL") or "https://app-automate.browserstack.com/"
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
           actor = os.environ.get("GITHUB_ACTOR", "")
           passed = int(os.environ.get("PASSED", "0") or "0")
