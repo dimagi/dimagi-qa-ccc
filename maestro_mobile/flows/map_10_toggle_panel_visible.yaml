@@ -8,10 +8,14 @@
 # their appearance stays a manual check.
 #
 # Toggle STATE is asserted via the switch's `checked` trait, not its label text.
-# On 2.65 the labels are the bare layer names (Markers / Polygons / Geopoints)
-# and the ON/OFF state lives in the switch itself - the earlier "<layer> ON"
-# label text no longer exists, so a text assertion breaks on 2.65 while the
-# checked state stays true across builds.
+# The label is app-content driven - EntityMapActivity.getToggleLabel() returns
+# the case-list detail's marker/boundary/geopoint header when the app sets one,
+# falling back to the bare "Markers"/"Polygons"/"Geopoints" strings - so it is
+# not a state signal at all. The MapLayerSwitch style sets no textOn/textOff,
+# and the layout defaults all three to android:checked="true", so `checked` is
+# the build- and app-independent signal. (Asserting "<layer> ON" matched the
+# pre-2.64 build these flows were written against, 2026-08-18, and stopped
+# matching on 2.64.)
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml

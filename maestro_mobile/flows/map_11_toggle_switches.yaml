@@ -6,9 +6,11 @@
 #
 # Toggle ids verified live 2026-08-18: tapping toggle_polygons flips its switch
 # state while the others are unchanged. State is read from the switch's `checked`
-# accessibility trait rather than a "<layer> ON"/"<layer> OFF" label: on 2.65 the
-# labels are the bare layer names (Markers / Polygons / Geopoints) and the ON/OFF
-# state moved into the switch, so the old text assertions no longer match.
+# accessibility trait rather than a "<layer> ON"/"<layer> OFF" label, because the
+# label is app-content driven (getToggleLabel() returns the case-list detail's
+# header when set, else the bare layer name) and carries no state at all. The
+# text form matched the pre-2.64 build these flows were written against and
+# stopped matching on 2.64.
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml
