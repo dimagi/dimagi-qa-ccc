@@ -21,6 +21,9 @@ appId: org.commcare.dalvik
 - runFlow: shared_map_open.yaml
 
 # The toggle panel and all three switches are visible for a multi-entity list.
+# Asserted separately from the checked-state block below - this is "the panel is
+# up", that is "state is ON"; the checked assertions would pass this on their own,
+# but keeping them apart names the failure mode a bit more precisely.
 - assertVisible: { id: "org.commcare.dalvik:id/map_overlay" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_markers" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
