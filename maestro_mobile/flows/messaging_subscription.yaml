@@ -128,6 +128,7 @@ env:
           text: "Resubscribe"
       - tapOn:
           text: "Resubscribe"
+      - runFlow: shared_consent_settled.yaml
       - extendedWaitUntil:
           notVisible:
             text: ".*${NOT_SUBSCRIBED_TEXT}.*"
@@ -153,6 +154,7 @@ env:
     text: "Unsubscribe"
 - tapOn:
     text: "Unsubscribe"
+- runFlow: shared_consent_settled.yaml
 - extendedWaitUntil:
     visible:
       text: ".*${NOT_SUBSCRIBED_TEXT}.*"
@@ -192,6 +194,7 @@ env:
     text: "Resubscribe"
 - tapOn:
     text: "Resubscribe"
+- runFlow: shared_consent_settled.yaml
 - extendedWaitUntil:
     notVisible:
       text: ".*${NOT_SUBSCRIBED_TEXT}.*"

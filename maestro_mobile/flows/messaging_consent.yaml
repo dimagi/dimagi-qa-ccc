@@ -111,6 +111,7 @@ env:
     text: "Unsubscribe"
 - tapOn:
     text: "Unsubscribe"
+- runFlow: shared_consent_settled.yaml
 
 # --- TC-SUB-002: sending is disabled and the banner explains why ---
 - extendedWaitUntil:
@@ -142,6 +143,7 @@ env:
     text: "Resubscribe"
 - tapOn:
     text: "Resubscribe"
+- runFlow: shared_consent_settled.yaml
 
 # The composer works again: typing makes the send control appear, which it only
 # does when the channel is consented AND the input is non-empty. That is a

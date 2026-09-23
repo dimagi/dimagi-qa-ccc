@@ -119,6 +119,7 @@ env:
     text: "Resubscribe"
 - tapOn:
     text: "Resubscribe"
+- runFlow: shared_consent_settled.yaml
 - extendedWaitUntil:
     notVisible:
       text: ".*${NOT_SUBSCRIBED_TEXT}.*"
