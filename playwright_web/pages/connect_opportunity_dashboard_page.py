@@ -37,6 +37,7 @@ class OpportunityDashboardPage(BasePage):
         "inactive": "/workers/deliver/?last_active=3",
         "services_delivered": "/workers/deliver/?sort=-last_active",
         "payments_earned": "/workers/payments/",
+        "microplanning": "/microplanning/",
     }
 
     # -- load / structure -------------------------------------------------------
