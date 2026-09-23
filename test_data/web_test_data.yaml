@@ -419,12 +419,19 @@ OLP_NM_CREATE:
   managed_program_id_staging: "2a961eb6-230b-4f52-8ecb-2af694b853f3"
 
 # Opportunity Dashboard (OD_1-OD_19, read-only tier). One fully-configured
-# opportunity to open. "Demo Opportunity" is the automation-seeded opp (same one
-# OLP_4 uses) and exists on both environments; add an _staging override if the
-# staging seed ever diverges. If the name is not found the test falls back to the
-# first row in the list, so the suite stays runnable without seed coupling.
+# opportunity to open. "Demo Opportunity" had no exact match on either env (only
+# a "Demo Opportunity_<date>" flood), so OPD always fell back to a varying
+# first-row opp (non-deterministic - see commit 52debdf). Repointed 2026-09-23
+# to "Case List Opportunity" per Anshu: confirmed live on both envs (Active,
+# not ended, Learn+Deliver apps and payment units configured) - exists prod
+# c2345254-b139-4b8b-aebc-13ffc4dd918a / stage a58539ee-3dd0-479f-b218-9ab196e78fac,
+# org pm_automation_01. Full OPD suite verified on stage: 40 passed, 2 skipped
+# (OD_36 catchment export/import - this opp has no Catchment Areas hamburger
+# item, same clean skip as before the repoint, not a regression). If the name
+# is not found the test falls back to the first row in the list, so the suite
+# stays runnable without seed coupling.
 OPD:
-  opportunity_name: "Demo Opportunity"
+  opportunity_name: "Case List Opportunity"
   # Budget/message cases need an opp with claimed workers; Demo has none.
   budget_opportunity_name_staging: "OLP_Test_Opp"
   # Optional fixtures that unlock the data-guarded gap tests (OD_20-OD_43) in
