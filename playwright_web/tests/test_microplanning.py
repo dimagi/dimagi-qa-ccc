@@ -223,6 +223,41 @@ def test_microplanning_34_sort_arrows_present(session):
     assert sortable.count() > 0, "No sortable column headers found on the Work Area Assignments tab"
 
 
+# -- Microplanning_16/17: select/modify a work area, driven via JS (no map click) --
+
+
+def test_microplanning_16_select_work_area_section(session):
+    connect_page, base, slug, opp_id = session
+    micro = _home(session)
+    micro.enter_assignment_mode()  # cheapest path to a real assignee id
+    work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
+    micro.exit_assignment_mode()
+    if work_area is None:
+        pytest.skip("No assignee on this opportunity has any assigned work areas to select")
+    micro = _home(session)
+    micro.select_work_area_via_js(work_area)
+    text = micro.select_work_area_section_text()
+    for label in ("Expected Visit Count", "Number of Buildings", "Status"):
+        assert label in text, f"'{label}' missing from the Select Work Area section: {text!r}"
+
+
+def test_microplanning_17_modify_work_area_form_fields(session):
+    """Opens the Modify Work Area form and checks its fields render - does NOT
+    submit/save, so this stays non-mutating against the shared fixture opp."""
+    connect_page, base, slug, opp_id = session
+    micro = _home(session)
+    micro.enter_assignment_mode()
+    work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
+    micro.exit_assignment_mode()
+    if work_area is None:
+        pytest.skip("No assignee on this opportunity has any assigned work areas to select")
+    micro = _home(session)
+    micro.select_work_area_via_js(work_area)
+    micro.open_modify_work_area_modal()
+    text = micro.modify_work_area_modal_text()
+    assert text.strip(), "Modify Work Area modal opened empty"
+
+
 # -- Microplanning_31/35-40 + unnumbered: Coverage Progress Tracker --------------
 
 

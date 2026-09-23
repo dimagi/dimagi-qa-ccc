@@ -45,6 +45,9 @@ class MicroplanningPage(BasePage):
     FLW_SUMMARY_SECTION = locators.get("connect_microplanning_page", "flw_summary_section")
     FLW_SUMMARY_VIEW_BY_FLW_BTN = locators.get("connect_microplanning_page", "flw_summary_view_by_flw_btn")
     FLW_SUMMARY_VIEW_VISITS_BTN = locators.get("connect_microplanning_page", "flw_summary_view_visits_btn")
+    SELECT_WORK_AREA_SECTION = locators.get("connect_microplanning_page", "select_work_area_section")
+    MODIFY_WORK_AREA_BUTTON = locators.get("connect_microplanning_page", "modify_work_area_button")
+    MODIFY_WORK_AREA_MODAL = locators.get("connect_microplanning_page", "modify_work_area_modal")
 
     # -- Microplanning_01/30: land + opp-card metrics --------------------------------
 
@@ -152,6 +155,70 @@ class MicroplanningPage(BasePage):
         self._step("Open FLW summary 'View Visits'")
         self.click(self.FLW_SUMMARY_VIEW_VISITS_BTN)
         self.page.wait_for_load_state("load")
+
+    # -- Microplanning_16/17: select/modify a single work area (non-assignment-mode) -
+    # No map click needed: mapController()'s single-select state (`selectedFeature`)
+    # is set entirely client-side by its 'click' handler on the Mapbox canvas
+    # ('workareas-fill' layer, map_handler.html), with no DOM/dropdown equivalent
+    # outside assignment mode. Rather than guess at a pixel coordinate (unproven,
+    # depends on current pan/zoom/render), this drives the same Alpine state a real
+    # click would set, using a real work area id fetched from the same
+    # group_work_areas endpoint the assignment-mode group dropdown already calls -
+    # so the id/status/counts are real product data, not fabricated.
+
+    def _option_values(self, select_selector):
+        """<option value> attributes (real pks), skipping the empty placeholder -
+        option *text* isn't what the assignment endpoints below take."""
+        options = self.page.locator(f"{select_selector} option").all()
+        return [v for v in (o.get_attribute("value") for o in options) if v]
+
+    def fetch_a_real_work_area(self, host, org_slug, opp_id):
+        """A real WorkArea record (id/building_count/expected_visit_count/status)
+        via the same authenticated session. Tries every assignee's own work areas
+        (get_flw_work_areas_for_assignment) rather than assuming work area groups
+        exist - Microplanning_02 (create groups) is a separate, not-yet-automated,
+        mutating case, so this opportunity may have zero groups."""
+        assignee_ids = self._option_values(self.ASSIGNMENT_ASSIGNEE_SELECT)
+        for assignee_id in assignee_ids:
+            url = f"{host}/a/{org_slug}/microplanning/{opp_id}/assignment/flw_work_areas/{assignee_id}/"
+            resp = self.page.request.get(url)
+            assert resp.ok, f"GET {url} -> {resp.status}"
+            work_areas = resp.json()["work_areas"]
+            if work_areas:
+                self._step(f"Fetched real work area {work_areas[0]} (assignee {assignee_id})")
+                return work_areas[0]
+        return None
+
+    def select_work_area_via_js(self, work_area):
+        """Set mapController()'s selectedFeature directly - the same effect a real
+        canvas click on this feature would have, without depending on map render
+        state. Requires window.Alpine (Alpine.js exposes it globally by default)."""
+        self._step(f"Select work area {work_area['id']} (JS, no map click)")
+        self.page.evaluate(
+            """(wa) => {
+                const el = document.querySelector('[x-data="mapController()"]');
+                const data = window.Alpine.$data(el);
+                data.selectedFeature = {
+                    expected_visit_count: wa.expected_visit_count,
+                    building_count: wa.building_count,
+                    status: wa.status,
+                    _id: wa.id,
+                };
+            }""",
+            work_area,
+        )
+
+    def select_work_area_section_text(self):
+        self.page.locator(self.SELECT_WORK_AREA_SECTION).first.wait_for(state="visible", timeout=10000)
+        return self.page.locator(self.SELECT_WORK_AREA_SECTION).first.inner_text()
+
+    def open_modify_work_area_modal(self):
+        self._step("Open 'Modify Work Area'")
+        self.click(self.MODIFY_WORK_AREA_BUTTON)
+        self.page.locator(self.MODIFY_WORK_AREA_MODAL).first.wait_for(state="visible", timeout=10000)
+
+    def modify_work_area_modal_text(self):
+        return self.page.locator(self.MODIFY_WORK_AREA_MODAL).first.inner_text()
 
     # -- Microplanning_31: nav to the Coverage Progress Tracker ----------------------
 

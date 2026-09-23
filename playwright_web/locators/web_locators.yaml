@@ -672,6 +672,9 @@ connect_microplanning_page:
   flw_summary_section: "//h3[normalize-space()='FLW Summary']/ancestor::div[contains(@class,'border-t')][1]"
   flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View summary by FLW')] | //a[contains(normalize-space(),'View summary by FLW')]"
   flw_summary_view_visits_btn: "//button[contains(normalize-space(),'View Visits')] | //a[contains(normalize-space(),'View Visits')]"
+  select_work_area_section: "//h2[normalize-space()='Select Work Area']/ancestor::aside[1]"
+  modify_work_area_button: "//button[contains(normalize-space(),'Modify Work Area')]"
+  modify_work_area_modal: "work-area-form"
 connect_coverage_progress_page:
   page_title: "//h1[normalize-space()='Coverage Progress Tracker']"
   ward_saturation_label: "//p[contains(normalize-space(),'Ward Saturation Goal')]"
