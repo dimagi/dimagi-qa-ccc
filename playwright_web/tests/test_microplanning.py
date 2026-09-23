@@ -332,3 +332,118 @@ def test_microplanning_40_core_metrics_update_on_date_filter(session):
     after = coverage.section_table_headers("Core Metrics")
     assert after, "Core Metrics table disappeared after applying a date filter"
     assert before == after, "Core Metrics columns changed shape after filtering (expected same columns)"
+
+
+# -- Microplanning_09/10/11: review an inaccessible-work-area request ------------
+# Separate disposable opp (MICROPLANNING_REVIEW, not the shared OLP Test opp) -
+# see test_data/web_test_data.yaml for why. Anshu seeded exactly 3 work areas in
+# REQUEST_FOR_INACCESSIBLE status; deny/approve permanently consume one each, so
+# each test claims a different one (by ascending id, deterministic across a
+# single run) and skips cleanly once fewer than it needs remain - this data does
+# NOT replenish itself and will need reseeding after 10/11 have both run once.
+#
+# MTP note: the committed sheet's title/steps look swapped for these two -
+# "Microplanning_10 ... approve the inaccessible request" whose own steps click
+# Deny, and "Microplanning_11 ... deny the inaccessible request" whose own steps
+# click "Approve as inaccessible". Followed the steps/expected-result text (the
+# unambiguous part) rather than the titles - not fixing the xlsx here, out of
+# scope for this batch.
+
+
+@pytest.fixture(scope="module")
+def review_session(browser, config, settings, test_data):
+    review = test_data.get("MICROPLANNING_REVIEW") or {}
+    opp_id = env_value(review, "opportunity_id", config)
+    slug = env_value(review, "org_slug", config)
+    if not opp_id or not slug:
+        pytest.skip("MICROPLANNING_REVIEW.opportunity_id/org_slug not configured for this env")
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        connect_page = login_to_connect(page, config, settings, PM_ORG)
+        base = config.get("connect_url")
+        connect_page.goto(f"{base}/a/{slug}/microplanning/{opp_id}/")
+        connect_page.wait_for_load_state("load")
+        micro = MicroplanningPage(connect_page)
+        micro.verify_loaded()
+        yield connect_page, base, slug, opp_id
+    finally:
+        context.close()
+
+
+def _review_home(review_session):
+    connect_page, base, slug, opp_id = review_session
+    connect_page.goto(f"{base}/a/{slug}/microplanning/{opp_id}/")
+    connect_page.wait_for_load_state("load")
+    micro = MicroplanningPage(connect_page)
+    micro.verify_loaded()
+    return micro
+
+
+def _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, n):
+    """The nth (0-indexed, by ascending id) work area still in
+    REQUEST_FOR_INACCESSIBLE status - re-fetched fresh every call so a test
+    reflects whichever ones a prior test in this run has already consumed."""
+    work_areas = sorted(
+        (wa for wa in micro.fetch_all_work_areas(base, slug, opp_id) if wa.get("status") == "REQUEST_FOR_INACCESSIBLE"),
+        key=lambda wa: wa["id"],
+    )
+    if len(work_areas) <= n:
+        pytest.skip(
+            f"Fewer than {n + 1} REQUEST_FOR_INACCESSIBLE work area(s) left on this opp "
+            f"({len(work_areas)} remain) - needs reseeding"
+        )
+    return work_areas[n]
+
+
+def _require_review_ui(micro):
+    """Skip cleanly if the 'Review Inaccessible' trigger isn't deployed yet -
+    confirmed live 2026-09-23 that staging's backend is fully functional
+    (GET .../review_inaccessibility/<id>/ -> 200, real request data) but the
+    frontend button/JS aren't rendered anywhere on the page. See
+    MicroplanningPage.review_button_ready's docstring."""
+    if not micro.review_button_ready():
+        pytest.skip(
+            "'Review Inaccessible' UI not deployed on this env yet (backend endpoint "
+            "is live, but no trigger button/JS in the rendered page) - re-run once deployed"
+        )
+
+
+def test_microplanning_09_review_inaccessibility_details(review_session):
+    connect_page, base, slug, opp_id = review_session
+    micro = _review_home(review_session)
+    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 0)
+    micro.select_work_area_via_js(work_area)
+    _require_review_ui(micro)
+    micro.open_review_inaccessibility_modal()
+    present = micro.review_modal_fields_present()
+    for field in ("visit_date", "reason", "photo_evidence", "return_to_map", "deny", "approve"):
+        assert present[field], f"Review-inaccessibility modal missing '{field}': {present}"
+    assert micro.review_visit_date(), "Visit date is empty"
+    assert micro.review_reason(), "Reason is empty"
+
+
+def test_microplanning_10_deny_inaccessibility_request(review_session):
+    """Steps/expected in the MTP: click Deny -> push notification sent, work
+    area status updates (to NOT_VISITED - see act_on_inaccessibility_request)."""
+    connect_page, base, slug, opp_id = review_session
+    micro = _review_home(review_session)
+    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 1)
+    micro.select_work_area_via_js(work_area)
+    _require_review_ui(micro)
+    micro.open_review_inaccessibility_modal()
+    micro.deny_inaccessibility_request()
+    assert micro.selected_feature_status() == "NOT_VISITED", "Work area status did not update to NOT_VISITED after deny"
+
+
+def test_microplanning_11_approve_inaccessibility_request(review_session):
+    """Steps/expected in the MTP: click Approve as Inaccessible -> work area is
+    marked inaccessible (status INACCESSIBLE)."""
+    connect_page, base, slug, opp_id = review_session
+    micro = _review_home(review_session)
+    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 1)
+    micro.select_work_area_via_js(work_area)
+    _require_review_ui(micro)
+    micro.open_review_inaccessibility_modal()
+    micro.approve_inaccessibility_request()
+    assert micro.selected_feature_status() == "INACCESSIBLE", "Work area status did not update to INACCESSIBLE after approve"
