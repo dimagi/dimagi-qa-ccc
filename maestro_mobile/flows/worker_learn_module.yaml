@@ -1,0 +1,175 @@
+# Worker side of the hybrid Learn-tab test (MTP Learn_tab_02: "modules completed
+# progress is updated as we submit learn apps in mobile"). NOT YET DEVICE-VALIDATED
+# - see the caveats below and the flow's own comments; expect to refine this
+# against real BrowserStack failure screenshots, the same way every other flow in
+# this suite was built.
+#
+# Ids/strings are sourced from commcare-android (not commcare-core, which has no
+# Learn-specific code at all - "Learn app" is purely an org-authored CCZ, no
+# built-in gating):
+#   JobListConnectHomeAppsAdapter.java (connect_job_list_item.xml) - while a job's
+#     learning is <100%, its card shows btn_resume ("Resume"), same id/label the
+#     Deliver-side flows use. Tapping it does NOT open an app directly while the
+#     assessment is unpassed - ConnectJobsListsFragment.launchAppForJob() instead
+#     routes to the Learn Progress screen.
+#   ConnectLearningProgressFragment.java (fragment_connect_learning_progress.xml) -
+#     that screen's own action button is connect_learning_button, labelled
+#     "Continue Learning" (not installed yet -> "Download Learn App" first) while
+#     learningComplete is false. Its status text (connect_learning_status_text)
+#     reads "You have completed %d of %d lessons..." - this is the server's count
+#     (ConnectJobLearningRecord rows), NOT local state, so it only advances after
+#     a real device->HQ->Connect sync round-trip - same shape as the relearn task
+#     flow's PENDING_WARNING wait.
+#
+# UNCONFIRMED (this test opportunity's specific Learn CCZ, only checkable live):
+#   - the literal module/form names (LEARN_MODULE/LEARN_FORM below are placeholders)
+#   - whether the first form is a plain question (safe for the tap-below-label +
+#     nav_btn_next pattern) or contains video/rich media that could stall Next
+#   - how long after syncing the "completed X of Y" text/percent actually updates
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "TBD"
+  USERNAME: "TBD - Learn Tab 02 Worker"
+  BACKUP_CODE: "TBD"
+  OPPORTUNITY: "TBD"
+  # From the opportunity's own Learn app CCZ - fill in once Anshu seeds a worker
+  # whose learning is started but not 100% complete.
+  LEARN_MODULE: "TBD"
+  LEARN_FORM: "TBD"
+  LEARN_ANSWER: "Learn Automation"
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- runFlow: shared_login_signup.yaml
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "backup_code_view"
+    commands:
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - tapOn:
+          id: "personalid_email_skip_button"
+          optional: true
+      - tapOn:
+          text: "YES"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          point: "92%,50%"
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_login_button"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn: "Refresh Opportunities"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_login_button"
+          timeout: 120000
+- tapOn:
+    id: "connect_login_button"
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "btn_view_opportunity"
+    commands:
+      - tapOn:
+          id: "btn_view_opportunity"
+      - tapOn:
+          id: "btn_start"
+      - tapOn:
+          text: "OK"
+          optional: true
+
+# --- Reach the Learn Progress screen (learning <100%, so Resume routes here
+# rather than opening an app directly) ---
+- tapOn:
+    id: "btn_resume"
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_button"
+    timeout: 60000
+
+# --- Open the Learn app (downloads it first if not installed) ---
+- tapOn:
+    id: "connect_learning_button"
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 600000
+
+# --- Complete one Learn module/form (same module -> form -> answer -> next*
+# -> finish pattern as worker_relearn_task.yaml) ---
+- tapOn: "Start"
+- tapOn: "${LEARN_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${LEARN_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${LEARN_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${LEARN_ANSWER}"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- Confirm the Learn Progress screen reflects the new count once its own
+# sync round-trips through HQ -> Connect (server-side count, not local) ---
+- back
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_button"
+    timeout: 60000
+- tapOn:
+    id: "btnSync"
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_status_text"
+    timeout: 90000
