@@ -155,7 +155,7 @@ class CCHQMessagingPage(BasePage):
         field.wait_for(state="visible")
         # The wrapper holds the committed tokens, so it is what proves the value
         # actually took.
-        container = field.locator("xpath=ancestor::div[starts-with(@id,'div_id_schedule')][1]")
+        container = field.locator(locators.get("cchq_messaging_page", "schedule_ancestor_div"))
         for value in values:
             field.click()
             field.type(str(value))
@@ -323,7 +323,7 @@ class CCHQMessagingPage(BasePage):
         self._type_keys(self.SEARCH_BOX, name)
         self.click(self.SEARCH_BTN)
         self._wait_loaded()
-        row = self.page.locator(f"//table//td//a[contains(normalize-space(), \"{name}\")]").first
+        row = self.page.locator(locators.get("cchq_messaging_page", "broadcast_link_by_name").format(name=name)).first
         expect(row).to_be_visible(timeout=60_000)
         self._step(f"conditional alert '{name}' present in the list")
 
@@ -464,7 +464,7 @@ class CCHQMessagingPage(BasePage):
     def verify_broadcast_in_list(self, name):
         table = self._locator(self.BROADCASTS_TABLE)
         table.wait_for(state="visible", timeout=60_000)
-        row = table.locator(f"//tr//td//a[normalize-space()=\"{name}\"]").first
+        row = table.locator(locators.get("cchq_messaging_page", "broadcast_row_link_by_name").format(name=name)).first
         expect(row).to_be_visible(timeout=60_000)
         self._step(f"broadcast '{name}' present in the list")
 

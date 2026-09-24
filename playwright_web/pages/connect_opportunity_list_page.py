@@ -54,6 +54,7 @@ class ConnectOpportunityListPage(BasePage):
     EMPTY_TEXT = locators.get("connect_opportunity_list_page", "empty_text")
     SORT_HEADER_BY_LABEL = locators.get("connect_opportunity_list_page", "sort_header_by_label")
     ROW_LINK_BY_NAME = locators.get("connect_opportunity_list_page", "row_link_by_name")
+    ROW_LINK_BY_EXACT_NAME = locators.get("connect_opportunity_list_page", "row_link_by_exact_name")
     TEST_ICON_BY_NAME = locators.get("connect_opportunity_list_page", "test_icon_by_name")
 
     FILTER_BUTTON = locators.get("connect_opportunity_list_page", "filter_button")
@@ -117,7 +118,7 @@ class ConnectOpportunityListPage(BasePage):
         row.wait_for(state="visible", timeout=15000)
         # The name cell also carries the NM org as a subtitle line; keep only the
         # opportunity name (first line) for matching.
-        name = row.locator("xpath=.//a").first.inner_text().strip().split("\n")[0].strip()
+        name = row.locator(locators.get("connect_opportunity_list_page", "row_first_link")).first.inner_text().strip().split("\n")[0].strip()
         self._step(f"First opportunity in list: {name!r}")
         return name
 
@@ -239,9 +240,16 @@ class ConnectOpportunityListPage(BasePage):
 
     # -- row open / kebab -------------------------------------------------------
 
-    def open_opportunity(self, name):
-        self._step(f"Open opportunity '{name}'")
-        self.click(self.ROW_LINK_BY_NAME.format(name=name))
+    def has_opportunity(self, name, exact=False):
+        """Whether the list currently shows an opportunity `name` (exact-name match
+        when exact=True, else substring)."""
+        loc = self.ROW_LINK_BY_EXACT_NAME if exact else self.ROW_LINK_BY_NAME
+        return self.page.locator(loc.format(name=name)).count() > 0
+
+    def open_opportunity(self, name, exact=False):
+        self._step(f"Open opportunity '{name}'{' (exact)' if exact else ''}")
+        loc = self.ROW_LINK_BY_EXACT_NAME if exact else self.ROW_LINK_BY_NAME
+        self.click(loc.format(name=name))
         self.page.wait_for_load_state("load")
 
     def open_kebab(self, name):
