@@ -295,12 +295,6 @@ def test_opd_21_viewer_read_only(browser, config, settings):
         context.close()
 
 
-def test_opd_22_standalone_opportunity_menu(test_data, config):
-    """OD_22: DEPRECATED - no standalone (non-program) opportunities exist; they were
-    migrated to the legacy program (per Anshu 2026-09-04). Pending Nitin confirm."""
-    pytest.skip("DEPRECATED - no standalone opps exist (migrated to legacy program)")
-
-
 def test_opd_23_setup_incomplete_redirect(session, test_data, config):
     """OD_23: opening a setup-incomplete opportunity (no payment units) redirects to
     the Add Payment Units page."""
@@ -343,16 +337,11 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
     assert status == 200, f"work-areas URL returned {status} on the MICROPLANNING opp"
 
 
-def test_opd_30_increment_badges(test_data, config):
-    """OD_30: 24h increment ('↑') badges on Services Delivered + Payments Earned.
-
-    DESCOPED here: the badge needs deliveries/payments in the last 24h, which no
-    standalone web test can keep fresh (no daily cadence exists). Its proper home
-    is inside the delivery-submitting E2E flow (test_e2e_relearn_lifecycle): assert
-    the increment badge right after that test submits a visit, so submit+verify
-    happen together with no freshness problem. Fold in there if/when we prioritise
-    it or enable a daily schedule."""
-    pytest.skip("DESCOPED - fold into the E2E delivery-submission test; no daily-fresh data otherwise")
+# OD_30 (24h increment badges) was removed here: it needs deliveries/payments in the
+# last 24h, which no standalone web test can keep fresh. Its coverage belongs inside
+# the delivery-submitting E2E flow (test_e2e_relearn_lifecycle) - assert the increment
+# badge right after that test submits a visit. Tracked in the MTP, not left as a
+# permanent skip.
 
 
 def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
