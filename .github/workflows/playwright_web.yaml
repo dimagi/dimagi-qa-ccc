@@ -294,11 +294,12 @@ jobs:
           START_TS: ${{ steps.slack_start.outputs.ts }}
           START_CHANNEL: ${{ steps.slack_start.outputs.channel }}
           START_EPOCH: ${{ steps.slack_start.outputs.start_epoch }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           # matplotlib is only needed for the donut chart; the run still reports if
           # it (or the files:write scope) is unavailable - the chart is best-effort.
-          pip install --quiet slack_sdk matplotlib
+          pip install --quiet slack_sdk matplotlib openai
           python - <<'PY'
           import os
           import time
@@ -445,4 +446,21 @@ jobs:
                   print("No tests to chart - skipping donut")
           except Exception as exc:  # noqa: BLE001
               print(f"Chart upload skipped: {exc}")
+
+          # AI failure analysis: one terse line per failing test (Flaky/Bug/Env +
+          # cause + fix), threaded under the result. Best-effort - a missing
+          # OPENAI_API_KEY or any analysis error must never fail the build; the
+          # main summary/detail/donut above already carry the numbers.
+          try:
+              if failed and not cancelled:
+                  from utils.ai_failure_analyst import analyse
+                  report = analyse(
+                      f"playwright_web/reports/playwright-web-{env_name.lower()}.xml",
+                      scope_label=f"[{env_name}] Web Run #{run_number}",
+                  )
+                  if report:
+                      client.chat_postMessage(channel=chart_channel, thread_ts=chart_ts, text=report)
+                      print("AI failure analysis posted to thread")
+          except Exception as exc:  # noqa: BLE001
+              print(f"AI failure analysis skipped: {exc}")
           PY

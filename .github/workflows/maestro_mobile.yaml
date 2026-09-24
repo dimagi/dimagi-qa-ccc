@@ -185,9 +185,12 @@ jobs:
           SKIPPED: ${{ steps.aggregate.outputs.skipped }}
           BS_URL: ${{ steps.aggregate.outputs.url }}
           ARTIFACT_URL: ${{ steps.report.outputs.artifact-url }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
         shell: bash
         run: |
-          pip install --quiet slack_sdk
+          pip install --quiet slack_sdk requests openai
           python - <<'PY'
           import os
           from slack_sdk import WebClient
@@ -216,6 +219,24 @@ jobs:
               f"🎥 Device video and logs: <{bs_url}|BrowserStack build>\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
           )
-          WebClient(token=token).chat_postMessage(channel=channel, text=message)
+          client = WebClient(token=token)
+          posted = client.chat_postMessage(channel=channel, text=message)
           print("Slack notification sent")
+
+          # AI failure analysis: one terse line per failing flow (Flaky/Bug/Env +
+          # cause + fix), pulled from the flow's BrowserStack Maestro log and
+          # threaded under the result. Best-effort - never fails the build.
+          try:
+              failed = int(os.environ.get("FAILED", "0") or "0")
+              if failed and status != "SUCCESS":
+                  from utils.ai_failure_analyst import analyse_maestro
+                  report = analyse_maestro(
+                      "maestro_report.json",
+                      scope_label=f"[{app_env}] Mobile Run #{run_number}",
+                  )
+                  if report:
+                      client.chat_postMessage(channel=channel, thread_ts=posted["ts"], text=report)
+                      print("AI failure analysis posted to thread")
+          except Exception as exc:  # noqa: BLE001
+              print(f"AI failure analysis skipped: {exc}")
           PY
