@@ -99,9 +99,18 @@ env:
 # seconds after the code is submitted (a server round-trip), so wait for its OK
 # button and tap it - an early optional tap races the dialog and leaves it
 # covering the screen when the next step runs.
+#
+# Bumped 30s -> 60s 2026-09-24: this wait timed out 3 times in a row (2x prod,
+# 1x stage) across otherwise-unrelated runs (once even right after map_10
+# passed cleanly in the same session) - the failure is always right here,
+# never earlier/later in the flow, so it reads as this particular
+# server-round-trip occasionally running long rather than a broken element.
+# AI failure analysis flagged all three as "Flaky - UI element not ready -
+# increase wait time", which matches: map_10/map_11's own logic was never at
+# fault (map_10 already exercises the same fixed toggle assertions cleanly).
 - extendedWaitUntil:
     visible: { id: "org.commcare.dalvik:id/connect_message_button" }
-    timeout: 30000
+    timeout: 60000
 - tapOn: { id: "org.commcare.dalvik:id/connect_message_button" }
 - extendedWaitUntil:
     notVisible: { id: "org.commcare.dalvik:id/backup_code_view" }
