@@ -2,15 +2,16 @@
 """
 AI Failure Analyst
 ==================
-Parses a JUnit XML report, sends each failing test's traceback to OpenAI,
-and writes a plain-English diagnosis to ai_failure_report.md.
+Parses a JUnit XML report and asks OpenAI for a short, glance-friendly
+diagnosis of each failing test - one line each, not a multi-paragraph report.
+Meant to be read in a Slack thread in a few seconds, not a full write-up.
 
-Usage (called automatically by CI after tests run):
-    python utils/ai_failure_analyst.py reports/web-stage.xml
-    python utils/ai_failure_analyst.py reports/mobile-prod.xml
+Usage:
+    python utils/ai_failure_analyst.py reports/playwright-web-stage.xml
+    python utils/ai_failure_analyst.py reports/maestro-mobile-report-stage.xml
 
-Output:
-    ai_failure_report.md   — uploaded as a CI artifact and printed to console
+Printing to stdout is the primary interface (CI captures it for Slack);
+analyse() also returns the compact text for direct in-process use.
 """
 
 import os
@@ -21,10 +22,12 @@ from pathlib import Path
 try:
     from openai import OpenAI
 except ImportError:
-    print("[ai_failure_analyst] openai not installed — skipping analysis.")
+    print("[ai_failure_analyst] openai not installed - skipping analysis.")
     sys.exit(0)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+MAX_FAILURES = 8  # cap the OpenAI calls + keep the Slack message short
 
 
 def _load_api_key() -> str:
@@ -44,7 +47,8 @@ def _load_api_key() -> str:
 
 
 def _parse_failures(xml_path: Path) -> list[dict]:
-    """Return list of {name, classname, error} for every failed/errored test."""
+    """Return list of {name, classname, error} for every failed/errored test.
+    Skipped tests are deliberately excluded - they're not failures."""
     if not xml_path.exists():
         print(f"[ai_failure_analyst] XML not found: {xml_path}")
         return []
@@ -58,7 +62,7 @@ def _parse_failures(xml_path: Path) -> list[dict]:
                 failures.append({
                     "name":      tc.attrib.get("name", "unknown"),
                     "classname": tc.attrib.get("classname", ""),
-                    "error":     (node.text or node.attrib.get("message", ""))[:3000],
+                    "error":     (node.text or node.attrib.get("message", ""))[:2000],
                     "tag":       tag,
                 })
                 break
@@ -66,79 +70,79 @@ def _parse_failures(xml_path: Path) -> list[dict]:
 
 
 SYSTEM_PROMPT = """\
-You are a senior QA automation engineer reviewing a Selenium/Appium pytest failure.
-The project uses Python, Selenium 4, Appium, Page Object Model, YAML locators.
+You are a senior QA automation engineer triaging CI failures for a Playwright \
+(Python, Page Object Model, YAML locators) and Maestro (mobile YAML flows) test \
+suite testing a Django web app (CommCare Connect).
 
-For each failure, provide a structured diagnosis in exactly this format:
+Reply with EXACTLY ONE LINE, no markdown, no preamble, in this exact shape:
+<Flaky|Bug|Env> — <root cause in <=12 words> — Fix: <concrete action in <=10 words>
 
-**Root Cause:** One sentence describing what went wrong technically.
-**Flaky or Real Bug:** State "Likely flaky" or "Likely real bug" and why in one sentence.
-**Fix:** One concrete, actionable suggestion (e.g. "Add an explicit wait for X", "Update locator for Y element").
+"Flaky" = timing/race/staging-availability, nothing to fix in test or product code.
+"Bug" = a real defect in the test code (bad locator/logic) or the product.
+"Env" = external dependency/data/environment issue (seed data, staging outage, \
+expired real-clock state) - not fixable by changing code.
 
-Be concise. No preamble. No markdown headers beyond the three bold labels above.
+Be terse. One line only.
 """
 
 
 def _analyse_failure(client: OpenAI, name: str, error: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=300,
+        max_tokens=60,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content":
-                f"Test: `{name}`\n\nTraceback:\n```\n{error}\n```"
-            },
+            {"role": "user", "content": f"Test: `{name}`\n\nTraceback:\n```\n{error}\n```"},
         ],
     )
-    return response.choices[0].message.content.strip()
+    return response.choices[0].message.content.strip().replace("\n", " ")
 
 
-def analyse(xml_path: str) -> int:
-    """Run analysis on xml_path. Returns number of failures found."""
+def analyse(xml_path: str, scope_label: str | None = None) -> str:
+    """Run analysis on xml_path, print + return a compact glance-friendly
+    report (empty string if there's nothing to report or no API key)."""
     api_key = _load_api_key()
     if not api_key:
-        print("[ai_failure_analyst] OPENAI_API_KEY not set — skipping analysis.")
-        return 0
+        print("[ai_failure_analyst] OPENAI_API_KEY not set - skipping analysis.")
+        return ""
 
     path = Path(xml_path)
     failures = _parse_failures(path)
-
     if not failures:
-        print(f"[ai_failure_analyst] No failures in {path.name} — nothing to analyse.")
-        return 0
+        print(f"[ai_failure_analyst] No failures in {path.name} - nothing to analyse.")
+        return ""
 
     client = OpenAI(api_key=api_key)
-    scope = path.stem  # e.g. "web-stage"
+    scope = scope_label or path.stem
+    shown, overflow = failures[:MAX_FAILURES], failures[MAX_FAILURES:]
 
-    report_lines = [
-        f"# AI Failure Analysis — `{scope}`\n",
-        f"**{len(failures)} failure(s) detected**\n",
-        "---\n",
-    ]
+    lines = [f"\U0001f916 AI Failure Analysis — {scope}"]
+    for f in shown:
+        print(f"[ai_failure_analyst] Analysing: {f['name']} ...")
+        try:
+            diagnosis = _analyse_failure(client, f["name"], f["error"])
+        except Exception as exc:  # noqa: BLE001 - best-effort, never break CI over this
+            diagnosis = f"Env — analysis unavailable ({exc.__class__.__name__}) — Fix: check manually"
+        line = f"• `{f['name']}`: {diagnosis}"
+        lines.append(line)
+        print(line)
+    if overflow:
+        lines.append(f"...and {len(overflow)} more failure(s), see the full report.")
 
-    for i, f in enumerate(failures, 1):
-        print(f"\n[ai_failure_analyst] Analysing ({i}/{len(failures)}): {f['name']} ...")
-        diagnosis = _analyse_failure(client, f["name"], f["error"])
+    report_text = "\n".join(lines)
+    print(f"\n{report_text}")
 
-        block = (
-            f"## {i}. `{f['name']}`\n"
-            f"> Class: `{f['classname']}`  |  Type: `{f['tag']}`\n\n"
-            f"{diagnosis}\n\n"
-            "---\n"
-        )
-        report_lines.append(block)
-        print(diagnosis)
+    # Also write the file the legacy dimagi_pytest.yaml workflow's "Upload AI
+    # Failure Report" step still expects (manual-dispatch only, but functional -
+    # keep it working rather than assume it's dead).
+    (PROJECT_ROOT / "ai_failure_report.md").write_text(report_text, encoding="utf-8")
 
-    report_text = "\n".join(report_lines)
-    report_path = PROJECT_ROOT / "ai_failure_report.md"
-    report_path.write_text(report_text, encoding="utf-8")
-    print(f"\n[ai_failure_analyst] Report written -> {report_path}")
-    return len(failures)
+    return report_text
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python utils/ai_failure_analyst.py <path/to/junit.xml>")
+        print("Usage: python utils/ai_failure_analyst.py <path/to/junit.xml> [scope_label]")
         sys.exit(1)
 
-    analyse(sys.argv[1])
+    analyse(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
