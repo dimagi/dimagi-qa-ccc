@@ -96,21 +96,44 @@ def test_pid_59_confirm_unlink_flips_status(workers, config):
     if not target:
         pytest.skip("No worker with an active PersonalID link on this domain to unlink.")
 
-    # --- the actual test: unlink and confirm the status flips ---
-    workers.open_unlink_confirmation_for_worker(target)
-    workers.verify_unlink_confirmation_modal()
-    workers.confirm_unlink()
+    # The restore runs in a finally, not after the assertion. It used to sit
+    # after it, which meant any failure in between left the worker unlinked for
+    # the rest of the session - and this test unlinks a worker the messaging
+    # suite sends broadcasts to. Prod run 35588627616 is that exactly: the list
+    # failed to re-render after the unlink, PID_59 died on that reload, and
+    # CCC-Automationuser1 stayed unlinked. Forty minutes later
+    # test_message_push_opens_the_thread searched for its Connect user id as a
+    # broadcast recipient, got "No results found", and failed for a reason that
+    # had nothing to do with messaging.
+    #
+    # A failure inside the block still propagates: this only guarantees the
+    # re-link is attempted, and reports a restore that did not take.
+    restore_error = None
+    try:
+        # --- the actual test: unlink and confirm the status flips ---
+        workers.open_unlink_confirmation_for_worker(target)
+        workers.verify_unlink_confirmation_modal()
+        workers.confirm_unlink()
 
-    workers.open(config)  # refresh the list
-    status = workers.worker_personalid_status(target)
-    assert status in ("Not Linked", "Inactive"), (
-        f"Expected '{target}' unlinked after confirm; saw '{status}'"
-    )
+        workers.open(config)  # refresh the list
+        status = workers.worker_personalid_status(target)
+        assert status in ("Not Linked", "Inactive"), (
+            f"Expected '{target}' unlinked after confirm; saw '{status}'"
+        )
+    finally:
+        try:
+            workers.link_worker(target)
+            workers.open(config)
+            restored = workers.worker_personalid_status(target)
+            if restored != "Active":
+                restore_error = (
+                    f"Failed to restore link for '{target}'; status={restored!r}. "
+                    f"Anything downstream that needs this worker will now fail."
+                )
+        except Exception as exc:  # noqa: BLE001 - reported, never swallowed
+            restore_error = (
+                f"Could not restore the PersonalID link for '{target}': {exc}. "
+                f"Anything downstream that needs this worker will now fail."
+            )
 
-    # --- restore state so the test is idempotent for the next run ---
-    workers.link_worker(target)
-    workers.open(config)
-    restored = workers.worker_personalid_status(target)
-    assert restored == "Active", (
-        f"Failed to restore link for '{target}'; status={restored!r}"
-    )
+    assert not restore_error, restore_error

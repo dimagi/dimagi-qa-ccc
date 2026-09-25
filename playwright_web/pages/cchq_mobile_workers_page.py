@@ -1,3 +1,5 @@
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -39,9 +41,28 @@ class MobileWorkersPage(BasePage):
     def open(self, config):
         url = self.mobile_workers_url(config)
         self._step(f"open mobile workers page {url}")
-        self.page.goto(url, wait_until="load")
-        # Worker rows are rendered client-side (knockout) - wait for the table.
-        self.page.locator(self.WORKER_TABLE).first.wait_for(state="visible", timeout=30000)
+        # Worker rows are rendered client-side (knockout) against an async fetch,
+        # and the table stays hidden (data-bind="visible: showTable") until that
+        # fetch returns. A single 30s wait lost that race on prod run 35588627616,
+        # in the reload immediately after an unlink: "locator resolved to hidden
+        # <table>" 64 times, then a timeout. That killed PID_59 before it could
+        # re-link the worker, and left a worker the messaging suite needs unlinked
+        # for the rest of the run.
+        #
+        # Reload rather than just wait longer. A fetch that has already stalled
+        # does not recover on its own, so more patience buys nothing; a second
+        # GET does.
+        for attempt in (1, 2):
+            self.page.goto(url, wait_until="load")
+            try:
+                self.page.locator(self.WORKER_TABLE).first.wait_for(
+                    state="visible", timeout=45000
+                )
+                break
+            except PlaywrightTimeoutError:
+                if attempt == 2:
+                    raise
+                self._step("worker table never rendered - reloading once")
         self.page.wait_for_timeout(3000)
 
     # --- PID_56: PersonalID Status column present with valid values ---
