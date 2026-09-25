@@ -642,3 +642,60 @@ cchq_case_list_map_page:
   # object instead.
   add_property_button: "//button[contains(@data-bind,'addProperty')]"
   save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"
+# --- Invoices List page (Invoice_01-29, Invoice List_30-37) ---
+# invoice_base.html renders the "All Invoices"/"Payment Report" tabs and (for a
+# non-PM org) a "Create Invoice" dropdown; both tabs render exactly one
+# base-table (invoice_list.html / invoice_payment_report.html), so the same
+# "first base-table on the page" xpath used elsewhere (worker/opp tables)
+# applies here too. Role (NM vs PM) is derived from the URL's org slug, not a
+# UI toggle - see flows/invoices_setup.py.
+connect_invoice_list_page:
+  # The <span> is decorative; the real link is an invisible full-tile overlay
+  # anchor (class="absolute inset-0") in the same <li> - click that, not the span.
+  tab_by_label: "//ul[contains(@class,'tabs')]//li[.//span[normalize-space()='{label}']]//a"
+  active_tab_label: "//ul[contains(@class,'tabs')]//li[contains(@class,'active')]//span"
+  create_invoice_button: "//button[contains(normalize-space(),'Create Invoice')]"
+  create_invoice_menu_item_by_type: "//a[contains(@href,'invoice_type={type}')]"
+  table: "(//table[contains(@class,'base-table')])[1]"
+  table_headers: "(//table[contains(@class,'base-table')])[1]//thead//th"
+  table_rows: "(//table[contains(@class,'base-table')])[1]//tbody//tr"
+  empty_text: "(//table[contains(@class,'base-table')])[1]//tbody//td[contains(normalize-space(),'No Payment Invoices')]"
+  # Deployed markup (confirmed live, differs from the checked-out product repo's
+  # invoice_payment_report.html, which shows an older bg-brand-indigo/pointer-
+  # events-none pill pair): a chip-group of two <a class="chip ..."> links, the
+  # active one carrying both aria-current="true" and a chip-active class.
+  currency_toggle_links: "//div[contains(@class,'chip-group')]//a"
+  report_card_amounts: "//div[@id='invoice_report_card_container']//div[contains(@class,'text-2xl')]"
+  report_card_meta: "//div[@id='invoice_report_card_container']//span[contains(@class,'text-nowrap')]"
+# --- Invoice create/review form (shared crispy layout, AutomatedPaymentInvoiceForm) ---
+# Field ids are Django/crispy defaults (id_<field_name>); the review page always
+# renders the same fields read-only (see forms.py prepare_fields) plus an action
+# bar that differs by role/status (invoice_detail.html), and two confirm modals
+# (components/invoice_confirm_modal.html) keyed by their Alpine modal_name.
+connect_invoice_form_page:
+  invoice_number_field: "id_invoice_number"
+  date_field: "id_date"
+  title_field: "id_title"
+  start_date_field: "id_start_date"
+  end_date_field: "id_end_date"
+  amount_field: "id_amount"
+  amount_usd_field: "id_amount_usd"
+  usd_currency_checkbox: "id_usd_currency"
+  date_of_expense_field: "id_date_of_expense"
+  description_field: "id_description"
+  status_field: "id_status"
+  submit_button: "submit-id-submit"
+  exchange_rate_display: "exchange-rate-display"
+  back_to_invoices_link: "//a[normalize-space()='Back to Invoices']"
+  download_link: "//a[normalize-space()='Download']"
+  read_only_badge: "//span[contains(@class,'badge') and normalize-space()='Read Only']"
+  paid_badge: "//span[contains(@class,'badge') and normalize-space()='Paid']"
+  cancel_action_link: "//a[normalize-space()='Cancel']"
+  submit_to_pm_link: "//a[normalize-space()='Submit to Program Manager']"
+  reject_action_link: "//a[normalize-space()='Reject']"
+  approve_action_link: "//a[normalize-space()='Approve for Payment Processing']"
+  pay_button: "//button[normalize-space()='Pay']"
+  modal_by_name: "//div[@aria-labelledby='modal-title-{name}']"
+  modal_confirm_button: "//div[@aria-labelledby='modal-title-{name}']//button[contains(@class,'negative-dark')]"
+  modal_close_button: "//div[@aria-labelledby='modal-title-{name}']//button[normalize-space()='Close']"
+  field_error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist')]"

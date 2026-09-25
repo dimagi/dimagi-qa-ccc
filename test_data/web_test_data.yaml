@@ -476,3 +476,21 @@ OPD:
   # the org revert to auto-approval).
   manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
   manual_verify_org_slug_staging: "pm_automation_02"
+
+# Invoices List page (Invoice_01-29, Invoice List_30-37). No fixed opportunity -
+# the module picks the PM's opportunity-list first row at runtime (any of the
+# "Demo Opportunity_<date>" OLP-flood rows; all share the same PM_Automation_01
+# owner + "Network Manager" NM-partner relationship, confirmed live against
+# staging 2026-09-23 - see flows/invoices_setup.py). NM role is reached by
+# opening the SAME opp_id under the network_manager_slug, not an org switch.
+INVOICE_LIST:
+  network_manager: "Network Manager"
+  network_manager_slug: "network-manager"
+
+INVOICE_CUSTOM:
+  amount: "500"
+  date_of_expense: "" # left blank - filled with today's date at runtime
+  justification: "Automation custom invoice justification"
+
+INVOICE_VALIDATION:
+  future_days_ahead: 5
