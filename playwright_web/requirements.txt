@@ -3,3 +3,4 @@ pytest-playwright
 PyYAML>=6.0
 openai>=1.0.0
 openpyxl>=3.1
+mapbox-vector-tile>=2.1

@@ -642,3 +642,49 @@ cchq_case_list_map_page:
   # object instead.
   add_property_button: "//button[contains(@data-bind,'addProperty')]"
   save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"
+# --- Microplanning (Microplanning_01-40) ---
+# Reached from the opportunity dashboard's "View Progress Map" stat panel
+# (PANEL_HREF["microplanning"], opportunity_delivery_stats). Map itself renders on
+# a Mapbox canvas (no per-feature DOM elements) - only structural sidebar/filter/
+# assignment-mode elements are asserted here, never map-canvas content. Field ids
+# are django-filter's defaults (id_<field_name>); source: microplanning/filters.py,
+# forms.py, templates/microplanning/home.html + map_handler.html.
+connect_microplanning_page:
+  page_title: "//h2[normalize-space()='Select Opportunity Area']"
+  metric_card_labels: "//div[contains(@class,'metric-card')]//div[contains(@class,'text-white/80')]"
+  filter_status_select: "id_status"
+  filter_assignee_select: "id_assignee"
+  filter_start_date: "id_start_date"
+  filter_end_date: "id_end_date"
+  filter_unassigned_select: "id_unassigned_only"
+  show_visits_toggle: "show-visits-toggle"
+  download_button: "//aside[@id='sidebar']//a[.//i[contains(@class,'fa-download')]]"
+  enter_assignment_mode_link: "//a[contains(normalize-space(),'Enter Assignment Mode')]"
+  exit_assignment_mode_link: "//a[contains(normalize-space(),'Exit')]"
+  unassigned_only_toggle: "unassigned-toggle"
+  assignment_group_select: "id_work_area_group"
+  assignment_assignee_select: "id_assignee"
+  flw_summary_section: "//h3[normalize-space()='FLW Summary']/ancestor::div[contains(@class,'border-t')][1]"
+  flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View summary by FLW')] | //a[contains(normalize-space(),'View summary by FLW')]"
+  flw_summary_view_visits_btn: "//button[contains(normalize-space(),'View Visits')] | //a[contains(normalize-space(),'View Visits')]"
+  select_work_area_section: "//h2[normalize-space()='Select Work Area']/ancestor::aside[1]"
+  modify_work_area_button: "//button[contains(normalize-space(),'Modify Work Area')]"
+  modify_work_area_modal: "work-area-form"
+  review_inaccessible_button: "//button[contains(normalize-space(),'Review Inaccessible')]"
+  review_inaccessibility_fragment: "review-inaccessibility-fragment"
+  review_inaccessibility_modal_backdrop: "//div[@id='review-inaccessibility-fragment']/ancestor::div[contains(@class,'modal-backdrop')][1]"
+  review_visit_date_value: "//dt[normalize-space()='Date of Visit']/following-sibling::dd[1]"
+  review_reason_value: "//dt[normalize-space()='Reason']/following-sibling::dd[1]"
+  review_photo_evidence_section: "//p[normalize-space()='Photo Evidence']/parent::div"
+  review_return_to_map_button: "//button[contains(normalize-space(),'Return to Progress Map')]"
+  review_deny_button: "//button[@name='action' and @value='deny']"
+  review_approve_button: "//button[@name='action' and @value='approve']"
+connect_coverage_progress_page:
+  page_title: "//h1[normalize-space()='Coverage Progress Tracker']"
+  ward_saturation_label: "//p[contains(normalize-space(),'Ward Saturation Goal')]"
+  date_from: "id_start"
+  date_to: "id_end"
+  apply_button: "//button[normalize-space()='Apply']"
+  section_heading_by_text: "//h2[contains(@class,'title') and normalize-space()='{text}']"
+  download_button_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//button"
+  table_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table"

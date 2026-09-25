@@ -476,3 +476,20 @@ OPD:
   # the org revert to auto-approval).
   manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
   manual_verify_org_slug_staging: "pm_automation_02"
+
+# Microplanning_09/10/11: review/approve/deny an inaccessible-work-area request.
+# Separate, disposable microplanning opp Anshu seeded 2026-09-23 (staging only) -
+# deliberately NOT the shared OPD.microplanning_opp_id_staging ("OLP Test opp"),
+# since the mutating cases here (deny/approve permanently change a work area's
+# status) shouldn't run against an opp other suites rely on staying put. Verified
+# live 2026-09-23: 5 work areas total (KOTA0001-5), 3 confirmed in
+# REQUEST_FOR_INACCESSIBLE status (KOTA0001-3, ids 36051-36053) via the vector-
+# tile decode in MicroplanningPage.fetch_all_work_areas. This same opp doubles as
+# the disposable opp for the other mutating cases (02/16/17/19/20/23/24/26) per
+# Anshu - "same microplanning opp can be used for 2 scenario as well".
+MICROPLANNING_REVIEW:
+  opportunity_id_staging: "467a97c4-5c71-41cc-9e7c-8f7999b0b54c"
+  org_slug_staging: "pm_automation_01"
+  worker_name: "Microplanning_user"
+  worker_phone: "+74261291390"
+  worker_backup_code: "123456"
