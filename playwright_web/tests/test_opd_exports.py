@@ -1,4 +1,4 @@
-"""Opportunity Dashboard - Tier 2/3 export / import flows (OD_36/44/46).
+"""Opportunity Dashboard - Tier 2/3 export / import flows (OD_44/46).
 
 Non-mutating by construction:
 - Exports queue a background (Celery) task and 302-redirect with ?export_task_id;
@@ -22,7 +22,6 @@ from utils.helpers import with_page_size
 
 # Invalid upload payloads (Playwright in-memory FilePayloads - no temp files).
 BAD_TYPE_FILE = {"name": "not-a-sheet.txt", "mimeType": "text/plain", "buffer": b"this is not a csv or xlsx"}
-MISSING_COLS_CSV = {"name": "wrong.csv", "mimeType": "text/csv", "buffer": b"foo,bar\n1,2\n"}
 
 
 def _open_dashboard(page, test_data, config, settings):
@@ -95,27 +94,6 @@ def manual_dashboard(browser, config, settings, test_data):
         yield dash
     finally:
         context.close()
-
-
-def test_opd_36_catchment_export(dashboard):
-    """OD_36: Catchment Areas > Export queues an export (redirects with an export
-    task id). No data changed."""
-    dashboard.goto_dashboard()
-    if not dashboard.catchment_menu_available():
-        pytest.skip("'Catchment Areas' hamburger item is not present in this build - catchment export unavailable")
-    url = dashboard.submit_catchment_export()
-    assert "export_task_id" in url, f"Catchment export did not queue a task: {url}"
-
-
-def test_opd_36_catchment_import_rejects_bad_columns(dashboard):
-    """OD_36: a catchment import missing the required columns is rejected."""
-    dashboard.goto_dashboard()
-    if not dashboard.catchment_menu_available():
-        pytest.skip("'Catchment Areas' hamburger item is not present in this build - catchment import unavailable")
-    body = dashboard.upload_and_import(
-        dashboard.open_catchment_import_modal, dashboard.CATCHMENT_IMPORT_FILE, MISSING_COLS_CSV
-    )
-    assert dashboard.import_error_present(body), "Expected a column/format rejection for the catchment import"
 
 
 def test_opd_44_deliver_export_flow(manual_dashboard):

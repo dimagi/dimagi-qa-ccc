@@ -425,11 +425,12 @@ OLP_NM_CREATE:
 # to "Case List Opportunity" per Anshu: confirmed live on both envs (Active,
 # not ended, Learn+Deliver apps and payment units configured) - exists prod
 # c2345254-b139-4b8b-aebc-13ffc4dd918a / stage a58539ee-3dd0-479f-b218-9ab196e78fac,
-# org pm_automation_01. Full OPD suite verified on stage: 40 passed, 2 skipped
-# (OD_36 catchment export/import - this opp has no Catchment Areas hamburger
-# item, same clean skip as before the repoint, not a regression). If the name
-# is not found the test falls back to the first row in the list, so the suite
-# stays runnable without seed coupling.
+# org pm_automation_01. Full OPD suite verified on stage: 40 passed, 2 skipped.
+# (Those 2 were the OD_36 catchment export/import cases. Catchment Areas has
+# since been removed from the product entirely, so those cases are gone rather
+# than skipped - see the commit that deleted them.) If the name is not found the
+# test falls back to the first row in the list, so the suite stays runnable
+# without seed coupling.
 OPD:
   opportunity_name: "Case List Opportunity"
   # Budget/message cases need an opp with claimed workers; Demo has none.
