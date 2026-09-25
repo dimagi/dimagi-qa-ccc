@@ -193,11 +193,6 @@ opportunity_dashboard_page:
   deliver_progress_denominators: "//div[@id='table']//table//span[contains(@class,'text-gray-700')]"
 
   # -- Export / import flows (OD_36/44/46) -----------------------------------
-  # Catchment Areas: hamburger 'Catchment Areas' toggle reveals Import/Export links.
-  catchment_toggle: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Catchment Areas']"
-  catchment_import_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Import']"
-  catchment_export_link: "//div[contains(@class,'absolute') and contains(@class,'right-0')]//a[normalize-space()='Export']"
-  catchment_import_file: "//input[@type='file' and @name='catchments']"
   # Modal submit buttons (native POST forms). One modal open at a time -> .first visible.
   modal_export_submit: "//button[@type='submit' and normalize-space()='Export']"
   modal_import_submit: "//button[@type='submit' and normalize-space()='Import']"
