@@ -190,6 +190,16 @@ WORKER_LIFECYCLE:
   not_found_phone: "+74261291230"
   cooldown_phone: "+919000696488"
 
+# Learn_tab_02 hybrid (web+mobile): "modules completed" progress updates after a
+# device submits a Learn form. Needs a worker whose learning is started but not
+# 100% complete, on an opportunity whose Learn app has a known module/form name -
+# TBD gates the test to a clean skip until Anshu seeds this (add to the ask list).
+# The mobile side (worker_learn_module.yaml) is built but NOT device-validated.
+LEARN_TAB_02_HYBRID:
+  opportunity_name: "TBD - Anshu opp with a learning-in-progress worker"
+  worker_name: "TBD - seeded worker (learning started, not complete)"
+  mobile_flow_key: "LEARN_TAB_02"   # test_data/mobile_workers.yaml entry, once seeded
+
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
   # exists on staging under PM_Automation_01. covid_opp_test has an accepted worker
