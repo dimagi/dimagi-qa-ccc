@@ -106,7 +106,7 @@ def test_opd_27_currency_formatting(dashboard):
     )
 
 
-def test_opd_29_map_audit_tasks_panels_present(dashboard):
+def test_opd_29_map_audit_tasks_panels_present(dashboard, config):
     """OD_29: the View Progress Map / Audit Opportunity / Tasks Assigned panels
     render when enabled. Product-risk: the microplanning/audit links carry no
     MICROPLANNING guard, so click-through access control is verified on a
@@ -122,7 +122,19 @@ def test_opd_29_map_audit_tasks_panels_present(dashboard):
             if href is not None:
                 assert href.strip(), f"Panel {title!r} is a link with an empty href"
             dashboard._step(f"Panel {title!r} href: {href}")
-    assert present, f"None of the map/audit/tasks panels rendered: {titles}"
+    # The three panels only render when microplanning/tasks are enabled on the
+    # opportunity. Staging's Case List Opportunity has them and must keep them, so
+    # a missing panel there is a real failure. Prod's copy lacked them when this was
+    # written (though a later CI run saw them on prod too), so only prod skips when
+    # none render; if they appear there the link-integrity asserts above still run.
+    if not present:
+        message = (
+            "None of the map/audit/tasks panels are present on this opportunity "
+            f"({titles}); they require microplanning/tasks enabled on the opp."
+        )
+        if config.env == "prod":
+            pytest.skip(message)
+        pytest.fail(message)
     dashboard._step(f"Panels present: {present}")
 
 
