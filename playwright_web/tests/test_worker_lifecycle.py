@@ -122,19 +122,19 @@ def test_connect_worker_09_resend_cooldown(workers, test_data):
     """Connect_worker_09: resending a registered invite within 24h is refused with
     a cooldown message (real number; demo numbers don't enforce the cooldown).
 
-    This is real-clock-dependent, not a fixed fixture: the seeded invite's last
-    send has to still be <24h old at whatever moment CI happens to run. It WAS a
-    hard assert, which meant every time the window lapsed between runs, this
-    reported as a genuine-looking red failure indistinguishable from a real
-    regression - noisy for a case nothing in our code caused or can prevent.
-    Skip (not fail) when the cooldown window has lapsed - same "data-guarded,
-    skip don't fail" stance the rest of this suite already takes elsewhere."""
+    The window is checked from the invite's Invited Date BEFORE clicking Resend: if
+    it has already lapsed we skip without resending (a resend would text the real
+    number). Inside the window the refusal is a hard assert, so a broken cooldown
+    fails the test."""
     data = test_data.get("WORKER_LIFECYCLE")
-    if not workers.resend_shows_cooldown(data["cooldown_phone"]):
+    phone = data["cooldown_phone"]
+    if not workers.invite_within_cooldown(phone, data["cooldown_window_hours"], data["cooldown_margin_hours"]):
         pytest.skip(
-            f"{data['cooldown_phone']}'s 24h resend-cooldown window has lapsed (real-clock-dependent, "
-            "not a code issue) - the resend went through for real this run; next run will see a fresh window"
+            f"{phone}'s invite is outside the {data['cooldown_window_hours']}h resend window - not "
+            "resending (it would text a real user). Refresh the invite (delete + re-invite the number) "
+            "to re-enable this test."
         )
+    workers.verify_resend_cooldown(phone, data["cooldown_message"])
 
 
 def test_learn_tab_03_assessment_failed(workers, test_data):

@@ -1,6 +1,6 @@
 import re
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from utils.helpers import LocatorLoader, TestDataLoader
 
@@ -817,17 +817,35 @@ class ConnectWorkersPage(BasePage):
             "input[type=checkbox]"
         ).first.uncheck()
 
-    def resend_shows_cooldown(self, phone):
+    def invite_within_cooldown(self, phone, window_hours, margin_hours):
+        """Whether `phone`'s invite is still inside the resend-cooldown window, read
+        from the row's 'Invited Date' cell WITHOUT clicking Resend (a lapsed window
+        means a resend would really text that number). The table shows a naive
+        'DD-Mon-YYYY HH:MM' in the server's timezone, taken as UTC here; margin_hours
+        is subtracted from the window so clock/timezone skew errs towards 'lapsed'."""
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.lower() == "invited date"), None)
+        assert idx is not None, f"No 'Invited Date' column on the workers list: {headers}"
+        row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+        row.wait_for(state="visible", timeout=15000)
+        text = row.locator(self.ROW_CELLS).nth(idx).inner_text().strip()
+        invited = datetime.strptime(text, "%d-%b-%Y %H:%M")
+        age = datetime.now(timezone.utc).replace(tzinfo=None) - invited
+        within = age < timedelta(hours=window_hours - margin_hours)
+        self._step(f"Invite for {phone} sent {text} ({age} ago) - inside cooldown window: {within}")
+        return within
+
+    def verify_resend_cooldown(self, phone, expected_text):
         """Connect_worker_09 - resending a registered invite within 24h is refused
-        with a cooldown message. Uses a real registered number (demo numbers do not
-        enforce the cooldown). Returns True/False rather than asserting: whether the
-        invite is still inside its 24h window is real-clock-dependent and expected
-        to drift, so the caller should skip (not fail) on False - see
-        test_connect_worker_09_resend_cooldown."""
+        with a cooldown message naming the number. Only call once
+        invite_within_cooldown() is True, so a refusal is the expected outcome and
+        any successful resend is a real regression."""
         body = self.resend_worker_and_message(phone)
-        in_cooldown = "sent in the last 24 hours" in body.lower() and phone in body
-        self._step(f"Resend of {phone} {'refused - 24h cooldown' if in_cooldown else 'was NOT refused - cooldown window has lapsed'}")
-        return in_cooldown
+        assert expected_text in body.lower() and phone in body, (
+            f"Expected a 24h-cooldown refusal naming {phone}, but the resend was not refused "
+            f"(the invite has now been re-sent to the real number)."
+        )
+        self._step(f"Resend of {phone} refused - 24h cooldown")
 
     def _first_pending_invite_row(self):
         return self.page.locator(self.PENDING_INVITE_ROW).first

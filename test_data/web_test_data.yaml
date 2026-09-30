@@ -189,6 +189,9 @@ WORKER_LIFECYCLE:
   # for _06/_13, and a real registered number for the _09 24h resend cooldown.
   not_found_phone: "+74261291230"
   cooldown_phone: "+919000696488"
+  cooldown_window_hours: 24
+  cooldown_margin_hours: 1      # skew allowance: err towards "lapsed" (never resend)
+  cooldown_message: "sent in the last 24 hours"  # lowercase; matched against lowercased page text
 
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
