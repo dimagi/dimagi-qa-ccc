@@ -100,7 +100,7 @@ class OpportunityDashboardPage(BasePage):
             self.scroll_into_view(selector)
             card = self.page.locator(selector).first
             card.wait_for(state="visible", timeout=15000)
-            count = card.locator("xpath=.//h3[contains(@class,'text-2xl')]").first.inner_text().strip()
+            count = card.locator(locators.get("opportunity_dashboard_page", "card_count_h3")).first.inner_text().strip()
             assert count != "", f"{title} / {subtitle} count is empty"
             self._step(f"Stat panel '{title} / {subtitle}' -> {count}")
 
@@ -377,7 +377,7 @@ class OpportunityDashboardPage(BasePage):
         assert "Max Visits" in headers, f"'Max Visits' column not found in {headers}"
         col = headers.index("Max Visits")
         row = self.page.locator(self.ADD_BUDGET_TABLE_ROWS).nth(row_index)
-        cell = row.locator("xpath=./td").nth(col).inner_text().strip()
+        cell = row.locator(locators.get("opportunity_dashboard_page", "row_cells")).nth(col).inner_text().strip()
         value = int("".join(ch for ch in cell if ch.isdigit()) or "0")
         self._step(f"Add-budget row {row_index} Max Visits = {value}")
         return value
@@ -398,12 +398,8 @@ class OpportunityDashboardPage(BasePage):
     def budget_decrease_error_present(self):
         return self.is_displayed(self.ADD_BUDGET_DECREASE_ERROR, timeout=8000)
 
-    # -- Export / import flows (OD_36/44/46) ------------------------------------
+    # -- Export / import flows (OD_44/46) --------------------------------------
 
-    CATCHMENT_TOGGLE = locators.get("opportunity_dashboard_page", "catchment_toggle")
-    CATCHMENT_IMPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_import_link")
-    CATCHMENT_EXPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_export_link")
-    CATCHMENT_IMPORT_FILE = locators.get("opportunity_dashboard_page", "catchment_import_file")
     MODAL_EXPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_export_submit")
     MODAL_IMPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_import_submit")
     DELIVER_EXPORT_BTN = locators.get("opportunity_dashboard_page", "deliver_export_btn")
@@ -424,21 +420,6 @@ class OpportunityDashboardPage(BasePage):
         "Import failed",
         "failed:",
     )
-
-    def open_catchment_submenu(self):
-        self.open_hamburger()
-        self.click(self.CATCHMENT_TOGGLE)
-        self.page.locator(self.CATCHMENT_IMPORT_LINK).first.wait_for(state="visible", timeout=8000)
-
-    def submit_catchment_export(self):
-        """Open the catchment export modal and submit (queues a Celery export ->
-        302 to the dashboard with ?export_task_id). No data is mutated."""
-        self.open_catchment_submenu()
-        self.click(self.CATCHMENT_EXPORT_LINK)
-        self.page.locator(self.MODAL_EXPORT_SUBMIT).first.wait_for(state="visible", timeout=8000)
-        with self.page.expect_navigation(wait_until="load"):
-            self.click(self.MODAL_EXPORT_SUBMIT)
-        return self.page.url
 
     def upload_and_import(self, open_fn, file_locator, payload):
         """Open an import modal (via open_fn), upload an invalid `payload`, submit,
@@ -465,11 +446,6 @@ class OpportunityDashboardPage(BasePage):
         hit = next((s for s in self.IMPORT_ERROR_STRINGS if s.lower() in body_text.lower()), None)
         self._step(f"Import rejection string found: {hit!r}")
         return hit is not None
-
-    def open_catchment_import_modal(self):
-        self.open_catchment_submenu()
-        self.click(self.CATCHMENT_IMPORT_LINK)
-        self.page.locator(self.CATCHMENT_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
 
     # Deliver export
     def open_deliver_export_modal(self):
@@ -559,7 +535,7 @@ class OpportunityDashboardPage(BasePage):
     def summary_card_value(self, label):
         card = self.page.locator(self.INFO_CARD_BY_LABEL.format(label=label)).first
         card.wait_for(state="visible", timeout=15000)
-        value = card.locator("xpath=.//p").first.inner_text().strip()
+        value = card.locator(locators.get("opportunity_dashboard_page", "card_p")).first.inner_text().strip()
         self._step(f"Summary card '{label}' value: {value!r}")
         return value
 
@@ -609,7 +585,7 @@ class OpportunityDashboardPage(BasePage):
         card = self.page.locator(self.RESOURCE_CARD_BY_NAME.format(name=name)).first
         card.wait_for(state="visible", timeout=15000)
         # The card holds two <h3> (name, then the count); take the last.
-        count = card.locator("xpath=.//h3").last.inner_text().strip()
+        count = card.locator(locators.get("opportunity_dashboard_page", "card_h3")).last.inner_text().strip()
         self._step(f"Resource card '{name}' count: {count!r}")
         return count
 
@@ -619,7 +595,7 @@ class OpportunityDashboardPage(BasePage):
         self.page.locator(self.RESOURCE_MODAL).first.wait_for(state="visible", timeout=10000)
 
     def active_resource_tab(self):
-        tab = self.page.locator("//ul[contains(@class,'tabs')]//li[contains(@class,'active')]").first
+        tab = self.page.locator(locators.get("opportunity_dashboard_page", "active_tab")).first
         tab.wait_for(state="visible", timeout=10000)
         return tab.inner_text().strip()
 
@@ -701,7 +677,7 @@ class OpportunityDashboardPage(BasePage):
         card = self.page.locator(selector).first
         card.wait_for(state="visible")
         if count_section:
-            count = card.locator("xpath=.//h3[contains(@class,'text-2xl')]").inner_text().strip()
+            count = card.locator(locators.get("opportunity_dashboard_page", "card_count_h3")).inner_text().strip()
             assert count != "", f"{title} {subtitle} count is empty"
             print(f"{title} {subtitle} in Opportunity Dashboard --> {count}")
 
