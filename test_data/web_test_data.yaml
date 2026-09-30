@@ -476,3 +476,66 @@ OPD:
   # the org revert to auto-approval).
   manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
   manual_verify_org_slug_staging: "pm_automation_02"
+
+# Invoices List page (Invoice_01-29, Invoice List_30-37). Runs against the
+# dedicated "Invoice Opp" (created by Anshu on both envs, owned by
+# pm_automation_01 with the "Network Manager" org as NM partner), opened by exact
+# name. The tests create invoices on it, so the mutating ones are skipped on prod.
+# NM role is reached by opening the SAME opp_id under network_manager_slug, not an
+# org switch (see flows/invoices_setup.py).
+INVOICE_LIST:
+  opportunity_name: "Invoice Opp"
+  network_manager_slug: "network-manager"
+  tabs: ["All Invoices", "Payment Report"]
+  # PaymentInvoiceTable.Meta.sequence (opportunity/tables.py)
+  all_invoices_columns:
+    - "Amount"
+    - "Amount (USD)"
+    - "Rate"
+    - "Invoice Generation Date"
+    - "Invoice number"
+    - "Invoice Status"
+    - "Invoice Last Updated Date"
+    - "Payment Date"
+    - "Invoice Type"
+    - "Actions"
+  # PaymentReportTable (opportunity/tables.py)
+  payment_report_columns:
+    - "Payment Unit"
+    - "Approved Units"
+    - "User Payment Accrued"
+    - "Network Manager Payment Accrued"
+  report_card_count: 4
+  custom_invoice_type_label: "Other"
+  usd_url_param: "usd=True"
+  exchange_rate_preview_text: "Exchange Rate on"
+  future_date_error_text: "cannot be in the future"
+  irreversible_modal_text: "cannot be undone"
+  # Modal names (Alpine modal_name) on the invoice review page.
+  modals:
+    cancel: "showCancelModal"
+    reject: "showRejectModal"
+    submit: "showSubmitModal"
+  # Review-page action names, as InvoiceFormPage.available_actions() reports them.
+  actions:
+    cancel: "Cancel"
+    submit_to_pm: "Submit to Program Manager"
+    reject: "Reject"
+    approve: "Approve for Payment Processing"
+    pay: "Pay"
+
+# get_status_display() labels (InvoiceStatus, opportunity/models.py).
+INVOICE_STATUS:
+  pending_nm_review: "Pending Network Manager Review"
+  pending_pm_review: "Pending Program Manager Review"
+  cancelled_by_nm: "Cancelled by Network Manager"
+  ready_to_pay: "Ready to Pay"
+  rejected_by_pm: "Rejected by Program Manager"
+  paid: "Paid"
+
+INVOICE_CUSTOM:
+  amount: "500"
+  justification: "Automation custom invoice justification"
+
+INVOICE_VALIDATION:
+  future_days_ahead: 5
