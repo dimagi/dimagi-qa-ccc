@@ -51,6 +51,32 @@ jobs:
 
   maestro-mobile:
     name: Maestro Mobile Tests (${{ matrix.environment }})
+    # Serialise the TEST job across branches, one at a time per environment.
+    #
+    # The workflow-level group above is keyed on github.ref, so it only stops a
+    # branch racing itself. Two different PRs run this suite simultaneously
+    # against the SAME shared prod and staging data, and several of these tests
+    # own mutable state on a single shared account - the PersonalID fixture
+    # accounts these flows recover.
+    #
+    # That is not theoretical, though it was the Playwright suite that proved it:
+    # on 2026-09-24 PR #46 and PR #55 overlapped almost exactly and
+    # test_e2e_relearn_lifecycle failed in a perfect crossover - stage passed on
+    # #55 and failed on #46, prod failed on #55 and passed on #46 - because both
+    # runs were driving one worker's task list. See playwright_web.yaml.
+    #
+    # This suite has the same exposure by construction. profile_forget.yaml
+    # forgets and recovers a fixture account, profile_edit_name.yaml renames one,
+    # and signing in on one device logs the other out of the same PersonalID
+    # number - so two concurrent runs do not merely race, they sign each other
+    # out. Serialise it before it costs a day of diagnosis the way relearn did.
+    #
+    # cancel-in-progress is FALSE here on purpose: the second run must QUEUE, not
+    # die. Cancelling is right for a superseded commit (what the workflow-level
+    # group does) and wrong for an unrelated PR that simply arrived second.
+    concurrency:
+      group: maestro-mobile-shared-data-${{ matrix.environment }}
+      cancel-in-progress: false
     needs: resolve-matrix
     runs-on: ubuntu-latest
     strategy:

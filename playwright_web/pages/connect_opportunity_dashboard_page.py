@@ -398,12 +398,8 @@ class OpportunityDashboardPage(BasePage):
     def budget_decrease_error_present(self):
         return self.is_displayed(self.ADD_BUDGET_DECREASE_ERROR, timeout=8000)
 
-    # -- Export / import flows (OD_36/44/46) ------------------------------------
+    # -- Export / import flows (OD_44/46) --------------------------------------
 
-    CATCHMENT_TOGGLE = locators.get("opportunity_dashboard_page", "catchment_toggle")
-    CATCHMENT_IMPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_import_link")
-    CATCHMENT_EXPORT_LINK = locators.get("opportunity_dashboard_page", "catchment_export_link")
-    CATCHMENT_IMPORT_FILE = locators.get("opportunity_dashboard_page", "catchment_import_file")
     MODAL_EXPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_export_submit")
     MODAL_IMPORT_SUBMIT = locators.get("opportunity_dashboard_page", "modal_import_submit")
     DELIVER_EXPORT_BTN = locators.get("opportunity_dashboard_page", "deliver_export_btn")
@@ -424,35 +420,6 @@ class OpportunityDashboardPage(BasePage):
         "Import failed",
         "failed:",
     )
-
-    def catchment_menu_available(self):
-        """Whether the hamburger exposes the 'Catchment Areas' item. Returns False
-        (so the catchment tests skip rather than fail) both when the item is absent
-        (builds that lag main) and when the hamburger itself doesn't render on the
-        opened opportunity - guard against a 30s open_hamburger timeout by checking
-        the toggle is present first."""
-        if self.page.locator(self.HAMBURGER_TOGGLE).count() == 0:
-            self._step("Hamburger toggle not present on this opportunity - cannot check Catchment Areas")
-            return False
-        self.open_hamburger()
-        present = self.page.locator(self.CATCHMENT_TOGGLE).count() > 0
-        self._step(f"'Catchment Areas' hamburger item available: {present}")
-        return present
-
-    def open_catchment_submenu(self):
-        self.open_hamburger()
-        self.click(self.CATCHMENT_TOGGLE)
-        self.page.locator(self.CATCHMENT_IMPORT_LINK).first.wait_for(state="visible", timeout=8000)
-
-    def submit_catchment_export(self):
-        """Open the catchment export modal and submit (queues a Celery export ->
-        302 to the dashboard with ?export_task_id). No data is mutated."""
-        self.open_catchment_submenu()
-        self.click(self.CATCHMENT_EXPORT_LINK)
-        self.page.locator(self.MODAL_EXPORT_SUBMIT).first.wait_for(state="visible", timeout=8000)
-        with self.page.expect_navigation(wait_until="load"):
-            self.click(self.MODAL_EXPORT_SUBMIT)
-        return self.page.url
 
     def upload_and_import(self, open_fn, file_locator, payload):
         """Open an import modal (via open_fn), upload an invalid `payload`, submit,
@@ -479,11 +446,6 @@ class OpportunityDashboardPage(BasePage):
         hit = next((s for s in self.IMPORT_ERROR_STRINGS if s.lower() in body_text.lower()), None)
         self._step(f"Import rejection string found: {hit!r}")
         return hit is not None
-
-    def open_catchment_import_modal(self):
-        self.open_catchment_submenu()
-        self.click(self.CATCHMENT_IMPORT_LINK)
-        self.page.locator(self.CATCHMENT_IMPORT_FILE).first.wait_for(state="attached", timeout=8000)
 
     # Deliver export
     def open_deliver_export_modal(self):
