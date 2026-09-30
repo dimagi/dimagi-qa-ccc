@@ -660,6 +660,12 @@ connect_invoice_list_page:
   table_headers: "(//table[contains(@class,'base-table')])[1]//thead//th"
   table_rows: "(//table[contains(@class,'base-table')])[1]//tbody//tr"
   empty_text: "(//table[contains(@class,'base-table')])[1]//tbody//td[contains(normalize-space(),'No Payment Invoices')]"
+  # Match the invoice-number CELL exactly: a substring match would also hit a
+  # longer number that starts with the same digits.
+  row_by_invoice_number: "(//table[contains(@class,'base-table')])[1]//tbody//tr[td[normalize-space()='{invoice_number}']]"
+  row_cells: "./td"
+  row_review_link: ".//a[normalize-space()='Review']"
+  row_pay_button: ".//button[normalize-space()='Pay']"
   # Deployed markup (confirmed live, differs from the checked-out product repo's
   # invoice_payment_report.html, which shows an older bg-brand-indigo/pointer-
   # events-none pill pair): a chip-group of two <a class="chip ..."> links, the
@@ -698,4 +704,6 @@ connect_invoice_form_page:
   modal_by_name: "//div[@aria-labelledby='modal-title-{name}']"
   modal_confirm_button: "//div[@aria-labelledby='modal-title-{name}']//button[contains(@class,'negative-dark')]"
   modal_close_button: "//div[@aria-labelledby='modal-title-{name}']//button[normalize-space()='Close']"
+  modal_certify_checkbox: ".//input[@type='checkbox']"
+  modal_certify_button: ".//button[contains(normalize-space(),'Certify')]"
   field_error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist')]"

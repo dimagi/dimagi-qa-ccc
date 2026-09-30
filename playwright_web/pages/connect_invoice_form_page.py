@@ -15,17 +15,6 @@ from utils.helpers import LocatorLoader
 
 locators = LocatorLoader()
 
-# get_status_display() label strings (InvoiceStatus, opportunity/models.py).
-STATUS_LABELS = {
-    "pending_nm_review": "Pending Network Manager Review",
-    "pending_pm_review": "Pending Program Manager Review",
-    "cancelled_by_nm": "Cancelled by Network Manager",
-    "ready_to_pay": "Ready to Pay",
-    "rejected_by_pm": "Rejected by Program Manager",
-    "paid": "Paid",
-    "archived": "Archived",
-}
-
 
 class InvoiceFormPage(BasePage):
     INVOICE_NUMBER = locators.get("connect_invoice_form_page", "invoice_number_field")
@@ -53,6 +42,8 @@ class InvoiceFormPage(BasePage):
     MODAL_BY_NAME = locators.get("connect_invoice_form_page", "modal_by_name")
     MODAL_CONFIRM_BUTTON = locators.get("connect_invoice_form_page", "modal_confirm_button")
     MODAL_CLOSE_BUTTON = locators.get("connect_invoice_form_page", "modal_close_button")
+    MODAL_CERTIFY_CHECKBOX = locators.get("connect_invoice_form_page", "modal_certify_checkbox")
+    MODAL_CERTIFY_BUTTON = locators.get("connect_invoice_form_page", "modal_certify_button")
     FIELD_ERROR_TEXT = locators.get("connect_invoice_form_page", "field_error_text")
 
     # -- create ---------------------------------------------------------------
@@ -144,10 +135,10 @@ class InvoiceFormPage(BasePage):
         self.click(self.SUBMIT_TO_PM_LINK)
         modal = self.page.locator(self.MODAL_BY_NAME.format(name="showSubmitModal")).first
         modal.wait_for(state="visible", timeout=10000)
-        modal.locator("xpath=.//input[@type='checkbox']").first.check()
+        modal.locator(self.MODAL_CERTIFY_CHECKBOX).first.check()
         self._step("Confirm 'Certify & Submit'")
         with self.page.expect_navigation(wait_until="load", timeout=20000):
-            modal.locator("xpath=.//button[contains(normalize-space(),'Certify')]").first.click()
+            modal.locator(self.MODAL_CERTIFY_BUTTON).first.click()
 
     def open_cancel_modal(self):
         self._step("Open cancel-invoice modal")

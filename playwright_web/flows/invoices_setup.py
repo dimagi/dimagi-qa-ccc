@@ -9,10 +9,9 @@ derives request.is_opportunity_pm from the URL's org slug matching the
 opportunity's owning Program org (see opportunity/views.py, users/middleware.py).
 So reaching the same opportunity as a different org is a matter of navigating
 to that org's own URL for the same opp_id - confirmed live (probe against
-staging 2026-09-23): the PM_Automation_01-owned "Demo Opportunity_<date>" flood
-(created by the OLP journey tests, which always invite the "Network Manager"
-org as NM partner - flows/olp_setup.py:create_program_with_nm_handshake) is
-reachable under BOTH org slugs for the same opp_id, and the "Create Invoice"
+staging 2026-09-23): the PM_Automation_01-owned "Invoice Opp" (which has the
+"Network Manager" org as its NM partner) is reachable under BOTH org slugs for
+the same opp_id, and the "Create Invoice"
 button is correctly present only under the network-manager slug. This avoids
 the fragile UI org-switcher entirely (ConnectHomePage.select_organization_from_list
 depends on a page having exactly one 'fa-chevron-down' icon, which the invoice
@@ -21,25 +20,24 @@ list page's own "Create Invoice" dropdown chevron collides with).
 
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
+from utils.helpers import with_page_size
 
 
-def pick_pm_opportunity(connect_page):
-    """Open the PM's opportunity list (page_size=100, same fix as the workers
-    module needed - the list has no search and floods with OLP-created demo
-    opportunities) and open its first row. Returns (host, pm_slug, opp_id, name).
-    """
+def open_invoice_opportunity(connect_page, name):
+    """Open the dedicated invoice opportunity `name` (exact match) from the PM's
+    list. Returns (host, pm_slug, opp_id), or None if it is not in the list so the
+    caller can skip with a clear data-problem message instead of acting on some
+    other opportunity."""
+    connect_page.goto(with_page_size(connect_page.url))
+    connect_page.wait_for_load_state("load")
     olp = ConnectOpportunityListPage(connect_page)
     olp.verify_loaded()
-    base = connect_page.url.split("?")[0]
-    connect_page.goto(f"{base}?page_size=100")
-    connect_page.wait_for_load_state("load")
-    olp.verify_loaded()
-    name = olp.first_row_name()
-    olp.open_opportunity(name)
+    if not olp.has_opportunity(name, exact=True):
+        return None
+    olp.open_opportunity(name, exact=True)
     dash = OpportunityDashboardPage(connect_page)
     dash.verify_loaded()
-    host, pm_slug, opp_id = dash.base_url_parts()
-    return host, pm_slug, opp_id, name
+    return dash.base_url_parts()
 
 
 def open_invoice_list(connect_page, host, org_slug, opp_id):

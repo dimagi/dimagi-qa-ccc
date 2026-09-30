@@ -6,38 +6,12 @@ Both tabs render exactly one django-tables2 base-table
 the page" xpath used elsewhere in the suite applies to either tab.
 """
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader()
-
-# All Invoices columns (PaymentInvoiceTable.Meta.sequence, tables.py).
-ALL_INVOICES_COLUMNS = [
-    "Amount",
-    "Amount (USD)",
-    "Rate",
-    "Invoice Generation Date",
-    "Invoice number",
-    "Invoice Status",
-    "Invoice Last Updated Date",
-    "Payment Date",
-    "Invoice Type",
-    "Actions",
-]
-# Payment Report columns (PaymentReportTable, tables.py).
-PAYMENT_REPORT_COLUMNS = [
-    "Payment Unit",
-    "Approved Units",
-    "User Payment Accrued",
-    "Network Manager Payment Accrued",
-]
-# report_cards block order (opportunity/views.py::payment_report).
-REPORT_CARD_LABELS = [
-    "Connect Worker | Total Accrued",
-    "Connect Worker | Total Paid",
-    "Organization | Total Accrued",
-    "Organization | Total Paid",
-]
 
 
 class InvoiceListPage(BasePage):
@@ -49,6 +23,10 @@ class InvoiceListPage(BasePage):
     TABLE_HEADERS = locators.get("connect_invoice_list_page", "table_headers")
     TABLE_ROWS = locators.get("connect_invoice_list_page", "table_rows")
     EMPTY_TEXT = locators.get("connect_invoice_list_page", "empty_text")
+    ROW_BY_INVOICE_NUMBER = locators.get("connect_invoice_list_page", "row_by_invoice_number")
+    ROW_CELLS = locators.get("connect_invoice_list_page", "row_cells")
+    ROW_REVIEW_LINK = locators.get("connect_invoice_list_page", "row_review_link")
+    ROW_PAY_BUTTON = locators.get("connect_invoice_list_page", "row_pay_button")
     CURRENCY_TOGGLE_LINKS = locators.get("connect_invoice_list_page", "currency_toggle_links")
     REPORT_CARD_AMOUNTS = locators.get("connect_invoice_list_page", "report_card_amounts")
     REPORT_CARD_META = locators.get("connect_invoice_list_page", "report_card_meta")
@@ -109,34 +87,35 @@ class InvoiceListPage(BasePage):
         return self.page.locator(self.EMPTY_TEXT).count() > 0
 
     def row_by_invoice_number(self, invoice_number):
-        row = self.page.locator(
-            f"(//table[contains(@class,'base-table')])[1]//tbody//tr[contains(.,'{invoice_number}')]"
-        ).first
+        row = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).first
         row.wait_for(state="visible", timeout=15000)
         return row
+
+    def has_invoice(self, invoice_number):
+        return self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).count() > 0
 
     def row_status(self, invoice_number):
         headers = self.column_headers()
         col = headers.index("Invoice Status")
         row = self.row_by_invoice_number(invoice_number)
-        text = row.locator("xpath=./td").nth(col).inner_text().strip()
+        text = row.locator(self.ROW_CELLS).nth(col).inner_text().strip()
         self._step(f"Invoice {invoice_number} status (list): {text!r}")
         return text
 
     def open_review(self, invoice_number):
         row = self.row_by_invoice_number(invoice_number)
         self._step(f"Open review for invoice {invoice_number}")
-        row.locator("xpath=.//a[normalize-space()='Review']").click()
+        row.locator(self.ROW_REVIEW_LINK).click()
         self.page.wait_for_load_state("load")
 
     def pay_from_row(self, invoice_number):
         row = self.row_by_invoice_number(invoice_number)
-        button = row.locator("xpath=.//button[normalize-space()='Pay']")
+        button = row.locator(self.ROW_PAY_BUTTON)
         self._step(f"Pay invoice {invoice_number} from the list row")
         try:
             with self.page.expect_navigation(timeout=20000, wait_until="load"):
                 button.click()
-        except Exception:
+        except PlaywrightTimeoutError:
             self._step("no redirect followed - response was re-rendered in place")
         self.page.wait_for_load_state("load")
 
@@ -147,9 +126,7 @@ class InvoiceListPage(BasePage):
 
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            if self.page.locator(
-                f"(//table[contains(@class,'base-table')])[1]//tbody//tr[contains(.,'{invoice_number}')]"
-            ).count() > 0:
+            if self.has_invoice(invoice_number):
                 return True
             self.page.wait_for_timeout(1000)
             self.page.reload()
