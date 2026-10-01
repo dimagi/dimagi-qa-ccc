@@ -3,7 +3,24 @@
 # name or class contains any `match` substring (case-insensitive) is reported as
 # "Known issue (<id>)" without calling the model. Remove an entry when the issue is
 # fixed so real regressions in that area are analysed again.
+#
+# Matches are exact names, not broad prefixes: CCCT-2671 only affects the messaging
+# HYBRID flows (the ones signing in as the MAESTRO_MESSAGING_HYBRID worker plus the
+# web hybrid test file). messaging_empty_state and the messaging_conditional_alert*
+# flows use other workers and are NOT covered, so a failure there is still analysed.
 - id: CCCT-2671
   summary: messaging hybrid flows fail on a known product regression
   match:
-    - "messaging_"
+    - "test_messaging_hybrid"
+    - "messaging_broadcast.yaml"
+    - "messaging_survey.yaml"
+    - "messaging_keyword.yaml"
+    - "messaging_keyword_survey.yaml"
+    - "messaging_consent.yaml"
+    - "messaging_consent_history.yaml"
+    - "messaging_consent_delivery.yaml"
+    - "messaging_channel_created.yaml"
+    - "messaging_push_deeplink.yaml"
+    - "messaging_unsubscribe_only.yaml"
+    - "messaging_resubscribe_only.yaml"
+    - "messaging_subscription.yaml"
