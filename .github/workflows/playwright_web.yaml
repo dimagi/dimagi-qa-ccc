@@ -56,6 +56,29 @@ jobs:
 
   playwright-web:
     name: Playwright Web Tests (${{ matrix.environment }})
+    # Serialise the TEST job across branches, one at a time per environment.
+    #
+    # The workflow-level group above is keyed on github.ref, so it only stops a
+    # branch racing itself. Two different PRs run this suite simultaneously
+    # against the SAME shared prod and staging data, and several of these tests
+    # own mutable state on a single shared account - the tasking worker's task
+    # list, the messaging channels.
+    #
+    # That is not theoretical. On 2026-09-24 PR #46 and PR #55 overlapped almost
+    # exactly (11:09-11:57 on stage, 11:09-13:23 on prod) and
+    # test_e2e_relearn_lifecycle failed in a perfect crossover: stage passed on
+    # #55 and failed on #46, prod failed on #55 and passed on #46. The test
+    # deletes any existing task for its worker, creates a fresh one, then has the
+    # device complete it - so whichever run got there second wiped the other's
+    # task, and the loser's device found "All required tasks have been completed"
+    # where the flow asserts the pending-task warning. Two runs, one worker.
+    #
+    # cancel-in-progress is FALSE here on purpose: the second run must QUEUE, not
+    # die. Cancelling is right for a superseded commit (what the workflow-level
+    # group does) and wrong for an unrelated PR that simply arrived second.
+    concurrency:
+      group: playwright-web-shared-data-${{ matrix.environment }}
+      cancel-in-progress: false
     needs: resolve-matrix
     runs-on: ubuntu-latest
     strategy:
