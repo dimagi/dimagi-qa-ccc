@@ -395,3 +395,18 @@ MAESTRO_RECOVERY_FIXTURE:
   backup_code: "129104"
   phone_number_staging: "1290204"
   backup_code_staging: "129204"
+
+# --- Learn_tab_02 hybrid (worker_learn_module.yaml) ---
+# A worker whose learning is started but not 100% complete, on the opportunity named
+# in web_test_data.yaml LEARN_TAB_02_HYBRID (the web test passes that name in as
+# OPPORTUNITY). TBD values keep the web test skipped until the worker is seeded and
+# the Learn app's module/form/question names are copied from its CCZ.
+MAESTRO_LEARN_TAB_02:
+  country_code: "+7426"
+  phone_number: "TBD"
+  username: "TBD"
+  backup_code: "TBD"
+  learn_module: "TBD"
+  learn_form: "TBD"
+  learn_question: "TBD"   # the first question's label, used to find its answer field
+  learn_answer: "Learn Automation"

@@ -22,22 +22,28 @@
 #     flow's PENDING_WARNING wait.
 #
 # UNCONFIRMED (this test opportunity's specific Learn CCZ, only checkable live):
-#   - the literal module/form names (LEARN_MODULE/LEARN_FORM below are placeholders)
+#   - the literal module/form/question names (LEARN_MODULE/LEARN_FORM/LEARN_QUESTION,
+#     set in mobile_workers.yaml, are placeholders until the worker is seeded)
 #   - whether the first form is a plain question (safe for the tap-below-label +
 #     nav_btn_next pattern) or contains video/rich media that could stall Next
 #   - how long after syncing the "completed X of Y" text/percent actually updates
 appId: org.commcare.dalvik
+# Every value below is replaced at run time from test_data/mobile_workers.yaml
+# (MAESTRO_LEARN_TAB_02) and the web test; the empty strings only declare the keys.
 env:
-  COUNTRY_CODE: "+7426"
-  PHONE_NUMBER: "TBD"
-  USERNAME: "TBD - Learn Tab 02 Worker"
-  BACKUP_CODE: "TBD"
-  OPPORTUNITY: "TBD"
-  # From the opportunity's own Learn app CCZ - fill in once Anshu seeds a worker
-  # whose learning is started but not 100% complete.
-  LEARN_MODULE: "TBD"
-  LEARN_FORM: "TBD"
-  LEARN_ANSWER: "Learn Automation"
+  COUNTRY_CODE: ""
+  PHONE_NUMBER: ""
+  USERNAME: ""
+  BACKUP_CODE: ""
+  OPPORTUNITY: ""
+  LEARN_MODULE: ""
+  LEARN_FORM: ""
+  LEARN_QUESTION: ""
+  LEARN_ANSWER: ""
+  # The "completed N of M" count the Learn Progress screen should show once the
+  # submission has synced (the web test passes the "Modules completed" count it read
+  # beforehand, plus one).
+  LESSONS_COMPLETED_AFTER: ""
 ---
 - launchApp:
     clearState: true
@@ -67,8 +73,8 @@ env:
       visible:
         id: "nav_drawer_recycler"
     commands:
-      - tapOn:
-          point: "92%,50%"
+      # completeSignin() opens the drawer itself; Back closes it.
+      - back
 - runFlow:
     when:
       notVisible:
@@ -136,8 +142,15 @@ env:
     visible:
       id: "nav_btn_next"
     timeout: 60000
+# Form widgets carry no resource ids, so the answer field is found relative to
+# its question label rather than by screen coordinates.
+- extendedWaitUntil:
+    visible:
+      text: "${LEARN_QUESTION}"
+    timeout: 60000
 - tapOn:
-    point: "50%,32%"
+    below:
+      text: "${LEARN_QUESTION}"
 - inputText: "${LEARN_ANSWER}"
 - repeat:
     times: 6
@@ -173,3 +186,7 @@ env:
     visible:
       id: "connect_learning_status_text"
     timeout: 90000
+# The server-side count must have gone up, not merely re-rendered.
+- assertVisible:
+    id: "connect_learning_status_text"
+    text: ".*completed ${LESSONS_COMPLETED_AFTER} of.*"
