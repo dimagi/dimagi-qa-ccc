@@ -1,0 +1,100 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only. Registers ONE fixture account at a FIXED phone number, so the
+# Manage Profile and recovery flows have something to recover into.
+#
+# MUST be run on a 2.65+ build. It registers, and registration cannot complete
+# without the qaAutomation placeholder photo that enables Save Photo - that
+# landed in commcare-android 1e14ed79b (27-Aug-2026), after 2.64. Run it once per
+# environment; the flows that use the account afterwards run on 2.64 fine.
+#
+# Unlike shared_registration.yaml this does NOT generate a number: a fixture is
+# only useful if its number is known in advance and written in mobile_workers.yaml.
+#
+# Inputs: COUNTRY_CODE, PHONE_NUMBER, USERNAME, BACKUP_CODE
+
+- launchApp:
+    clearState: true
+- tapOn: { text: "Turn on", optional: true }
+- tapOn: { text: "Open navigation drawer", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nav_drawer_sign_in_button" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+    timeout: 20000
+
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- inputText: "${PHONE_NUMBER}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+- runFlow:
+    when:
+      notVisible:
+        id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+        enabled: true
+    commands:
+      - tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+      - tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+- tapOn: { id: "org.commcare.dalvik:id/personalid_phone_continue_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/nameTextValue" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- inputText: "${USERNAME}"
+- hideKeyboard
+- tapOn: { text: "CONTINUE" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+
+# GUARD: registration shows a confirm field; recovery does not. Its absence means
+# this number ALREADY has an account - stop rather than quietly recovering and
+# reporting a successful "seed" that created nothing.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 30000
+- assertVisible: { id: "org.commcare.dalvik:id/confirm_code_view" }
+
+- inputText: "${BACKUP_CODE}"
+# The Confirm field has to be focused by coordinate: NumericCodeView builds its
+# six EditTexts at runtime with setId(index), so they carry no resource-id, text
+# or content description, and childOf+index resolves to the container instead.
+# 23%,58% is the centre of Confirm's first box on the Pixel 7 (1080x2400).
+- assertVisible: { id: "org.commcare.dalvik:id/confirm_code_view" }
+- tapOn: { point: "23%,58%" }
+- inputText: "${BACKUP_CODE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+
+# Leave the fixture WITHOUT an email: MP_03 and RE_01 both depend on that.
+- tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
+- tapOn: { text: "YES", optional: true }
+
+# The account does not exist until the photo is saved. On a 2.65 build the
+# placeholder photo is already applied, so Save is enabled with no camera.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/save_photo_button" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/save_photo_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 60000
+- tapOn: { text: "OK", optional: true }
+
+# Proof the account was really created, not just that the screens advanced.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/header_user_name" }
+    timeout: 30000

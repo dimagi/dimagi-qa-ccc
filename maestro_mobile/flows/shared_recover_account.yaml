@@ -1,0 +1,92 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Signs into an EXISTING PersonalID account from a cleared app, stopping the
+# moment the backup code is accepted. It deliberately does NOT dismiss the
+# optional email step or the "Account Recovered" dialog: callers differ on what
+# they want there. shared_signed_in.yaml skips both to reach the home screen;
+# recovery_email_prompt.yaml asserts the email step instead, which is the case
+# under test.
+#
+# Why recovery and not registration: an automated signup cannot complete on 2.64.
+# The account is not created until the photo is saved, Save Photo is enabled only
+# by a real camera capture, and Maestro on BrowserStack cannot drive the camera -
+# the placeholder photo that makes signup automatable landed after 2.64. Recovery
+# needs no photo, so these flows run on both builds.
+#
+# The account must already exist. Seed it with the seed_*.yaml flows on a 2.65
+# build; see test_data/mobile_workers.yaml for the fixtures and the command.
+#
+# Inputs (env from the calling flow, resolved from mobile_workers.yaml):
+#   COUNTRY_CODE, PHONE_NUMBER, USERNAME, BACKUP_CODE
+
+- launchApp:
+    clearState: true
+# Google's "Location Accuracy" dialog can block the first screen after a clear.
+- tapOn: { text: "Turn on", optional: true }
+
+- tapOn: { text: "Open navigation drawer", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nav_drawer_sign_in_button" }
+- tapOn: { text: "Turn on", optional: true }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+    timeout: 20000
+
+# The Play Services phone-number hint sheet steals focus on the first tap of a
+# phone-adjacent field, so dismiss it and re-focus before typing.
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/countryCode" }
+- eraseText
+- inputText: "${COUNTRY_CODE}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/connect_primary_phone_input" }
+- inputText: "${PHONE_NUMBER}"
+- tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+# CONTINUE sometimes stays disabled with a valid number and consent ticked - the
+# app does not always re-evaluate. Re-toggling consent forces it. The Appium
+# suite carries the same workaround in PersonalIDPage.continue_next.
+- runFlow:
+    when:
+      notVisible:
+        id: "org.commcare.dalvik:id/personalid_phone_continue_button"
+        enabled: true
+    commands:
+      - tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+      - tapOn: { id: "org.commcare.dalvik:id/connect_consent_check" }
+- tapOn: { id: "org.commcare.dalvik:id/personalid_phone_continue_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+
+# Name is shown for returning accounts too on this build.
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/nameTextValue" }
+    timeout: 20000
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- tapOn: { text: "Cancel", optional: true }
+- tapOn: { id: "org.commcare.dalvik:id/nameTextValue" }
+- inputText: "${USERNAME}"
+- hideKeyboard
+- tapOn: { text: "CONTINUE" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+
+# GUARD: recovery shows ONE code field; registration shows a confirm field too.
+# If confirm_code_view is present the account does not exist on this environment
+# and this is silently registering instead - fail here rather than several steps
+# downstream. Re-seed the fixture (see mobile_workers.yaml).
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/backup_code_view" }
+    timeout: 20000
+- assertNotVisible: { id: "org.commcare.dalvik:id/confirm_code_view" }
+
+- inputText: "${BACKUP_CODE}"
+- hideKeyboard
+- tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000

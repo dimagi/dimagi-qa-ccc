@@ -7,11 +7,18 @@
 # else. Rather than assume which thing ate it, press until the list is actually
 # showing, which is the state the caller needs anyway.
 #
+# "Something other than the thread fragment" has since been identified: it is
+# the non-cancelable consent progress dialog, which swallows Back outright. See
+# shared_consent_settled.yaml. Pressing back more times cannot beat it - build
+# d3072bc4 spent all three attempts on it - so settle first, and keep the loop
+# for the ordinary case where a confirmation is still on screen.
+#
 # Bounded and guarded: each attempt only fires while "Channels" is not visible,
 # so it stops as soon as it has worked, and waitForAnimationToEnd spaces the
 # attempts without failing if there is no animation to wait for.
 appId: org.commcare.dalvik
 ---
+- runFlow: shared_consent_settled.yaml
 - repeat:
     times: 3
     commands:

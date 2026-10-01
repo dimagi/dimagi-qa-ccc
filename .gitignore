@@ -34,3 +34,6 @@ report.html
 maestro_report.html
 maestro_report.json
 maestro_history_*.json
+
+# Flow bundle built by run_on_browserstack.py on every run.
+maestro_mobile/flows.zip

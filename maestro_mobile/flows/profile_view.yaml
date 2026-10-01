@@ -1,0 +1,96 @@
+appId: org.commcare.dalvik
+# This flow's data (name, backup code, any addresses) lives in
+# test_data/mobile_workers.yaml under MAESTRO_PROFILE_VIEW.
+# run_on_browserstack.py resolves it for the target environment and writes
+# the env: block into this file at upload time, so nothing is hardcoded
+# here and one account's details live in exactly one place.
+#
+# Consequence: run this through that script, not `maestro test` directly -
+# run directly, the variables below are undefined.
+---
+# MP_01 - MP_04: reaching Manage Profile and what the Profile screen shows.
+#
+# The drawer link goes through the PersonalID unlock gate, which the qaAutomation
+# build bypasses (PersonalIdUnlocker checks IS_QA_AUTOMATION), so no biometric
+# interaction is needed here.
+- runFlow: shared_signed_in.yaml
+
+# ---------------------------------------------------------------- MP_01
+# The drawer offers Manage Profile beneath the user's name.
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/header_manage_profile"
+    timeout: 30000
+- assertVisible:
+    text: "Manage Profile"
+
+# ---------------------------------------------------------------- MP_02
+# Tapping it opens Profile, showing the photo, name and phone subtitle.
+- tapOn:
+    id: "org.commcare.dalvik:id/header_manage_profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_user_image"
+# Checked by value for the same reason as the row below: an empty TextView
+# would satisfy a bare presence check.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_phone_subtitle"
+    text: ".*426.*"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_name"
+    text: "${USERNAME}"
+
+# ---------------------------------------------------------------- MP_03
+# Personal Information lists the account details.
+- assertVisible:
+    text: "Personal Information"
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_name"
+    text: "${USERNAME}"
+
+# Phone is checked by value, not just presence. It is rendered through
+# PhoneNumberHelper.formatForDisplay, which groups the digits ("+7 426 129-35-69"),
+# so the generated subscriber number cannot be matched verbatim - the country
+# code is the stable part.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_phone"
+    text: ".*426.*"
+
+# Email: this account has none, and PersonalIdProfileDisplayModel maps that to
+# user.email.orEmpty() - an empty string, not a placeholder. So asserting the row
+# is "visible" would pass against an empty TextView and prove nothing. Asserting
+# that no address is rendered anywhere on the screen is the observable form of
+# that fallback. The populated case is covered by MP_13, which verifies an
+# address and then checks Profile shows it.
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_value_email"
+- assertNotVisible:
+    text: ".*@.*"
+
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_btn_forget_personalid"
+    text: "Forget PersonalID Account"
+
+# ---------------------------------------------------------------- MP_04
+# Edit Profile opens the form with Save unavailable and Phone not editable.
+- tapOn:
+    text: "Edit Profile"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_name_edit_text"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/btn_save"
+    enabled: false
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_phone_edit_text"
+    enabled: false
+- assertVisible:
+    id: "org.commcare.dalvik:id/profile_email_otp_notice"
+    text: ".*require an OTP verification.*"

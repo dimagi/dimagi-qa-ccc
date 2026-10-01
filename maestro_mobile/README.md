@@ -23,7 +23,7 @@ Uploads `app/app-cccStaging-release.apk` and the `flows/` folder to BrowserStack
 
 Credentials: reads `BROWSERSTACK_USERNAME`/`BROWSERSTACK_ACCESS_KEY` from the environment first, falling back to the `[browserstack]` section of `settings.cfg`. This is the **same `settings.cfg` at the repo root that the existing Appium/Selenium setup already uses** — no new file or location; if you already have it configured for the old suite, nothing extra is needed. On CI the values come from the repo's existing `BROWSERSTACK_*` secrets as environment variables, so `settings.cfg` is only needed for local runs.
 
-Only `login_signup_success.yaml` and `login_account_locked.yaml` are passed via the `execute` parameter — `shared_login_signup.yaml` is a sub-flow only (invoked via `runFlow`) and would fail if BrowserStack tried to run it standalone.
+Only `login_signup_success.yaml` and `login_account_locked.yaml` are passed via the `execute` parameter — the `shared_*.yaml` files (`shared_login_signup.yaml`, `shared_backup_code.yaml`, and the rest) are sub-flows only, invoked via `runFlow`, and would fail if BrowserStack tried to run them standalone. They still have to be in the zip, which is why the whole `flows/` folder is uploaded rather than just the flows being executed.
 
 **Zip structure matters**: BrowserStack requires every file to sit inside a single root folder within the uploaded zip (`flows/login_signup_success.yaml`, not flat at the zip root) — a flat zip fails with `BROWSERSTACK_TESTSUITE_PARSE_ERROR`. The `execute` paths themselves are relative to that root folder's *contents*, so they do **not** repeat the folder name (`login_signup_success.yaml`, not `flows/login_signup_success.yaml`).
 

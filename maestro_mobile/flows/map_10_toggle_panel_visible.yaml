@@ -6,16 +6,29 @@
 # map_overlay + the three toggle_* switches are real views (verified live
 # 2026-08-18); only the markers themselves render on the Google Map canvas, so
 # their appearance stays a manual check.
+#
+# Toggle STATE is asserted via the switch's `checked` trait, not its label text.
+# The label is app-content driven - EntityMapActivity.getToggleLabel() returns
+# the case-list detail's marker/boundary/geopoint header when the app sets one,
+# falling back to the bare "Markers"/"Polygons"/"Geopoints" strings - so it is
+# not a state signal at all. The MapLayerSwitch style sets no textOn/textOff,
+# and the layout defaults all three to android:checked="true", so `checked` is
+# the build- and app-independent signal. (Asserting "<layer> ON" matched the
+# pre-2.64 build these flows were written against, 2026-08-18, and stopped
+# matching on 2.64.)
 appId: org.commcare.dalvik
 ---
 - runFlow: shared_map_open.yaml
 
 # The toggle panel and all three switches are visible for a multi-entity list.
+# Asserted separately from the checked-state block below - this is "the panel is
+# up", that is "state is ON"; the checked assertions would pass this on their own,
+# but keeping them apart names the failure mode a bit more precisely.
 - assertVisible: { id: "org.commcare.dalvik:id/map_overlay" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_markers" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons" }
 - assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints" }
 # Each defaults to ON.
-- assertVisible: { text: "Markers ON" }
-- assertVisible: { text: "Polygons ON" }
-- assertVisible: { text: "Geopoints ON" }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_markers", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_polygons", checked: true }
+- assertVisible: { id: "org.commcare.dalvik:id/toggle_geopoints", checked: true }
