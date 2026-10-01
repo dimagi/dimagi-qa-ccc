@@ -15,21 +15,24 @@ Printing to stdout is the primary interface (CI captures it for Slack);
 analyse()/analyse_maestro() also return the compact text for in-process use.
 """
 
+import json
 import os
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import yaml
+
 try:
     from openai import OpenAI
-except ImportError:
-    print("[ai_failure_analyst] openai not installed - skipping analysis.")
-    sys.exit(0)
+except ImportError:  # a missing optional dependency must not end the importing script
+    OpenAI = None
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+KNOWN_ISSUES_FILE = PROJECT_ROOT / "test_data" / "known_issues.yaml"
+AI_DISCLAIMER = "AI-generated, unverified - treat as a hint, not a diagnosis."
 
 MAX_FAILURES = 8  # cap the OpenAI calls + keep the Slack message short
-MAESTRO_LOG_TAIL_LINES = 40  # enough to see the failing step + its preceding context
 
 
 def _load_api_key() -> str:
@@ -71,73 +74,49 @@ def _parse_failures(xml_path: Path) -> list[dict]:
     return failures
 
 
-def _maestro_auth():
-    username = os.environ.get("BROWSERSTACK_USERNAME", "").strip()
-    access_key = os.environ.get("BROWSERSTACK_ACCESS_KEY", "").strip()
-    return (username, access_key) if username and access_key else None
-
-
 def _parse_maestro_failures(report_json_path: Path) -> list[dict]:
     """Return list of {name, classname, error} for every failed Maestro flow.
 
-    maestro_report.json (run_on_browserstack.py) only carries flow name/status,
-    no error text - the actual failing-step detail lives in BrowserStack's own
-    Maestro API. Pulls the tail of each failed flow's log (the same one
-    map_10/map_11's staging-vs-prod investigation used manually) as the
-    "traceback". Best-effort: a build/session/log lookup failing for one flow
-    just means that flow's line says so, not that the whole analysis is lost."""
-    import json
-
-    import requests
-
+    The "traceback" is the masked log tail run_on_browserstack/maestro_report keep
+    in maestro_report.json (`log_tail`), so no BrowserStack call or credentials are
+    needed here."""
     if not report_json_path.exists():
         print(f"[ai_failure_analyst] {report_json_path} not found")
         return []
     report = json.loads(report_json_path.read_text(encoding="utf-8"))
-    build_id = report.get("build_id")
-    failed_names = {
-        f["name"]
+    return [
+        {"name": f["name"], "classname": "", "error": f.get("log_tail") or "(no log captured)"}
         for s in report.get("sessions", [])
         for f in s.get("flows", [])
-        if f.get("status") == "failed"
-    }
-    if not build_id or not failed_names:
+        if f.get("status") not in ("passed", "skipped", None)
+    ]
+
+
+def _dedupe(failures: list[dict]) -> list[dict]:
+    """One entry per test name - a test can appear twice in one run (e.g. two JUnit
+    entries for a rerun), which would waste a slot and print two lines."""
+    seen, unique = set(), []
+    for f in failures:
+        if f["name"] in seen:
+            continue
+        seen.add(f["name"])
+        unique.append(f)
+    return unique
+
+
+def _load_known_issues() -> list[dict]:
+    try:
+        return yaml.safe_load(KNOWN_ISSUES_FILE.read_text(encoding="utf-8")) or []
+    except Exception:  # noqa: BLE001 - no file/unreadable: just no known issues
         return []
 
-    auth = _maestro_auth()
-    if not auth:
-        print("[ai_failure_analyst] BROWSERSTACK creds not set - failures reported without log detail")
-        return [{"name": n, "classname": "", "error": "(no BrowserStack credentials to fetch the log)"} for n in failed_names]
 
-    base = "https://api-cloud.browserstack.com/app-automate/maestro/v2"
-    failures = []
-    try:
-        build = requests.get(f"{base}/builds/{build_id}", auth=auth, timeout=30).json()
-        for device in build.get("devices", []):
-            for session in device.get("sessions", []):
-                detail = requests.get(f"{base}/builds/{build_id}/sessions/{session['id']}", auth=auth, timeout=30).json()
-                for group in detail.get("testcases", {}).get("data", []):
-                    for tc in group.get("testcases", []):
-                        if tc.get("name") not in failed_names or tc.get("status") != "failed":
-                            continue
-                        error = "(log unavailable)"
-                        log_url = tc.get("maestro_log")
-                        if log_url:
-                            try:
-                                log_text = requests.get(log_url, auth=auth, timeout=30).text
-                                error = "\n".join(log_text.strip().splitlines()[-MAESTRO_LOG_TAIL_LINES:])
-                            except Exception as exc:  # noqa: BLE001
-                                error = f"(log fetch failed: {exc})"
-                        failures.append({"name": tc["name"], "classname": "", "error": error})
-    except Exception as exc:  # noqa: BLE001
-        print(f"[ai_failure_analyst] BrowserStack API lookup failed: {exc}")
-        return [{"name": n, "classname": "", "error": f"(BrowserStack lookup failed: {exc})"} for n in failed_names]
-
-    # Any failed flow the API lookup didn't match still gets reported, just without detail.
-    found = {f["name"] for f in failures}
-    for name in failed_names - found:
-        failures.append({"name": name, "classname": "", "error": "(no matching BrowserStack session testcase found)"})
-    return failures
+def _known_issue_for(failure: dict, known_issues: list[dict]):
+    haystack = f"{failure['classname']} {failure['name']}".lower()
+    for issue in known_issues:
+        if any(m.lower() in haystack for m in issue.get("match", [])):
+            return issue
+    return None
 
 
 SYSTEM_PROMPT = """\
@@ -146,18 +125,21 @@ You are a senior QA automation engineer triaging CI failures for a Playwright \
 suite testing a Django web app (CommCare Connect).
 
 Reply with EXACTLY ONE LINE, no markdown, no preamble, in this exact shape:
-<Flaky|Bug|Env> — <root cause in <=12 words> — Fix: <concrete action in <=10 words>
+<Flaky|Test bug|Product bug|Env> — <root cause in <=12 words> — Fix: <concrete action in <=10 words>
 
 "Flaky" = timing/race/staging-availability, nothing to fix in test or product code.
-"Bug" = a real defect in the test code (bad locator/logic) or the product.
+"Test bug" = a defect in the TEST code (bad locator/assertion/logic) - fix is in this repo.
+"Product bug" = the app behaved wrongly and the test is right - fix is a product ticket, \
+NOT a test change.
 "Env" = external dependency/data/environment issue (seed data, staging outage, \
 expired real-clock state) - not fixable by changing code.
 
+If unsure between Test bug and Product bug, say so in the cause rather than guessing.
 Be terse. One line only.
 """
 
 
-def _analyse_failure(client: OpenAI, name: str, error: str) -> str:
+def _analyse_failure(client, name: str, error: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         max_tokens=60,
@@ -169,25 +151,32 @@ def _analyse_failure(client: OpenAI, name: str, error: str) -> str:
     return response.choices[0].message.content.strip().replace("\n", " ")
 
 
-def _render_report(failures: list[dict], scope: str, client: OpenAI) -> str:
+def _render_report(failures: list[dict], scope: str, client) -> str:
     """Shared by analyse()/analyse_maestro(): failures -> compact report text,
-    writing ai_failure_report.md for the legacy dimagi_pytest.yaml workflow's
-    artifact/PR-comment flow along the way (manual-dispatch only, but
-    functional - keep it working rather than assume it's dead)."""
+    writing ai_failure_report.md (uploaded as a workflow artifact) along the way."""
+    failures = _dedupe(failures)
+    known_issues = _load_known_issues()
     shown, overflow = failures[:MAX_FAILURES], failures[MAX_FAILURES:]
 
-    lines = [f"\U0001f916 AI Failure Analysis — {scope}"]
+    lines = [f"\U0001f916 AI Failure Analysis — {scope}", f"_{AI_DISCLAIMER}_"]
     for f in shown:
-        print(f"[ai_failure_analyst] Analysing: {f['name']} ...")
-        try:
-            diagnosis = _analyse_failure(client, f["name"], f["error"])
-        except Exception as exc:  # noqa: BLE001 - best-effort, never break CI over this
-            diagnosis = f"Env — analysis unavailable ({exc.__class__.__name__}) — Fix: check manually"
+        issue = _known_issue_for(f, known_issues)
+        if issue:
+            diagnosis = (
+                f"Known issue ({issue['id']}) — {issue['summary']} — Fix: none in tests; "
+                "check it's the same failure"
+            )
+        else:
+            print(f"[ai_failure_analyst] Analysing: {f['name']} ...")
+            try:
+                diagnosis = _analyse_failure(client, f["name"], f["error"])
+            except Exception as exc:  # noqa: BLE001 - best-effort, never break CI over this
+                diagnosis = f"Env — analysis unavailable ({exc.__class__.__name__}) — Fix: check manually"
         line = f"• `{f['name']}`: {diagnosis}"
         lines.append(line)
         print(line)
     if overflow:
-        lines.append(f"...and {len(overflow)} more failure(s), see the full report.")
+        lines.append(f"...and {len(overflow)} more failure(s) not analysed - see the run's test report.")
 
     report_text = "\n".join(lines)
     print(f"\n{report_text}")
@@ -195,12 +184,23 @@ def _render_report(failures: list[dict], scope: str, client: OpenAI) -> str:
     return report_text
 
 
-def analyse(xml_path: str, scope_label: str | None = None) -> str:
-    """Web suite: run analysis on a JUnit XML report, print + return a compact
-    glance-friendly report (empty string if nothing to report or no API key)."""
+def _client_or_none():
+    """An OpenAI client, or None (with the reason printed) if analysis can't run."""
+    if OpenAI is None:
+        print("[ai_failure_analyst] openai not installed - skipping analysis.")
+        return None
     api_key = _load_api_key()
     if not api_key:
         print("[ai_failure_analyst] OPENAI_API_KEY not set - skipping analysis.")
+        return None
+    return OpenAI(api_key=api_key)
+
+
+def analyse(xml_path: str, scope_label: str | None = None) -> str:
+    """Web suite: run analysis on a JUnit XML report, print + return a compact
+    glance-friendly report (empty string if nothing to report or analysis can't run)."""
+    client = _client_or_none()
+    if client is None:
         return ""
 
     path = Path(xml_path)
@@ -209,16 +209,15 @@ def analyse(xml_path: str, scope_label: str | None = None) -> str:
         print(f"[ai_failure_analyst] No failures in {path.name} - nothing to analyse.")
         return ""
 
-    return _render_report(failures, scope_label or path.stem, OpenAI(api_key=api_key))
+    return _render_report(failures, scope_label or path.stem, client)
 
 
 def analyse_maestro(report_json_path: str, scope_label: str | None = None) -> str:
-    """Mobile suite: run analysis on a maestro_report.json (+ BrowserStack logs
-    for detail), print + return a compact glance-friendly report (empty string
-    if nothing to report or no API key)."""
-    api_key = _load_api_key()
-    if not api_key:
-        print("[ai_failure_analyst] OPENAI_API_KEY not set - skipping analysis.")
+    """Mobile suite: run analysis on a maestro_report.json (its masked `log_tail`
+    per failed flow), print + return a compact glance-friendly report (empty string
+    if nothing to report or analysis can't run)."""
+    client = _client_or_none()
+    if client is None:
         return ""
 
     path = Path(report_json_path)
@@ -227,7 +226,7 @@ def analyse_maestro(report_json_path: str, scope_label: str | None = None) -> st
         print(f"[ai_failure_analyst] No failures in {path.name} - nothing to analyse.")
         return ""
 
-    return _render_report(failures, scope_label or path.stem, OpenAI(api_key=api_key))
+    return _render_report(failures, scope_label or path.stem, client)
 
 
 if __name__ == "__main__":

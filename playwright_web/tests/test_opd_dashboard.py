@@ -39,9 +39,7 @@ REQUIRED_HAMBURGER = [
     "Configure Task Types",
 ]
 # "Add Connect Workers" only shows while the opportunity has not ended.
-# "Catchment Areas" is build-dependent - absent on deploys that lag main, where the
-# menu entry isn't rendered - so it is checked softly rather than required.
-OPTIONAL_HAMBURGER = ["Add Connect Workers", "Catchment Areas"]
+OPTIONAL_HAMBURGER = ["Add Connect Workers"]
 
 # Summary info cards that are always present (opportunity config, not live counts).
 SUMMARY_CARDS = ["Start Date", "End Date", "Max Connect Workers", "Max Service Deliveries", "Max Budget"]

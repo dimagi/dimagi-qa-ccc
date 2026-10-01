@@ -1,0 +1,9 @@
+# Open product issues the AI failure analysis should label as KNOWN instead of
+# guessing at a test fix (utils/ai_failure_analyst.py). A failing test/flow whose
+# name or class contains any `match` substring (case-insensitive) is reported as
+# "Known issue (<id>)" without calling the model. Remove an entry when the issue is
+# fixed so real regressions in that area are analysed again.
+- id: CCCT-2671
+  summary: messaging hybrid flows fail on a known product regression
+  match:
+    - "messaging_"

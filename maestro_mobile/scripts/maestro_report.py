@@ -11,7 +11,15 @@ rendering is a different job and this is most of the code by volume.
 
 import datetime
 import json
+import re
 from pathlib import Path
+
+import yaml
+
+WORKERS_FILE = Path(__file__).resolve().parent.parent.parent / "test_data" / "mobile_workers.yaml"
+LOG_TAIL_LINES = 40  # enough to see the failing step and its preceding context
+SENSITIVE_KEY_HINTS = ("phone", "backup", "code", "password", "otp", "pin")
+MASK = "***"
 
 HISTORY_LIMIT = 30  # older runs roll off so the trend stays readable
 STATUS_ORDER = ("passed", "failed", "skipped")
@@ -46,6 +54,44 @@ def extract_failed_step(log):
             step = line.split(marker, 1)[1].rstrip()
             return step[: -len(" FAILED")].strip()
     return None
+
+
+def _sensitive_values():
+    """Values from mobile_workers.yaml that must never leave the report: phone
+    numbers, backup codes and anything else keyed like a secret."""
+    try:
+        workers = yaml.safe_load(WORKERS_FILE.read_text(encoding="utf-8")) or {}
+    except Exception:  # noqa: BLE001 - masking falls back to the generic rules
+        return []
+    values = set()
+    for entry in workers.values():
+        if not isinstance(entry, dict):
+            continue
+        for key, value in entry.items():
+            if value and any(hint in key.lower() for hint in SENSITIVE_KEY_HINTS):
+                values.add(str(value))
+    return sorted(values, key=len, reverse=True)  # longest first so substrings don't leak
+
+
+def mask_sensitive(text):
+    """Strip what was typed on the device before a log goes anywhere.
+
+    Drops every inputText line (phone numbers, backup codes, OTPs, names), then
+    replaces any remaining occurrence of a worker's phone/backup-code value and any
+    run of 6+ digits (an OTP or a number split across a line) with a mask.
+    """
+    kept = [line for line in text.splitlines() if "inputText" not in line]
+    # Digit runs first, so a full phone number is masked whole before a shorter
+    # known value could replace only part of it and leave the rest behind.
+    masked = re.sub(r"\d{6,}", MASK, "\n".join(kept))
+    for value in _sensitive_values():
+        masked = masked.replace(value, MASK)
+    return masked
+
+
+def failed_log_tail(log):
+    """Masked last LOG_TAIL_LINES lines of a flow's Maestro log."""
+    return "\n".join(mask_sensitive(log or "").splitlines()[-LOG_TAIL_LINES:])
 
 
 def counts_from(summary):
@@ -341,13 +387,17 @@ def write_reports(summary, app_env="stage"):
 
     The JSON keeps its top-level status/passed/failed/skipped keys - the workflow's
     Parse Results step reads them - and drops per-flow logs and screenshots, which
-    belong in the HTML and would bloat the JSON by megabytes.
+    belong in the HTML and would bloat the JSON by megabytes. A failed flow keeps a
+    short MASKED tail of its log as `log_tail`, which is what the AI failure analysis
+    reads (so it needs no BrowserStack call or credentials).
     """
     json_summary = json.loads(json.dumps(summary))
     for session in json_summary.get("sessions", []):
         for flow in session.get("flows", []):
+            log = flow.pop("log", "")
+            if flow.get("status") not in ("passed", "skipped"):
+                flow["log_tail"] = failed_log_tail(log)
             flow.pop("screenshots", None)
-            flow.pop("log", None)
     Path("maestro_report.json").write_text(json.dumps(json_summary, indent=2), encoding="utf-8")
 
     counts = counts_from(summary)

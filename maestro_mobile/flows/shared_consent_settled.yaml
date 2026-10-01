@@ -1,0 +1,37 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Wait for a subscribe/unsubscribe to actually finish before doing anything else.
+#
+# Confirming either menu item calls ConnectMessageFragment.handleConsentUpdate(),
+# which puts up a CustomProgressDialog ("Please wait a few moments.") for the
+# duration of the consent API call. That dialog is NON-CANCELABLE:
+# CustomProgressDialog.isCancelable defaults to false and nothing calls
+# setCancelable() for NETWORK_ACTIVITY_MESSAGING_CHANNEL_ID, so while it is up
+# Android hands Back to the dialog and it does nothing at all.
+#
+# Two failures come out of that, and both are silent:
+#
+#   1. A `back` pressed while it is showing is swallowed whole. It still reports
+#      COMPLETED, because Maestro only checks that the press was delivered.
+#      shared_back_to_channels.yaml pressing back three times could not fix this
+#      - all three presses went into the dialog. Prod build d3072bc4 is that
+#      exactly: three backs COMPLETED, then a 30s wait for "Channels" that never
+#      came, and a failure screenshot still on the thread with the composer
+#      enabled. Build b8beb020 recorded the same shape earlier.
+#
+#   2. An `assertNotVisible` run while it is showing PASSES FOR THE WRONG REASON
+#      - the text underneath is not visible because a modal dialog is covering
+#      it, not because the consent changed. Every "not subscribed text is gone"
+#      check after a Resubscribe was open to that.
+#
+# So settle on the dialog rather than on a guess about timing. Matched on the
+# dialog root id rather than progress_bar, which other screens use too.
+#
+# 60s because this is a server round trip and the alternative to waiting is the
+# two failures above; it costs nothing when the call is quick.
+- extendedWaitUntil:
+    notVisible:
+      id: "progress_fragment_determinate"
+    timeout: 60000
