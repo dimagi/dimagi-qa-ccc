@@ -3,9 +3,10 @@ assignment sidebars) and CoverageProgressPage (its "Coverage" -> see more page).
 
 The map itself renders on a Mapbox canvas with no per-feature DOM access, so
 these page objects only ever touch the surrounding sidebars/forms/tables -
-never map-canvas content. Selecting an individual work area (clicking a map
-feature) is out of scope here for the same reason; every method below reaches
-its target through a dropdown/toggle/button instead.
+never map-canvas content. Selecting an individual work area is done by setting
+the map component's Alpine state (see select_work_area_via_js), not by clicking
+the canvas; every other method reaches its target through a dropdown/toggle/
+button.
 
 Work area ids/slugs/statuses ARE obtainable read-only, via the same
 `/tiles/<z>/<x>/<y>/` Mapbox Vector Tile endpoint the canvas itself renders
@@ -20,6 +21,7 @@ work areas that were seeded directly rather than routed through assignment.
 import math
 
 import mapbox_vector_tile
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
@@ -35,24 +37,12 @@ def _deg2tile(lat_deg, lon_deg, zoom):
     ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
     return xtile, ytile
 
-# WorkAreaStatus.choices (microplanning/models.py) - the MTP's plan wording is
-# slightly off ("Not Started" isn't a real status; "Expected visit count" is
-# short for "Expected Visit Count Reached"), so this list follows the product.
-WORK_AREA_STATUS_OPTIONS = [
-    "Unassigned",
-    "Not Visited",
-    "Visited",
-    "Request for Inaccessible",
-    "Expected Visit Count Reached",
-    "Inaccessible",
-    "Excluded",
-]
-
 
 class MicroplanningPage(BasePage):
     PAGE_TITLE = locators.get("connect_microplanning_page", "page_title")
-    METRIC_CARD_LABELS = locators.get("connect_microplanning_page", "metric_card_labels")
+    METRIC_CARDS = locators.get("connect_microplanning_page", "metric_cards")
     FILTER_STATUS_SELECT = locators.get("connect_microplanning_page", "filter_status_select")
+    FILTER_STATUS_OPTIONS = locators.get("connect_microplanning_page", "filter_status_options")
     FILTER_ASSIGNEE_SELECT = locators.get("connect_microplanning_page", "filter_assignee_select")
     FILTER_START_DATE = locators.get("connect_microplanning_page", "filter_start_date")
     FILTER_END_DATE = locators.get("connect_microplanning_page", "filter_end_date")
@@ -63,6 +53,10 @@ class MicroplanningPage(BasePage):
     EXIT_ASSIGNMENT_MODE_LINK = locators.get("connect_microplanning_page", "exit_assignment_mode_link")
     UNASSIGNED_ONLY_TOGGLE = locators.get("connect_microplanning_page", "unassigned_only_toggle")
     ASSIGNMENT_GROUP_SELECT = locators.get("connect_microplanning_page", "assignment_group_select")
+    ASSIGNMENT_GROUP_OPTIONS = locators.get("connect_microplanning_page", "assignment_group_options")
+    ASSIGNMENT_ASSIGNEE_OPTIONS = locators.get("connect_microplanning_page", "assignment_assignee_options")
+    MAP_CONTROLLER_ROOT = locators.get("connect_microplanning_page", "map_controller_root")
+    WORK_AREA_ASSIGNMENTS_SORTABLE_HEADERS = locators.get("connect_work_area_assignments_tab", "sortable_headers")
     ASSIGNMENT_ASSIGNEE_SELECT = locators.get("connect_microplanning_page", "assignment_assignee_select")
     FLW_SUMMARY_SECTION = locators.get("connect_microplanning_page", "flw_summary_section")
     FLW_SUMMARY_VIEW_BY_FLW_BTN = locators.get("connect_microplanning_page", "flw_summary_view_by_flw_btn")
@@ -87,10 +81,11 @@ class MicroplanningPage(BasePage):
         assert "/microplanning/" in self.page.url, f"Not on the microplanning page: {self.page.url}"
         self._step("Microplanning page loaded")
 
-    def opp_card_metric_labels(self):
-        labels = [l.strip() for l in self.page.locator(self.METRIC_CARD_LABELS).all_inner_texts() if l.strip()]
-        self._step(f"Opp-card metric labels: {labels}")
-        return labels
+    def opp_card_metrics(self):
+        """Text of each opp-card metric tile (label + value)."""
+        cards = [c.strip() for c in self.page.locator(self.METRIC_CARDS).all_inner_texts() if c.strip()]
+        self._step(f"Opp-card metrics: {cards}")
+        return cards
 
     # -- Microplanning_03/04/06/07/12/13/14: filter sidebar --------------------------
 
@@ -106,12 +101,12 @@ class MicroplanningPage(BasePage):
         self._step(f"Filter Map Work Areas fields present: {present}")
         return present
 
-    def _select_option_labels(self, select_selector):
-        options = self.page.locator(f"{select_selector} option").all_inner_texts()
+    def _select_option_labels(self, options_locator):
+        options = self.page.locator(options_locator).all_inner_texts()
         return [o.strip() for o in options if o.strip() and not o.strip().startswith("---")]
 
     def status_filter_options(self):
-        labels = self._select_option_labels(self.FILTER_STATUS_SELECT)
+        labels = self._select_option_labels(self.FILTER_STATUS_OPTIONS)
         self._step(f"Work Area Status options: {labels}")
         return labels
 
@@ -158,12 +153,12 @@ class MicroplanningPage(BasePage):
     # -- Microplanning_22/25/27/28/29: assignment-mode panels ------------------------
 
     def assignment_group_options(self):
-        labels = self._select_option_labels(self.ASSIGNMENT_GROUP_SELECT)
+        labels = self._select_option_labels(self.ASSIGNMENT_GROUP_OPTIONS)
         self._step(f"'Select Work Areas to Assign' group options: {labels}")
         return labels
 
     def assignment_assignee_options(self):
-        labels = self._select_option_labels(self.ASSIGNMENT_ASSIGNEE_SELECT)
+        labels = self._select_option_labels(self.ASSIGNMENT_ASSIGNEE_OPTIONS)
         self._step(f"'Select new Assignee' options: {labels}")
         return labels
 
@@ -173,6 +168,15 @@ class MicroplanningPage(BasePage):
 
     def flw_summary_visible(self):
         return self.page.locator(self.FLW_SUMMARY_SECTION).first.is_visible()
+
+    def wait_for_flw_summary(self, timeout_ms=10000):
+        """Wait for updateFlwSummary()'s async fetch to render the FLW Summary
+        section; False if it never appears."""
+        try:
+            self.page.locator(self.FLW_SUMMARY_SECTION).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
 
     def flw_summary_text(self):
         return self.page.locator(self.FLW_SUMMARY_SECTION).first.inner_text()
@@ -197,10 +201,10 @@ class MicroplanningPage(BasePage):
     # group_work_areas endpoint the assignment-mode group dropdown already calls -
     # so the id/status/counts are real product data, not fabricated.
 
-    def _option_values(self, select_selector):
+    def _option_values(self, options_locator):
         """<option value> attributes (real pks), skipping the empty placeholder -
         option *text* isn't what the assignment endpoints below take."""
-        options = self.page.locator(f"{select_selector} option").all()
+        options = self.page.locator(options_locator).all()
         return [v for v in (o.get_attribute("value") for o in options) if v]
 
     def fetch_a_real_work_area(self, host, org_slug, opp_id):
@@ -209,7 +213,7 @@ class MicroplanningPage(BasePage):
         (get_flw_work_areas_for_assignment) rather than assuming work area groups
         exist - Microplanning_02 (create groups) is a separate, not-yet-automated,
         mutating case, so this opportunity may have zero groups."""
-        assignee_ids = self._option_values(self.ASSIGNMENT_ASSIGNEE_SELECT)
+        assignee_ids = self._option_values(self.ASSIGNMENT_ASSIGNEE_OPTIONS)
         for assignee_id in assignee_ids:
             url = f"{host}/a/{org_slug}/microplanning/{opp_id}/assignment/flw_work_areas/{assignee_id}/"
             resp = self.page.request.get(url)
@@ -268,11 +272,14 @@ class MicroplanningPage(BasePage):
     def select_work_area_via_js(self, work_area):
         """Set mapController()'s selectedFeature directly - the same effect a real
         canvas click on this feature would have, without depending on map render
-        state. Requires window.Alpine (Alpine.js exposes it globally by default)."""
+        state. Requires window.Alpine (Alpine.js exposes it globally by default).
+
+        This is tied to the frontend's internal state shape (`selectedFeature` with
+        `_id`, plus the mapController root element): if the frontend renames them
+        this fails loudly here, not silently in a test."""
         self._step(f"Select work area {work_area['id']} (JS, no map click)")
-        self.page.evaluate(
-            """(wa) => {
-                const el = document.querySelector('[x-data="mapController()"]');
+        self.page.locator(self.MAP_CONTROLLER_ROOT).first.evaluate(
+            """(el, wa) => {
                 const data = window.Alpine.$data(el);
                 data.selectedFeature = {
                     expected_visit_count: wa.expected_visit_count,
@@ -363,11 +370,8 @@ class MicroplanningPage(BasePage):
         """The Alpine `selectedFeature.status` after a review action - the same
         state `inaccessibilityReviewed`'s listener updates in place, so this
         confirms the work area's new status without a page reload."""
-        return self.page.evaluate(
-            """() => {
-                const el = document.querySelector('[x-data="mapController()"]');
-                return window.Alpine.$data(el).selectedFeature?.status;
-            }"""
+        return self.page.locator(self.MAP_CONTROLLER_ROOT).first.evaluate(
+            "el => window.Alpine.$data(el).selectedFeature?.status"
         )
 
     # -- Microplanning_31: nav to the Coverage Progress Tracker ----------------------
@@ -390,6 +394,8 @@ class CoverageProgressPage(BasePage):
     SECTION_HEADING_BY_TEXT = locators.get("connect_coverage_progress_page", "section_heading_by_text")
     DOWNLOAD_BUTTON_IN_SECTION = locators.get("connect_coverage_progress_page", "download_button_in_section")
     TABLE_BY_SECTION = locators.get("connect_coverage_progress_page", "table_by_section")
+    TABLE_BODY_BY_SECTION = locators.get("connect_coverage_progress_page", "table_body_by_section")
+    CSV_LINK_IN_SECTION = locators.get("connect_coverage_progress_page", "csv_link_in_section")
 
     def verify_loaded(self):
         self.page.locator(self.PAGE_TITLE).first.wait_for(state="visible", timeout=20000)
@@ -412,16 +418,21 @@ class CoverageProgressPage(BasePage):
         self._step(f"'{text}' table headers: {headers}")
         return headers
 
+    def section_table_body_text(self, text):
+        """Body text of a section's table (values, not just the column headers)."""
+        body = self.page.locator(self.TABLE_BODY_BY_SECTION.format(text=text)).first
+        body.wait_for(state="visible", timeout=15000)
+        return body.inner_text().strip()
+
     def download_from_section(self, text):
         # Two "Download" dropdowns exist on the page (Core Metrics + Metrics by
-        # Work Area Group); the CSV link must be scoped to the same button's own
-        # dropdown container, not just "the first CSV link in the DOM".
+        # Work Area Group); the CSV link locator is scoped to the same section's
+        # own dropdown, not just "the first CSV link in the DOM".
         self._step(f"Download '{text}' file")
         button = self.page.locator(self.DOWNLOAD_BUTTON_IN_SECTION.format(text=text)).first
-        container = button.locator("xpath=..")
         with self.page.expect_download() as dl_info:
             button.click()
-            container.locator("xpath=.//a[normalize-space()='CSV']").first.click()
+            self.page.locator(self.CSV_LINK_IN_SECTION.format(text=text)).first.click()
         return dl_info.value
 
     def apply_date_filter(self, start_iso, end_iso):

@@ -651,9 +651,12 @@ cchq_case_list_map_page:
 # forms.py, templates/microplanning/home.html + map_handler.html.
 connect_microplanning_page:
   page_title: "//h2[normalize-space()='Select Opportunity Area']"
-  metric_card_labels: "//div[contains(@class,'metric-card')]//div[contains(@class,'text-white/80')]"
+  metric_cards: "//div[contains(@class,'metric-card')]"
   filter_status_select: "id_status"
-  filter_assignee_select: "id_assignee"
+  filter_status_options: "//select[@id='id_status']/option"
+  # The same id appears in two places: the Filter sidebar (inside #map-filter-form)
+  # and, in assignment mode, the "Select new Assignee" panel (an <aside> with no id).
+  filter_assignee_select: "//form[@id='map-filter-form']//select[@id='id_assignee']"
   filter_start_date: "id_start_date"
   filter_end_date: "id_end_date"
   filter_unassigned_select: "id_unassigned_only"
@@ -663,7 +666,11 @@ connect_microplanning_page:
   exit_assignment_mode_link: "//a[contains(normalize-space(),'Exit')]"
   unassigned_only_toggle: "unassigned-toggle"
   assignment_group_select: "id_work_area_group"
-  assignment_assignee_select: "id_assignee"
+  assignment_group_options: "//select[@id='id_work_area_group']/option"
+  assignment_assignee_select: "//aside[not(@id='sidebar')]//select[@id='id_assignee']"
+  assignment_assignee_options: "//aside[not(@id='sidebar')]//select[@id='id_assignee']/option"
+  # The map's Alpine component root; selecting a work area is driven through its state.
+  map_controller_root: "//*[@x-data='mapController()']"
   flw_summary_section: "//h3[normalize-space()='FLW Summary']/ancestor::div[contains(@class,'border-t')][1]"
   flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View summary by FLW')] | //a[contains(normalize-space(),'View summary by FLW')]"
   flw_summary_view_visits_btn: "//button[contains(normalize-space(),'View Visits')] | //a[contains(normalize-space(),'View Visits')]"
@@ -688,3 +695,7 @@ connect_coverage_progress_page:
   section_heading_by_text: "//h2[contains(@class,'title') and normalize-space()='{text}']"
   download_button_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//button"
   table_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table"
+  table_body_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table//tbody"
+  csv_link_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//a[normalize-space()='CSV']"
+connect_work_area_assignments_tab:
+  sortable_headers: "//table[contains(@class,'base-table')]//th[.//a[contains(@href,'sort=')]]"

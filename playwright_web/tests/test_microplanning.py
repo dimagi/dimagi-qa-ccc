@@ -1,9 +1,10 @@
 """Microplanning (Microplanning_01-40, CCC_Web_Platform_MTP.xlsx).
 
-Read-only/structural cases only - everything that needs clicking a specific
-work area on the Mapbox canvas map (no per-feature DOM access - see
-connect_microplanning_page.py's module docstring) is deferred to a later batch
-that works out a click-coordinate or API-seeded workaround.
+Mostly read-only/structural cases. The Mapbox canvas has no per-feature DOM, so
+tests that need a selected work area (16/17 and the review cases 09-11) set the
+map component's Alpine `selectedFeature` state from JavaScript instead of
+clicking the canvas - they exercise the side panel for that work area, not the
+click-to-select itself. The deny/approve cases (10/11) change seeded data.
 
 Reuses the OPD.microplanning_opp_id_staging fixture (the "OLP Test opp" already
 used by test_opd_gaps.py::test_opd_28) - staging only, skips on prod, same as
@@ -14,11 +15,7 @@ import pytest
 
 from flows.olp_setup import PM_ORG
 from flows.tasking_static import env_value, login_to_connect
-from pages.connect_microplanning_page import (
-    WORK_AREA_STATUS_OPTIONS,
-    CoverageProgressPage,
-    MicroplanningPage,
-)
+from pages.connect_microplanning_page import CoverageProgressPage, MicroplanningPage
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_workers_page import ConnectWorkersPage
 
@@ -72,8 +69,8 @@ def test_microplanning_01_lands_on_select_opportunity_area(session):
 
 def test_microplanning_30_opp_card_details(session):
     micro = _home(session)
-    labels = micro.opp_card_metric_labels()
-    assert labels, "No opp-card metrics rendered"
+    cards = micro.opp_card_metrics()
+    assert cards, "No opp-card metrics rendered"
 
 
 # -- Microplanning_03/04/06/07/12/13/14: filter sidebar --------------------------
@@ -86,10 +83,11 @@ def test_microplanning_04_filter_fields_present(session):
     assert not missing, f"Missing filter fields: {missing}"
 
 
-def test_microplanning_07_work_area_status_options(session):
+def test_microplanning_07_work_area_status_options(session, test_data):
     micro = _home(session)
     options = micro.status_filter_options()
-    missing = [o for o in WORK_AREA_STATUS_OPTIONS if o not in options]
+    expected = test_data.get("MICROPLANNING_UI")["work_area_status_options"]
+    missing = [o for o in expected if o not in options]
     assert not missing, f"Missing Work Area Status options {missing}. Present: {options}"
 
 
@@ -156,7 +154,6 @@ def test_microplanning_25_select_new_assignee_dropdown(session):
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
     assert options, "'Select new Assignee' dropdown has no connect workers listed"
-    return options
 
 
 def test_microplanning_27_flw_summary_on_assignee_select(session):
@@ -166,22 +163,22 @@ def test_microplanning_27_flw_summary_on_assignee_select(session):
     if not options:
         pytest.skip("No assignees available on this opportunity to select for FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
-    micro.page.wait_for_timeout(1500)  # updateFlwSummary() is an async fetch
-    assert micro.flw_summary_visible(), "FLW Summary section did not populate after selecting an assignee"
+    assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
 
 
-def test_microplanning_28_view_summary_by_flw_nav(session):
+def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
     micro = _home(session)
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
     if not options:
         pytest.skip("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
-    micro.page.wait_for_timeout(1500)
+    micro.wait_for_flw_summary()
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
         pytest.skip("'View summary by FLW' control not present for this assignee")
     micro.open_flw_summary_by_flw()
-    assert "work" in micro.page.url.lower(), f"Did not land on the work-area-assignments page: {micro.page.url}"
+    path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
+    assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
 
 
 def test_microplanning_29_view_visits_nav(session):
@@ -191,7 +188,7 @@ def test_microplanning_29_view_visits_nav(session):
     if not options:
         pytest.skip("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
-    micro.page.wait_for_timeout(1500)
+    micro.wait_for_flw_summary()
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
         pytest.skip("'View Visits' control not present for this assignee")
     micro.open_flw_summary_visits()
@@ -201,32 +198,33 @@ def test_microplanning_29_view_visits_nav(session):
 # -- Microplanning_33/34: Connect Workers page "Work Area Assignments" tab ------
 
 
-def test_microplanning_33_work_area_assignment_tab_headers(session):
+def test_microplanning_33_work_area_assignment_tab_headers(session, test_data):
     connect_page, base, slug, opp_id = session
-    connect_page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/workers/work-areas/")
+    ui = test_data.get("MICROPLANNING_UI")
+    connect_page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/{ui['work_area_assignments_path']}/")
     connect_page.wait_for_load_state("load")
     workers = ConnectWorkersPage(connect_page)
-    expected = [
-        "Name", "Last active", "Assigned Buildings", "Assigned Visits",
-        "Assigned work areas", "Assigned work area groups", "Visits Done",
-    ]
-    workers.verify_table_headers_present(expected)
+    workers.verify_table_headers_present(ui["work_area_assignments_headers"])
 
 
-def test_microplanning_34_sort_arrows_present(session):
+def test_microplanning_34_sort_arrows_present(session, test_data):
     connect_page, base, slug, opp_id = session
-    connect_page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/workers/work-areas/")
+    ui = test_data.get("MICROPLANNING_UI")
+    connect_page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/{ui['work_area_assignments_path']}/")
     connect_page.wait_for_load_state("load")
     workers = ConnectWorkersPage(connect_page)
     workers._header_texts()  # waits for the #table htmx swap to render
-    sortable = connect_page.locator("//table[contains(@class,'base-table')]//th[.//a[contains(@href,'sort=')]]")
+    sortable = connect_page.locator(MicroplanningPage.WORK_AREA_ASSIGNMENTS_SORTABLE_HEADERS)
     assert sortable.count() > 0, "No sortable column headers found on the Work Area Assignments tab"
 
 
 # -- Microplanning_16/17: select/modify a work area, driven via JS (no map click) --
 
 
-def test_microplanning_16_select_work_area_section(session):
+def test_microplanning_16_select_work_area_section(session, test_data):
+    """Checks the Select Work Area side panel for a work area. The work area is
+    selected by setting the map's Alpine state from JS, NOT by clicking it on the
+    canvas, so this covers the panel's content, not click-to-select."""
     connect_page, base, slug, opp_id = session
     micro = _home(session)
     micro.enter_assignment_mode()  # cheapest path to a real assignee id
@@ -237,13 +235,14 @@ def test_microplanning_16_select_work_area_section(session):
     micro = _home(session)
     micro.select_work_area_via_js(work_area)
     text = micro.select_work_area_section_text()
-    for label in ("Expected Visit Count", "Number of Buildings", "Status"):
+    for label in test_data.get("MICROPLANNING_UI")["select_work_area_labels"]:
         assert label in text, f"'{label}' missing from the Select Work Area section: {text!r}"
 
 
 def test_microplanning_17_modify_work_area_form_fields(session):
     """Opens the Modify Work Area form and checks its fields render - does NOT
-    submit/save, so this stays non-mutating against the shared fixture opp."""
+    submit/save, so this stays non-mutating against the shared fixture opp. The
+    work area is selected via JS state (not a canvas click), as in test 16."""
     connect_page, base, slug, opp_id = session
     micro = _home(session)
     micro.enter_assignment_mode()
@@ -268,34 +267,39 @@ def test_microplanning_31_coverage_see_more_nav(session):
     coverage.verify_loaded()
 
 
-def test_microplanning_35_progress_tracker_page_details(session):
+def test_microplanning_35_progress_tracker_page_details(session, test_data):
     micro = _home(session)
     micro.open_coverage_progress()
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
-    assert coverage.section_present("Core Metrics")
-    assert coverage.section_present("Metrics by Work Area Group")
+    sections = test_data.get("MICROPLANNING_UI")["coverage_sections"]
+    assert coverage.section_present(sections["core_metrics"])
+    assert coverage.section_present(sections["by_group"])
 
 
-def test_microplanning_36_core_metrics_table_and_download(session):
+def test_microplanning_36_core_metrics_table_and_download(session, test_data):
     micro = _home(session)
     micro.open_coverage_progress()
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
-    headers = coverage.section_table_headers("Core Metrics")
-    assert "Ward" in " | ".join(headers), f"Core Metrics table missing 'Ward' column: {headers}"
-    download = coverage.download_from_section("Core Metrics")
+    ui = test_data.get("MICROPLANNING_UI")
+    section = ui["coverage_sections"]["core_metrics"]
+    headers = coverage.section_table_headers(section)
+    ward = ui["core_metrics_ward_column"]
+    assert ward in " | ".join(headers), f"Core Metrics table missing '{ward}' column: {headers}"
+    download = coverage.download_from_section(section)
     assert download.suggested_filename
 
 
-def test_microplanning_37_metrics_by_work_area_group(session):
+def test_microplanning_37_metrics_by_work_area_group(session, test_data):
     micro = _home(session)
     micro.open_coverage_progress()
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
-    headers = coverage.section_table_headers("Metrics by Work Area Group")
-    assert headers, "Metrics by Work Area Group table has no columns"
-    download = coverage.download_from_section("Metrics by Work Area Group")
+    section = test_data.get("MICROPLANNING_UI")["coverage_sections"]["by_group"]
+    headers = coverage.section_table_headers(section)
+    assert headers, f"{section} table has no columns"
+    download = coverage.download_from_section(section)
     assert download.suggested_filename
 
 
@@ -317,32 +321,35 @@ def test_microplanning_39_ward_saturation_goal(session):
     assert "%" in text or any(ch.isdigit() for ch in text), f"No percentage shown: {text!r}"
 
 
-def test_microplanning_40_core_metrics_update_on_date_filter(session):
-    import datetime
-
+def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data):
+    ui = test_data.get("MICROPLANNING_UI")
+    section = ui["coverage_sections"]["core_metrics"]
     micro = _home(session)
     micro.open_coverage_progress()
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
-    before = coverage.section_table_headers("Core Metrics")
-    start = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
-    end = datetime.date.today().isoformat()
+    before = coverage.section_table_body_text(section)
+    if not any(ch.isdigit() and ch != "0" for ch in before):
+        pytest.skip("Core Metrics shows no non-zero values to react to a date filter on this opportunity")
+    start, end = ui["empty_date_range"]
     coverage.apply_date_filter(start, end)
     coverage.verify_loaded()
-    after = coverage.section_table_headers("Core Metrics")
-    assert after, "Core Metrics table disappeared after applying a date filter"
-    assert before == after, "Core Metrics columns changed shape after filtering (expected same columns)"
+    after = coverage.section_table_body_text(section)
+    assert after != before, (
+        f"Core Metrics values did not change after filtering to {start}..{end} (a range with no activity)"
+    )
 
 
 # -- Microplanning_09/10/11: review an inaccessible-work-area request ------------
 # Separate disposable opp (MICROPLANNING_REVIEW, not the shared OLP Test opp) -
-# see test_data/web_test_data.yaml for why. Anshu seeded exactly 3 work areas in
-# REQUEST_FOR_INACCESSIBLE status; deny/approve permanently consume one each, so
-# each test claims a different one (by ascending id, deterministic across a
-# single run) and skips cleanly once fewer than it needs remain - this data does
-# NOT replenish itself and will need reseeding after 10/11 have both run once.
+# see test_data/web_test_data.yaml for why. It was seeded with exactly 3 work areas
+# in REQUEST_FOR_INACCESSIBLE status. Each test uses its OWN work area, named by id
+# in the test data (details / deny / approve), so a skipped or failed test can never
+# make two tests act on the same one. Deny and approve permanently consume theirs and
+# nothing restores them, so once they have run the next run skips with a message
+# saying exactly what to ask for.
 #
-# MTP note: the committed sheet's title/steps look swapped for these two -
+# MTP note: the committed sheet's title/steps look swapped for 10 and 11 -
 # "Microplanning_10 ... approve the inaccessible request" whose own steps click
 # Deny, and "Microplanning_11 ... deny the inaccessible request" whose own steps
 # click "Approve as inaccessible". Followed the steps/expected-result text (the
@@ -380,20 +387,23 @@ def _review_home(review_session):
     return micro
 
 
-def _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, n):
-    """The nth (0-indexed, by ascending id) work area still in
-    REQUEST_FOR_INACCESSIBLE status - re-fetched fresh every call so a test
-    reflects whichever ones a prior test in this run has already consumed."""
-    work_areas = sorted(
-        (wa for wa in micro.fetch_all_work_areas(base, slug, opp_id) if wa.get("status") == "REQUEST_FOR_INACCESSIBLE"),
-        key=lambda wa: wa["id"],
-    )
-    if len(work_areas) <= n:
+def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
+    """The seeded work area named by MICROPLANNING_REVIEW.<key>, fetched fresh so
+    it reflects what earlier runs consumed. Skips (naming the reseed request) if it
+    is gone or no longer REQUEST_FOR_INACCESSIBLE."""
+    work_area_id = env_value(test_data.get("MICROPLANNING_REVIEW"), key, config)
+    if work_area_id is None:
+        pytest.skip(f"MICROPLANNING_REVIEW.{key} not configured for this env")
+    by_id = {wa["id"]: wa for wa in micro.fetch_all_work_areas(base, slug, opp_id)}
+    work_area = by_id.get(work_area_id)
+    if work_area is None or work_area.get("status") != "REQUEST_FOR_INACCESSIBLE":
+        status = work_area.get("status") if work_area else "not found"
         pytest.skip(
-            f"Fewer than {n + 1} REQUEST_FOR_INACCESSIBLE work area(s) left on this opp "
-            f"({len(work_areas)} remain) - needs reseeding"
+            f"Work area {work_area_id} on opportunity {opp_id} is no longer REQUEST_FOR_INACCESSIBLE "
+            f"(now: {status}). Deny/approve consume it - ask Anshu to reseed that work area (or point "
+            f"MICROPLANNING_REVIEW.{key} at a fresh one)."
         )
-    return work_areas[n]
+    return work_area
 
 
 def _require_review_ui(micro):
@@ -409,10 +419,10 @@ def _require_review_ui(micro):
         )
 
 
-def test_microplanning_09_review_inaccessibility_details(review_session):
+def test_microplanning_09_review_inaccessibility_details(review_session, test_data, config):
     connect_page, base, slug, opp_id = review_session
     micro = _review_home(review_session)
-    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 0)
+    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "details_work_area_id")
     micro.select_work_area_via_js(work_area)
     _require_review_ui(micro)
     micro.open_review_inaccessibility_modal()
@@ -423,12 +433,13 @@ def test_microplanning_09_review_inaccessibility_details(review_session):
     assert micro.review_reason(), "Reason is empty"
 
 
-def test_microplanning_10_deny_inaccessibility_request(review_session):
+def test_microplanning_10_deny_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Deny -> push notification sent, work
-    area status updates (to NOT_VISITED - see act_on_inaccessibility_request)."""
+    area status updates (to NOT_VISITED - see act_on_inaccessibility_request).
+    Consumes MICROPLANNING_REVIEW.deny_work_area_id."""
     connect_page, base, slug, opp_id = review_session
     micro = _review_home(review_session)
-    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 1)
+    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "deny_work_area_id")
     micro.select_work_area_via_js(work_area)
     _require_review_ui(micro)
     micro.open_review_inaccessibility_modal()
@@ -436,12 +447,13 @@ def test_microplanning_10_deny_inaccessibility_request(review_session):
     assert micro.selected_feature_status() == "NOT_VISITED", "Work area status did not update to NOT_VISITED after deny"
 
 
-def test_microplanning_11_approve_inaccessibility_request(review_session):
+def test_microplanning_11_approve_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Approve as Inaccessible -> work area is
-    marked inaccessible (status INACCESSIBLE)."""
+    marked inaccessible (status INACCESSIBLE). Consumes
+    MICROPLANNING_REVIEW.approve_work_area_id."""
     connect_page, base, slug, opp_id = review_session
     micro = _review_home(review_session)
-    work_area = _nth_pending_inaccessible_work_area(micro, base, slug, opp_id, 1)
+    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "approve_work_area_id")
     micro.select_work_area_via_js(work_area)
     _require_review_ui(micro)
     micro.open_review_inaccessibility_modal()
