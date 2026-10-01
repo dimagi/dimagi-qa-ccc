@@ -476,3 +476,53 @@ OPD:
   # the org revert to auto-approval).
   manual_verify_opp_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
   manual_verify_org_slug_staging: "pm_automation_02"
+
+# Microplanning_09/10/11: review/approve/deny an inaccessible-work-area request.
+# Separate, disposable microplanning opp Anshu seeded 2026-09-23 (staging only) -
+# deliberately NOT the shared OPD.microplanning_opp_id_staging ("OLP Test opp"),
+# since the mutating cases here (deny/approve permanently change a work area's
+# status) shouldn't run against an opp other suites rely on staying put. Verified
+# live 2026-09-23: 5 work areas total (KOTA0001-5), 3 confirmed in
+# REQUEST_FOR_INACCESSIBLE status (KOTA0001-3, ids 36051-36053) via the vector-
+# tile decode in MicroplanningPage.fetch_all_work_areas. This same opp doubles as
+# the disposable opp for the other mutating cases (02/16/17/19/20/23/24/26) per
+# Anshu - "same microplanning opp can be used for 2 scenario as well".
+MICROPLANNING_REVIEW:
+  opportunity_id_staging: "467a97c4-5c71-41cc-9e7c-8f7999b0b54c"
+  org_slug_staging: "pm_automation_01"
+  # The three seeded REQUEST_FOR_INACCESSIBLE work areas, one per test (deny/approve
+  # permanently consume theirs; the details test only reads). Each test picks its
+  # own by id so a skipped/failed test can never make two tests act on one area.
+  # After a full run 10/11 skip until someone reseeds - the skip message says what.
+  details_work_area_id_staging: 36051
+  deny_work_area_id_staging: 36052
+  approve_work_area_id_staging: 36053
+
+# Microplanning page text/URL expectations (Microplanning_01-40).
+MICROPLANNING_UI:
+  # WorkAreaStatus.choices (microplanning/models.py) - the MTP's wording is slightly
+  # off ("Not Started" isn't a real status), so this follows the product.
+  work_area_status_options:
+    - "Unassigned"
+    - "Not Visited"
+    - "Visited"
+    - "Request for Inaccessible"
+    - "Expected Visit Count Reached"
+    - "Inaccessible"
+    - "Excluded"
+  work_area_assignments_path: "workers/work-areas"
+  work_area_assignments_headers:
+    - "Name"
+    - "Last active"
+    - "Assigned Buildings"
+    - "Assigned Visits"
+    - "Assigned work areas"
+    - "Assigned work area groups"
+    - "Visits Done"
+  select_work_area_labels: ["Expected Visit Count", "Number of Buildings", "Status"]
+  coverage_sections:
+    core_metrics: "Core Metrics"
+    by_group: "Metrics by Work Area Group"
+  core_metrics_ward_column: "Ward"
+  # A range with no activity, to prove the Core Metrics values react to the date filter.
+  empty_date_range: ["2000-01-01", "2000-01-02"]
