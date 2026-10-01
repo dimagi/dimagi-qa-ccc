@@ -412,6 +412,19 @@ class ConnectWorkersPage(BasePage):
             return
         raise AssertionError("No worker with a 'Passed' assessment found on the Learn tab")
 
+    def learn_column_value(self, worker, column_name):
+        """Learn tab - a named worker's value in an arbitrary column (e.g.
+        'Modules completed'). Used by the hybrid Learn_tab_02 test to read the
+        progress count before/after a device submits a learn module."""
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.strip().lower() == column_name.strip().lower()), None)
+        assert idx is not None, f"No '{column_name}' column on the Learn tab: {headers}"
+        row = self.page.locator(self.DATA_ROW_BY_P_TEXT.format(text=worker)).first
+        row.wait_for(state="visible", timeout=15000)
+        value = row.locator(self.ROW_CELLS).nth(idx).inner_text().strip()
+        self._step(f"'{worker}' Learn tab '{column_name}': {value!r}")
+        return value
+
     def verify_assessment_status(self, worker, expected):
         """Learn_tab_03/_04 - a named worker's Assessment column equals `expected`
         ('Passed' / 'Failed')."""
