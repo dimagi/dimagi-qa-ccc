@@ -36,20 +36,20 @@ either tracker is often wrong.
 |---|---|---|
 | Connect Workers page | 45 | Functionally complete (destructive/mobile/data-gated items aside) |
 | Visit Verification page | ~35 | Strong coverage, hybrid/data-gated remainder tracked |
-| Invoices List page | 40 | 21 done; rest gated on real delivery data (Anshu ask sent) |
-| Microplanning | 41 | 27 done; rest gated on map-canvas limits + Anshu data (partially unblocked) |
+| Invoices List page | 37 | 28 covered by 21 tests in **open PR #47** (not merged); 9 gated on real delivery data |
+| Microplanning | 40 | 30 covered in **open PR #49** (not merged); 10 remaining |
 | **Opportunity List page** | 27 | **27/27 — verified against real assertions, no gaps found** |
 | Opportunity dashboard | 47 | 43/47; remaining 4 descoped/cross-referenced/1 to confirm |
 | Connect Messaging | 10 | 7/10 solid (device-proven); 3 real gaps (recipient-picker filtering) |
-| Programs List page | 16 | 9/16; 6 real gaps (mostly navigation/negative-path) |
+| Programs List page | 16 | 10/16; 6 real gaps (mostly navigation/negative-path) |
 | Login page | 9 | 0 dedicated, 3 implicit, 2 genuinely manual, 4 cheap gaps |
-| **Opportunity creation** | 28 | 3 solid, 5 unverified, **20 real gaps** (Org Pay cluster = 9 of these) |
-| **Re-Learn Task (Tasking)** | 38 | 14 solid, 2 fine-as-is, **21 real gaps** |
+| **Opportunity creation** | 28 | 4 solid, 6 unverified, **18 real gaps** (Org Pay cluster = 9 of these) |
+| **Re-Learn Task (Tasking)** | 38 | 14 solid, 2 fine-as-is, **22 real gaps** |
 | **Delivery Reminder Mails** | 8 | **0/8** — blocked on triggering a scheduled backend job on demand |
 | App Credentials | 3 | **0/3** — small, no blockers, just never built |
 
-**Bottom line:** modules built or re-verified in the same session as this audit (Workers, VV,
-Invoices, Microplanning) are in good shape, and the modules that got an honest code-level
+**Bottom line:** the Workers and VV modules are in good shape; Invoices and Microplanning are
+built but still in open PRs (#47, #49), so they are not yet in `main`. And the modules that got an honest code-level
 re-check (Opportunity List page, Opportunity dashboard, Connect Messaging) mostly hold up well
 too. The real, non-blocked gap work clusters in two modules nobody had gone back to close since
 the original July gap-analysis pass — **Opportunity creation** and **Re-Learn Task / Tasking** —
@@ -68,11 +68,11 @@ Delivery_tab_01–05/09–16, Payment Processing_1–4, plus 6 gap-analysis case
 are deliberate, not oversights:
 
 - **Connect_worker_16** (bulk-delete-all-types) — skipped; destructive, would wipe seeded workers.
-- **Learn_tab_02** — needs a live mobile submission mid-test; hybrid flow built and PR'd
-  (skip-gated pending seed data).
+- **Learn_tab_02** — needs a live mobile submission mid-test; hybrid flow in progress in open
+  PR #48 (skip-gated pending seed data; not device-validated).
 - **Delivery_tab_06/07** — needs controlled visit data; considered eng-covered.
 - 4 partial gap cases (GAP-SRC-W-47/48/49/51/52) — small missing slices, each waiting on
-  specific seed data already on the Anshu ask list.
+  specific seed data that has been requested from Anshu.
 
 ### Visit Verification page (~35 web-relevant TCs)
 
@@ -80,19 +80,25 @@ Strong coverage from the Workers-module migration (VV_1/3/4/5/9/31–34 automate
 source-derived gap cases (GAP-SRC-W-40–52). Remaining backlog is mobile/hybrid-heavy
 (VV_6-30, Payment eligibility) and tracked as in-scope, not deferred.
 
-### Invoices List page (40 TCs) — 21 automated
+### Invoices List page (37 TCs) — 28 covered in open PR #47
 
-Full self-contained NM-create → submit → PM-approve → pay lifecycle, plus cancel/reject paths,
-all validated headed against staging. Remaining 16 TCs need real approved-delivery data
-(Service Delivery invoices, auto-generated invoices) — Anshu has since replied with a
-partial unblock (see project memory for the live opportunity ids).
+PR #47 (open, not merged) adds 21 tests covering 28 of the sheet's 37 TCs: the full
+self-contained NM-create → submit → PM-approve → pay lifecycle plus cancel/reject paths
+(Invoice_26/27 only for the data-agnostic half). Remaining 9 TCs (Invoice_18–25, 29) need real
+approved-delivery data (Service Delivery invoices, auto-generated invoices). Anshu has since
+replied with a partial unblock: a dedicated "Invoice Opp" on staging
+(`e81d6301-f086-4091-b7dd-6f5be353cd06`) and prod (`38ce9f22-ce19-42b4-bd98-b539a663686a`);
+the automatic-generation cases (Invoice_21–25) stay blocked until after the 5th-of-month
+billing run.
 
-### Microplanning (41 TCs) — 27 automated
+### Microplanning (40 TCs) — 30 covered in open PR #49
 
-All map-click-free structural/read-only cases done. The map itself renders on a Mapbox canvas
-with no per-feature DOM access, so work-area selection needed a JS-injection workaround
-(built, currently skip-gated on data). Anshu has since seeded a disposable opportunity that
-unblocks most of the remainder — see project memory for details.
+PR #49 (open, not merged) adds 30 tests covering 30 of the sheet's 40 TCs. The map itself
+renders on a Mapbox canvas with no per-feature DOM access, so work-area selection uses a
+JS-state workaround rather than a click. Anshu has since seeded a disposable opportunity
+(`467a97c4-5c71-41cc-9e7c-8f7999b0b54c`, staging) with three REQUEST_FOR_INACCESSIBLE work
+areas for the deny/approve cases. Remaining 10 TCs: Microplanning_02, 05, 08, 15, 19, 20, 23, 24,
+26, 32.
 
 ### Opportunity List page (27 TCs) — 27/27, verified
 
@@ -128,9 +134,9 @@ and `test_messaging_hybrid.py` (real device delivery/answerability, 11 tests). R
 (The hybrid suite is currently red on prod due to the already-escalated CCCT-2671 messaging
 regression — a product/infra issue, not a coverage gap.)
 
-### Programs List page (16 TCs) — 9/16
+### Programs List page (16 TCs) — 10/16
 
-Automated: PLP_01, 03, 05, 06, 10, 11/17, 12/14/15. Real gaps:
+Automated (10): PLP_01, 03, 05, 06, 10, 11, 12, 14, 15, 17. Real gaps (6):
 
 - **PLP_02** — invite-NM action performed but never asserted (no "Invited" status check).
 - **PLP_04** — "select any program → land on its own detail page" not covered at all.
@@ -156,31 +162,31 @@ its own assertable test.
 | Login 7 (SSO prompt) | Implicitly exercised only |
 | Login 8/9 (password reset) | Genuinely manual — needs a real email round-trip |
 
-### Opportunity creation (28 TCs) — 3 solid, 20 real gaps
+### Opportunity creation (28 TCs) — 4 solid, 18 real gaps
 
 **Not a regression** — this gap was flagged in the original July "Pass 1" gap-analysis ledger
 (4 automated / 22 not-yet-done / 2 manual, almost exactly matching what this audit found
 independently) and simply never got the closing pass that Opportunity Dashboard, Opportunity
 List, and Programs List each later received.
 
-Automated: Opp_create_04/28 (create), 05 (payment unit page), 21 (budget page).
+Automated (4): Opp_create_04/28 (create), 05 (payment unit page), 21 (budget page).
 
-Exercised but not verified: Opp_create_22–24 (only one HQ server ever used), 25/26 (dropdowns
+Exercised but not verified (6): Opp_create_22–24 (only one HQ server ever used), 25/26 (dropdowns
 selected blindly, narrowing never asserted), 27 (only selects an existing credential, doesn't
 create one).
 
-Real gaps:
+Real gaps (18):
 - **Opp_create_01/02/03** — negative/permission cases (NM can't create; PM can't create
   non-managed; legacy-program linking) — no negative-path tests exist.
 - **Opp_create_06–09, 14–18** — the entire **Org Pay** feature (per-payment-unit config,
   independent editing, budget recalculation). Confirmed `org_pay` doesn't exist anywhere in
-  the codebase. **9 of the 20 gaps are this one cluster.**
+  the codebase. **9 of the 18 gaps are this one cluster.**
 - **Opp_create_10–13** — field validation (decimal, long int, negative, special characters).
 - **Opp_create_19/20** — worker actually earns/paid the configured amount — needs real mobile
   deliveries + payment verification; closest existing coverage is the Workers module's Payment
   Processing tests, but that's a different angle.
 
-### Re-Learn Task / Tasking (38 TCs) — 14 solid, 21 real gaps
+### Re-Learn Task / Tasking (38 TCs) — 14 solid, 22 real gaps
 
 Real coverage exists under the Tasking plan's own IDs (`TC-TTC/TAS/TLV/TDL/PRM-*`) across five
 test files, verified by reading the full test bodies.
@@ -193,7 +199,7 @@ combos).
 Probably fine, cross-plan: Re-Learn_16 (Tasks tab on Visit Verification page) likely covered by
 `test_vv_05_visit_tabs_render` in the Workers module.
 
-Real gaps:
+Real gaps (22):
 - **Re-Learn_04/05/07, 20/21** — mandatory-field validation (name/description/task-unit/due-date).
 - **Re-Learn_06** — configuring a task type *without* a case property (test always supplies one).
 - **Re-Learn_08/09/22** — Cancel/Close dismissal on both the task-type config and
@@ -232,7 +238,7 @@ to close.
 
 1. **Opportunity creation — Org Pay cluster** (9 TCs) is the single largest coherent body of
    real, unblocked work. Worth its own dedicated pass.
-2. **Re-Learn Task / Tasking gaps** (21 TCs) — mostly small, well-scoped items (validation,
+2. **Re-Learn Task / Tasking gaps** (22 TCs) — mostly small, well-scoped items (validation,
    popup dismissal, sorting) that fit the existing Tasking test-file structure.
 3. **App Credentials** (3 TCs) — small, quick win, no blockers.
 4. **Login page cheap gaps** (Login 1/2/5/6, 4 TCs) — infrastructure already exists, just needs
@@ -241,5 +247,5 @@ to close.
    scheduled job on demand before any automation can start (same ask as Invoice auto-generation).
 6. Two quick sanity checks, not full builds: **OD_41** (possible duplicate of `GAP-SRC-W-50`)
    and **Re-Learn_16** (possible duplicate of `test_vv_05_visit_tabs_render`).
-7. Ongoing: Invoices (16 TCs) and Microplanning (14 TCs) remainders are progressing as Anshu's
-   seed data lands — see the respective project memory files for live status.
+7. Ongoing: land PRs #47 (Invoices), #48 (Learn_tab_02) and #49 (Microplanning), then the
+   remainders: Invoices 9 TCs and Microplanning 10 TCs, as Anshu's seed data lands.
