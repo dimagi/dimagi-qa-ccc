@@ -192,6 +192,8 @@ WORKER_LIFECYCLE:
   cooldown_window_hours: 24
   cooldown_margin_hours: 1      # skew allowance: err towards "lapsed" (never resend)
   cooldown_message: "sent in the last 24 hours"  # lowercase; matched against lowercased page text
+  cooldown_date_column: "Invited Date"           # workers-list column holding the invite's notification_date
+  cooldown_date_format: "%d-%b-%Y %H:%M"         # how that column renders it (UTC)
 
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer

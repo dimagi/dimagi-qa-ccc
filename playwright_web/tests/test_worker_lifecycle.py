@@ -128,7 +128,19 @@ def test_connect_worker_09_resend_cooldown(workers, test_data):
     fails the test."""
     data = test_data.get("WORKER_LIFECYCLE")
     phone = data["cooldown_phone"]
-    if not workers.invite_within_cooldown(phone, data["cooldown_window_hours"], data["cooldown_margin_hours"]):
+    within = workers.invite_within_cooldown(
+        phone,
+        data["cooldown_window_hours"],
+        data["cooldown_margin_hours"],
+        data["cooldown_date_column"],
+        data["cooldown_date_format"],
+    )
+    if within is None:
+        pytest.skip(
+            f"{phone} has no '{data['cooldown_date_column']}' on the workers list, so the 24h window "
+            "cannot be checked - not resending (it would text a real user)."
+        )
+    if not within:
         pytest.skip(
             f"{phone}'s invite is outside the {data['cooldown_window_hours']}h resend window - not "
             "resending (it would text a real user). Refresh the invite (delete + re-invite the number) "

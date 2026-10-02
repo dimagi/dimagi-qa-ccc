@@ -817,19 +817,24 @@ class ConnectWorkersPage(BasePage):
             "input[type=checkbox]"
         ).first.uncheck()
 
-    def invite_within_cooldown(self, phone, window_hours, margin_hours):
+    def invite_within_cooldown(self, phone, window_hours, margin_hours, date_column, date_format):
         """Whether `phone`'s invite is still inside the resend-cooldown window, read
-        from the row's 'Invited Date' cell WITHOUT clicking Resend (a lapsed window
+        from the row's `date_column` cell WITHOUT clicking Resend (a lapsed window
         means a resend would really text that number). The table shows a naive
-        'DD-Mon-YYYY HH:MM' in the server's timezone, taken as UTC here; margin_hours
-        is subtracted from the window so clock/timezone skew errs towards 'lapsed'."""
+        `date_format` timestamp in UTC; margin_hours is subtracted from the window so
+        clock/timezone skew errs towards 'lapsed'. Returns None when the cell has no
+        date (Connect shows an em dash), so the caller can skip with a clear reason."""
         headers = self._header_texts()
-        idx = next((i for i, h in enumerate(headers) if h.lower() == "invited date"), None)
-        assert idx is not None, f"No 'Invited Date' column on the workers list: {headers}"
+        idx = next((i for i, h in enumerate(headers) if h.lower() == date_column.lower()), None)
+        assert idx is not None, f"No '{date_column}' column on the workers list: {headers}"
         row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
         row.wait_for(state="visible", timeout=15000)
         text = row.locator(self.ROW_CELLS).nth(idx).inner_text().strip()
-        invited = datetime.strptime(text, "%d-%b-%Y %H:%M")
+        try:
+            invited = datetime.strptime(text, date_format)
+        except ValueError:
+            self._step(f"Invite for {phone} has no usable '{date_column}' (cell reads {text!r})")
+            return None
         age = datetime.now(timezone.utc).replace(tzinfo=None) - invited
         within = age < timedelta(hours=window_hours - margin_hours)
         self._step(f"Invite for {phone} sent {text} ({age} ago) - inside cooldown window: {within}")
