@@ -1,0 +1,38 @@
+# Open product issues the AI failure analysis should label as KNOWN instead of
+# guessing at a test fix (utils/ai_failure_analyst.py). A failing test/flow whose
+# name or class contains any `match` substring (case-insensitive) is reported as
+# "Known issue (<id>)" without calling the model. Remove an entry when the issue is
+# fixed so real regressions in that area are analysed again.
+#
+# Matches are exact names, not broad prefixes: CCCT-2671 only affects the messaging
+# HYBRID cases (the ones signing in as the MAESTRO_MESSAGING_HYBRID worker). The
+# conditional-alert cases (they sign in as the tasking worker) and the empty-state
+# case (its own reserved account) are NOT covered, so a failure there is still
+# analysed. Mobile flow names are matched without their ".yaml" extension, which is
+# how maestro_report.json stores them; web tests are matched by test name.
+- id: CCCT-2671
+  summary: messaging hybrid cases fail on a known product regression
+  match:
+    # Mobile flows
+    - "messaging_broadcast"
+    - "messaging_survey"
+    - "messaging_keyword"
+    - "messaging_keyword_survey"
+    - "messaging_consent"
+    - "messaging_consent_history"
+    - "messaging_consent_delivery"
+    - "messaging_channel_created"
+    - "messaging_push_deeplink"
+    - "messaging_unsubscribe_only"
+    - "messaging_resubscribe_only"
+    - "messaging_subscription"
+    # Web tests (test_messaging_hybrid.py) driving the hybrid worker
+    - "test_broadcast_connect_message_reaches_the_channel"
+    - "test_broadcast_connect_survey_is_answerable"
+    - "test_keyword_triggered_from_channel_returns_a_message"
+    - "test_keyword_returns_a_survey_that_is_answerable"
+    - "test_first_consent_request_creates_a_channel"
+    - "test_consent_gates_message_delivery"
+    - "test_message_push_opens_the_thread"
+    - "test_subscribed_channels_sort_before_unsubscribed"
+    - "test_channel_unsubscribe_and_resubscribe"
