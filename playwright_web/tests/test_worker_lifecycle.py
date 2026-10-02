@@ -122,6 +122,12 @@ def test_connect_worker_09_resend_cooldown(workers, test_data):
     """Connect_worker_09: resending a registered invite within 24h is refused with
     a cooldown message (real number; demo numbers don't enforce the cooldown).
 
+    MANUAL BY DESIGN (decided 2026-10-02): the cooldown only exists for a real
+    registered number, and every invite or resend texts it, so the invite cannot be
+    refreshed on each CI run without texting a real person. QA re-invites the number
+    by hand before a release; this test then verifies the refusal while that invite
+    is still inside the window, and otherwise skips.
+
     The window is checked from the invite's Invited Date BEFORE clicking Resend: if
     it has already lapsed we skip without resending (a resend would text the real
     number). Inside the window the refusal is a hard assert, so a broken cooldown
@@ -143,8 +149,8 @@ def test_connect_worker_09_resend_cooldown(workers, test_data):
     if not within:
         pytest.skip(
             f"{phone}'s invite is outside the {data['cooldown_window_hours']}h resend window - not "
-            "resending (it would text a real user). Refresh the invite (delete + re-invite the number) "
-            "to re-enable this test."
+            "resending (it would text a real user). Manual by design: QA re-invites the number by hand "
+            "before a release, then runs this test inside the window."
         )
     workers.verify_resend_cooldown(phone, data["cooldown_message"])
 
