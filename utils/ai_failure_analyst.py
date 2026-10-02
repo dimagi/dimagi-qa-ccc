@@ -23,6 +23,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root, so `utils` imports when run as a script
+from utils.log_masking import mask_sensitive  # noqa: E402
+
 try:
     from openai import OpenAI
 except ImportError:  # a missing optional dependency must not end the importing script
@@ -67,7 +70,7 @@ def _parse_failures(xml_path: Path) -> list[dict]:
                 failures.append({
                     "name":      tc.attrib.get("name", "unknown"),
                     "classname": tc.attrib.get("classname", ""),
-                    "error":     (node.text or node.attrib.get("message", ""))[:2000],
+                    "error":     mask_sensitive(node.text or node.attrib.get("message", ""))[:2000],
                     "tag":       tag,
                 })
                 break
@@ -112,9 +115,10 @@ def _load_known_issues() -> list[dict]:
 
 
 def _known_issue_for(failure: dict, known_issues: list[dict]):
-    haystack = f"{failure['classname']} {failure['name']}".lower()
+    # Mobile flow names are stored without ".yaml"; match on that form either way.
+    haystack = f"{failure['classname']} {failure['name']}".lower().replace(".yaml", "")
     for issue in known_issues:
-        if any(m.lower() in haystack for m in issue.get("match", [])):
+        if any(m.lower().replace(".yaml", "") in haystack for m in issue.get("match", [])):
             return issue
     return None
 
