@@ -1,7 +1,9 @@
 """Mask what must not leave CI before a log or traceback goes to a third party.
 
-Shared by maestro_report.py (mobile log tails) and ai_failure_analyst.py (web
-tracebacks), so both suites are masked the same way.
+Shared by maestro_report.py (mobile log tails) and utils/ai_failure_analyst.py (web
+tracebacks), so both suites are masked the same way. Lives beside maestro_report.py
+rather than in utils/ because playwright_web has its own `utils` package, which
+shadows the repo-root one whenever the web suite imports the mobile runner.
 """
 
 import re
@@ -9,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 SENSITIVE_SOURCES = (
     ROOT / "test_data" / "mobile_workers.yaml",
     ROOT / "test_data" / "web_test_data.yaml",

@@ -11,11 +11,9 @@ rendering is a different job and this is most of the code by volume.
 
 import datetime
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, for utils/
-from utils.log_masking import mask_sensitive  # noqa: E402
+from log_masking import mask_sensitive
 
 LOG_TAIL_LINES = 40  # enough to see the failing step and its preceding context
 

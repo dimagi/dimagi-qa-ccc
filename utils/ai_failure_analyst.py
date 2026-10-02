@@ -23,8 +23,8 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root, so `utils` imports when run as a script
-from utils.log_masking import mask_sensitive  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "maestro_mobile" / "scripts"))
+from log_masking import mask_sensitive  # noqa: E402
 
 try:
     from openai import OpenAI
