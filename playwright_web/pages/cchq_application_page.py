@@ -49,6 +49,18 @@ class CCHQApplicationPage(BasePage):
         self.page.wait_for_timeout(5000)
 
     def click_make_new_version_button(self):
+        # The freshly copied app's page renders the button late on prod (30s click
+        # timeout in run 36988523792); reloading the view is read-only, so retry it.
+        button = self.page.locator(self.MAKE_NEW_VERSION_BUTTON).first
+        for attempt in range(3):
+            try:
+                button.wait_for(state="visible", timeout=60000)
+                break
+            except Exception:  # noqa: BLE001
+                if attempt == 2:
+                    raise
+                self._step(f"Make New Version not ready (attempt {attempt + 1}/3) - reloading")
+                self.page.reload(wait_until="load")
         self.click(self.MAKE_NEW_VERSION_BUTTON)
         self.click(self.RELEASED_BUTTON)
 
