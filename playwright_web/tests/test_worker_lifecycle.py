@@ -120,9 +120,39 @@ def test_connect_worker_13_not_found_deletable(workers, test_data):
 
 def test_connect_worker_09_resend_cooldown(workers, test_data):
     """Connect_worker_09: resending a registered invite within 24h is refused with
-    a cooldown message (real number; demo numbers don't enforce the cooldown)."""
+    a cooldown message (real number; demo numbers don't enforce the cooldown).
+
+    MANUAL BY DESIGN (decided 2026-10-02): the cooldown only exists for a real
+    registered number, and every invite or resend texts it, so the invite cannot be
+    refreshed on each CI run without texting a real person. QA re-invites the number
+    by hand before a release; this test then verifies the refusal while that invite
+    is still inside the window, and otherwise skips.
+
+    The window is checked from the invite's Invited Date BEFORE clicking Resend: if
+    it has already lapsed we skip without resending (a resend would text the real
+    number). Inside the window the refusal is a hard assert, so a broken cooldown
+    fails the test."""
     data = test_data.get("WORKER_LIFECYCLE")
-    workers.verify_resend_cooldown(data["cooldown_phone"])
+    phone = data["cooldown_phone"]
+    within = workers.invite_within_cooldown(
+        phone,
+        data["cooldown_window_hours"],
+        data["cooldown_margin_hours"],
+        data["cooldown_date_column"],
+        data["cooldown_date_format"],
+    )
+    if within is None:
+        pytest.skip(
+            f"{phone} has no '{data['cooldown_date_column']}' on the workers list, so the 24h window "
+            "cannot be checked - not resending (it would text a real user)."
+        )
+    if not within:
+        pytest.skip(
+            f"{phone}'s invite is outside the {data['cooldown_window_hours']}h resend window - not "
+            "resending (it would text a real user). Manual by design: QA re-invites the number by hand "
+            "before a release, then runs this test inside the window."
+        )
+    workers.verify_resend_cooldown(phone, data["cooldown_message"])
 
 
 def test_learn_tab_03_assessment_failed(workers, test_data):
