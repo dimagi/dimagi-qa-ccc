@@ -172,7 +172,7 @@ jobs:
         # forward_signals.sh so a cancelled job stops its BrowserStack build
         # instead of leaving it running on the shared accounts.
         run: |
-          .github/scripts/forward_signals.sh 'python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee -i bs_output.log'
+          exec .github/scripts/forward_signals.sh 'python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee -i bs_output.log'
 
       - name: Parse Results
         id: aggregate

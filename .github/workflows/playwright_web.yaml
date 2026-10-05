@@ -181,7 +181,7 @@ jobs:
         # Run through forward_signals.sh so a cancelled job reaches pytest, and a
         # hybrid test stops its BrowserStack build rather than leaving it running.
         run: |
-          ../.github/scripts/forward_signals.sh '
+          exec ../.github/scripts/forward_signals.sh '
             MARKER_ARGS=()
             [ -n "$PYTEST_MARKERS" ] && MARKER_ARGS=(-m "$PYTEST_MARKERS")
             xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short

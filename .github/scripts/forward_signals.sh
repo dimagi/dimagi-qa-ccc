@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Run a command so that a cancelled job actually reaches it.
 #
-#   .github/scripts/forward_signals.sh '<command line>'
+#   exec .github/scripts/forward_signals.sh '<command line>'
+#
+# The `exec` matters: the runner signals only the step's own shell process. Run
+# without it, this script is a child of that shell and never hears the signal -
+# a cancelled test run on 2026-10-05 (run 37315241026) left build 332038cc
+# running exactly that way.
 #
 # When a job is cancelled (a superseding push, a manual cancel, a timeout) the
 # runner sends SIGINT to the step's shell, SIGTERM 7.5s later, then kills it.
@@ -16,6 +21,10 @@
 # The command's exit status is this script's exit status. Use `tee -i` in the
 # command so the log keeps receiving the stop-build output after the interrupt.
 set -u
+
+# Python block-buffers stdout into a pipe, so a cancelled step used to lose
+# everything it had printed, the stop-build lines included.
+export PYTHONUNBUFFERED=1
 
 setsid bash -o pipefail -c "$1" &
 pid=$!
