@@ -49,12 +49,6 @@ appId: org.commcare.dalvik
       notVisible:
         id: "connect_login_button"
     commands:
-      # The setup screen can still be loading right after sign-in; wait for the
-      # overflow rather than tapping it on an empty screen.
-      - extendedWaitUntil:
-          visible:
-            text: "More options"
-          timeout: 60000
       - tapOn:
           text: "More options"
       - tapOn: "Refresh Opportunities"
