@@ -4,9 +4,7 @@
 #   exec .github/scripts/forward_signals.sh '<command line>'
 #
 # The `exec` matters: the runner signals only the step's own shell process. Run
-# without it, this script is a child of that shell and never hears the signal -
-# a cancelled test run on 2026-10-05 (run 37315241026) left build 332038cc
-# running exactly that way.
+# without it, this script is a child of that shell and never hears the signal.
 #
 # When a job is cancelled (a superseding push, a manual cancel, a timeout) the
 # runner sends SIGINT to the step's shell, SIGTERM 7.5s later, then kills it.

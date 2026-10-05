@@ -399,10 +399,11 @@ def trigger_build(auth, app_url, test_suite_url, flows=None, app_env=None):
 def stop_build(auth, build_id):
     """Ask BrowserStack to stop a build. Best effort: it runs while the job is being
     torn down, so it never raises, and it is short - GitHub follows its SIGINT with
-    SIGTERM 7.5s later and SIGKILL 2.5s after that. BrowserStack answers 422 for a
+    SIGTERM 7.5s later and SIGKILL 2.5s after that. The timeout is per phase
+    (connect, read), so (3, 4) caps the request at about 7s. BrowserStack answers 422 for a
     build that has already finished, which is harmless here."""
     try:
-        response = requests.post(STOP_BUILD_URL.format(build_id=build_id), auth=auth, timeout=6)
+        response = requests.post(STOP_BUILD_URL.format(build_id=build_id), auth=auth, timeout=(3, 4))
         print(f"Stop build {build_id}: HTTP {response.status_code} {response.text[:200]}", flush=True)
     except Exception as exc:  # noqa: BLE001 - must not mask the original error
         print(f"Stop build {build_id} failed: {exc}", flush=True)
@@ -421,8 +422,7 @@ def stop_build_on_abort(auth):
     A cancelled CI job (a superseding push, a manual cancel, a timeout) used to
     leave its BrowserStack build running against the shared fixture accounts, and
     GitHub releases the job's shared-data lock at once - so the next run's build
-    collided with it. Stage builds #244 and #245 on 2026-10-02 did exactly that, and
-    profile_edit_email and profile_discard failed on each other's account state.
+    ran on the same accounts at the same time and failed on their state.
 
     Yields a dict; put the build id in state["build_id"] once triggered and clear it
     once the build has finished. While it is set, SIGINT/SIGTERM or any exception
