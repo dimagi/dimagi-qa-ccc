@@ -2,9 +2,12 @@ import argparse
 import configparser
 import json
 import os
+import signal
 import sys
+import threading
 import time
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import maestro_report
@@ -13,6 +16,8 @@ import yaml
 from requests.auth import HTTPBasicAuth
 
 BASE_URL = "https://api-cloud.browserstack.com/app-automate/maestro/v2"
+# Stop is the one Maestro endpoint without the v2 prefix - the v2 path is a 404.
+STOP_BUILD_URL = "https://api-cloud.browserstack.com/app-automate/maestro/builds/{build_id}/stop"
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 FLOWS_DIR = Path(__file__).parent.parent / "flows"
 # The app is built against one Connect server, so the environment picks the build -
@@ -391,6 +396,59 @@ def trigger_build(auth, app_url, test_suite_url, flows=None, app_env=None):
     return build_id
 
 
+def stop_build(auth, build_id):
+    """Ask BrowserStack to stop a build. Best effort: it runs while the job is being
+    torn down, so it never raises, and it is short - GitHub follows its SIGINT with
+    SIGTERM 7.5s later and SIGKILL 2.5s after that. BrowserStack answers 422 for a
+    build that has already finished, which is harmless here."""
+    try:
+        response = requests.post(STOP_BUILD_URL.format(build_id=build_id), auth=auth, timeout=6)
+        print(f"Stop build {build_id}: HTTP {response.status_code} {response.text[:200]}", flush=True)
+    except Exception as exc:  # noqa: BLE001 - must not mask the original error
+        print(f"Stop build {build_id} failed: {exc}", flush=True)
+
+
+def _raise_interrupt(signum, frame):
+    # SIGTERM included: by default it kills the process without unwinding, and
+    # the build would be left running.
+    raise KeyboardInterrupt(f"received {signal.Signals(signum).name}")
+
+
+@contextmanager
+def stop_build_on_abort(auth):
+    """Stop the running build if this process is cancelled or fails while waiting.
+
+    A cancelled CI job (a superseding push, a manual cancel, a timeout) used to
+    leave its BrowserStack build running against the shared fixture accounts, and
+    GitHub releases the job's shared-data lock at once - so the next run's build
+    collided with it. Stage builds #244 and #245 on 2026-10-02 did exactly that, and
+    profile_edit_email and profile_discard failed on each other's account state.
+
+    Yields a dict; put the build id in state["build_id"] once triggered and clear it
+    once the build has finished. While it is set, SIGINT/SIGTERM or any exception
+    stops the build and then propagates. The handlers are only installed on the
+    main thread, the only place Python allows them.
+    """
+    state = {"build_id": None}
+    previous = {}
+    if threading.current_thread() is threading.main_thread():
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            previous[sig] = signal.signal(sig, _raise_interrupt)
+    try:
+        yield state
+    except BaseException:
+        if state["build_id"]:
+            # A second signal must not cut the stop request short.
+            for sig in previous:
+                signal.signal(sig, signal.SIG_IGN)
+            print(f"Aborted while build {state['build_id']} was running - stopping it", flush=True)
+            stop_build(auth, state["build_id"])
+        raise
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def poll_build(auth, build_id):
     print("Waiting for build to finish...")
     while True:
@@ -514,13 +572,16 @@ def run_flows(flows=None, env=None, reports=True, session_retries=1, app_env=Non
     # suite are reused. A genuine test failure comes back as "failed" and is
     # never retried.
     attempt = 0
-    while True:
-        build_id = trigger_build(auth, app_url, test_suite_url, flows=flows, app_env=app_env)
-        result = poll_build(auth, build_id)
-        if result.get("status") != "error" or attempt >= session_retries:
-            break
-        attempt += 1
-        print(f"Build errored before running (session could not start) - retry {attempt}/{session_retries}")
+    with stop_build_on_abort(auth) as running:
+        while True:
+            build_id = trigger_build(auth, app_url, test_suite_url, flows=flows, app_env=app_env)
+            running["build_id"] = build_id
+            result = poll_build(auth, build_id)
+            running["build_id"] = None
+            if result.get("status") != "error" or attempt >= session_retries:
+                break
+            attempt += 1
+            print(f"Build errored before running (session could not start) - retry {attempt}/{session_retries}")
 
     summary = summarize_build(result, build_id, auth=auth, flows=flows)
     if reports:

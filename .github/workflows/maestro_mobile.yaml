@@ -168,10 +168,11 @@ jobs:
         id: bs
         # Uploads the environment's APK and maestro_mobile/flows, runs them on a
         # real device via App Automate, and polls until the build finishes. Exits
-        # non-zero unless the build status is "passed".
+        # non-zero unless the build status is "passed". Run through
+        # forward_signals.sh so a cancelled job stops its BrowserStack build
+        # instead of leaving it running on the shared accounts.
         run: |
-          set -o pipefail
-          python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee bs_output.log
+          .github/scripts/forward_signals.sh 'python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee -i bs_output.log'
 
       - name: Parse Results
         id: aggregate
