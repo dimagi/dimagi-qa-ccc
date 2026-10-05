@@ -1,0 +1,47 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Skip the optional "Add your email (optional)" step that 2.64+ shows after the
+# backup code is accepted. Call it straight after tapping
+# connect_backup_code_button.
+#
+# The step is only offered while the account has no verified email and the
+# email_otp_verification switch is on, so it is skipped when present rather than
+# asserted. Every caller used to do that with a single optional tap, which
+# races the server: the tap runs right after CONTINUE, looks for ~7s, warns, and
+# is spent. When the code round trip is slower than that, the email screen
+# lands afterwards and sits over every later step.
+#
+# Prod build 414232bb is exactly that: the optional skip tap ran at 09:13:39 and
+# WARNED at 09:13:46 having found nothing, and "More options" FAILED at 09:14:23
+# with the failure screenshot showing "Add your email (optional)" still up.
+#
+# So: wait for the code screen to go away first - that is the server's answer -
+# and then check for the email step a few times, the way the "Account Recovered"
+# guard does, so whichever check runs after it renders is the one that skips it.
+# Cheap when the step never shows.
+
+# A rejected code keeps this screen up with an error, so a timeout here means the
+# code was not accepted.
+- extendedWaitUntil:
+    notVisible:
+      id: "backup_code_view"
+    timeout: 60000
+- repeat:
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: "personalid_email_skip_button"
+          commands:
+            - tapOn:
+                id: "personalid_email_skip_button"
+            # The confirm dialog's buttons are Material buttons, which upper-case
+            # their labels: YES.
+            - tapOn:
+                text: "YES"
+                optional: true
+      - waitForAnimationToEnd:
+          timeout: 2500
