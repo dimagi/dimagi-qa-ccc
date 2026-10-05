@@ -80,8 +80,7 @@ appId: org.commcare.dalvik
     timeout: 40000
 
 # Leave the fixture WITHOUT an email: MP_03 and RE_01 both depend on that.
-- tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
-- tapOn: { text: "YES", optional: true }
+- runFlow: shared_skip_email_step.yaml
 
 # The account does not exist until the photo is saved. On a 2.65 build the
 # placeholder photo is already applied, so Save is enabled with no camera.
