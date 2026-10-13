@@ -49,7 +49,8 @@ def test_olp_list_program_manager_view(page, test_data, config, settings):
     assert fields["is_test"] and fields["status"], f"Missing core filter fields: {fields}"
     assert fields["program"], "PM view should expose the Program filter"
     assert set(IS_TEST_OPTIONS).issubset(set(olp.is_test_options()))
-    assert olp.status_options() == STATUS_OPTIONS
+    # Order is not asserted: with Active selected by default the dropdown lists it last.
+    assert sorted(olp.status_options()) == sorted(STATUS_OPTIONS)
     assert olp.program_options(), "Program filter should list at least one program for a PM org"
     olp.close_filter_modal()
 
@@ -85,7 +86,8 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     fields = olp.filter_fields_present()
     assert fields["is_test"] and fields["status"], f"Missing core filter fields: {fields}"
     assert not fields["program"], "NM view should not expose the Program filter"
-    assert olp.status_options() == STATUS_OPTIONS
+    # Order is not asserted: with Active selected by default the dropdown lists it last.
+    assert sorted(olp.status_options()) == sorted(STATUS_OPTIONS)
     olp.close_filter_modal()
 
     # OLP_23/24/26 - NM count cells drill down to the right pages (by sort param:

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, with_all_opportunities, with_page_size
 
 locators = LocatorLoader()
 
@@ -214,5 +214,10 @@ class ConnectOpportunitiesPage(BasePage):
             self.page.wait_for_timeout(10000)
         except Exception:
             print("Dropdown not present")
+        if self.page.get_by_role("link", name=value, exact=False).count() == 0:
+            # The list opens on default filters (Active, non-test only - CCCT-2882)
+            # and a freshly created opportunity is test/non-active, so it is hidden.
+            self.page.goto(with_page_size(with_all_opportunities(self.page.url)))
+            self.page.wait_for_load_state("load")
         self.click_link_by_text(value)
         self.page.wait_for_timeout(3000)
