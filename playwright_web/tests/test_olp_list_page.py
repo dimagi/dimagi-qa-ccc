@@ -37,6 +37,16 @@ def test_olp_list_program_manager_view(page, test_data, config, settings):
     # OLP_01/04 - landing
     olp.verify_loaded()
 
+    # CCCT-2882 - the list opens on its defaults: Active + non-test only
+    olp.open_default_list()
+    olp.open_filter_modal()
+    assert olp.selected_filter_labels("filter_status_select") == ["Active"]
+    assert olp.selected_filter_labels("filter_is_test_select") == ["No"]
+    olp.close_filter_modal()
+    assert olp.filter_badge_count() == 2, "Default filters should show the orange count dot (2)"
+    assert set(olp.visible_statuses()) <= {"Active"}, "Default list should show Active opportunities only"
+    assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
+
     # OLP_05 (PM) - the program-manager column set
     olp.verify_columns(PM_COLUMNS)
 
@@ -49,8 +59,9 @@ def test_olp_list_program_manager_view(page, test_data, config, settings):
     assert fields["is_test"] and fields["status"], f"Missing core filter fields: {fields}"
     assert fields["program"], "PM view should expose the Program filter"
     assert set(IS_TEST_OPTIONS).issubset(set(olp.is_test_options()))
-    # Order is not asserted: with Active selected by default the dropdown lists it last.
-    assert sorted(olp.status_options()) == sorted(STATUS_OPTIONS)
+    # Compared as a set: with Active selected by default the dropdown lists it last
+    # (the default itself is asserted above).
+    assert set(olp.status_options()) == set(STATUS_OPTIONS)
     assert olp.program_options(), "Program filter should list at least one program for a PM org"
     olp.close_filter_modal()
 
@@ -86,8 +97,9 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     fields = olp.filter_fields_present()
     assert fields["is_test"] and fields["status"], f"Missing core filter fields: {fields}"
     assert not fields["program"], "NM view should not expose the Program filter"
-    # Order is not asserted: with Active selected by default the dropdown lists it last.
-    assert sorted(olp.status_options()) == sorted(STATUS_OPTIONS)
+    # Compared as a set: with Active selected by default the dropdown lists it last
+    # (the default itself is asserted in the PM view test).
+    assert set(olp.status_options()) == set(STATUS_OPTIONS)
     olp.close_filter_modal()
 
     # OLP_23/24/26 - NM count cells drill down to the right pages (by sort param:
