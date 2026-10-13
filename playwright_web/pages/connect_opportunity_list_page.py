@@ -11,8 +11,10 @@ locator here is derived from the Connect source (opportunities_list.html +
 base_table.html + tables.py + filters.py), not guessed against a live page.
 """
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, with_all_opportunities, with_page_size
 
 locators = LocatorLoader()
 
@@ -111,11 +113,29 @@ class ConnectOpportunityListPage(BasePage):
     def is_empty(self):
         return self.page.locator(self.EMPTY_TEXT).count() > 0
 
+    def show_all_opportunities(self):
+        """Reload the list past its default filters (Active, non-test only).
+
+        Our seeded/created opportunities are test and/or non-active, so on a build
+        with the default filters they are hidden until `filtered=1` is on the URL.
+        No-op when the URL already carries it."""
+        if "filtered=" in self.page.url:
+            return
+        self._step("Reload list with default filters cleared (filtered=1)")
+        self.page.goto(with_page_size(with_all_opportunities(self.page.url)))
+        self.page.wait_for_load_state("load")
+        self.verify_loaded()
+
     def first_row_name(self):
         """Name in the first data row - used to pick a real opportunity to act on
         without hard-coding one, keeping the tests independent of seed data."""
         row = self.page.locator(self.DATA_ROWS).first
-        row.wait_for(state="visible", timeout=15000)
+        try:
+            row.wait_for(state="visible", timeout=15000)
+        except PlaywrightTimeoutError:
+            # Default filters can leave the list empty for these accounts.
+            self.show_all_opportunities()
+            row.wait_for(state="visible", timeout=15000)
         # The name cell also carries the NM org as a subtitle line; keep only the
         # opportunity name (first line) for matching.
         name = row.locator(locators.get("connect_opportunity_list_page", "row_first_link")).first.inner_text().strip().split("\n")[0].strip()
@@ -244,11 +264,15 @@ class ConnectOpportunityListPage(BasePage):
         """Whether the list currently shows an opportunity `name` (exact-name match
         when exact=True, else substring)."""
         loc = self.ROW_LINK_BY_EXACT_NAME if exact else self.ROW_LINK_BY_NAME
+        if self.page.locator(loc.format(name=name)).count() == 0:
+            self.show_all_opportunities()
         return self.page.locator(loc.format(name=name)).count() > 0
 
     def open_opportunity(self, name, exact=False):
         self._step(f"Open opportunity '{name}'{' (exact)' if exact else ''}")
         loc = self.ROW_LINK_BY_EXACT_NAME if exact else self.ROW_LINK_BY_NAME
+        if self.page.locator(loc.format(name=name)).count() == 0:
+            self.show_all_opportunities()
         self.click(loc.format(name=name))
         self.page.wait_for_load_state("load")
 
@@ -313,9 +337,10 @@ class ConnectOpportunityListPage(BasePage):
         return statuses
 
     def clear_filters(self):
-        """Drop all query params by reloading the bare list URL."""
+        """Drop all filter params. `filtered=1` is kept: the bare URL would re-apply
+        the default filters (Active, non-test), which is not "cleared"."""
         base = self.page.url.split("?")[0]
-        self.page.goto(base)
+        self.page.goto(with_all_opportunities(base))
         self.page.wait_for_load_state("load")
         self.verify_loaded()
 

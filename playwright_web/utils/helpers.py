@@ -24,6 +24,17 @@ def with_page_size(url, size=OPP_LIST_PAGE_SIZE):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
 
 
+def with_all_opportunities(url):
+    """Return `url` with `filtered=1` set. The Opportunities List opens on default
+    filters (Active, non-test only - CCCT-2882) until a filter form is submitted,
+    and `filtered` is the marker for that; with no other filter params it means
+    "show everything". Older builds ignore the param."""
+    parts = urlsplit(url)
+    query = parse_qs(parts.query)
+    query["filtered"] = ["1"]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
+
+
 class LocatorLoader:
     def __init__(self, file_path="locators/web_locators.yaml"):
         with open(PLAYWRIGHT_ROOT / file_path, "r") as f:
