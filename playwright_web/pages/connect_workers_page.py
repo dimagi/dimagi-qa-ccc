@@ -823,18 +823,20 @@ class ConnectWorkersPage(BasePage):
         means a resend would really text that number). The table shows a naive
         `date_format` timestamp in UTC; margin_hours is subtracted from the window so
         clock/timezone skew errs towards 'lapsed'. Returns None when the cell has no
-        date (Connect shows an em dash), so the caller can skip with a clear reason."""
+        date (Connect shows an em dash), so the caller can skip with a clear reason.
+        Any other unparseable value raises ValueError."""
         headers = self._header_texts()
         idx = next((i for i, h in enumerate(headers) if h.lower() == date_column.lower()), None)
         assert idx is not None, f"No '{date_column}' column on the workers list: {headers}"
         row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
         row.wait_for(state="visible", timeout=15000)
         text = row.locator(self.ROW_CELLS).nth(idx).inner_text().strip()
-        try:
-            invited = datetime.strptime(text, date_format)
-        except ValueError:
-            self._step(f"Invite for {phone} has no usable '{date_column}' (cell reads {text!r})")
+        if text in ("", "\u2014"):
+            self._step(f"Invite for {phone} has no '{date_column}' (cell reads {text!r})")
             return None
+        # Any other unreadable value is a format change in Connect - let strptime
+        # raise so the test fails instead of silently skipping on every run.
+        invited = datetime.strptime(text, date_format)
         age = datetime.now(timezone.utc).replace(tzinfo=None) - invited
         within = age < timedelta(hours=window_hours - margin_hours)
         self._step(f"Invite for {phone} sent {text} ({age} ago) - inside cooldown window: {within}")
