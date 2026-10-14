@@ -28,6 +28,22 @@ from pages.connect_opportunity_list_page import (
 )
 
 
+def _verify_default_filters(olp, test_data, config):
+    """CCCT-2882 - the list opens on its defaults: Active + non-test only. Only on
+    environments that have shipped it (OLP_DEFAULT_FILTERS.expected)."""
+    defaults = test_data.get("OLP_DEFAULT_FILTERS")
+    if not env_value(defaults, "expected", config):
+        return
+    olp.open_default_list()
+    olp.open_filter_modal()
+    assert olp.selected_filter_labels("filter_status_select") == [defaults["status"]]
+    assert olp.selected_filter_labels("filter_is_test_select") == [defaults["is_test"]]
+    olp.close_filter_modal()
+    assert olp.filter_badge_count() == defaults["badge_count"], "Default filters should show the orange count dot"
+    assert set(olp.visible_statuses()) <= {defaults["status"]}, "Default list should show Active opportunities only"
+    assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
+
+
 def test_olp_list_program_manager_view(page, test_data, config, settings):
     """PM org: PM column set, sortable headers, filter modal (incl. Program),
     kebab actions and the rows-per-page control."""
@@ -37,18 +53,7 @@ def test_olp_list_program_manager_view(page, test_data, config, settings):
     # OLP_01/04 - landing
     olp.verify_loaded()
 
-    # CCCT-2882 - the list opens on its defaults: Active + non-test only. Only on
-    # environments that have shipped it (OLP_DEFAULT_FILTERS.expected).
-    defaults = test_data.get("OLP_DEFAULT_FILTERS")
-    if env_value(defaults, "expected", config):
-        olp.open_default_list()
-        olp.open_filter_modal()
-        assert olp.selected_filter_labels("filter_status_select") == [defaults["status"]]
-        assert olp.selected_filter_labels("filter_is_test_select") == [defaults["is_test"]]
-        olp.close_filter_modal()
-        assert olp.filter_badge_count() == defaults["badge_count"], "Default filters should show the orange count dot"
-        assert set(olp.visible_statuses()) <= {defaults["status"]}, "Default list should show Active opportunities only"
-        assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
+    _verify_default_filters(olp, test_data, config)
 
     # OLP_05 (PM) - the program-manager column set
     olp.verify_columns(PM_COLUMNS)
@@ -91,6 +96,8 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     # OLP_01/04 - landing
     olp.verify_loaded()
 
+    _verify_default_filters(olp, test_data, config)
+
     # OLP_05 (NM) - the network-manager column set
     olp.verify_columns(NM_COLUMNS)
 
@@ -101,7 +108,7 @@ def test_olp_list_network_manager_view(page, test_data, config, settings):
     assert fields["is_test"] and fields["status"], f"Missing core filter fields: {fields}"
     assert not fields["program"], "NM view should not expose the Program filter"
     # Compared as a set: with Active selected by default the dropdown lists it last
-    # (the default itself is asserted in the PM view test).
+    # (the default itself is asserted above).
     assert set(olp.status_options()) == set(STATUS_OPTIONS)
     olp.close_filter_modal()
 
