@@ -329,23 +329,10 @@ jobs:
           else:
               timing_line = f"\n🕒 Ended: {ended_at}"
 
-          def emoji_bar(width=20):
-              """A proportional pass/fail/skip ratio bar."""
-              total = passed + failed + skipped
-              if total == 0:
-                  return ""
-              g = round(width * passed / total)
-              r = round(width * failed / total)
-              y = max(0, width - g - r)  # skipped fills the remainder
-              pct = round(100 * passed / total)
-              return f"\n{'🟩' * g}{'🟥' * r}{'⬜' * y}  {pct}% passed"
-
-          bar = "" if cancelled else emoji_bar()
-
           header = f"{icon} 📊 [{env_name}] CommCare-Connect Maestro Mobile Tests — Run #{run_number}"
           if cancelled:
               # No test outcomes to report - the run was superseded/stopped, not run.
-              # Skip the counts, ratio bar and donut; just say so plus the timing.
+              # Skip the counts and donut; just say so plus the timing.
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
@@ -360,13 +347,13 @@ jobs:
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
                   f"📱 Mobile → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
-                  f"{bar}"
                   f"{timing_line}\n"
                   f"🔗 Run: <{run_url}|View on GitHub>"
               )
               # Threaded reply: anchors the detail without repeating the summary's
-              # counts/bar/timer lines - the donut below carries the breakdown and
-              # this states the result and links the full report + device evidence.
+              # counts/timer lines - the donut on the main message carries the
+              # breakdown and this states the result and links the full report +
+              # device evidence.
               detail = (
                   f"{icon} Result: {status}\n"
                   f"📎 Report: <{artifact_url}|Download here>\n"
@@ -404,32 +391,77 @@ jobs:
           start_ts = os.environ.get("START_TS", "")
           start_channel = os.environ.get("START_CHANNEL", "") or channel
 
-          if start_ts:
-              # Flip the kickoff message to the final status, then thread the detail.
-              client.chat_update(channel=start_channel, ts=start_ts, text=summary)
-              client.chat_postMessage(channel=start_channel, thread_ts=start_ts, text=detail)
-              print(f"Kickoff {start_ts} updated and result threaded")
-              chart_ts, chart_channel = start_ts, start_channel
-          else:
-              # No kickoff to attach to - post the full result standalone.
-              posted = client.chat_postMessage(channel=channel, text=summary + "\n" + detail)
-              print("Slack notification sent (standalone - no kickoff ts)")
-              chart_ts, chart_channel = posted["ts"], channel
-
-          # Upload the donut into the thread. Never fail the build on chart problems
-          # (missing files:write scope, matplotlib import, etc.). Skipped entirely
+          # The donut is shown on the main message itself (an image block), not as a
+          # thread reply. Best-effort: a failure at any step falls back to the plain
+          # text message plus the donut uploaded into the thread. Skipped entirely
           # for a cancelled run - there is no breakdown to chart.
-          try:
-              path = None if cancelled else build_donut()
-              if path:
-                  client.files_upload_v2(
-                      channel=chart_channel, thread_ts=chart_ts, file=path,
-                      title=f"{env_name} Run #{run_number} results",
+          path = None
+          if not cancelled:
+              try:
+                  path = build_donut()
+              except Exception as exc:  # noqa: BLE001
+                  print(f"Donut render skipped: {exc}")
+
+          # Kickoff message gets the summary only (detail is threaded); a standalone
+          # post has nowhere to thread, so it carries both.
+          main_text = summary if start_ts else summary + "\n" + detail
+
+          def donut_blocks():
+              """Upload the donut privately (no channel/thread, so it posts nothing by
+              itself) and return blocks that show it under the summary, or None."""
+              if not path:
+                  return None
+              try:
+                  up = client.files_upload_v2(
+                      file=path, title=f"{env_name} Run #{run_number} results",
                       filename="run-result.png",
                   )
-                  print("Donut chart uploaded to thread")
-              else:
-                  print("No tests to chart - skipping donut")
-          except Exception as exc:  # noqa: BLE001
-              print(f"Chart upload skipped: {exc}")
+                  file_id = up["file"]["id"]
+              except Exception as exc:  # noqa: BLE001
+                  print(f"Donut upload skipped: {exc}")
+                  return None
+              return [
+                  {"type": "section", "text": {"type": "mrkdwn", "text": main_text}},
+                  {"type": "image", "slack_file": {"id": file_id},
+                   "alt_text": f"{env_name} Run #{run_number} results: {passed} passed, "
+                               f"{failed} failed, {skipped} skipped"},
+              ]
+
+          def post_main(blocks):
+              kwargs = {"blocks": blocks} if blocks else {}
+              if start_ts:
+                  return client.chat_update(channel=start_channel, ts=start_ts, text=main_text, **kwargs)
+              return client.chat_postMessage(channel=channel, text=main_text, **kwargs)
+
+          blocks = donut_blocks()
+          posted = None
+          if blocks:
+              # A freshly uploaded file can take a moment before Slack accepts it in a block.
+              for attempt in range(4):
+                  try:
+                      posted = post_main(blocks)
+                      print("Donut shown on the main message")
+                      break
+                  except Exception as exc:  # noqa: BLE001
+                      print(f"Main message with donut failed (attempt {attempt + 1}): {exc}")
+                      time.sleep(3)
+          if posted is None:
+              posted = post_main(None)
+              if path:
+                  try:
+                      client.files_upload_v2(
+                          channel=start_channel if start_ts else channel,
+                          thread_ts=start_ts or posted["ts"], file=path,
+                          title=f"{env_name} Run #{run_number} results",
+                          filename="run-result.png",
+                      )
+                      print("Donut uploaded to thread (fallback)")
+                  except Exception as exc:  # noqa: BLE001
+                      print(f"Chart upload skipped: {exc}")
+
+          if start_ts:
+              client.chat_postMessage(channel=start_channel, thread_ts=start_ts, text=detail)
+              print(f"Kickoff {start_ts} updated and result threaded")
+          else:
+              print("Slack notification sent (standalone - no kickoff ts)")
           PY
