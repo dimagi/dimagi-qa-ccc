@@ -37,15 +37,18 @@ def test_olp_list_program_manager_view(page, test_data, config, settings):
     # OLP_01/04 - landing
     olp.verify_loaded()
 
-    # CCCT-2882 - the list opens on its defaults: Active + non-test only
-    olp.open_default_list()
-    olp.open_filter_modal()
-    assert olp.selected_filter_labels("filter_status_select") == ["Active"]
-    assert olp.selected_filter_labels("filter_is_test_select") == ["No"]
-    olp.close_filter_modal()
-    assert olp.filter_badge_count() == 2, "Default filters should show the orange count dot (2)"
-    assert set(olp.visible_statuses()) <= {"Active"}, "Default list should show Active opportunities only"
-    assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
+    # CCCT-2882 - the list opens on its defaults: Active + non-test only. Only on
+    # environments that have shipped it (OLP_DEFAULT_FILTERS.expected).
+    defaults = test_data.get("OLP_DEFAULT_FILTERS")
+    if env_value(defaults, "expected", config):
+        olp.open_default_list()
+        olp.open_filter_modal()
+        assert olp.selected_filter_labels("filter_status_select") == [defaults["status"]]
+        assert olp.selected_filter_labels("filter_is_test_select") == [defaults["is_test"]]
+        olp.close_filter_modal()
+        assert olp.filter_badge_count() == defaults["badge_count"], "Default filters should show the orange count dot"
+        assert set(olp.visible_statuses()) <= {defaults["status"]}, "Default list should show Active opportunities only"
+        assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
 
     # OLP_05 (PM) - the program-manager column set
     olp.verify_columns(PM_COLUMNS)
