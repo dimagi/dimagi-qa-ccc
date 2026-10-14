@@ -407,18 +407,18 @@ jobs:
               import matplotlib
               matplotlib.use("Agg")
               import matplotlib.pyplot as plt
-              fig, ax = plt.subplots(figsize=(4.2, 4.2))
+              fig, ax = plt.subplots(figsize=(2.7, 2.7))
               ax.pie([v for _, v, _ in segs],
                      labels=[f"{l} ({v})" for l, v, _ in segs],
                      colors=[c for _, _, c in segs],
                      startangle=90, counterclock=False,
                      wedgeprops={"width": 0.42, "edgecolor": "white"},
-                     textprops={"fontsize": 10})
+                     textprops={"fontsize": 7})
               ax.text(0, 0, f"{total}\ntests", ha="center", va="center",
-                      fontsize=15, fontweight="bold")
-              ax.set_title(f"[{env_name}] Run #{run_number} — {status}", fontsize=12)
+                      fontsize=10, fontweight="bold")
+              ax.set_title(f"[{env_name}] Run #{run_number} — {status}", fontsize=8)
               path = "/tmp/run-result.png"
-              fig.savefig(path, bbox_inches="tight", dpi=110)
+              fig.savefig(path, bbox_inches="tight", dpi=100)
               plt.close(fig)
               return path
 
