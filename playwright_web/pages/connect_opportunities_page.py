@@ -216,7 +216,7 @@ class ConnectOpportunitiesPage(BasePage):
             self.page.wait_for_timeout(10000)
         except Exception:
             print("Dropdown not present")
-        link = self.OPP_LINK_BY_NAME.format(name=value)
+        link = ConnectOpportunityListPage.ROW_LINK_BY_EXACT_NAME.format(name=value)
         if self.page.locator(link).count() == 0:
             # The list opens on default filters (Active, non-test only - CCCT-2882)
             # and a freshly created opportunity is test/non-active, so it is hidden.

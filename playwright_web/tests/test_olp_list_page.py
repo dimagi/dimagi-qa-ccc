@@ -30,12 +30,20 @@ from pages.connect_opportunity_list_page import (
 
 def _verify_default_filters(olp, test_data, config):
     """CCCT-2882 - the list opens on its defaults: Active + non-test only. Only on
-    environments that have shipped it (OLP_DEFAULT_FILTERS.expected)."""
+    environments that have shipped it (OLP_DEFAULT_FILTERS.expected); elsewhere the
+    OLD behaviour is asserted (no default filters), so this fails once the change
+    reaches that environment and the flag gets flipped."""
     defaults = test_data.get("OLP_DEFAULT_FILTERS")
-    if not env_value(defaults, "expected", config):
-        return
     olp.open_default_list()
+    assert olp.row_count() > 0, "Default list should show at least one opportunity"
     olp.open_filter_modal()
+    if not env_value(defaults, "expected", config):
+        assert olp.selected_filter_labels("filter_status_select") == [], (
+            "CCCT-2882 appears to have shipped here: set OLP_DEFAULT_FILTERS.expected to true for this environment")
+        assert olp.selected_filter_labels("filter_is_test_select") == []
+        olp.close_filter_modal()
+        assert olp.filter_badge_count() == 0, "No default filters expected on this environment yet"
+        return
     assert olp.selected_filter_labels("filter_status_select") == [defaults["status"]]
     assert olp.selected_filter_labels("filter_is_test_select") == [defaults["is_test"]]
     olp.close_filter_modal()
