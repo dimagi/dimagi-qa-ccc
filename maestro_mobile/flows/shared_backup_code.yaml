@@ -72,6 +72,20 @@ appId: org.commcare.dalvik
       - repeat:
           times: 3
           commands:
+            # The email step renders after a server round trip too, so the single
+            # optional skip above can run on an empty screen (prod build 878 of
+            # worker_relearn_task sat on "Add your email (optional)" and then
+            # failed on "More options"). Skip it here once it is actually up.
+            - runFlow:
+                when:
+                  visible:
+                    id: "personalid_email_skip_button"
+                commands:
+                  - tapOn:
+                      id: "personalid_email_skip_button"
+                  - tapOn:
+                      text: "YES"
+                      optional: true
             - runFlow:
                 when:
                   visible:
