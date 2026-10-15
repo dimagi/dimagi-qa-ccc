@@ -16,8 +16,6 @@ from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from utils.helpers import with_page_size
 
-PM_ORG_SLUG = "pm_automation_01"
-
 
 def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=None, organization=PM_ORG):
     """Log in (as `organization`, default the PM org) and return the opportunity's
@@ -31,7 +29,7 @@ def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=
     dashboard = OpportunityDashboardPage(connect_page)
 
     if opp_id:
-        connect_page.goto(f"{config.get('connect_url')}/a/{PM_ORG_SLUG}/opportunity/{opp_id}/")
+        connect_page.goto(f"{config.get('connect_url')}/a/{env_value(test_data.get('OPD'), 'org_slug', config)}/opportunity/{opp_id}/")
         connect_page.wait_for_load_state("load")
     else:
         if names is None:

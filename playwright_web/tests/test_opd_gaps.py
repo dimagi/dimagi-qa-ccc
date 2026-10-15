@@ -277,7 +277,7 @@ def test_opd_23_setup_incomplete_redirect(session, test_data, config):
     the Add Payment Units page."""
     dash, base = session
     opp_id = _opd(test_data, "incomplete_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.incomplete_opp_id not configured")
     dash.page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/")
@@ -291,7 +291,7 @@ def test_opd_26_test_opportunity_badge(session, test_data, config):
     """OD_26: a test opportunity (is_test) shows the 'Test' badge in the header."""
     dash, base = session
     opp_id = _opd(test_data, "test_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.test_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
@@ -303,7 +303,7 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
     is present and its URL is reachable (200)."""
     dash, base = session
     opp_id = _opd(test_data, "microplanning_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.microplanning_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
@@ -326,7 +326,7 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     until the fixture opp's end date has actually passed (badge reads 'Ended')."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
