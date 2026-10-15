@@ -910,8 +910,7 @@ class ConnectWorkersPage(BasePage):
         self.page.wait_for_timeout(400)
 
     def resend_selected_invite(self):
-        """Click Resend Invite(s) for the selected row and return any message shown
-        (Connect_worker_09 expects a cooldown message within 24h)."""
+        """Click Resend Invite(s) for the selected row and return any message shown."""
         self._step("Resend the selected invite")
         self.click(self.RESEND_INVITES_BTN)
         self.page.wait_for_timeout(2500)
