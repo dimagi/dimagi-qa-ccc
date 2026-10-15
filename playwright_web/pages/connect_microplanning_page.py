@@ -19,6 +19,7 @@ work areas that were seeded directly rather than routed through assignment.
 """
 
 import math
+import re
 
 import mapbox_vector_tile
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -395,6 +396,7 @@ class CoverageProgressPage(BasePage):
     DOWNLOAD_BUTTON_IN_SECTION = locators.get("connect_coverage_progress_page", "download_button_in_section")
     TABLE_BY_SECTION = locators.get("connect_coverage_progress_page", "table_by_section")
     TABLE_BODY_BY_SECTION = locators.get("connect_coverage_progress_page", "table_body_by_section")
+    TABLE_CELLS_BY_SECTION = locators.get("connect_coverage_progress_page", "table_cells_by_section")
     CSV_LINK_IN_SECTION = locators.get("connect_coverage_progress_page", "csv_link_in_section")
 
     def verify_loaded(self):
@@ -423,6 +425,13 @@ class CoverageProgressPage(BasePage):
         body = self.page.locator(self.TABLE_BODY_BY_SECTION.format(text=text)).first
         body.wait_for(state="visible", timeout=15000)
         return body.inner_text().strip()
+
+    def section_numeric_cells(self, text):
+        """Body cells of a section's table that are purely numeric (digits, '%',
+        ',' '.'), so names like 'Ward 3' aren't mistaken for data."""
+        self.page.locator(self.TABLE_BODY_BY_SECTION.format(text=text)).first.wait_for(state="visible", timeout=15000)
+        cells = [c.strip() for c in self.page.locator(self.TABLE_CELLS_BY_SECTION.format(text=text)).all_inner_texts()]
+        return [c for c in cells if c and re.fullmatch(r"[\d.,%\s]+", c)]
 
     def download_from_section(self, text):
         # Two "Download" dropdowns exist on the page (Core Metrics + Metrics by

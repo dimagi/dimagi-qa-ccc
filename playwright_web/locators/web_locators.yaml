@@ -696,6 +696,7 @@ connect_coverage_progress_page:
   download_button_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//button"
   table_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table"
   table_body_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table//tbody"
+  table_cells_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table//tbody//td"
   csv_link_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//a[normalize-space()='CSV']"
 connect_work_area_assignments_tab:
   sortable_headers: "//table[contains(@class,'base-table')]//th[.//a[contains(@href,'sort=')]]"

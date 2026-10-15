@@ -173,7 +173,7 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
     if not options:
         pytest.skip("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
-    micro.wait_for_flw_summary()
+    assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
         pytest.skip("'View summary by FLW' control not present for this assignee")
     micro.open_flw_summary_by_flw()
@@ -188,7 +188,7 @@ def test_microplanning_29_view_visits_nav(session):
     if not options:
         pytest.skip("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
-    micro.wait_for_flw_summary()
+    assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
         pytest.skip("'View Visits' control not present for this assignee")
     micro.open_flw_summary_visits()
@@ -329,7 +329,7 @@ def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data)
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
     before = coverage.section_table_body_text(section)
-    if not any(ch.isdigit() and ch != "0" for ch in before):
+    if not any(c.strip(" %,.0") for c in coverage.section_numeric_cells(section)):
         pytest.skip("Core Metrics shows no non-zero values to react to a date filter on this opportunity")
     start, end = ui["empty_date_range"]
     coverage.apply_date_filter(start, end)
