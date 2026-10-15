@@ -506,6 +506,11 @@ INVOICE_LIST:
     - "User Payment Accrued"
     - "Network Manager Payment Accrued"
   report_card_count: 4
+  status_column: "Invoice Status"
+  create_invoice_path: "/invoice/create/"
+  # Create Invoice menu item types (data-type of the dropdown entries).
+  invoice_types:
+    custom: "custom"
   custom_invoice_type_label: "Other"
   usd_url_param: "usd=True"
   exchange_rate_preview_text: "Exchange Rate on"

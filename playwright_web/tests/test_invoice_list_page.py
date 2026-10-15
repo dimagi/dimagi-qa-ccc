@@ -92,10 +92,19 @@ def ctx(browser, config, settings, test_data):
             "opp_id": opp_id,
             "opp_name": opp_name,
             "invoices": {},
+            "actions": invoice_list["actions"],
+            "modals": invoice_list["modals"],
+            "status_column": invoice_list["status_column"],
+            "create_path": invoice_list["create_invoice_path"],
+            "invoice_types": invoice_list["invoice_types"],
         }
         yield state
     finally:
         context.close()
+
+
+def _form(ctx):
+    return InvoiceFormPage(ctx["connect_page"], ctx["actions"], ctx["modals"])
 
 
 def _as_nm(ctx):
@@ -126,8 +135,8 @@ def _create_custom_invoice(ctx, test_data, amount=None):
     _as_nm(ctx)
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
-    invoices.open_create_invoice("custom")
-    form = InvoiceFormPage(ctx["connect_page"])
+    invoices.open_create_invoice(ctx["invoice_types"]["custom"])
+    form = _form(ctx)
     form.verify_create_loaded(service_delivery=False)
     invoice_number = form.invoice_number()
     form.fill_custom_invoice(amount or data["amount"], EXPENSE_DATE, data["justification"])
@@ -203,8 +212,8 @@ def test_invoice_04_usd_toggle(ctx, test_data):
 def test_invoice_07_mandatory_fields_validation(ctx):
     _as_nm(ctx)
     invoices = InvoiceListPage(ctx["connect_page"])
-    invoices.open_create_invoice("custom")
-    form = InvoiceFormPage(ctx["connect_page"])
+    invoices.open_create_invoice(ctx["invoice_types"]["custom"])
+    form = _form(ctx)
     form.verify_create_loaded(service_delivery=False)
     create_url = ctx["connect_page"].url
     # amount/date_of_expense/description(Justification) are all required=True for
@@ -226,15 +235,15 @@ def test_invoice_17_future_date_of_expense_rejected(ctx, test_data):
     future = (datetime.date.today() + datetime.timedelta(days=test_data.get("INVOICE_VALIDATION")["future_days_ahead"])).isoformat()
     _as_nm(ctx)
     invoices = InvoiceListPage(ctx["connect_page"])
-    invoices.open_create_invoice("custom")
-    form = InvoiceFormPage(ctx["connect_page"])
+    invoices.open_create_invoice(ctx["invoice_types"]["custom"])
+    form = _form(ctx)
     form.verify_create_loaded(service_delivery=False)
     form.fill_custom_invoice(data["amount"], future, data["justification"])
     form.submit()
     errors = " | ".join(form.field_errors())
     expected = test_data.get("INVOICE_LIST")["future_date_error_text"]
     assert expected in errors.lower(), f"Expected a future-date error, got: {errors!r}"
-    assert "/invoice/create/" in ctx["connect_page"].url, "A rejected submit should stay on the create form"
+    assert ctx["create_path"] in ctx["connect_page"].url, "A rejected submit should stay on the create form"
 
 
 # -- Invoice_06: USD exchange-rate preview (create form, not submitted) --------------
@@ -244,8 +253,8 @@ def test_invoice_06_usd_exchange_rate_preview(ctx, test_data):
     data = test_data.get("INVOICE_CUSTOM")
     _as_nm(ctx)
     invoices = InvoiceListPage(ctx["connect_page"])
-    invoices.open_create_invoice("custom")
-    form = InvoiceFormPage(ctx["connect_page"])
+    invoices.open_create_invoice(ctx["invoice_types"]["custom"])
+    form = _form(ctx)
     form.verify_create_loaded(service_delivery=False)
     form.type(form.AMOUNT, str(data["amount"]))
     ctx["connect_page"].wait_for_timeout(800)  # convert() is debounced 300ms + an htmx round trip
@@ -261,7 +270,7 @@ def test_invoice_06_usd_exchange_rate_preview(ctx, test_data):
 @non_prod_only
 def test_invoice_05_create_custom_invoice(ctx, test_data):
     invoice_number = _create_custom_invoice(ctx, test_data)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     assert invoice_number, "Invoice ID should be auto-generated"
     assert form.generation_date() in ACCEPTED_GENERATION_DATES, (
         f"Generation date {form.generation_date()!r} should default to today (+/-1 day for timezone)"
@@ -272,7 +281,7 @@ def test_invoice_05_create_custom_invoice(ctx, test_data):
 @non_prod_only
 def test_invoice_08_status_pending_nm_review_on_create(ctx, test_data):
     _require_invoice(ctx, "approve_and_pay")
-    form = InvoiceFormPage(ctx["connect_page"])  # still on the review page from the previous test
+    form = _form(ctx)  # still on the review page from the previous test
     assert form.status_field_value() == test_data.get("INVOICE_STATUS")["pending_nm_review"]
 
 
@@ -280,7 +289,7 @@ def test_invoice_08_status_pending_nm_review_on_create(ctx, test_data):
 def test_invoice_13_nm_cannot_edit_custom_invoice(ctx, test_data):
     _require_invoice(ctx, "approve_and_pay")
     actions = test_data.get("INVOICE_LIST")["actions"]
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     assert form.is_read_only(), "Custom-invoice review page should render every field read-only"
     assert set(form.available_actions()) == {actions["cancel"], actions["submit_to_pm"]}
 
@@ -289,12 +298,12 @@ def test_invoice_13_nm_cannot_edit_custom_invoice(ctx, test_data):
 def test_invoice_16_28_back_to_invoices_button(ctx, test_data):
     number = _require_invoice(ctx, "approve_and_pay")
     data = test_data.get("INVOICE_LIST")
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     form.click_back_to_invoices()
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
     assert invoices.active_tab() == data["tabs"][0]
-    assert invoices.row_status(number) == test_data.get("INVOICE_STATUS")["pending_nm_review"]
+    assert invoices.row_status(number, ctx["status_column"]) == test_data.get("INVOICE_STATUS")["pending_nm_review"]
     type_label = data["custom_invoice_type_label"]
     assert type_label in invoices.row_by_invoice_number(number).inner_text(), (
         f"Custom invoice should show Invoice Type '{type_label}'"
@@ -307,11 +316,11 @@ def test_invoice_09_12_list31_submit_to_program_manager(ctx, test_data):
     number = _require_invoice(ctx, "approve_and_pay")
     # Confirmed live: a successful submit lands on the All Invoices list, not
     # back on the review page (see InvoiceFormPage.submit_to_program_manager).
-    form = InvoiceFormPage(ctx["connect_page"])  # positioned on the invoice's review page
+    form = _form(ctx)  # positioned on the invoice's review page
     form.submit_to_program_manager()
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
-    assert invoices.row_status(number) == test_data.get("INVOICE_STATUS")["pending_pm_review"]
+    assert invoices.row_status(number, ctx["status_column"]) == test_data.get("INVOICE_STATUS")["pending_pm_review"]
 
 
 @non_prod_only
@@ -322,7 +331,7 @@ def test_invoice_14_list37_pm_readonly_review(ctx, test_data):
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
     invoices.open_review(number)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     form.verify_review_loaded()
     assert form.is_read_only()
     assert form.read_only_badge_present()
@@ -335,11 +344,11 @@ def test_invoice_list32_pm_approve_for_payment_processing(ctx, test_data):
     actions = test_data.get("INVOICE_LIST")["actions"]
     # Approve (unlike Submit) has no confirm modal and, like every other action
     # here, redirects to the list rather than staying on the review page.
-    form = InvoiceFormPage(ctx["connect_page"])  # still on the PM review page
+    form = _form(ctx)  # still on the PM review page
     form.approve_for_payment_processing()
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
-    assert invoices.row_status(number) == test_data.get("INVOICE_STATUS")["ready_to_pay"]
+    assert invoices.row_status(number, ctx["status_column"]) == test_data.get("INVOICE_STATUS")["ready_to_pay"]
     invoices.open_review(number)
     form.verify_review_loaded()
     assert form.available_actions() == [actions["reject"], actions["pay"]]
@@ -348,11 +357,11 @@ def test_invoice_list32_pm_approve_for_payment_processing(ctx, test_data):
 @non_prod_only
 def test_invoice_15_list36_pm_pay(ctx, test_data):
     number = _require_invoice(ctx, "approve_and_pay")
-    form = InvoiceFormPage(ctx["connect_page"])  # on the review page (reopened above)
+    form = _form(ctx)  # on the review page (reopened above)
     form.pay()
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
-    assert invoices.row_status(number) == test_data.get("INVOICE_STATUS")["paid"]
+    assert invoices.row_status(number, ctx["status_column"]) == test_data.get("INVOICE_STATUS")["paid"]
     invoices.open_review(number)
     form.verify_review_loaded()
     assert form.paid_badge_present()
@@ -366,10 +375,10 @@ def test_invoice_10_11_cancel_invoice(ctx, test_data):
     data = test_data.get("INVOICE_LIST")
     status = test_data.get("INVOICE_STATUS")
     invoice_number = _create_custom_invoice(ctx, test_data)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
 
     form.open_cancel_modal()
-    message = form.modal_message(data["modals"]["cancel"])
+    message = form.modal_message("cancel")
     assert data["irreversible_modal_text"] in message
 
     # Invoice_11: Close backs out - no status change.
@@ -382,7 +391,7 @@ def test_invoice_10_11_cancel_invoice(ctx, test_data):
     form.confirm_cancel()
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()
-    assert invoices.row_status(invoice_number) == status["cancelled_by_nm"]
+    assert invoices.row_status(invoice_number, ctx["status_column"]) == status["cancelled_by_nm"]
     invoices.open_review(invoice_number)
     form.verify_review_loaded()
     assert form.available_actions() == [], "A cancelled invoice should show no NM/PM actions"
@@ -393,7 +402,7 @@ def test_invoice_10_11_cancel_invoice(ctx, test_data):
 def test_invoice_26_create_invoice_after_a_cancelled_one(ctx, test_data):
     cancelled = _require_invoice(ctx, "cancelled")
     invoice_number = _create_custom_invoice(ctx, test_data)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     assert form.status_field_value() == test_data.get("INVOICE_STATUS")["pending_nm_review"]
     assert invoice_number != cancelled
     ctx["invoices"]["after_cancel"] = invoice_number
@@ -407,7 +416,7 @@ def test_invoice_list33_34_35_pm_reject_invoice(ctx, test_data):
     data = test_data.get("INVOICE_LIST")
     status = test_data.get("INVOICE_STATUS")
     invoice_number = _create_custom_invoice(ctx, test_data)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     form.submit_to_program_manager()  # -> lands on the (NM) list
 
     _as_pm(ctx)
@@ -417,7 +426,7 @@ def test_invoice_list33_34_35_pm_reject_invoice(ctx, test_data):
     form.verify_review_loaded()
 
     form.open_reject_modal()
-    message = form.modal_message(data["modals"]["reject"])
+    message = form.modal_message("reject")
     assert data["irreversible_modal_text"] in message
 
     # List_34: Close backs out - no status change.
@@ -428,7 +437,7 @@ def test_invoice_list33_34_35_pm_reject_invoice(ctx, test_data):
     form.open_reject_modal()
     form.confirm_reject()
     invoices.verify_loaded()
-    assert invoices.row_status(invoice_number) == status["rejected_by_pm"]
+    assert invoices.row_status(invoice_number, ctx["status_column"]) == status["rejected_by_pm"]
     ctx["invoices"]["rejected"] = invoice_number
 
 
@@ -436,7 +445,7 @@ def test_invoice_list33_34_35_pm_reject_invoice(ctx, test_data):
 def test_invoice_27_create_invoice_after_a_rejected_one(ctx, test_data):
     rejected = _require_invoice(ctx, "rejected")
     invoice_number = _create_custom_invoice(ctx, test_data)
-    form = InvoiceFormPage(ctx["connect_page"])
+    form = _form(ctx)
     assert form.status_field_value() == test_data.get("INVOICE_STATUS")["pending_nm_review"]
     assert invoice_number != rejected
     ctx["invoices"]["after_reject"] = invoice_number

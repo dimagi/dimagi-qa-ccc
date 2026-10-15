@@ -46,6 +46,14 @@ class InvoiceFormPage(BasePage):
     MODAL_CERTIFY_BUTTON = locators.get("connect_invoice_form_page", "modal_certify_button")
     FIELD_ERROR_TEXT = locators.get("connect_invoice_form_page", "field_error_text")
 
+    def __init__(self, page, actions, modals):
+        """`actions` / `modals` are INVOICE_LIST.actions / INVOICE_LIST.modals from
+        the test data (key -> review-page action label / Alpine modal name), so the
+        labels and modal names have a single source."""
+        super().__init__(page)
+        self.actions = actions
+        self.modals = modals
+
     # -- create ---------------------------------------------------------------
 
     def verify_create_loaded(self, service_delivery):
@@ -106,14 +114,14 @@ class InvoiceFormPage(BasePage):
         return self.page.locator(self.PAID_BADGE).count() > 0
 
     def available_actions(self):
-        actions = {
-            "Cancel": self.CANCEL_LINK,
-            "Submit to Program Manager": self.SUBMIT_TO_PM_LINK,
-            "Reject": self.REJECT_LINK,
-            "Approve for Payment Processing": self.APPROVE_LINK,
-            "Pay": self.PAY_BUTTON,
+        selectors = {
+            "cancel": self.CANCEL_LINK,
+            "submit_to_pm": self.SUBMIT_TO_PM_LINK,
+            "reject": self.REJECT_LINK,
+            "approve": self.APPROVE_LINK,
+            "pay": self.PAY_BUTTON,
         }
-        present = [name for name, sel in actions.items() if self.page.locator(sel).count() > 0]
+        present = [self.actions[key] for key, sel in selectors.items() if self.page.locator(sel).count() > 0]
         self._step(f"Available review-page actions: {present}")
         return present
 
@@ -133,7 +141,7 @@ class InvoiceFormPage(BasePage):
         submit lands on the All Invoices list, not back on this review page."""
         self._step("Open 'Submit to Program Manager' certify modal")
         self.click(self.SUBMIT_TO_PM_LINK)
-        modal = self.page.locator(self.MODAL_BY_NAME.format(name="showSubmitModal")).first
+        modal = self.page.locator(self.MODAL_BY_NAME.format(name=self.modals["submit"])).first
         modal.wait_for(state="visible", timeout=10000)
         modal.locator(self.MODAL_CERTIFY_CHECKBOX).first.check()
         self._step("Confirm 'Certify & Submit'")
@@ -143,17 +151,17 @@ class InvoiceFormPage(BasePage):
     def open_cancel_modal(self):
         self._step("Open cancel-invoice modal")
         self.click(self.CANCEL_LINK)
-        self.page.locator(self.MODAL_BY_NAME.format(name="showCancelModal")).first.wait_for(
+        self.page.locator(self.MODAL_BY_NAME.format(name=self.modals["cancel"])).first.wait_for(
             state="visible", timeout=10000
         )
 
     def close_cancel_modal(self):
-        self.click(self.MODAL_CLOSE_BUTTON.format(name="showCancelModal"))
+        self.click(self.MODAL_CLOSE_BUTTON.format(name=self.modals["cancel"]))
         self.page.wait_for_timeout(500)
 
     def confirm_cancel(self):
         self._step("Confirm cancel invoice")
-        self.click_and_await_redirect(self.MODAL_CONFIRM_BUTTON.format(name="showCancelModal"))
+        self.click_and_await_redirect(self.MODAL_CONFIRM_BUTTON.format(name=self.modals["cancel"]))
 
     # -- PM: approve / reject / pay -----------------------------------------------
 
@@ -164,22 +172,22 @@ class InvoiceFormPage(BasePage):
     def open_reject_modal(self):
         self._step("Open reject-invoice modal")
         self.click(self.REJECT_LINK)
-        self.page.locator(self.MODAL_BY_NAME.format(name="showRejectModal")).first.wait_for(
+        self.page.locator(self.MODAL_BY_NAME.format(name=self.modals["reject"])).first.wait_for(
             state="visible", timeout=10000
         )
 
     def close_reject_modal(self):
-        self.click(self.MODAL_CLOSE_BUTTON.format(name="showRejectModal"))
+        self.click(self.MODAL_CLOSE_BUTTON.format(name=self.modals["reject"]))
         self.page.wait_for_timeout(500)
 
     def confirm_reject(self):
         self._step("Confirm reject invoice")
-        self.click_and_await_redirect(self.MODAL_CONFIRM_BUTTON.format(name="showRejectModal"))
+        self.click_and_await_redirect(self.MODAL_CONFIRM_BUTTON.format(name=self.modals["reject"]))
 
     def pay(self):
         self._step("Pay invoice (from review page)")
         self.click_and_await_redirect(self.PAY_BUTTON)
 
-    def modal_message(self, modal_name):
-        modal = self.page.locator(self.MODAL_BY_NAME.format(name=modal_name)).first
+    def modal_message(self, modal_key):
+        modal = self.page.locator(self.MODAL_BY_NAME.format(name=self.modals[modal_key])).first
         return modal.inner_text().strip()

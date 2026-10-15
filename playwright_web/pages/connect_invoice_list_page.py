@@ -9,7 +9,7 @@ the page" xpath used elsewhere in the suite applies to either tab.
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, with_page_size
 
 locators = LocatorLoader()
 
@@ -34,6 +34,11 @@ class InvoiceListPage(BasePage):
     # -- structure / tabs --------------------------------------------------------
 
     def verify_loaded(self):
+        # Every run adds invoices and nothing cleans them up; show a large page so
+        # this run's invoices are on the first page once the table paginates.
+        if "page_size=" not in self.page.url:
+            self.page.goto(with_page_size(self.page.url))
+            self.page.wait_for_load_state("load")
         self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=20000)
         assert "/invoice" in self.page.url, f"Not on an invoice page: {self.page.url}"
         self._step(f"Invoice page loaded: {self.page.url}")
@@ -94,9 +99,9 @@ class InvoiceListPage(BasePage):
     def has_invoice(self, invoice_number):
         return self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).count() > 0
 
-    def row_status(self, invoice_number):
+    def row_status(self, invoice_number, status_column):
         headers = self.column_headers()
-        col = headers.index("Invoice Status")
+        col = headers.index(status_column)
         row = self.row_by_invoice_number(invoice_number)
         text = row.locator(self.ROW_CELLS).nth(col).inner_text().strip()
         self._step(f"Invoice {invoice_number} status (list): {text!r}")
