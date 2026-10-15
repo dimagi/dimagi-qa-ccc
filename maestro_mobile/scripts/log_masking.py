@@ -16,7 +16,7 @@ SENSITIVE_SOURCES = (
     ROOT / "test_data" / "mobile_workers.yaml",
     ROOT / "test_data" / "web_test_data.yaml",
 )
-SENSITIVE_KEY_HINTS = ("phone", "backup", "code", "password", "otp", "pin")
+SENSITIVE_KEY_HINTS = ("phone", "backup", "code", "password", "otp", "pin", "email")
 MIN_VALUE_LEN = 4  # shorter values would mask ordinary text
 MASK = "***"
 

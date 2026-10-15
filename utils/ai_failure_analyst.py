@@ -17,6 +17,7 @@ analyse()/analyse_maestro() also return the compact text for in-process use.
 
 import json
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -114,11 +115,18 @@ def _load_known_issues() -> list[dict]:
         return []
 
 
+def _normalise_name(name: str) -> str:
+    """Strip the ".yaml" extension and a trailing "[param]" suffix, lower-cased."""
+    name = re.sub(r"\[.*\]$", "", str(name).strip())
+    return re.sub(r"\.ya?ml$", "", name).strip().lower()
+
+
 def _known_issue_for(failure: dict, known_issues: list[dict]):
-    # Mobile flow names are stored without ".yaml"; match on that form either way.
-    haystack = f"{failure['classname']} {failure['name']}".lower().replace(".yaml", "")
+    # Exact match on the normalised test/flow name, so "messaging_consent" does not
+    # also swallow "messaging_consent_history".
+    name = _normalise_name(failure["name"])
     for issue in known_issues:
-        if any(m.lower().replace(".yaml", "") in haystack for m in issue.get("match", [])):
+        if any(_normalise_name(m) == name for m in issue.get("match", [])):
             return issue
     return None
 
