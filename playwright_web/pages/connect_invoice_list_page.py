@@ -38,7 +38,7 @@ class InvoiceListPage(BasePage):
         assert "/invoice" in self.page.url, f"Not on an invoice page: {self.page.url}"
         self._step(f"Invoice page loaded: {self.page.url}")
 
-    def tabs_present(self, labels=("All Invoices", "Payment Report")):
+    def tabs_present(self, labels):
         present = [label for label in labels if self.page.locator(self.TAB_BY_LABEL.format(label=label)).count() > 0]
         self._step(f"Invoice tabs present: {present}")
         return present

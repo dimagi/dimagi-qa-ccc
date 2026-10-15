@@ -478,7 +478,7 @@ OPD:
   manual_verify_org_slug_staging: "pm_automation_02"
 
 # Invoices List page (Invoice_01-29, Invoice List_30-37). Runs against the
-# dedicated "Invoice Opp" (created by Anshu on both envs, owned by
+# dedicated "Invoice Opp" (a dedicated opp that exists on both envs, owned by
 # pm_automation_01 with the "Network Manager" org as NM partner), opened by exact
 # name. The tests create invoices on it, so the mutating ones are skipped on prod.
 # NM role is reached by opening the SAME opp_id under network_manager_slug, not an
