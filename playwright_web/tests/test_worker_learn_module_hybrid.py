@@ -72,7 +72,17 @@ def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, co
     workers.click_tab_by_name("Learn")
     workers.verify_learn_table_headers_present()
     before = _completed_count(workers.learn_column_value(worker_name, column))
+    total = data.get("total_lessons")
+    if not _is_tbd(total) and before >= int(total):
+        pytest.skip(
+            f"'{worker_name}' is already at {before}/{total} lessons: re-seed the worker (reset its "
+            "learning, see MAESTRO_LEARN_TAB_02 in mobile_workers.yaml) so Resume opens the Learn Progress screen again"
+        )
 
+    # The device's "completed N of M lessons" and the web "Modules completed" column both
+    # count the server-side ConnectLearningRecord rows for the worker, so N == before + 1
+    # after one form. Unconfirmed until the first device run; if they differ, read the
+    # device count separately instead of deriving it here.
     device_env = {**worker, "OPPORTUNITY": opportunity_name, "LESSONS_COMPLETED_AFTER": str(before + 1)}
     summary = run_flows(flows=[FLOW], env=device_env, reports=False, app_env=config.env)
     assert summary["status"] == "SUCCESS", (

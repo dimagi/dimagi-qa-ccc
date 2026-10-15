@@ -199,6 +199,7 @@ LEARN_TAB_02_HYBRID:
   opportunity_name: "TBD - Anshu opp with a learning-in-progress worker"
   worker_name: "TBD - seeded worker (learning started, not complete)"
   modules_completed_column: "Modules completed"
+  total_lessons: "TBD - number of lessons in the Learn app (skip once the worker reaches it)"
   # The mobile worker/flow values live in mobile_workers.yaml (MAESTRO_LEARN_TAB_02).
 
 PAYMENT_PROCESSING_1_2_3:

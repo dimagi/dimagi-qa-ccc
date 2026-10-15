@@ -401,6 +401,10 @@ MAESTRO_RECOVERY_FIXTURE:
 # in web_test_data.yaml LEARN_TAB_02_HYBRID (the web test passes that name in as
 # OPPORTUNITY). TBD values keep the web test skipped until the worker is seeded and
 # the Learn app's module/form/question names are copied from its CCZ.
+# RESET: every run completes one more Learn form, so the worker's progress only
+# goes up. Before it reaches 100% (web_test_data.yaml LEARN_TAB_02_HYBRID.total_lessons),
+# reset the worker's learning in Connect (or re-seed a fresh worker and update these
+# values); the web test skips with a message once the worker is complete.
 MAESTRO_LEARN_TAB_02:
   country_code: "+7426"
   phone_number: "TBD"
