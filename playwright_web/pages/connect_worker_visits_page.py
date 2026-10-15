@@ -307,24 +307,59 @@ class WorkerVisitsPage(BasePage):
     # justification modal) OR PM Agree/Disagree (which post immediately), depending
     # on the org role and the visit's review state; it is absent under auto-verify.
 
-    def _open_row_at(self, index):
-        """Open the visit row at `index` and wait for its details panel to populate."""
-        self.page.locator(self.VISIT_ROW_ANY).nth(index).click()
-        self.page.locator(self.VISIT_DETAILS_CONTAINER).first.wait_for(state="visible", timeout=15000)
+    def _click_row_and_wait_for_details(self, row):
+        """Click a visit row and wait for ITS details to load.
+
+        The #visit-details container and its "Information" heading stay visible from
+        the previously opened visit, so waiting on them returns immediately and the
+        caller reads (or acts on) the PREVIOUS visit's action bar - seen live on prod
+        2026-10-15: reject/approve landed on a different visit than the one the test
+        thought it had opened. Each row click fires exactly one user_visit_details
+        GET, so wait on that response, then let the htmx/Alpine swap settle."""
+        with self.page.expect_response(
+            lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
+        ):
+            row.click()
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
+        self.page.wait_for_timeout(400)
+
+    def _open_row_at(self, index):
+        """Open the visit row at `index` and wait for its details panel to populate."""
+        self._click_row_and_wait_for_details(self.page.locator(self.VISIT_ROW_ANY).nth(index))
 
     def _open_row_by_id(self, visit_id):
         """Re-open a visit by its data-visit-id after a table reload (the review post
         triggers reload_table, re-rendering rows) and wait for its details panel."""
         row = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first
         row.wait_for(state="visible", timeout=15000)
-        row.click()
-        self.page.locator(self.VISIT_DETAILS_CONTAINER).first.wait_for(state="visible", timeout=15000)
-        self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
-            state="visible", timeout=15000
-        )
+        self._click_row_and_wait_for_details(row)
+
+    def _wait_for_visit_status(self, visit_id, expected, attempts=4):
+        """Read a visit's data-visit-status from a freshly loaded table, reloading
+        between attempts, and return the last status seen.
+
+        The review POST (hx-swap="none") does not re-render the visit table in place -
+        observed live on prod 2026-10-15: the action landed (visit changed state, last
+        activity updated) while the already-rendered row kept its old
+        data-visit-status for 20s+. A page reload is the only reliable way to read the
+        new state, so reload (and return to the 'All' tab when the verification
+        tab-set is present, since a reload resets to the default tab)."""
+        status = None
+        for _ in range(attempts):
+            self.page.reload()
+            self.page.wait_for_load_state("load")
+            self._await_table()
+            if self.has_review_tabs():
+                self.click_tab_by_name("All")
+            row = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first
+            if row.count() > 0:
+                status = row.get_attribute("data-visit-status")
+                if status == expected:
+                    return status
+            self.page.wait_for_timeout(2000)
+        return status
 
     def _find_visit_with_enabled_action(self, action_locator, max_rows=15):
         """Open visits in turn until one exposes `action_locator` present and enabled.
@@ -355,12 +390,7 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_REJECT_MODAL_REASON, reason)
         self.click(self.VISIT_REJECT_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(2000)
-        # reload_table re-rendered the rows; re-open by id and confirm the outcome.
-        self._open_row_by_id(visit_id)
-        status = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
-            "data-visit-status"
-        )
+        status = self._wait_for_visit_status(visit_id, "rejected")
         assert status == "rejected", f"Visit {visit_id} status is {status!r} after reject, expected 'rejected'"
         self._step(f"NM rejected visit {visit_id} (status now rejected)")
         return True
@@ -377,11 +407,7 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_APPROVE_MODAL_JUSTIFICATION, justification)
         self.click(self.VISIT_APPROVE_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(2000)
-        self._open_row_by_id(visit_id)
-        status = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
-            "data-visit-status"
-        )
+        status = self._wait_for_visit_status(visit_id, "approved")
         assert status == "approved", f"Visit {visit_id} status is {status!r} after approve, expected 'approved'"
         self._step(f"NM approved visit {visit_id} (status now approved)")
         return True

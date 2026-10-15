@@ -26,9 +26,8 @@ from urllib.parse import urlsplit
 import pytest
 
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect
+from flows.tasking_static import env_value, login_to_connect
 from flows.workers_setup import open_connect_workers, open_deliver_tab
-from pages.connect_home_page import ConnectHomePage
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import parse_org_and_opp
@@ -36,26 +35,39 @@ from utils.helpers import parse_org_and_opp
 REVIEW_DATA_KEY = "WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34"
 
 
-def _require_review_data(test_data):
-    """Return the VV_31-34 review data, or skip while it is still the TBD placeholder
-    (a manual-review opportunity with seeded visits is an Anshu-provided fixture)."""
+def _require_review_data(test_data, config):
+    """Return the VV_31-35 review data for the current env, or skip.
+
+    The manual-review opportunity is an Anshu-provided fixture that exists on PROD
+    only (a separate PM/NM workspace: PM "PM Automation 2" + NM "Network Manager 2").
+    Unsuffixed keys are prod, `_staging` keys staging (same convention as the rest of
+    this file's data) - with no staging values the tests skip on stage rather than
+    pointing a staging URL at a prod opportunity id."""
     data = test_data.get(REVIEW_DATA_KEY)
-    if str(data.get("opportunity_name", "")).startswith("TBD") or str(data.get("worker_name", "")).startswith("TBD"):
-        pytest.skip(
-            f"{REVIEW_DATA_KEY} is unseeded - set opportunity_name/worker_name to the "
-            "manual-review opportunity + worker Anshu seeds (>=2 pending and >=2 "
-            "NM-approved/PM-review-pending visits) to run VV_31/32/33/34."
-        )
-    return data
+    resolved = {k: env_value(data, k, config) for k in data}
+    if config.env == "stage" and not data.get("opportunity_id_staging"):
+        pytest.skip(f"{REVIEW_DATA_KEY} has no staging manual-review opportunity - prod only.")
+    missing = [k for k in ("opportunity_id", "nm_org_slug", "pm_org_slug", "worker_user_id") if not resolved.get(k)]
+    if missing:
+        pytest.skip(f"{REVIEW_DATA_KEY} is missing {missing} for env '{config.env}'.")
+    return resolved
 
 
-def _open_worker_visits_all_tab(connect_page, opps_url, data):
-    """Open the seeded worker's Visits page on the 'All' tab (shows every status),
-    returning the WorkerVisitsPage. Assumes the caller has selected the right org."""
-    workers = ConnectWorkersPage(connect_page)
+def _open_review_visits(connect_page, config, data, role):
+    """Open the seeded worker's Visits page as `role` ('nm' or 'pm') by direct URL.
+
+    Role is derived from the org slug in the URL (the NM and PM orgs both see the
+    same opportunity id under their own slug), so no org-switcher round-trip is
+    needed - and the module's login session works for either. Lands on the 'All' tab
+    when the verification tab-set is present."""
+    slug = data["nm_org_slug"] if role == "nm" else data["pm_org_slug"]
+    base = config.get("connect_url")
+    connect_page.goto(
+        f"{base}/a/{slug}/opportunity/{data['opportunity_id']}/user_visits/?user={data['worker_user_id']}"
+    )
+    connect_page.wait_for_load_state("load")
     visits = WorkerVisitsPage(connect_page)
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
+    visits.verify_worker_visits_table_headers_present()
     if visits.has_review_tabs():
         visits.click_tab_by_name("All")
     return visits
@@ -221,50 +233,40 @@ def test_vv_03_image_carousel(connect, test_data):
     visits.open_and_verify_image_carousel()
 
 
-def test_vv_31_nm_reject_visit(connect, test_data):
+def test_vv_31_nm_reject_visit(connect, test_data, config):
     """VV_31: as the Network Manager, reject a pending visit via the Reason-for-
-    Rejection modal; the visit becomes rejected. Runs in the NM org, restoring the
-    PM org afterwards so the module's other tests keep their PM session."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        if not visits.nm_reject_a_visit(data["reject_reason"]):
-            pytest.skip(
-                f"No rejectable visit for '{data['worker_name']}' - seed a pending "
-                "visit to cover VV_31."
-            )
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    Rejection modal; the visit becomes rejected. Opens the Visits page under the NM
+    org's slug, so no org switch is needed."""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    if not visits.nm_reject_a_visit(data["reject_reason"]):
+        pytest.skip(
+            f"No rejectable visit for '{data['worker_name']}' - seed a pending "
+            "visit to cover VV_31."
+        )
 
 
-def test_vv_32_nm_approve_visit(connect, test_data):
+def test_vv_32_nm_approve_visit(connect, test_data, config):
     """VV_32: as the Network Manager, approve a pending visit via the Justification-
-    for-Approval modal; the visit becomes approved. Runs in the NM org, restoring the
-    PM org afterwards."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        if not visits.nm_approve_a_visit(data["approve_justification"]):
-            pytest.skip(
-                f"No approvable visit for '{data['worker_name']}' - seed a pending "
-                "visit to cover VV_32."
-            )
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    for-Approval modal; the visit becomes approved. Opens the Visits page under the NM
+    org's slug."""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    if not visits.nm_approve_a_visit(data["approve_justification"]):
+        pytest.skip(
+            f"No approvable visit for '{data['worker_name']}' - seed a pending "
+            "visit to cover VV_32."
+        )
 
 
-def test_vv_33_pm_agree_visit(connect, test_data):
+def test_vv_33_pm_agree_visit(connect, test_data, config):
     """VV_33: as the Program Manager, agree an NM-reviewed visit (the Agree button
     posts directly); payment accrues on agree. Uses the module's PM session."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_agree_a_visit():
         pytest.skip(
             f"No NM-reviewed visit with an enabled Agree for '{data['worker_name']}' "
@@ -272,12 +274,12 @@ def test_vv_33_pm_agree_visit(connect, test_data):
         )
 
 
-def test_vv_34_pm_disagree_visit(connect, test_data):
+def test_vv_34_pm_disagree_visit(connect, test_data, config):
     """VV_34: as the Program Manager, disagree an NM-reviewed visit pending PM review
     (the Disagree button posts directly); no payment accrues. Uses the PM session."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_disagree_a_visit():
         pytest.skip(
             f"No NM-reviewed visit with an enabled Disagree for '{data['worker_name']}' "
@@ -429,27 +431,27 @@ def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data):
     )
 
 
-def test_gap_w_43_bulk_controls_visible_for_nm(connect, test_data):
+def test_gap_w_43_bulk_controls_visible_for_nm(connect, test_data, config):
     """GAP-SRC-W-43 (positive control): a non-viewer NM on a manual-review opportunity
     DOES see the bulk Approve All / Reject All buttons and the select-all column.
     Runs in the NM org against the seeded manual-review opp; skips until that data
     exists. Restores the PM org afterwards."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        approve, reject, select = visits.bulk_controls_present()
-        assert approve and reject and select, (
-            "A non-viewer NM on a manual-review opp should see the bulk controls, but found "
-            f"approve_all={approve} reject_all={reject} select_all={select}"
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    if visits.has_visits_tasks_tabs():
+        pytest.skip(
+            "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table "
+            "has no bulk controls (they belong to the tabbed verification table)."
         )
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    approve, reject, select = visits.bulk_controls_present()
+    assert approve and reject and select, (
+        "A non-viewer NM on a manual-review opp should see the bulk controls, but found "
+        f"approve_all={approve} reject_all={reject} select_all={select}"
+    )
 
 
-def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data):
+def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, config):
     """GAP-SRC-W-40: the verification tab-set is a function of mode x role. On a
     manual-review opportunity, the PM sees its own pending queue (Pending PM Review)
     but not the NM's, while the NM sees both pending queues; every role's set ends
@@ -459,15 +461,14 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data):
 
     Skips until the manual-review opportunity is seeded, and when the WORKER_VISITS_TASKS
     switch is ON (the plain table shows Visits/Tasks, not the verification tab-set)."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
 
     # PM (the module's session): manual+PM tab-set.
-    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+    visits = _open_review_visits(connect_page, config, data, "pm")
     if visits.has_visits_tasks_tabs() or not visits.has_review_tabs():
         pytest.skip(
-            f"'{data['opportunity_name']}' does not render the verification tab-set "
+            f"Opportunity {data['opportunity_id']} does not render the verification tab-set "
             "(WORKER_VISITS_TASKS switch ON or no NM-review tabs) - GAP-SRC-W-40 needs "
             "the tabbed verification table."
         )
@@ -479,73 +480,59 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data):
     )
 
     # NM: manual+NM tab-set exposes BOTH pending queues.
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        nm_labels = visits.review_tab_labels()
-        assert nm_labels and nm_labels[-1] == "All", f"NM tab-set should end with 'All': {nm_labels}"
-        assert "Pending NM Review" in nm_labels, f"NM should see 'Pending NM Review': {nm_labels}"
-        assert "Pending PM Review" in nm_labels, f"NM should see 'Pending PM Review': {nm_labels}"
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    nm_labels = visits.review_tab_labels()
+    assert nm_labels and nm_labels[-1] == "All", f"NM tab-set should end with 'All': {nm_labels}"
+    assert "Pending NM Review" in nm_labels, f"NM should see 'Pending NM Review': {nm_labels}"
+    assert "Pending PM Review" in nm_labels, f"NM should see 'Pending PM Review': {nm_labels}"
 
 
-def test_gap_w_42_reject_requires_reason(connect, test_data):
+def test_gap_w_42_reject_requires_reason(connect, test_data, config):
     """GAP-SRC-W-42 (partial): the in-UI Reject action requires a reason - submitting
     the Reject modal with an empty reason is blocked and the visit stays unreviewed.
     Runs as the NM on the manual-review opp; skips until seeded or when no rejectable
     visit is present. (The 100-visit bulk cap needs >100 seeded visits and is not
     covered here.)"""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        blocked = visits.nm_reject_blocked_without_reason()
-        if blocked is None:
-            pytest.skip(
-                f"No rejectable visit for '{data['worker_name']}' - seed a pending visit "
-                "to cover the reject-requires-reason rule (GAP-SRC-W-42)."
-            )
-        assert blocked, "Reject was accepted with an empty reason - the reason should be mandatory"
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    blocked = visits.nm_reject_blocked_without_reason()
+    if blocked is None:
+        pytest.skip(
+            f"No rejectable visit for '{data['worker_name']}' - seed a pending visit "
+            "to cover the reject-requires-reason rule (GAP-SRC-W-42)."
+        )
+    assert blocked, "Reject was accepted with an empty reason - the reason should be mandatory"
 
 
-def test_gap_w_42_approve_requires_justification(connect, test_data):
+def test_gap_w_42_approve_requires_justification(connect, test_data, config):
     """GAP-SRC-W-42 (partial): the in-UI Approve action requires a justification -
     submitting the Approve modal with an empty justification is blocked and the visit
     stays unreviewed. Runs as the NM on the manual-review opp; skips until seeded or
     when no approvable visit is present."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    home = ConnectHomePage(connect_page)
-    try:
-        home.select_organization_from_list(data["network_manager"])
-        visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
-        blocked = visits.nm_approve_blocked_without_justification()
-        if blocked is None:
-            pytest.skip(
-                f"No approvable visit for '{data['worker_name']}' - seed a pending visit "
-                "to cover the approve-requires-justification rule (GAP-SRC-W-42)."
-            )
-        assert blocked, (
-            "Approve was accepted with an empty justification - the justification should be mandatory"
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    blocked = visits.nm_approve_blocked_without_justification()
+    if blocked is None:
+        pytest.skip(
+            f"No approvable visit for '{data['worker_name']}' - seed a pending visit "
+            "to cover the approve-requires-justification rule (GAP-SRC-W-42)."
         )
-    finally:
-        home.select_organization_from_list(PM_ORG)
+    assert blocked, (
+        "Approve was accepted with an empty justification - the justification should be mandatory"
+    )
 
 
-def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data):
+def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data, config):
     """VV_35 (Worker Visit Verification Page_35): a visit the PM has disagreed cannot
     then be agreed, and vice versa. As the PM, disagree a reviewable visit and confirm
     Agree is no longer actionable on it; if a second reviewable visit is available,
     also agree one and confirm Disagree is no longer actionable. Skips until the
     manual-review opp is seeded or when no PM-reviewable visit is present."""
-    connect_page, opps_url = connect
-    data = _require_review_data(test_data)
-    visits = _open_worker_visits_all_tab(connect_page, opps_url, data)
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
 
     cannot_agree = visits.pm_disagree_then_cannot_agree()
     if cannot_agree is None:
