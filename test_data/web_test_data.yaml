@@ -126,6 +126,8 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   worker_user_id: "1385565e-de0f-4cdd-bd5c-df8c026016cd"
   reject_reason: "Automation NM reject reason"
   approve_justification: "Automation NM approve justification"
+  rejected_status: "rejected"
+  approved_status: "approved"
 
 # GAP-SRC-W-44 (individual action-bar gating) + GAP-SRC-W-45 (manual-verify endpoints
 # return 403 + HX-Trigger:reload_table under auto-verify). Any opportunity/worker with

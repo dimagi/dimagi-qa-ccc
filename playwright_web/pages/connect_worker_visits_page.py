@@ -316,6 +316,9 @@ class WorkerVisitsPage(BasePage):
         2026-10-15: reject/approve landed on a different visit than the one the test
         thought it had opened. Each row click fires exactly one user_visit_details
         GET, so wait on that response, then let the htmx/Alpine swap settle."""
+        panel_before = self.page.evaluate(
+            "id => document.getElementById(id)?.innerHTML ?? ''", self.VISIT_DETAILS_CONTAINER
+        )
         with self.page.expect_response(
             lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
         ):
@@ -323,7 +326,13 @@ class WorkerVisitsPage(BasePage):
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
-        self.page.wait_for_timeout(400)
+        # The old panel stays rendered until the swap lands, so wait for its content to
+        # differ from what was there before the click.
+        self.page.wait_for_function(
+            "([id, before]) => (document.getElementById(id)?.innerHTML ?? '') !== before",
+            arg=[self.VISIT_DETAILS_CONTAINER, panel_before],
+            timeout=15000,
+        )
 
     def _open_row_at(self, index):
         """Open the visit row at `index` and wait for its details panel to populate."""
@@ -378,7 +387,7 @@ class WorkerVisitsPage(BasePage):
         self._step(f"No visit in the first {min(total, max_rows)} rows offers the requested action")
         return None
 
-    def nm_reject_a_visit(self, reason, max_rows=15):
+    def nm_reject_a_visit(self, reason, rejected_status, max_rows=15):
         """VV_31 (NM): reject a rejectable visit via the Reason-for-Rejection modal,
         then confirm the visit is now rejected. Returns False (caller skips) when no
         scanned visit is rejectable."""
@@ -390,12 +399,14 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_REJECT_MODAL_REASON, reason)
         self.click(self.VISIT_REJECT_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        status = self._wait_for_visit_status(visit_id, "rejected")
-        assert status == "rejected", f"Visit {visit_id} status is {status!r} after reject, expected 'rejected'"
+        status = self._wait_for_visit_status(visit_id, rejected_status)
+        assert status == rejected_status, (
+            f"Visit {visit_id} status is {status!r} after reject, expected {rejected_status!r}"
+        )
         self._step(f"NM rejected visit {visit_id} (status now rejected)")
         return True
 
-    def nm_approve_a_visit(self, justification, max_rows=15):
+    def nm_approve_a_visit(self, justification, approved_status, max_rows=15):
         """VV_32 (NM): approve an approvable visit via the Justification-for-Approval
         modal (the justification textarea is required), then confirm it is approved.
         Returns False when no scanned visit is approvable."""
@@ -407,8 +418,10 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_APPROVE_MODAL_JUSTIFICATION, justification)
         self.click(self.VISIT_APPROVE_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        status = self._wait_for_visit_status(visit_id, "approved")
-        assert status == "approved", f"Visit {visit_id} status is {status!r} after approve, expected 'approved'"
+        status = self._wait_for_visit_status(visit_id, approved_status)
+        assert status == approved_status, (
+            f"Visit {visit_id} status is {status!r} after approve, expected {approved_status!r}"
+        )
         self._step(f"NM approved visit {visit_id} (status now approved)")
         return True
 
@@ -515,7 +528,7 @@ class WorkerVisitsPage(BasePage):
             "data-visit-status"
         )
 
-    def nm_reject_blocked_without_reason(self, max_rows=15):
+    def nm_reject_blocked_without_reason(self, rejected_status, max_rows=15):
         """Open a rejectable visit, submit the Reject modal with an EMPTY reason, and
         report whether that was blocked (modal stayed open, or the visit did not
         become rejected). Returns None when no scanned visit is rejectable."""
@@ -532,11 +545,11 @@ class WorkerVisitsPage(BasePage):
         # Modal closed - the reason must still have been rejected server-side, so the
         # visit must NOT be rejected.
         self._open_row_by_id(visit_id)
-        blocked = self._visit_status(visit_id) != "rejected"
+        blocked = self._visit_status(visit_id) != rejected_status
         self._step(f"Reject-without-reason blocked (visit not rejected): {blocked}")
         return blocked
 
-    def nm_approve_blocked_without_justification(self, max_rows=15):
+    def nm_approve_blocked_without_justification(self, approved_status, max_rows=15):
         """Counterpart of nm_reject_blocked_without_reason for the Approve modal's
         mandatory justification. Returns None when no scanned visit is approvable."""
         visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows)
@@ -550,7 +563,7 @@ class WorkerVisitsPage(BasePage):
             self._step("Approve blocked client-side (justification required, modal stayed open)")
             return True
         self._open_row_by_id(visit_id)
-        blocked = self._visit_status(visit_id) != "approved"
+        blocked = self._visit_status(visit_id) != approved_status
         self._step(f"Approve-without-justification blocked (visit not approved): {blocked}")
         return blocked
 

@@ -97,9 +97,10 @@ jobs:
       # viewer_password to enable it in CI.
       viewer_username: ${{ secrets.viewer_username }}
       viewer_password: ${{ secrets.viewer_password }}
-      # Per-PR runs skip on_demand tests (real-device Maestro builds); a manual
-      # workflow_dispatch runs everything.
-      PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand' || '' }}
+      # Per-PR runs skip on_demand tests (real-device Maestro builds). Every automatic
+      # run (PR push and main) also skips consumes_seed_data tests, which permanently
+      # use up seeded prod fixtures; a manual workflow_dispatch runs everything.
+      PYTEST_MARKERS: ${{ github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || 'not consumes_seed_data') || '' }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.

@@ -233,6 +233,7 @@ def test_vv_03_image_carousel(connect, test_data):
     visits.open_and_verify_image_carousel()
 
 
+@pytest.mark.consumes_seed_data
 def test_vv_31_nm_reject_visit(connect, test_data, config):
     """VV_31: as the Network Manager, reject a pending visit via the Reason-for-
     Rejection modal; the visit becomes rejected. Opens the Visits page under the NM
@@ -240,13 +241,14 @@ def test_vv_31_nm_reject_visit(connect, test_data, config):
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
-    if not visits.nm_reject_a_visit(data["reject_reason"]):
+    if not visits.nm_reject_a_visit(data["reject_reason"], data["rejected_status"]):
         pytest.skip(
             f"No rejectable visit for '{data['worker_name']}' - seed a pending "
             "visit to cover VV_31."
         )
 
 
+@pytest.mark.consumes_seed_data
 def test_vv_32_nm_approve_visit(connect, test_data, config):
     """VV_32: as the Network Manager, approve a pending visit via the Justification-
     for-Approval modal; the visit becomes approved. Opens the Visits page under the NM
@@ -254,16 +256,18 @@ def test_vv_32_nm_approve_visit(connect, test_data, config):
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
-    if not visits.nm_approve_a_visit(data["approve_justification"]):
+    if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"]):
         pytest.skip(
             f"No approvable visit for '{data['worker_name']}' - seed a pending "
             "visit to cover VV_32."
         )
 
 
+@pytest.mark.consumes_seed_data
 def test_vv_33_pm_agree_visit(connect, test_data, config):
     """VV_33: as the Program Manager, agree an NM-reviewed visit (the Agree button
-    posts directly); payment accrues on agree. Uses the module's PM session."""
+    posts directly); payment accrues on agree. Manual runs only (consumes_seed_data):
+    each run accrues a payment for the seeded worker. Uses the module's PM session."""
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "pm")
@@ -274,6 +278,7 @@ def test_vv_33_pm_agree_visit(connect, test_data, config):
         )
 
 
+@pytest.mark.consumes_seed_data
 def test_vv_34_pm_disagree_visit(connect, test_data, config):
     """VV_34: as the Program Manager, disagree an NM-reviewed visit pending PM review
     (the Disagree button posts directly); no payment accrues. Uses the PM session."""
@@ -435,7 +440,7 @@ def test_gap_w_43_bulk_controls_visible_for_nm(connect, test_data, config):
     """GAP-SRC-W-43 (positive control): a non-viewer NM on a manual-review opportunity
     DOES see the bulk Approve All / Reject All buttons and the select-all column.
     Runs in the NM org against the seeded manual-review opp; skips until that data
-    exists. Restores the PM org afterwards."""
+    exists. Opens the Visits page under the NM org's slug."""
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
@@ -487,6 +492,7 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, conf
     assert "Pending PM Review" in nm_labels, f"NM should see 'Pending PM Review': {nm_labels}"
 
 
+@pytest.mark.consumes_seed_data
 def test_gap_w_42_reject_requires_reason(connect, test_data, config):
     """GAP-SRC-W-42 (partial): the in-UI Reject action requires a reason - submitting
     the Reject modal with an empty reason is blocked and the visit stays unreviewed.
@@ -496,7 +502,7 @@ def test_gap_w_42_reject_requires_reason(connect, test_data, config):
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
-    blocked = visits.nm_reject_blocked_without_reason()
+    blocked = visits.nm_reject_blocked_without_reason(data["rejected_status"])
     if blocked is None:
         pytest.skip(
             f"No rejectable visit for '{data['worker_name']}' - seed a pending visit "
@@ -505,6 +511,7 @@ def test_gap_w_42_reject_requires_reason(connect, test_data, config):
     assert blocked, "Reject was accepted with an empty reason - the reason should be mandatory"
 
 
+@pytest.mark.consumes_seed_data
 def test_gap_w_42_approve_requires_justification(connect, test_data, config):
     """GAP-SRC-W-42 (partial): the in-UI Approve action requires a justification -
     submitting the Approve modal with an empty justification is blocked and the visit
@@ -513,7 +520,7 @@ def test_gap_w_42_approve_requires_justification(connect, test_data, config):
     connect_page, _ = connect
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
-    blocked = visits.nm_approve_blocked_without_justification()
+    blocked = visits.nm_approve_blocked_without_justification(data["approved_status"])
     if blocked is None:
         pytest.skip(
             f"No approvable visit for '{data['worker_name']}' - seed a pending visit "
@@ -524,6 +531,7 @@ def test_gap_w_42_approve_requires_justification(connect, test_data, config):
     )
 
 
+@pytest.mark.consumes_seed_data
 def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data, config):
     """VV_35 (Worker Visit Verification Page_35): a visit the PM has disagreed cannot
     then be agreed, and vice versa. As the PM, disagree a reviewable visit and confirm
