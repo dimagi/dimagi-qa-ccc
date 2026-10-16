@@ -480,10 +480,13 @@ worker_visits_page:
   # Action-bar buttons live directly under #visit-actions (not inside a .modal).
   visit_action_reject: "//div[@id='visit-actions']//button[normalize-space()='Reject'][not(ancestor::div[contains(@class,'modal')])]"
   visit_action_approve: "//div[@id='visit-actions']//button[normalize-space()='Approve'][not(ancestor::div[contains(@class,'modal')])]"
-  visit_reject_modal_reason: "//div[contains(@class,'modal')]//textarea[@name='reason']"
-  visit_reject_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Reject']"
-  visit_approve_modal_justification: "//div[contains(@class,'modal')]//textarea[@name='justification']"
-  visit_approve_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Approve']"
+  # Scoped to #visit-actions: the page also carries a hidden "suspend user" modal whose
+  # textarea is ALSO name='reason' and comes first in the DOM, so an unscoped
+  # //textarea[@name='reason'] resolves to that hidden one (seen live on prod 2026-10-15).
+  visit_reject_modal_reason: "//div[@id='visit-actions']//textarea[@name='reason']"
+  visit_reject_modal_submit: "//div[@id='visit-actions']//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Reject']"
+  visit_approve_modal_justification: "//div[@id='visit-actions']//textarea[@name='justification']"
+  visit_approve_modal_submit: "//div[@id='visit-actions']//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Approve']"
   visit_pm_agree: "//div[@id='visit-actions']//button[@name='review_status'][normalize-space()='Agree']"
   visit_pm_disagree: "//div[@id='visit-actions']//button[@name='review_status'][normalize-space()='Disagree']"
 
