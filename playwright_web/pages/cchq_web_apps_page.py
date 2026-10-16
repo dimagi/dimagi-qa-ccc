@@ -53,10 +53,23 @@ class WebAppsPage(BasePage):
         """Navigate to the form from wherever Web Apps currently is: the app list (first
         time) or inside the app (after a previous submit returns to its menu)."""
         self._step(f"Open {app_name} > {module} > {form}")
-        try:
-            self._click_first_visible(self.APP_TILE.format(name=app_name), timeout_ms=8000)
-        except AssertionError:
-            pass  # no such tile: already inside the app. A failed CLICK still raises.
+        # Work out where Web Apps is: the app list (click the tile) or already inside the app
+        # (after a previous submit). Staging renders 200+ tiles slowly after "Log in as", so a
+        # short wait for the tile mistakes "not rendered yet" for "already inside".
+        import time
+
+        tile_sel = self.APP_TILE.format(name=app_name)
+        inside_sels = [self.MENU_ENTRY.format(text=module), self.MENU_ENTRY.format(text=form), self.NAME_TEXTAREA]
+        deadline = time.monotonic() + 60
+        while True:
+            if any(self._any_visible(sel) for sel in inside_sels):
+                break
+            if self._any_visible(tile_sel):
+                self._click_first_visible(tile_sel, timeout_ms=10000)
+                break
+            if time.monotonic() > deadline:
+                raise AssertionError(f"Neither the '{app_name}' tile nor its menu appeared in Web Apps")
+            self.page.wait_for_timeout(500)
         for entry in (module, form):
             if self.page.locator(self.NAME_TEXTAREA).first.is_visible():
                 break
@@ -65,6 +78,10 @@ class WebAppsPage(BasePage):
             except AssertionError:
                 continue  # e.g. already inside the module, so its label isn't a menu entry
         self.page.locator(self.NAME_TEXTAREA).first.wait_for(state="visible", timeout=30000)
+
+    def _any_visible(self, selector):
+        matches = self.page.locator(selector)
+        return any(matches.nth(i).is_visible() for i in range(matches.count()))
 
     def _click_first_visible(self, selector, timeout_ms=30000):
         import time
