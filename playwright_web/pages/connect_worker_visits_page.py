@@ -361,7 +361,7 @@ class WorkerVisitsPage(BasePage):
             self.page.wait_for_timeout(2000)
         return status
 
-    def _find_visit_with_enabled_action(self, action_locator, max_rows=15):
+    def _find_visit_with_enabled_action(self, action_locator, max_rows=15, only_status=None):
         """Open visits in turn until one exposes `action_locator` present and enabled.
         Returns that visit's data-visit-id, or None if none of the scanned visits
         offer the action (e.g. all already in a terminal state, or auto-verify)."""
@@ -370,6 +370,8 @@ class WorkerVisitsPage(BasePage):
         total = rows.count()
         for i in range(min(total, max_rows)):
             visit_id = rows.nth(i).get_attribute("data-visit-id")
+            if only_status and rows.nth(i).get_attribute("data-visit-status") != only_status:
+                continue
             self._open_row_at(i)
             btn = self.page.locator(action_locator).first
             if btn.count() > 0 and btn.is_enabled():
@@ -395,11 +397,11 @@ class WorkerVisitsPage(BasePage):
         self._step(f"NM rejected visit {visit_id} (status now rejected)")
         return True
 
-    def nm_approve_a_visit(self, justification, max_rows=15):
+    def nm_approve_a_visit(self, justification, max_rows=15, only_status=None):
         """VV_32 (NM): approve an approvable visit via the Justification-for-Approval
         modal (the justification textarea is required), then confirm it is approved.
         Returns False when no scanned visit is approvable."""
-        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows)
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows, only_status)
         if visit_id is None:
             return False
         self.click(self.VISIT_ACTION_APPROVE)
@@ -509,6 +511,17 @@ class WorkerVisitsPage(BasePage):
     # mandatory field blocks an empty submission (client-side `required`, and the
     # server rejects it too). These probe that guard without leaving the visit
     # reviewed.
+
+    def visit_status_counts(self):
+        """{status: count} over the visit rows currently rendered (one page)."""
+        self._await_table()
+        statuses = self.page.locator(self.VISIT_ROW_ANY).evaluate_all(
+            "els => els.map(e => e.getAttribute('data-visit-status'))"
+        )
+        counts = {}
+        for st in statuses:
+            counts[st] = counts.get(st, 0) + 1
+        return counts
 
     def _visit_status(self, visit_id):
         return self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(

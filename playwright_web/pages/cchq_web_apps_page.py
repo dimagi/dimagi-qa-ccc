@@ -6,6 +6,8 @@ needs no worker credential. Submissions made this way are attributed to the work
 HQ user id, which is what Connect keys visits on.
 """
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -48,10 +50,22 @@ class WebAppsPage(BasePage):
         self.page.locator(self.WORKING_AS_BANNER).first.wait_for(state="visible", timeout=30000)
 
     def open_form(self, app_name, module, form):
+        """Navigate to the form from wherever Web Apps currently is: the app list (first
+        time) or inside the app (after a previous submit returns to its menu)."""
         self._step(f"Open {app_name} > {module} > {form}")
-        self.page.locator(self.APP_TILE.format(name=app_name)).first.click()
+        tile = self.page.locator(self.APP_TILE.format(name=app_name)).first
+        try:
+            tile.wait_for(state="visible", timeout=5000)
+            tile.click()
+        except PlaywrightTimeoutError:
+            pass  # already inside the app
         for entry in (module, form):
-            self._click_first_visible(self.MENU_ENTRY.format(text=entry))
+            if self.page.locator(self.NAME_TEXTAREA).first.is_visible():
+                break
+            try:
+                self._click_first_visible(self.MENU_ENTRY.format(text=entry), timeout_ms=8000)
+            except AssertionError:
+                continue  # e.g. already inside the module, so its label isn't a menu entry
         self.page.locator(self.NAME_TEXTAREA).first.wait_for(state="visible", timeout=30000)
 
     def _click_first_visible(self, selector, timeout_ms=30000):
@@ -79,5 +93,6 @@ class WebAppsPage(BasePage):
 
     def submit(self):
         self._step("Submit delivery form")
-        self.click(self.SUBMIT)
-        self.page.locator(self.SUBMITTED).first.wait_for(state="visible", timeout=30000)
+        self._click_first_visible(self.SUBMIT)
+        # The form closes (Submit disappears) once HQ has accepted it.
+        self.page.locator(self.SUBMIT).first.wait_for(state="hidden", timeout=30000)

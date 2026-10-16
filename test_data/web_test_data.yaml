@@ -126,6 +126,21 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   worker_user_id: "1385565e-de0f-4cdd-bd5c-df8c026016cd"
   reject_reason: "Automation NM reject reason"
   approve_justification: "Automation NM approve justification"
+  # Self-seeding: the review actions are one-way, so the tests top the pool up by submitting
+  # the delivery form in HQ Web Apps as the worker ("Log in as" - proven 2026-10-16; Connect
+  # records it as the worker's pending visit). The worker's HQ username is the id Connect shows.
+  hq_domain: "connectqa-automation-prod"
+  hq_worker_username: "74531b63f0e73a64e226"
+  hq_app_name: "Manual Delivery App"
+  hq_module: "Case List"
+  hq_form: "Registration Form"
+  seed_entity_id: 98765
+  seed_location: "Hyderabad"
+  # Pending visits to keep available for the reject/approve tests, plus how many extra to
+  # NM-approve up front so VV_33/34/35 (which need NM-approved, PM-review-pending visits)
+  # have items to act on. Each run seeds only the shortfall (P1 allows 200 visits/day).
+  seed_pending_target: 6
+  seed_pm_review_items: 4
 
 # GAP-SRC-W-44 (individual action-bar gating) + GAP-SRC-W-45 (manual-verify endpoints
 # return 403 + HX-Trigger:reload_table under auto-verify). Any opportunity/worker with
