@@ -61,7 +61,6 @@ connect_home_page:
   organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
 
 connect_opportunities_page:
-  opportunity_link_by_name: "//a[contains(normalize-space(.),'{name}')]"
   name_input: "id_name"
   label_by_text: ".//label[normalize-space(.) = '{required_text}']"
   data_rows_no_detail: ".//tbody/tr[not(contains(@class,'detail-row'))]"

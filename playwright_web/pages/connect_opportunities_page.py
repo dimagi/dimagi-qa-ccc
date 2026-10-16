@@ -22,7 +22,6 @@ class ConnectOpportunitiesPage(BasePage):
     OPP_LEARN_APP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "learn_app_description")
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
-    OPP_LINK_BY_NAME = locators.get("connect_opportunities_page", "opportunity_link_by_name")
 
     ADD_PAYMENT_UNIT_BUTTON = locators.get("connect_opportunities_page", "add_payment_btn")
     AMOUNT_INPUT = locators.get("connect_opportunities_page", "amount_input")
@@ -209,7 +208,9 @@ class ConnectOpportunitiesPage(BasePage):
         self.click_submit_btn()
         self.page.wait_for_timeout(3000)
 
-    def click_opportunity_in_opportunity(self, value):
+    def click_opportunity_in_opportunity(self, value, exact=True):
+        """exact=False matches by substring, for data that names a family of rows
+        (OLP_4: 'Demo Opportunity' for the dated 'Demo Opportunity_<date>' rows)."""
         self.page.wait_for_timeout(5000)
         try:
             self.select_by_visible_text(self.PAGE_SIZE, "100")
@@ -217,6 +218,8 @@ class ConnectOpportunitiesPage(BasePage):
         except Exception:
             print("Dropdown not present")
         link = ConnectOpportunityListPage.ROW_LINK_BY_EXACT_NAME.format(name=value)
+        if not exact:
+            link = ConnectOpportunityListPage.ROW_LINK_BY_NAME.format(name=value)
         if self.page.locator(link).count() == 0:
             # The list opens on default filters (Active, non-test only - CCCT-2882)
             # and a freshly created opportunity is test/non-active, so it is hidden.
