@@ -22,7 +22,6 @@ class ConnectOpportunitiesPage(BasePage):
     OPP_LEARN_APP_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "learn_app_description")
     OPP_LEARN_APP_PASSING_SCORE_INPUT = locators.get("connect_opportunities_page", "learn_app_passing_score_input")
     SUBMIT_BUTTON = locators.get("connect_opportunities_page", "submit_button")
-    OPP_LINK_BY_NAME = locators.get("connect_opportunities_page", "opportunity_link_by_name")
 
     ADD_PAYMENT_UNIT_BUTTON = locators.get("connect_opportunities_page", "add_payment_btn")
     AMOUNT_INPUT = locators.get("connect_opportunities_page", "amount_input")
