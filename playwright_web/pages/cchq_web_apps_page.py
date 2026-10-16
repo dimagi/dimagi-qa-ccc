@@ -41,6 +41,9 @@ class WebAppsPage(BasePage):
         """Web Apps -> 'Log in as' -> filter -> pick the worker -> confirm. Filtering needs
         Enter (typing alone leaves the full list), and picking a row opens a confirm dialog."""
         self._step(f"Log in as {worker_username}")
+        banner = self.page.locator(self.WORKING_AS_BANNER).first
+        if banner.is_visible() and worker_username in banner.inner_text():
+            return  # a reload keeps the "Log in as" session; picking the worker again finds no dialog
         self.page.locator(self.RESTORE_AS_TILE).first.click()
         box = self.page.locator(self.FILTER_WORKERS).first
         box.wait_for(state="visible", timeout=20000)
