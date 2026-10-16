@@ -53,12 +53,10 @@ class WebAppsPage(BasePage):
         """Navigate to the form from wherever Web Apps currently is: the app list (first
         time) or inside the app (after a previous submit returns to its menu)."""
         self._step(f"Open {app_name} > {module} > {form}")
-        tile = self.page.locator(self.APP_TILE.format(name=app_name)).first
         try:
-            tile.wait_for(state="visible", timeout=5000)
-            tile.click()
-        except PlaywrightTimeoutError:
-            pass  # already inside the app
+            self._click_first_visible(self.APP_TILE.format(name=app_name), timeout_ms=8000)
+        except AssertionError:
+            pass  # no such tile: already inside the app. A failed CLICK still raises.
         for entry in (module, form):
             if self.page.locator(self.NAME_TEXTAREA).first.is_visible():
                 break

@@ -657,7 +657,9 @@ cchq_web_apps_page:
   # Matches the text node (the entry's label sits in a nested element); callers click the
   # first VISIBLE match, since the nav dropdown can hold hidden duplicates.
   menu_entry_by_text: "//*[normalize-space(text())='{text}']"
-  question_name_textarea: "(//textarea)[1]"
+  # String questions render as textarea#str<N>; an unscoped (//textarea)[1] hits the hidden
+  # "report an issue" dialog's textarea that staging's Web Apps page carries first.
+  question_name_textarea: "//textarea[starts-with(@id,'str')]"
   question_id_input: "//input[@type='text'][starts-with(@id,'int')]"
   gps_map: "//div[contains(@class,'leaflet-container')]"
   # The map's search box sits in the same input group as its Search button (other hidden

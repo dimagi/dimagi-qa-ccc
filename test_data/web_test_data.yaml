@@ -130,8 +130,17 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   # the delivery form in HQ Web Apps as the worker ("Log in as" - proven 2026-10-16; Connect
   # records it as the worker's pending visit). The worker's HQ username is the id Connect shows.
   hq_domain: "connectqa-automation-prod"
+  # Staging has its own manual-review opp ("Manual approval opp", program "Automation program"):
+  # PM org PM_Automation_02 (slug pm_automation_02), NM org NM_Automation (slug nm_automation),
+  # the same worker (HQ username identical to prod), and a different ConnectUser id.
+  opportunity_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  nm_org_slug_staging: "nm_automation"
+  pm_org_slug_staging: "pm_automation_02"
+  worker_user_id_staging: "b01fe03f-a852-4f81-b205-13faa445d226"
+  hq_domain_staging: "connectqa-automation"
   hq_worker_username: "74531b63f0e73a64e226"
   hq_app_name: "Manual Delivery App"
+  hq_app_name_staging: "[Manual approval] Delivery App"
   hq_module: "Case List"
   hq_form: "Registration Form"
   seed_entity_id: 98765
