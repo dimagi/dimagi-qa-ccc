@@ -14,45 +14,17 @@ module via the shared PM account, same shape as test_opd_dashboard.
 
 import pytest
 
-from flows.olp_setup import PM_ORG
-from flows.tasking_static import env_value, login_to_connect
-from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
-from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-
-
-def _open_dashboard(page, test_data, config, settings):
-    connect_page = login_to_connect(page, config, settings, PM_ORG)
-    olp = ConnectOpportunityListPage(connect_page)
-    olp.verify_loaded()
-    # Prefer an opportunity with claimed workers (budget/message forms only render
-    # then); fall back to the read-only opp, then the first row.
-    name = env_value(test_data.get("OPD"), "budget_opportunity_name", config) or env_value(
-        test_data.get("OPD"), "opportunity_name", config
-    )
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-        olp._step(f"Configured opportunity {name!r} not in list - falling back to first row")
-        name = olp.first_row_name()
-    olp.open_opportunity(name)
-    dashboard = OpportunityDashboardPage(connect_page)
-    dashboard.verify_loaded()
-    dashboard.dashboard_url = dashboard.page.url
-    return dashboard
+from flows.opd_setup import dashboard_session
+from flows.tasking_static import env_value
 
 
 @pytest.fixture(scope="module")
 def dashboard(browser, config, settings, test_data):
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    try:
-        try:
-            dash = _open_dashboard(page, test_data, config, settings)
-        except Exception:
-            page.close()
-            page = context.new_page()
-            dash = _open_dashboard(page, test_data, config, settings)
-        yield dash
-    finally:
-        context.close()
+    # Prefer an opportunity with claimed workers (budget/message forms only render
+    # then); fall back to the read-only opp. Exact names only - skips if neither exists.
+    opd = test_data.get("OPD")
+    names = [env_value(opd, "budget_opportunity_name", config), env_value(opd, "opportunity_name", config)]
+    yield from dashboard_session(browser, config, settings, test_data, names=names)
 
 
 def test_opd_08_send_message_page(dashboard):
