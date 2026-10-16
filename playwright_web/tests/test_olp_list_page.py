@@ -35,7 +35,7 @@ def _verify_default_filters(olp, test_data, config):
     reaches that environment and the flag gets flipped."""
     defaults = test_data.get("OLP_DEFAULT_FILTERS")
     olp.open_default_list()
-    assert olp.row_count() > 0, "Default list should show at least one opportunity"
+    default_rows = olp.row_count()
     olp.open_filter_modal()
     if not env_value(defaults, "expected", config):
         assert olp.selected_filter_labels("filter_status_select") == [], (
@@ -43,6 +43,7 @@ def _verify_default_filters(olp, test_data, config):
         assert olp.selected_filter_labels("filter_is_test_select") == []
         olp.close_filter_modal()
         assert olp.filter_badge_count() == 0, "No default filters expected on this environment yet"
+        assert default_rows > 0, "Unfiltered list should show at least one opportunity"
         return
     assert olp.selected_filter_labels("filter_status_select") == [defaults["status"]]
     assert olp.selected_filter_labels("filter_is_test_select") == [defaults["is_test"]]
@@ -50,6 +51,16 @@ def _verify_default_filters(olp, test_data, config):
     assert olp.filter_badge_count() == defaults["badge_count"], "Default filters should show the orange count dot"
     assert set(olp.visible_statuses()) <= {defaults["status"]}, "Default list should show Active opportunities only"
     assert olp.test_opportunity_count() == 0, "Default list should hide test opportunities"
+    # The two checks above pass trivially on an empty default list. Clear the filters:
+    # the account must have opportunities at all, and when the default list is empty
+    # the filters must be what hides them (a test or non-Active opportunity exists).
+    olp.show_all_opportunities()
+    all_rows = olp.row_count()
+    assert all_rows > 0, "Unfiltered list should show at least one opportunity"
+    assert default_rows <= all_rows
+    if default_rows == 0:
+        hidden_by_defaults = olp.test_opportunity_count() > 0 or not set(olp.visible_statuses()) <= {defaults["status"]}
+        assert hidden_by_defaults, "Default list is empty but nothing is hidden by the default filters"
 
 
 def test_olp_list_program_manager_view(page, test_data, config, settings):
