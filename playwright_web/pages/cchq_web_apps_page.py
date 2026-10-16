@@ -94,5 +94,13 @@ class WebAppsPage(BasePage):
     def submit(self):
         self._step("Submit delivery form")
         self._click_first_visible(self.SUBMIT)
-        # The form closes (Submit disappears) once HQ has accepted it.
+        # The form closes (Submit disappears) as soon as it is sent, but the POST to HQ can
+        # still be in flight: closing the page right after the LAST submit dropped the final
+        # visit (3 of 4 arrived in Connect, prod 2026-10-16). Wait for HQ's confirmation
+        # message, falling back to the network settling.
         self.page.locator(self.SUBMIT).first.wait_for(state="hidden", timeout=30000)
+        try:
+            self.page.locator(self.SUBMITTED).first.wait_for(state="visible", timeout=20000)
+        except PlaywrightTimeoutError:
+            self.page.wait_for_load_state("networkidle")
+            self.page.wait_for_timeout(5000)
