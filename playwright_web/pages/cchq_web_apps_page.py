@@ -32,9 +32,10 @@ class WebAppsPage(BasePage):
 
     def open(self, hq_url, domain):
         self._step(f"Open Web Apps for {domain}")
-        self.page.goto(f"{hq_url}/a/{domain}/cloudcare/apps/v2/")
-        self.page.wait_for_load_state("load")
-        self.page.locator(self.RESTORE_AS_TILE).first.wait_for(state="visible", timeout=60000)
+        # Web Apps pulls in heavy scripts/trackers, so a full "load" occasionally exceeds 30s on
+        # staging. The page is usable once parsed; the tile wait below covers the rest.
+        self.page.goto(f"{hq_url}/a/{domain}/cloudcare/apps/v2/", wait_until="domcontentloaded", timeout=90000)
+        self.page.locator(self.RESTORE_AS_TILE).first.wait_for(state="visible", timeout=90000)
 
     def log_in_as(self, worker_username):
         """Web Apps -> 'Log in as' -> filter -> pick the worker -> confirm. Filtering needs
@@ -68,16 +69,24 @@ class WebAppsPage(BasePage):
                 self._click_first_visible(tile_sel, timeout_ms=10000)
                 break
             if time.monotonic() > deadline:
-                raise AssertionError(f"Neither the '{app_name}' tile nor its menu appeared in Web Apps")
+                shot = "/tmp/web_apps_open_form_timeout.png"
+                self.page.screenshot(path=shot)
+                raise AssertionError(
+                    f"Neither the '{app_name}' tile nor its menu appeared in Web Apps "
+                    f"(url={self.page.url}; screenshot {shot}; page text: "
+                    f"{self.page.inner_text('body')[:300]!r})"
+                )
             self.page.wait_for_timeout(500)
         for entry in (module, form):
             if self.page.locator(self.NAME_TEXTAREA).first.is_visible():
                 break
             try:
-                self._click_first_visible(self.MENU_ENTRY.format(text=entry), timeout_ms=8000)
+                # Staging's formplayer can take well over 8s to load each menu level.
+                self._click_first_visible(self.MENU_ENTRY.format(text=entry), timeout_ms=30000)
             except AssertionError:
-                continue  # e.g. already inside the module, so its label isn't a menu entry
-        self.page.locator(self.NAME_TEXTAREA).first.wait_for(state="visible", timeout=30000)
+                if entry == form:
+                    raise  # the form entry must be reachable; only the module may already be open
+        self.page.locator(self.NAME_TEXTAREA).first.wait_for(state="visible", timeout=45000)
 
     def _any_visible(self, selector):
         matches = self.page.locator(selector)
