@@ -14,7 +14,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-from utils.helpers import with_page_size
+from utils.helpers import with_all_opportunities, with_page_size
 
 
 def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=None, organization=PM_ORG):
@@ -36,8 +36,9 @@ def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=
             names = [env_value(test_data.get("OPD"), "opportunity_name", config)]
         names = [n for n in names if n]
         # Load the whole list on one page so the flood of "Demo Opportunity_<date>" rows
-        # doesn't hide the target.
-        connect_page.goto(with_page_size(connect_page.url))
+        # doesn't hide the target, and past the default filters (Active, non-test only -
+        # CCCT-2882), which hide our test opportunities.
+        connect_page.goto(with_all_opportunities(with_page_size(connect_page.url)))
         connect_page.wait_for_load_state("load")
         olp = ConnectOpportunityListPage(connect_page)
         olp.verify_loaded()
