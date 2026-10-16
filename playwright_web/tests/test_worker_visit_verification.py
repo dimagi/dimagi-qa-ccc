@@ -79,6 +79,7 @@ def _open_review_visits(connect_page, config, data, role):
 
 
 SEED_SETTLE_SECONDS = 240
+SEED_PROCESSING_SECONDS = 60
 
 
 @pytest.fixture(scope="module")
@@ -102,11 +103,24 @@ def review_pool(connect, test_data, config, settings):
             connect_page.wait_for_timeout(15000)
         else:
             pytest.fail(f"Seeded {len(names)} visits but Connect still shows fewer than {need_pending} pending")
+        # Listed is not the same as settled: an NM approve made within seconds of a visit first
+        # appearing did not stick (still pending minutes later; approving the same visit a few
+        # minutes on worked, as did approvals ~1 minute after seeding). Give Connect's
+        # post-ingest processing time to finish before acting on the new visits.
+        connect_page.wait_for_timeout(SEED_PROCESSING_SECONDS * 1000)
 
-    for _ in range(int(data["seed_pm_review_items"])):
+    wanted = int(data["seed_pm_review_items"])
+    approved = attempts = 0
+    while approved < wanted and attempts < wanted + 3:
+        attempts += 1
         visits = _open_review_visits(connect_page, config, data, "nm")
-        if not visits.nm_approve_a_visit(data["approve_justification"], only_status="pending"):
-            break
+        try:
+            if not visits.nm_approve_a_visit(data["approve_justification"], only_status="pending"):
+                break
+            approved += 1
+        except AssertionError:
+            # The approve didn't stick (visit still processing) - wait and retry.
+            connect_page.wait_for_timeout(30000)
     return data
 
 
@@ -561,12 +575,34 @@ def test_gap_w_42_approve_requires_justification(connect, test_data, config, rev
     )
 
 
-def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data, config, review_pool):
-    """VV_35 (Worker Visit Verification Page_35): a visit the PM has disagreed cannot
-    then be agreed, and vice versa. As the PM, disagree a reviewable visit and confirm
-    Agree is no longer actionable on it; if a second reviewable visit is available,
-    also agree one and confirm Disagree is no longer actionable. Skips until the
-    manual-review opp is seeded or when no PM-reviewable visit is present."""
+def test_vv_35_agree_then_cannot_disagree(connect, test_data, config, review_pool):
+    """VV_35 (Worker Visit Verification Page_35), agree-first direction: once the PM has
+    agreed a visit, Disagree is no longer actionable. Holds on prod."""
+    connect_page, _ = connect
+    data = review_pool
+    visits = _open_review_visits(connect_page, config, data, "pm")
+
+    cannot_disagree = visits.pm_agree_then_cannot_disagree()
+    if cannot_disagree is None:
+        pytest.skip(
+            f"No PM-reviewable visit with an enabled Agree for '{data['worker_name']}' "
+            "- needs an NM-approved / PM-review-pending visit to cover VV_35."
+        )
+    assert cannot_disagree, "An agreed visit could still be disagreed - agree/disagree must be exclusive"
+
+
+@pytest.mark.xfail(
+    reason=(
+        "MTP VV_35 says a disagreed visit cannot then be agreed, but the product leaves Agree "
+        "enabled after Disagree (user_visit_details.html: Agree is only disabled when "
+        "review_status == 'agree'; Disagree only enabled while 'pending'), so a PM can flip "
+        "disagree -> agree. Seen live on prod 2026-10-16. Product bug or plan inaccuracy - "
+        "awaiting a decision; XPASSes if the product changes."
+    ),
+    strict=False,
+)
+def test_vv_35_disagree_then_cannot_agree(connect, test_data, config, review_pool):
+    """VV_35, disagree-first direction: a visit the PM has disagreed cannot then be agreed."""
     connect_page, _ = connect
     data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
@@ -575,14 +611,6 @@ def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data, con
     if cannot_agree is None:
         pytest.skip(
             f"No PM-reviewable visit with an enabled Disagree for '{data['worker_name']}' "
-            "- seed an NM-approved / PM-review-pending visit to cover VV_35."
+            "- needs an NM-approved / PM-review-pending visit to cover VV_35."
         )
     assert cannot_agree, "A disagreed visit could still be agreed - agree/disagree must be exclusive"
-
-    # Best-effort reverse direction on another visit; only assert if one was available.
-    cannot_disagree = visits.pm_agree_then_cannot_disagree()
-    if cannot_disagree is not None:
-        assert cannot_disagree, (
-            "An agreed visit could still be disagreed - agree/disagree must be exclusive"
-        )
-
