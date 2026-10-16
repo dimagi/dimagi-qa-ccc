@@ -645,3 +645,25 @@ cchq_case_list_map_page:
   # object instead.
   add_property_button: "//button[contains(@data-bind,'addProperty')]"
   save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"
+
+# CommCare HQ Web Apps (cloudcare) - used to submit delivery forms AS a Connect worker
+# ("Log in as"), so tests can seed their own visits. Structure confirmed live on prod 2026-10-16.
+cchq_web_apps_page:
+  restore_as_tile: "//div[contains(@class,'js-restore-as-item')]"
+  filter_workers_input: "//input[@placeholder='Filter workers']"
+  login_as_confirm: "//button[normalize-space()='Log in']"
+  working_as_banner: "//*[contains(normalize-space(),'Working as')]"
+  app_tile_by_name: "//*[contains(@class,'appicon-title')][normalize-space()='{name}']"
+  # Matches the text node (the entry's label sits in a nested element); callers click the
+  # first VISIBLE match, since the nav dropdown can hold hidden duplicates.
+  menu_entry_by_text: "//*[normalize-space(text())='{text}']"
+  question_name_textarea: "(//textarea)[1]"
+  question_id_input: "//input[@type='text'][starts-with(@id,'int')]"
+  gps_map: "//div[contains(@class,'leaflet-container')]"
+  # The map's search box sits in the same input group as its Search button (other hidden
+  # text inputs on the page, e.g. the report-email dialog, come first in the DOM).
+  gps_search_input: "//button[normalize-space()='Search']/ancestor::div[.//input[@type='text']][1]//input[@type='text']"
+  gps_search_button: "//button[normalize-space()='Search']"
+  gps_unset_label: "//*[contains(normalize-space(text()),'??.?????')]"
+  form_submit_button: "//button[normalize-space()='Submit']"
+  form_submitted_message: "//*[contains(normalize-space(),'successfully')]"
