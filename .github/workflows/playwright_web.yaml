@@ -441,6 +441,11 @@ jobs:
           # post has nowhere to thread, so it carries both.
           main_text = summary if start_ts else summary + "\n" + detail
 
+          def slack_error(exc):
+              """The Slack API's own error code (e.g. 'invalid_blocks'), else the exception text."""
+              resp = getattr(exc, "response", None)
+              return (resp.get("error") if resp is not None else None) or str(exc)
+
           def donut_blocks():
               """Upload the donut privately (no channel/thread, so it posts nothing by
               itself) and return blocks that show it under the summary, or None."""
@@ -452,8 +457,21 @@ jobs:
                       filename="run-result.png",
                   )
                   file_id = up["file"]["id"]
+                  # Slack accepts the upload before it has processed the file, and a
+                  # block that references it too early is rejected. Poll until the
+                  # file is ready (needs files:read; without it, fall back to the
+                  # retry loop below).
+                  for _ in range(10):
+                      try:
+                          info = client.files_info(file=file_id)["file"]
+                      except Exception as exc:  # noqa: BLE001
+                          print(f"Could not check the donut upload ({slack_error(exc)}) - relying on retries")
+                          break
+                      if info.get("mimetype") and info.get("url_private"):
+                          break
+                      time.sleep(1)
               except Exception as exc:  # noqa: BLE001
-                  print(f"Donut upload skipped: {exc}")
+                  print(f"Donut upload skipped: {slack_error(exc)}")
                   return None
               return [
                   {"type": "section", "text": {"type": "mrkdwn", "text": main_text}},
@@ -478,7 +496,7 @@ jobs:
                       print("Donut shown on the main message")
                       break
                   except Exception as exc:  # noqa: BLE001
-                      print(f"Main message with donut failed (attempt {attempt + 1}): {exc}")
+                      print(f"Main message with donut failed (attempt {attempt + 1}): {slack_error(exc)}")
                       time.sleep(3)
           if posted is None:
               posted = post_main(None)
@@ -493,6 +511,10 @@ jobs:
                       print("Donut uploaded to thread (fallback)")
                   except Exception as exc:  # noqa: BLE001
                       print(f"Chart upload skipped: {exc}")
+
+          # ts/channel of the main message: other steps (e.g. the AI failure analysis
+          # thread) post their replies under it.
+          chart_ts, chart_channel = (start_ts, start_channel) if start_ts else (posted["ts"], channel)
 
           if start_ts:
               client.chat_postMessage(channel=start_channel, thread_ts=start_ts, text=detail)
