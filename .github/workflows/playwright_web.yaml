@@ -238,9 +238,11 @@ jobs:
                   elif tc.find("error") is not None:
                       errors += 1
                   elif tc.find("skipped") is not None:
-                      # Count by test FILE, so every messaging skip is caught
-                      # regardless of which fixture skipped it or its wording.
-                      if "test_messaging" in cls:
+                      # Messaging is excluded on staging only (it runs on prod), so
+                      # only there are its skips reported as "not included". Count by
+                      # test FILE, so every messaging skip is caught regardless of
+                      # which fixture skipped it or its wording.
+                      if "test_messaging" in cls and env != "prod":
                           messaging_excluded += 1
                       else:
                           skipped += 1
