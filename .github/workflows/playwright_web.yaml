@@ -3,9 +3,12 @@ name: CommCare-Connect Playwright Web Suite
 env:
   SEND_EMAIL: "true"
   SEND_SLACK: "true"
-  # "post-deploy" when the deploy pipeline dispatched this run (it uses the same
-  # account as a manual run, so the actor cannot tell them apart); else "manual".
-  RUN_SOURCE: ${{ inputs.source || 'manual' }}
+  # Defined once, used by the Slack steps and the email. The deploy pipeline
+  # dispatches with the same account as a manual run, so it passes source=post-deploy.
+  TRIGGERED_BY: ${{ inputs.source == 'post-deploy' && 'Post-deploy automated trigger' || github.actor }}
+  # Post-deploy results keep the automated-results channel; PR and manual runs go
+  # to the branch-test channel (falling back to it if that secret is unset).
+  SLACK_CHANNEL: ${{ inputs.source == 'post-deploy' && secrets.SLACK_CHANNEL_ID_TESTS || secrets.SLACK_CHANNEL_ID_BRANCH_TEST || secrets.SLACK_CHANNEL_ID_TESTS }}
 
 on:
   pull_request:
@@ -138,7 +141,6 @@ jobs:
         continue-on-error: true
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ inputs.source == 'post-deploy' && secrets.SLACK_CHANNEL_ID_TESTS || secrets.SLACK_CHANNEL_ID_BRANCH_TEST || secrets.SLACK_CHANNEL_ID_TESTS }}
         shell: bash
         run: |
           pip install --quiet slack_sdk
@@ -157,8 +159,7 @@ jobs:
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
-          actor = ("Post-deploy automated trigger" if os.environ.get("RUN_SOURCE") == "post-deploy"
-                   else os.environ.get("GITHUB_ACTOR", ""))
+          actor = os.environ.get("TRIGGERED_BY", "")
           start_epoch = int(time.time())
           # Slack renders <!date^EPOCH^{format}|fallback> in each viewer's timezone.
           started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
@@ -303,7 +304,7 @@ jobs:
             <h2>CommCare-Connect Playwright Web Report - ${{ env.TEST_ENV }}</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
-            <p><b>Triggered by:</b> ${{ inputs.source == 'post-deploy' && 'Post-deploy automated trigger' || github.actor }}</p>
+            <p><b>Triggered by:</b> ${{ env.TRIGGERED_BY }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -322,7 +323,6 @@ jobs:
         if: ${{ always() && env.SEND_SLACK == 'true' }}
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ inputs.source == 'post-deploy' && secrets.SLACK_CHANNEL_ID_TESTS || secrets.SLACK_CHANNEL_ID_BRANCH_TEST || secrets.SLACK_CHANNEL_ID_TESTS }}
           STATUS: ${{ steps.aggregate.outputs.status }}
           PASSED: ${{ steps.aggregate.outputs.passed }}
           FAILED: ${{ steps.aggregate.outputs.failed }}
@@ -359,8 +359,7 @@ jobs:
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
 
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
-          actor = ("Post-deploy automated trigger" if os.environ.get("RUN_SOURCE") == "post-deploy"
-                   else os.environ.get("GITHUB_ACTOR", ""))
+          actor = os.environ.get("TRIGGERED_BY", "")
           passed = int(os.environ.get("PASSED", "0") or "0")
           failed = int(os.environ.get("FAILED", "0") or "0")
           skipped = int(os.environ.get("SKIPPED", "0") or "0")
