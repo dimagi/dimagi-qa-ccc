@@ -24,6 +24,14 @@ on:
           - stage
           - prod
           - both
+      deployed_sha:
+        description: "Deployed commcare-connect commit; picks pending_prod / replaced_by_pr tests per PR"
+        required: false
+        default: ""
+      deployed_prs:
+        description: "Or: comma-separated Connect PR numbers to treat as deployed (overrides deployed_sha)"
+        required: false
+        default: ""
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -100,6 +108,12 @@ jobs:
       # Per-PR runs skip on_demand tests (real-device Maestro builds); a manual
       # workflow_dispatch runs everything.
       PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand' || '' }}
+      # Connect PR gating (utils/pr_gating.py). Empty means no marked PR counts as
+      # deployed: originals run, pending_prod copies skip. The token only reads the
+      # public commcare-connect repo to compare commits.
+      DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+      DEPLOYED_PRS: ${{ inputs.deployed_prs }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
