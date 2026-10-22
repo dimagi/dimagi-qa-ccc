@@ -23,6 +23,20 @@ on:
           - stage
           - prod
           - both
+      prod_apk:
+        description: "APK for prod runs. 'latest release' = the highest-version commcare-android GitHub release; 'committed app/ file' = app/app-commcare-release.apk on this branch (e.g. to test a build that isn't released yet)."
+        required: false
+        default: "latest release"
+        type: choice
+        options:
+          - latest release
+          - committed app/ file
+
+  # Weekdays 00:00 UTC (05:30 IST), staging only: the dev/beta build against Connect
+  # staging, before anyone is online. The run takes about 5 minutes, so it is done
+  # before the CommCare mobile suite takes the shared BrowserStack slots at 00:30 UTC.
+  schedule:
+    - cron: "0 0 * * 1-5"
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.
@@ -45,6 +59,8 @@ jobs:
             else
               echo "matrix={\"environment\":[\"${{ inputs.environment }}\"]}" >> $GITHUB_OUTPUT
             fi
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo 'matrix={"environment":["stage"]}' >> $GITHUB_OUTPUT
           else
             echo 'matrix={"environment":["stage","prod"]}' >> $GITHUB_OUTPUT
           fi
@@ -152,6 +168,17 @@ jobs:
         # pyyaml: the runner reads test_data/mobile_workers.yaml to resolve each
         # flow's worker for this environment.
         run: pip install requests pyyaml
+
+      # Prod runs test the latest commcare-android release rather than a committed
+      # app/ file, unless a manual run picks 'committed app/ file'. The script stops
+      # the run if the APK's versionName doesn't match its release tag or it isn't
+      # built for Connect prod. Every run (this or a committed APK) is also checked
+      # again before upload by run_on_browserstack.py.
+      - name: Fetch latest release APK (prod)
+        if: ${{ matrix.environment == 'prod' && (github.event_name != 'workflow_dispatch' || inputs.prod_apk != 'committed app/ file') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python maestro_mobile/scripts/apk_check.py fetch-release
 
       # The report's trend line needs the previous runs' pass rates, and reports are
       # artifacts rather than committed files. Cached per environment: stage and prod
