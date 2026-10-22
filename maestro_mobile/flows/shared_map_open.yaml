@@ -129,7 +129,16 @@ env:
 - extendedWaitUntil:
     visible: { text: "${OPPORTUNITY}" }
     timeout: 60000
-- tapOn: { text: "Resume" }
+# 2.65 dropped the card's Resume button (connect_job_info_view_resume) and made
+# the whole card (job_card_root) the tap target; tapping its title lands on it.
+- runFlow:
+    when: { visible: { text: "Resume" } }
+    commands:
+      - tapOn: { text: "Resume" }
+- runFlow:
+    when: { notVisible: { text: "Resume" } }
+    commands:
+      - tapOn: { text: "${OPPORTUNITY}" }
 - extendedWaitUntil:
     visible: { text: "Sync with Server" }
     timeout: 600000

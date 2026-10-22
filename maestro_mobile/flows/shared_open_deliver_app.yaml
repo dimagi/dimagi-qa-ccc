@@ -88,8 +88,22 @@ appId: org.commcare.dalvik
 # The card's title is not clickable - its buttons are. With learning already
 # finished the card offers Resume, which downloads the app on a fresh install and
 # then opens its home screen. Allow a long timeout: this is a real download.
-- tapOn:
-    id: "btn_resume"
+# 2.65 dropped btn_resume and made the whole card (job_card_root) the tap target;
+# tapping its title lands on it.
+- runFlow:
+    when:
+      visible:
+        id: "btn_resume"
+    commands:
+      - tapOn:
+          id: "btn_resume"
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_resume"
+    commands:
+      - tapOn:
+          text: "${OPPORTUNITY}"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"
