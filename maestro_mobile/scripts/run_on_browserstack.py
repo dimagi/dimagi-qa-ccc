@@ -7,6 +7,7 @@ import time
 import zipfile
 from pathlib import Path
 
+import apk_check
 import maestro_report
 import requests
 import yaml
@@ -316,6 +317,10 @@ def get_credentials():
 def upload_app(auth, app_env=None):
     apk_path = resolve_apk(app_env)
     app_env = app_env or DEFAULT_APP_ENV
+    try:
+        apk_check.check_apk(apk_path, app_env)
+    except apk_check.ApkCheckError as error:
+        sys.exit(f"APK check failed: {error}")
     print(f"Uploading {apk_path.name} for env '{app_env}'...")
     with open(apk_path, "rb") as f:
         response = requests.post(
