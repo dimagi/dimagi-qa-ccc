@@ -104,6 +104,14 @@ appId: org.commcare.dalvik
     commands:
       - tapOn:
           text: "${OPPORTUNITY}"
+      # ...which opens the opportunity's Delivery dashboard. Its footer button
+      # reads "Download App" until the deliver app is installed, then "Start".
+      - extendedWaitUntil:
+          visible:
+            text: "Download App|Start"
+          timeout: 60000
+      - tapOn:
+          text: "Download App|Start"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"
