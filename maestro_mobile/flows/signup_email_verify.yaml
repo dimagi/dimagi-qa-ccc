@@ -93,8 +93,9 @@ appId: org.commcare.dalvik
     visible:
       text: "Verification unsuccessful"
     timeout: 30000
+# 2.65.0 renamed the dialog's retry button from "Try again" to "Wait".
 - assertVisible:
-    text: "Try again"
+    text: "Wait"
 - assertVisible:
     text: "Proceed without email"
 

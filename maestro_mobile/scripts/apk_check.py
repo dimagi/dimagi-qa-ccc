@@ -8,11 +8,19 @@ Two jobs, both agreed with the dev team (Mobile Automation QA Plan, tasks B2/B3)
   APK's own code, which carries the Connect host it was built against; the expected
   host comes from config/env.yaml's connect_url.
 
+* check_apk() also refuses anything but a qaAutomation build. The flows depend on it:
+  a plain release build sends signup to biometric/PIN setup after the phone number,
+  asks for biometrics on every PersonalID unlock, and needs a real camera for the
+  signup photo - none of which a BrowserStack device can do. That is not a 2.65
+  change; it is why the public release APK fails at the first screen after the phone
+  number (PR #70's first prod run, on app-commcare-release.apk from commcare_2.65.0).
+
 * fetch_release_apk(): prod runs test the latest commcare-android GitHub release
   instead of a committed app/ file. "Latest" is the highest version among published
   releases, not the most recently published one - releases are uploaded by hand, and
   a patch for an older line can land after a newer version. The APK's versionName
-  must match its release tag.
+  must match its release tag. Only a qaAutomation asset counts (see above), so this
+  finds nothing until releases carry one alongside app-commcare-release.apk.
 
 The staging (cccStaging) APK stays committed in app/ until there is a fixed place to
 fetch dev/beta staging builds from.
@@ -38,11 +46,16 @@ ENV_CONFIG = PROJECT_ROOT / "config" / "env.yaml"
 RELEASES_API = "https://api.github.com/repos/dimagi/commcare-android/releases"
 RELEASE_APK_PATH = PROJECT_ROOT / "app" / "app-commcare-release.apk"
 RELEASES_TO_SCAN = 15
-# The main CommCare APK under every name seen on releases so far (app-commcare-release.apk,
-# commcare-2.63.1-release.apk, app-commcare-release_2.64.1.apk); not lts/staging/connect builds.
-RELEASE_ASSET = re.compile(r"^(app-)?commcare[-_](?!.*(lts|staging|connect)).*\.apk$", re.IGNORECASE)
+# The CommCare qaAutomation APK, named as commcare-android's build writes it
+# (app-commcare-qaAutomation.apk), allowing a version suffix the way release assets have had
+# one (app-commcare-release_2.64.1.apk); not lts/staging/connect builds, and not the plain
+# release APK.
+RELEASE_ASSET = re.compile(r"^(app-)?commcare[-_](?!.*(lts|staging|connect)).*qaautomation.*\.apk$", re.IGNORECASE)
 RELEASE_TAG = re.compile(r"^commcare_(\d+(?:\.\d+)*)$")
 
+# BuildConfig.BUILD_TYPE of a qaAutomation build, as a dex string-table entry: a ULEB128 length
+# (12) then the MUTF-8 bytes and a NUL. A plain release build has no such entry.
+_QA_AUTOMATION_DEX_STRING = b"\x0cqaAutomation\x00"
 _RES_STRING_POOL = 0x0001
 _RES_XML_START_ELEMENT = 0x0102
 _UTF8_FLAG = 0x100
@@ -115,6 +128,14 @@ def connect_hosts(apk_path):
     return hosts
 
 
+def is_qa_automation_build(apk_path):
+    """True if the APK is a qaAutomation build (BuildConfig.IS_QA_AUTOMATION)."""
+    with zipfile.ZipFile(apk_path) as apk:
+        return any(
+            _QA_AUTOMATION_DEX_STRING in apk.read(name) for name in apk.namelist() if name.endswith(".dex")
+        )
+
+
 def expected_hosts():
     """{app_env: Connect host} from config/env.yaml's connect_url."""
     with open(ENV_CONFIG, encoding="utf-8") as f:
@@ -146,6 +167,11 @@ def check_apk(apk_path, app_env, expected_version=None):
     wrong = found & others
     if wrong:
         raise ApkCheckError(f"{Path(apk_path).name} is built for another environment: it names {sorted(wrong)}")
+    if not is_qa_automation_build(apk_path):
+        raise ApkCheckError(
+            f"{Path(apk_path).name} is not a qaAutomation build; the flows need one "
+            "(assembleCommcareQaAutomation / assembleCccStagingQaAutomation)"
+        )
 
     version = read_version_name(apk_path)
     if not version:
@@ -168,7 +194,7 @@ def _get_json(url):
 
 
 def pick_release(releases):
-    """(release, asset) for the highest-version published release with a CommCare APK."""
+    """(release, asset) for the highest-version published release with a CommCare qaAutomation APK."""
     candidates = []
     for release in releases:
         match = RELEASE_TAG.match(release.get("tag_name") or "")
@@ -178,7 +204,10 @@ def pick_release(releases):
         if asset:
             candidates.append((tuple(int(p) for p in match.group(1).split(".")), release, asset))
     if not candidates:
-        raise ApkCheckError(f"No published release in the last {RELEASES_TO_SCAN} has a CommCare APK")
+        raise ApkCheckError(
+            f"No published release in the last {RELEASES_TO_SCAN} has a CommCare qaAutomation APK "
+            "(releases carry only the plain release build until the release process attaches one)"
+        )
     _, release, asset = max(candidates, key=lambda candidate: candidate[0])
     return release, asset
 

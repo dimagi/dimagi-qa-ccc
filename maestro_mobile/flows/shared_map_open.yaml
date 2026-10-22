@@ -91,9 +91,9 @@ env:
 # account has no verified email and the email_otp_verification switch is on -
 # so both taps are optional rather than asserted. Without them this flow stops
 # on "Add your email (optional)" and every later step fails. The confirm
-# dialog's buttons are Material buttons, which upper-case their labels: YES.
+# dialog's buttons are Material buttons, which upper-case their labels: YES. 2.65 renamed the dialog "Protect your account" and its button SKIP.
 - tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
-- tapOn: { text: "YES", optional: true }
+- tapOn: { text: "YES|SKIP", optional: true }
 # All our seeded map workers are pre-created PersonalId accounts, so signing in
 # recovers the account and shows an "Account Recovered" dialog. It appears a few
 # seconds after the code is submitted (a server round-trip), so wait for its OK
