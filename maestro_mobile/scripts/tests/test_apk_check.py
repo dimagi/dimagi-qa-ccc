@@ -4,6 +4,8 @@ Release picking runs on fake release lists. The host and version checks run on
 the APKs committed in app/, which are real builds for each environment.
 """
 
+import zipfile
+
 import pytest
 
 from maestro_mobile.scripts.apk_check import (
@@ -18,7 +20,7 @@ PROD_APK = PROJECT_ROOT / "app" / "app-commcare-release.apk"
 STAGE_APK = PROJECT_ROOT / "app" / "app-cccStaging-release.apk"
 
 
-def _release(tag, asset="app-commcare-release.apk", draft=False, prerelease=False):
+def _release(tag, asset="app-commcare-qaAutomation.apk", draft=False, prerelease=False):
     return {"tag_name": tag, "draft": draft, "prerelease": prerelease, "assets": [{"name": asset}]}
 
 
@@ -39,13 +41,14 @@ def test_pick_release_skips_drafts_prereleases_and_non_version_tags():
     assert release["tag_name"] == "commcare_2.65.0"
 
 
-def test_pick_release_skips_releases_without_a_commcare_apk():
+def test_pick_release_skips_releases_without_a_commcare_qa_automation_apk():
     releases = [
-        _release("commcare_2.66.0", asset="commcare-2.66.0-staging.apk"),
-        _release("commcare_2.65.0", asset="app-commcare-release_2.65.0.apk"),
+        _release("commcare_2.67.0", asset="app-commcare-release.apk"),
+        _release("commcare_2.66.0", asset="app-cccStaging-qaAutomation.apk"),
+        _release("commcare_2.65.0", asset="app-commcare-qaAutomation_2.65.0.apk"),
     ]
     release, asset = pick_release(releases)
-    assert (release["tag_name"], asset["name"]) == ("commcare_2.65.0", "app-commcare-release_2.65.0.apk")
+    assert (release["tag_name"], asset["name"]) == ("commcare_2.65.0", "app-commcare-qaAutomation_2.65.0.apk")
 
 
 def test_pick_release_fails_when_nothing_usable():
@@ -70,3 +73,13 @@ def test_version_must_match_when_one_is_expected():
     assert check_apk(PROD_APK, "prod", expected_version=version) == version
     with pytest.raises(ApkCheckError, match="expected 0.0.1"):
         check_apk(PROD_APK, "prod", expected_version="0.0.1")
+
+
+def test_a_plain_release_build_is_rejected(tmp_path):
+    # Built for prod, but without the qaAutomation build type - what the public
+    # release asset is.
+    apk = tmp_path / "app-commcare-release.apk"
+    with zipfile.ZipFile(apk, "w") as zf:
+        zf.writestr("classes.dex", b"https://connect.dimagi.com/ \x07release\x00")
+    with pytest.raises(ApkCheckError, match="not a qaAutomation build"):
+        check_apk(apk, "prod")

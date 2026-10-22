@@ -53,10 +53,11 @@ login_page:
   email_skip_btn: "org.commcare.dalvik:id/personalid_email_skip_button"
   email_continue_btn: "org.commcare.dalvik:id/personalid_email_continue_button"
   email_error_txt: "org.commcare.dalvik:id/personalid_email_error"
-  # The skip confirmation reuses the app-linking Yes/No strings, not Skip/Cancel,
-  # and Material buttons render them upper-cased - match both spellings.
-  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
-  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
+  # The skip confirmation is Yes/No on 2.64 and Skip/Add Email ("Protect your
+  # account") on 2.65+. Material buttons render them upper-cased - match both
+  # spellings of each.
+  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes' or @text='SKIP' or @text='Skip']"
+  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No' or @text='ADD EMAIL' or @text='Add Email']"
   # StandardAlertDialog renders its message in a plain TextView, NOT in
   # connect_message_message - that id belongs to the full-screen message
   # fragment. Match on the text.

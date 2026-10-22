@@ -41,3 +41,22 @@ Alternative when you can't/don't want to use Maestro Studio's browser UI: `adb s
 - **`assertVisible`/`tapOn` on `text:` selectors require a full match, not substring.** Popup body text that continues past your target phrase (e.g. "You have entered the wrong Backup Code. Please try again...") won't match a plain substring — wrap it as `.*your phrase.*`.
 - **Device-level location prompts** (Google's "Location Accuracy" dialog, then the app's own "Enable Location Service" screen) block the very first sign-up attempt after a fresh install/clear. `adb shell cmd location set-location-enabled true` isn't sufficient on its own — you also have to tap through the Google Location Accuracy dialog once (choosing "Turn on") and relaunch the app for it to pass the check.
 - **`maestro test`/`run_tests.py` need `maestro`, `adb`, and `java` resolvable via a real Windows `PATH` search**, not just a shell alias — Python's `subprocess.run` on Windows won't find `maestro.bat` from a bare `"maestro"` without `shutil.which` resolving it first (already handled in `run_tests.py`).
+
+## The APKs in app/ must be qaAutomation builds
+
+`app/app-commcare-release.apk` (prod) and `app/app-cccStaging-release.apk` (stage) are
+**qaAutomation** builds (`BuildConfig.IS_QA_AUTOMATION = true`), not the APK attached to a
+commcare-android GitHub release. A plain release build opens biometric/PIN setup right after
+the phone number, asks for biometrics on every PersonalID unlock and needs a real camera for
+the signup photo, so every flow fails on it. `apk_check.py` refuses such an APK up front.
+
+To move the suite to a new release `X.Y.Z`:
+
+1. Dispatch commcare-android's `commcare-android-pr-workflow.yml` on the release tag, passing
+   commcare-core's commit for the same tag (without it the build cannot resolve `:commcare-core`):
+   `gh workflow run commcare-android-pr-workflow.yml -R dimagi/commcare-android --ref commcare_X.Y.Z -f commcare_core_sha=$(gh api repos/dimagi/commcare-core/commits/commcare_X.Y.Z -q .sha)`
+2. From that run, download `commcare-qaAutomation-release-apk` and
+   `ccc-staging-qaAutomation-release-apk` (kept 3 days) and save them as
+   `app/app-commcare-release.apk` and `app/app-cccStaging-release.apk`.
+3. `python maestro_mobile/scripts/apk_check.py check --app-env prod --expect-version X.Y.Z`,
+   and the same for `stage`.

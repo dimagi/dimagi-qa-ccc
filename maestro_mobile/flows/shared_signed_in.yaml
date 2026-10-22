@@ -33,7 +33,7 @@ appId: org.commcare.dalvik
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
     optional: true
 - tapOn:
-    text: "YES"
+    text: "YES|SKIP"
     optional: true
 
 # Recovering an existing account raises "Account Recovered". It lands a moment
