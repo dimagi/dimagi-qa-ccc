@@ -393,6 +393,13 @@ def poll_build(auth, build_id):
     print("Waiting for build to finish...")
     while True:
         response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth)
+        # A 5xx from the status endpoint says nothing about the build, which keeps
+        # running on BrowserStack: a single 504 here once killed a stage run three
+        # minutes in and threw away the device build. Keep polling through them.
+        if response.status_code >= 500:
+            print(f"Build status returned {response.status_code}; still polling...")
+            time.sleep(POLL_INTERVAL_SECONDS)
+            continue
         response.raise_for_status()
         data = response.json()
         status = data.get("status")
