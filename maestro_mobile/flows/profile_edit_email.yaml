@@ -106,32 +106,55 @@ appId: org.commcare.dalvik
     enabled: true
 
 # ---------------------------------------------------------------- MP_10
-# Saving an email change asks for confirmation first; Cancel returns to the form
-# with the entered values still there.
+# Saving an email change asks the user to authenticate first; backing out returns
+# to the form with the entered values still there.
+#
+# 2.65.0 replaced the "Verify your new email" confirmation dialog (Cancel / Send
+# Code) with a "Confirm Backup Code" screen (PersonalIdProfileEditFragment.
+# startEmailChangeAuth), followed by a "Verify your email" screen with a "Send
+# code" button. Accounts without a backup code get a phone OTP instead; the
+# fixture always has one.
 - tapOn:
     id: "org.commcare.dalvik:id/btn_save"
 - extendedWaitUntil:
     visible:
-      text: "Verify your new email"
+      id: "org.commcare.dalvik:id/backup_code_view"
     timeout: 30000
 - assertVisible:
-    text: ".*6-digit code.*"
-- tapOn:
-    text: "Cancel"
+    text: "Confirm Backup Code"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_email_edit_text"
+    timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_email_edit_text"
     text: ".*mpedit.*"
 
 # ---------------------------------------------------------------- MP_11
-# Send Code opens the Verify Email screen for the new address.
+# After the backup code, Send code opens the Verify Email screen for the new
+# address. The send screen shows the address unmasked on this path
+# (setMasked(false)).
 - tapOn:
     id: "org.commcare.dalvik:id/btn_save"
 - extendedWaitUntil:
     visible:
-      text: "Verify your new email"
+      id: "org.commcare.dalvik:id/backup_code_view"
     timeout: 30000
 - tapOn:
-    text: "Send Code"
+    id: "org.commcare.dalvik:id/backup_code_view"
+- inputText: "${BACKUP_CODE}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_button"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/send_otp_button"
+    timeout: 30000
+- assertVisible:
+    id: "org.commcare.dalvik:id/send_otp_address"
+    text: ".*mpedit.*"
+- tapOn:
+    id: "org.commcare.dalvik:id/send_otp_button"
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/otp_code_view"
@@ -149,7 +172,16 @@ appId: org.commcare.dalvik
 # been committed by this point, which is the whole point of the case: the app
 # saves the name before the OTP step, so abandoning verification leaves the new
 # name in place and the email unchanged.
-- back
+#
+# On 2.65 the backup code and send-code screens sit between the two, so back is
+# pressed until Edit Profile is showing rather than exactly once.
+- repeat:
+    while:
+      notVisible:
+        id: "org.commcare.dalvik:id/profile_name_edit_text"
+    times: 4
+    commands:
+      - back
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/profile_name_edit_text"

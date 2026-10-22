@@ -107,7 +107,7 @@ class PersonalIDPage(BasePage):
         self.wait_for_element(self.BACKUP_CODE_WELCOME_TEXT)
         welcome_text = self.get_text(self.BACKUP_CODE_WELCOME_TEXT)
         assert re.match(
-            rf"Welcome back\s+{name}",
+            rf"Welcome back,?\s+{name}",  # 2.65 added the comma
             welcome_text
         )
 
@@ -121,7 +121,7 @@ class PersonalIDPage(BasePage):
         if not self.is_displayed(self.EMAIL_SKIP_BTN, timeout=15):
             return False
         self.click_element(self.EMAIL_SKIP_BTN)
-        # Confirmation dialog - the buttons reuse the app-linking Yes/No strings.
+        # Confirmation dialog - Yes/No on 2.64, Skip/Add Email on 2.65+.
         self.click_element(self.EMAIL_SKIP_CONFIRM_YES)
         return True
 

@@ -76,7 +76,7 @@ appId: org.commcare.dalvik
                   - tapOn:
                       id: "personalid_email_skip_button"
                   - tapOn:
-                      text: "YES"
+                      text: "YES|SKIP"
                       optional: true
             - runFlow:
                 when:

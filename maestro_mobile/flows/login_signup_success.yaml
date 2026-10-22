@@ -13,7 +13,8 @@ env:
 - runFlow: shared_login_signup.yaml
 - assertVisible:
     id: "org.commcare.dalvik:id/welcome_back"
-    text: "Welcome back ${USERNAME}"
+    # 2.65 added a comma: "Welcome back, <name>" (personalid_welcome_back_msg).
+    text: "Welcome back,? ${USERNAME}"
 # 2.63 replaced the single connect_backup_code_input field with a six-box
 # NumericCodeView, backup_code_view (fragment_recovery_code.xml). Tapping the
 # view focuses the first empty box - NumericCodeView.onFocusChange redirects
