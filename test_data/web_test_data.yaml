@@ -1,8 +1,7 @@
 # CCCT-2882: the Opportunities List opens on Active, non-test only. Unsuffixed =
-# prod (not deployed there yet: the test asserts the OLD, unfiltered behaviour and
-# fails once it ships - flip prod to true then), _staging = stage.
+# prod (shipped there too - the check caught the release), _staging = stage.
 OLP_DEFAULT_FILTERS:
-  expected: false
+  expected: true
   expected_staging: true
   status: "Active"
   is_test: "No"
