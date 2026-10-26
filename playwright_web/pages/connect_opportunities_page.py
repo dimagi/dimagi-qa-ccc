@@ -81,12 +81,12 @@ class ConnectOpportunitiesPage(BasePage):
 
     def select_learn_app_in_opportunity(self, value):
         self.scroll_into_view(self.OPP_LEARN_APP_DROPDOWN)
-        self.wait_for_select_options_loaded(self.OPP_LEARN_APP_DROPDOWN)
+        self.wait_for_select_options_loaded(self.OPP_LEARN_APP_DROPDOWN, timeout=90000)
         self.select_by_visible_text(self.OPP_LEARN_APP_DROPDOWN, value)
 
     def select_deliver_app_in_opportunity(self, value):
         self.scroll_into_view(self.OPP_DELIVER_APP_DROPDOWN)
-        self.wait_for_select_options_loaded(self.OPP_DELIVER_APP_DROPDOWN)
+        self.wait_for_select_options_loaded(self.OPP_DELIVER_APP_DROPDOWN, timeout=90000)
         self.select_by_visible_text(self.OPP_DELIVER_APP_DROPDOWN, value)
 
     def enter_learn_app_description_in_opportunity(self, value):
@@ -181,8 +181,8 @@ class ConnectOpportunitiesPage(BasePage):
             # the reload timeout in the report. Re-open the form by URL (not reload) so a
             # half-loaded page cannot hang it, then give the app lists time to load.
             self._step(f"Opportunity form failed ({type(error).__name__}: {str(error)[:300]}) - re-opening")
-            self.page.goto(self.page.url, wait_until="commit", timeout=60000)
-            self.page.wait_for_load_state("domcontentloaded", timeout=60000)
+            self.page.goto(self.page.url, wait_until="commit", timeout=120000)
+            self.page.wait_for_load_state("domcontentloaded", timeout=120000)
             self.page.wait_for_timeout(10000)
             opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
         self.page.wait_for_timeout(3000)
