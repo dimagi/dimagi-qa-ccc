@@ -13,7 +13,8 @@ tables.py, filters.py), not guessed against a live page.
 
 Entry is the shared PM web account (PM_Automation_01) via flows.login_to_connect.
 The opportunity is chosen from test data (OPD.opportunity_name, the seeded "Demo
-Opportunity") with a fall-back to the first row so the suite is not seed-coupled.
+Opportunity"), matched exactly; if it is not in the list the OPD modules skip with
+a clear message instead of running against a different opportunity.
 """
 
 import pytest
