@@ -70,9 +70,10 @@ appId: org.commcare.dalvik
 # The Confirm field has to be focused by coordinate: NumericCodeView builds its
 # six EditTexts at runtime with setId(index), so they carry no resource-id, text
 # or content description, and childOf+index resolves to the container instead.
-# 23%,58% is the centre of Confirm's first box on the Pixel 7 (1080x2400).
+# 23%,44% is the centre of Confirm's first box on the Pixel 7 (1080x2400) on
+# 2.65 (23%,58% before it); see shared_registration.yaml.
 - assertVisible: { id: "org.commcare.dalvik:id/confirm_code_view" }
-- tapOn: { point: "23%,58%" }
+- tapOn: { point: "23%,44%" }
 - inputText: "${BACKUP_CODE}"
 - tapOn: { id: "org.commcare.dalvik:id/connect_backup_code_button" }
 - extendedWaitUntil:
@@ -81,7 +82,7 @@ appId: org.commcare.dalvik
 
 # Leave the fixture WITHOUT an email: MP_03 and RE_01 both depend on that.
 - tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
-- tapOn: { text: "YES", optional: true }
+- tapOn: { text: "YES|SKIP", optional: true }
 
 # The account does not exist until the photo is saved. On a 2.65 build the
 # placeholder photo is already applied, so Save is enabled with no camera.

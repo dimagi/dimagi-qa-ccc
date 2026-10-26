@@ -30,7 +30,7 @@ on:
           - prod
           - both
       prod_apk:
-        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch; 'latest release' = the highest-version commcare-android GitHub release. Committed stays the default until the flows support 2.65 (shared_login_signup fails on 2.65.0)."
+        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch (a qaAutomation build of the latest release, 2.65.0); 'latest release' = the qaAutomation APK on the highest-version commcare-android GitHub release, which fails until releases attach one - the flows cannot run on the plain release build."
         required: false
         default: "committed app/ file"
         type: choice
@@ -186,13 +186,14 @@ jobs:
         # flow's worker for this environment.
         run: pip install requests pyyaml
 
-      # A manual prod run can test the latest commcare-android release instead of the
-      # committed app/ file. Not the default yet: on 2.65.0 every flow fails in
-      # shared_login_signup.yaml (PR #70's first run), so PR and scheduled runs keep the
-      # committed APK until the flows support 2.65. The script stops the run if the
-      # APK's versionName doesn't match its release tag or it isn't built for Connect
-      # prod. Every run (this or a committed APK) is also checked again before upload
-      # by run_on_browserstack.py.
+      # A manual prod run can fetch the latest commcare-android release instead of the
+      # committed app/ file. Not the default: the flows need a qaAutomation build, and
+      # releases carry only the plain release APK, which stops at biometric setup after
+      # the phone number (PR #70's first run). Until releases attach the qaAutomation
+      # APK, app/ holds one built from the release tag. The script stops the run if
+      # there is no such asset, its versionName doesn't match its release tag, or it
+      # isn't built for Connect prod. Every run (this or a committed APK) is also
+      # checked again before upload by run_on_browserstack.py.
       - name: Fetch latest release APK (prod)
         if: ${{ matrix.environment == 'prod' && github.event_name == 'workflow_dispatch' && inputs.prod_apk == 'latest release' }}
         env:

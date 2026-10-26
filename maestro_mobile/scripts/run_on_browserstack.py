@@ -47,19 +47,12 @@ TEST_FLOWS = [
     "profile_discard.yaml",
     "profile_forget.yaml",
     "recovery_email_prompt.yaml",
-    # SKIPPED, 2026-09-10: signup_email_add.yaml and signup_email_verify.yaml are
-    # held out until the 2.65 APK ships. Between them they cover SE_01-SE_09 and
-    # SE_12 - adding and verifying an email DURING signup - and they pass, but
-    # only against the unreleased 2.65 build they were written on. Running the
-    # suite on 2.65 to keep them green would put every other flow on an
-    # unreleased build too, which is the worse trade: those flows are the stable
-    # regression set.
-    #
-    # Nothing else depends on them. Each registers its own account from a cleared
-    # app, so holding them out changes no other flow's starting state.
-    #
-    # TO RE-ENABLE once 2.65 is released: add the two names here, and drop
-    # @pytest.mark.skip from tests/mobile_tests/test_tc_11.py (SE_10, same gap).
+    # SE_01-SE_09: adding and verifying an email DURING signup. Held out until
+    # 2.65.0 shipped, because automated signup needs the qaAutomation placeholder
+    # photo that first appears in 2.65. Each registers its own account from a
+    # cleared app, so they change no other flow's starting state.
+    "signup_email_add.yaml",
+    "signup_email_verify.yaml",
 ]
 POLL_INTERVAL_SECONDS = 15
 
@@ -400,6 +393,13 @@ def poll_build(auth, build_id):
     print("Waiting for build to finish...")
     while True:
         response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth)
+        # A 5xx from the status endpoint says nothing about the build, which keeps
+        # running on BrowserStack: a single 504 here once killed a stage run three
+        # minutes in and threw away the device build. Keep polling through them.
+        if response.status_code >= 500:
+            print(f"Build status returned {response.status_code}; still polling...")
+            time.sleep(POLL_INTERVAL_SECONDS)
+            continue
         response.raise_for_status()
         data = response.json()
         status = data.get("status")

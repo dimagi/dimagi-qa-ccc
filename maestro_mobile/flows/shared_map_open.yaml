@@ -91,9 +91,16 @@ env:
 # account has no verified email and the email_otp_verification switch is on -
 # so both taps are optional rather than asserted. Without them this flow stops
 # on "Add your email (optional)" and every later step fails. The confirm
-# dialog's buttons are Material buttons, which upper-case their labels: YES.
+# dialog's buttons are Material buttons, which upper-case their labels: YES. 2.65 renamed the dialog "Protect your account" and its button SKIP.
+# The email step renders after a server round trip, so wait for it (briefly, and
+# optionally) before the skip - a bare optional tap can run on an empty screen
+# and leave the flow stuck on "Add your email (optional)" (stage, 2.65.0).
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/personalid_email_skip_button" }
+    timeout: 15000
+    optional: true
 - tapOn: { id: "org.commcare.dalvik:id/personalid_email_skip_button", optional: true }
-- tapOn: { text: "YES", optional: true }
+- tapOn: { text: "YES|SKIP", optional: true }
 # All our seeded map workers are pre-created PersonalId accounts, so signing in
 # recovers the account and shows an "Account Recovered" dialog. It appears a few
 # seconds after the code is submitted (a server round-trip), so wait for its OK
@@ -129,7 +136,23 @@ env:
 - extendedWaitUntil:
     visible: { text: "${OPPORTUNITY}" }
     timeout: 60000
-- tapOn: { text: "Resume" }
+# 2.65 dropped the card's Resume button (connect_job_info_view_resume) and made
+# the whole card (job_card_root) the tap target; tapping its title lands on it.
+- runFlow:
+    when: { visible: { text: "Resume" } }
+    commands:
+      - tapOn: { text: "Resume" }
+- runFlow:
+    when: { notVisible: { text: "Resume" } }
+    commands:
+      - tapOn: { text: "${OPPORTUNITY}" }
+      # ...which opens the opportunity's Delivery dashboard. Its footer button
+      # reads "Download App" until the deliver app is installed, then "Start";
+      # either opens the app's home screen.
+      - extendedWaitUntil:
+          visible: { text: "Download App|Start" }
+          timeout: 60000
+      - tapOn: { text: "Download App|Start" }
 - extendedWaitUntil:
     visible: { text: "Sync with Server" }
     timeout: 600000
