@@ -176,8 +176,13 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(5000)
         try:
             opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
-        except Exception:
-            self.page.reload(wait_until="domcontentloaded", timeout=60000)
+        except Exception as error:  # noqa: BLE001 - retry once on any form failure
+            # Log why the first attempt failed: the retry used to hide it, leaving only
+            # the reload timeout in the report. Re-open the form by URL (not reload) so a
+            # half-loaded page cannot hang it, then give the app lists time to load.
+            self._step(f"Opportunity form failed ({type(error).__name__}: {str(error)[:300]}) - re-opening")
+            self.page.goto(self.page.url, wait_until="commit", timeout=60000)
+            self.page.wait_for_load_state("domcontentloaded", timeout=60000)
             self.page.wait_for_timeout(10000)
             opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
         self.page.wait_for_timeout(3000)
