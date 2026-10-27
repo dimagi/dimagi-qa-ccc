@@ -3,6 +3,12 @@ name: CommCare-Connect Maestro Mobile Suite
 env:
   SEND_EMAIL: "true"
   SEND_SLACK: "true"
+  # Defined once, used by the Slack steps and the email. The deploy pipeline
+  # dispatches with the same account as a manual run, so it passes source=post-deploy.
+  TRIGGERED_BY: ${{ inputs.source == 'post-deploy' && 'Post-deploy automated trigger' || github.actor }}
+  # Post-deploy results keep the automated-results channel; PR and manual runs go
+  # to the branch-test channel (falling back to it if that secret is unset).
+  SLACK_CHANNEL: ${{ inputs.source == 'post-deploy' && secrets.SLACK_CHANNEL_ID_TESTS || secrets.SLACK_CHANNEL_ID_BRANCH_TEST || secrets.SLACK_CHANNEL_ID_TESTS }}
 
 on:
   pull_request:
@@ -23,6 +29,17 @@ on:
           - stage
           - prod
           - both
+      # Set to post-deploy by the deploy pipeline's dispatch (dev repo). Post-deploy
+      # results go to the automated-results channel under a "post-deploy" label;
+      # PR and manual runs go to the branch-test channel under the actor's name.
+      source:
+        description: "Run source (the deploy pipeline sets post-deploy)"
+        required: false
+        default: "manual"
+        type: choice
+        options:
+          - manual
+          - post-deploy
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.
@@ -110,7 +127,6 @@ jobs:
         continue-on-error: true
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
         shell: bash
         run: |
           pip install --quiet slack_sdk
@@ -129,7 +145,7 @@ jobs:
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "")
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
-          actor = os.environ.get("GITHUB_ACTOR", "")
+          actor = os.environ.get("TRIGGERED_BY", "")
           start_epoch = int(time.time())
           # Slack renders <!date^EPOCH^{format}|fallback> in each viewer's timezone.
           started_at = f"<!date^{start_epoch}^{{date_short_pretty}} at {{time}}|started>"
@@ -249,7 +265,7 @@ jobs:
             <h2>CommCare-Connect Maestro Mobile Report — ${{ matrix.environment }}</h2>
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
-            <p><b>Triggered by:</b> ${{ github.actor }}</p>
+            <p><b>Triggered by:</b> ${{ env.TRIGGERED_BY }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -273,7 +289,6 @@ jobs:
         continue-on-error: true
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_QA_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID_TESTS }}
           STATUS: ${{ steps.aggregate.outputs.status }}
           PASSED: ${{ steps.aggregate.outputs.passed }}
           FAILED: ${{ steps.aggregate.outputs.failed }}
@@ -311,7 +326,7 @@ jobs:
           run_url = f"https://github.com/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}"
           bs_url = os.environ.get("BS_URL") or "https://app-automate.browserstack.com/"
           artifact_url = os.environ.get("ARTIFACT_URL") or run_url
-          actor = os.environ.get("GITHUB_ACTOR", "")
+          actor = os.environ.get("TRIGGERED_BY", "")
           passed = int(os.environ.get("PASSED", "0") or "0")
           failed = int(os.environ.get("FAILED", "0") or "0")
           skipped = int(os.environ.get("SKIPPED", "0") or "0")
