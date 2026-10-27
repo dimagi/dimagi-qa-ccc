@@ -45,7 +45,7 @@ def _open_dashboard(page, test_data, config, settings, opp_id, name):
         connect_page.goto(f"{config.get('connect_url')}/a/pm_automation_01/opportunity/{opp_id}/")
         connect_page.wait_for_load_state("load")
     else:
-        if connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
+        if connect_page.locator(olp.ROW_LINK_BY_EXACT_NAME.format(name=name)).count() == 0:
             pytest.skip(f"Mutation opportunity {name!r} not visible to this account/env")
         olp.open_opportunity(name)
     dash.verify_loaded()

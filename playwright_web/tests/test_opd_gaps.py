@@ -30,7 +30,7 @@ def _open_dashboard(page, test_data, config, settings, organization=PM_ORG):
     olp = ConnectOpportunityListPage(connect_page)
     olp.verify_loaded()
     name = env_value(test_data.get("OPD"), "opportunity_name", config)
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
+    if not name or connect_page.locator(olp.ROW_LINK_BY_EXACT_NAME.format(name=name)).count() == 0:
         name = olp.first_row_name()
     olp.open_opportunity(name)
     dash = OpportunityDashboardPage(connect_page)

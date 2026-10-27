@@ -29,7 +29,7 @@ def _open_dashboard(page, test_data, config, settings):
     name = env_value(test_data.get("OPD"), "budget_opportunity_name", config) or env_value(
         test_data.get("OPD"), "opportunity_name", config
     )
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
+    if not name or connect_page.locator(olp.ROW_LINK_BY_EXACT_NAME.format(name=name)).count() == 0:
         olp._step(f"Configured opportunity {name!r} not in list - falling back to first row")
         name = olp.first_row_name()
     olp.open_opportunity(name)
