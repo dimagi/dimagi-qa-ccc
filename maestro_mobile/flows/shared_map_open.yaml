@@ -8,7 +8,7 @@
 # is a CONNECT job app with no mobile-worker password: access is via the Connect
 # menu, not username/password. Path verified live (APK app-cccStaging) 2026-08-18:
 #   PersonalId sign-in -> "GO TO CONNECT MENU" (connect_login_button)
-#   -> opportunity card Resume -> deliver app Start -> "Case List" module
+#   -> opportunity card -> Download app/Start -> deliver app Start -> "Case List" module
 #   -> the follow-up case list -> overflow "View on Map".
 #
 # The staging PersonalId phone sign-in is SLOW (>20s between steps), hence the
@@ -124,12 +124,20 @@ env:
     visible: { id: "org.commcare.dalvik:id/connect_login_button" }
     timeout: 30000
 - tapOn: { id: "org.commcare.dalvik:id/connect_login_button" }
-# Connect menu: find the opportunity card and resume it. Resume downloads the
+# Connect menu: find the opportunity card and open its deliver app. That downloads the
 # deliver app on a fresh install, so allow a long wait for the home screen.
 - extendedWaitUntil:
     visible: { text: "${OPPORTUNITY}" }
     timeout: 60000
-- tapOn: { text: "Resume" }
+# 2.65 (CCCT-2785 redesign) dropped the card's Resume button: the whole card is
+# the tap target and opens the delivery home screen, whose bottom bar button
+# (cta_button - "Download app" on a fresh install, "Start" once installed)
+# downloads and launches the deliver app.
+- tapOn: { text: "${OPPORTUNITY}" }
+- extendedWaitUntil:
+    visible: { id: "org.commcare.dalvik:id/cta_button" }
+    timeout: 30000
+- tapOn: { id: "org.commcare.dalvik:id/cta_button" }
 - extendedWaitUntil:
     visible: { text: "Sync with Server" }
     timeout: 600000
