@@ -296,6 +296,9 @@ TASKING_HYBRID:
   # payment unit's daily/total visit cap; every push runs this test on both
   # environments against one worker, so later runs in a day land there.
   allowed_visit_statuses: ["Approved", "Pending", "Over Limit"]
+  # Shown on a visit that Connect blocked because a task was outstanding (TC-E2E-002).
+  # TC-E2E-003 asserts it is absent, so the check is about task blocking, not status wording.
+  blocking_flag: "pending task"
   opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
   opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
   # The mobile worker lives in test_data/mobile_workers.yaml under

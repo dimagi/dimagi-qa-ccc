@@ -229,5 +229,10 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
         f"Visit '{allowed_visit_name}' should have been processed normally; expected one of "
         f"{allowed_statuses}. Row reads: {allowed_row!r}"
     )
+    blocking_flag = hybrid["blocking_flag"]
+    assert blocking_flag not in allowed_row.lower().replace("_", " "), (
+        f"Visit '{allowed_visit_name}' carries the '{blocking_flag}' flag, so it was blocked by a "
+        f"task even though none was outstanding. Row reads: {allowed_row!r}"
+    )
     print(f"STEP [Hybrid] Blocked visit: {blocked_row!r}")
     print(f"STEP [Hybrid] Allowed visit: {allowed_row!r}")
