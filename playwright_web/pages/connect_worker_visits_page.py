@@ -319,6 +319,11 @@ class WorkerVisitsPage(BasePage):
         panel_before = self.page.evaluate(
             "id => document.getElementById(id)?.innerHTML ?? ''", self.VISIT_DETAILS_CONTAINER
         )
+        visit_id = row.get_attribute("data-visit-id")
+        # Re-opening the visit that is already shown (e.g. after a modal closes) swaps in
+        # identical HTML, so "content differs" can never hold - only wait for a change
+        # when a different visit is being opened.
+        same_visit = visit_id is not None and visit_id == getattr(self, "_opened_visit_id", None)
         with self.page.expect_response(
             lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
         ):
@@ -326,13 +331,15 @@ class WorkerVisitsPage(BasePage):
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
-        # The old panel stays rendered until the swap lands, so wait for its content to
-        # differ from what was there before the click.
-        self.page.wait_for_function(
-            "([id, before]) => (document.getElementById(id)?.innerHTML ?? '') !== before",
-            arg=[self.VISIT_DETAILS_CONTAINER, panel_before],
-            timeout=15000,
-        )
+        # The old panel stays rendered until the swap lands, so when a different visit
+        # was opened wait for its content to differ from what was there before the click.
+        if not same_visit:
+            self.page.wait_for_function(
+                "([id, before]) => (document.getElementById(id)?.innerHTML ?? '') !== before",
+                arg=[self.VISIT_DETAILS_CONTAINER, panel_before],
+                timeout=15000,
+            )
+        self._opened_visit_id = visit_id
 
     def _open_row_at(self, index):
         """Open the visit row at `index` and wait for its details panel to populate."""
