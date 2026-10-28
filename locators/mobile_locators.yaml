@@ -11,7 +11,9 @@ home_page:
   # Material dialog buttons.
   forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID')]"
   refresh_opportunities_btn: "//android.widget.TextView[contains(@text,'Refresh Opportunities')]"
-  go_to_connect_btn: "//android.widget.Button[contains(@text,'GO TO CONNECT MENU')]"
+  # By id: 2.65 renders the label in sentence case ("Go to Connect menu"), so the
+  # old upper-case text match stopped finding it.
+  go_to_connect_btn: "org.commcare.dalvik:id/connect_login_button"
 
   opportunities_btn: "//android.widget.TextView[contains(@text,'Opportunities')]/parent::android.widget.LinearLayout"
   commcare_app_btn: "//android.widget.TextView[contains(@text,'CommCare Apps')]/parent::android.widget.LinearLayout"
