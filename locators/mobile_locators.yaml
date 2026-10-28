@@ -223,7 +223,7 @@ otp_page:
 
   # Email verification screen (2.64+). otp_code_view is a NumericCodeView like
   # the backup code fields, so it needs type_code rather than send_keys, and it
-  # auto-submits on the sixth digit - no Verify tap required.
+  # since 2.65 it only enables VERIFY CODE (email_verify_btn), which must be tapped.
   email_otp_input: "org.commcare.dalvik:id/otp_code_view"
   email_verify_btn: "org.commcare.dalvik:id/personalid_email_verify_button"
   email_verify_error: "org.commcare.dalvik:id/personalid_email_verify_error"
