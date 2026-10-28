@@ -170,8 +170,10 @@ def test_opd_40_workers_tab_count_and_search(dashboard):
     dashboard.goto_worker_tab("workers")
     label = dashboard.workers_tab_label_text()
     assert "(" in label and ")" in label, f"Workers tab label has no count: {label!r}"
-    if "(0)" in label:
-        pytest.skip(f"Opportunity has no workers ({label!r}); the 'Displaying X of Y' line only renders with a worker list")
+    assert "(0)" not in label, (
+        f"Workers tab count is still 0 after waiting ({label!r}); the fixture opportunity has no workers "
+        "or the count did not populate"
+    )
     dashboard.search_workers("zzz-no-such-worker")
     line = dashboard.displaying_count_text()
     assert "Displaying" in line, f"Search did not produce a 'Displaying X of Y' line (got {line!r})"

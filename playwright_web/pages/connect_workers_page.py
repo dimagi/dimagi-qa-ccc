@@ -436,8 +436,7 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Click '{tab_name}' tab")
         self.click(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name))
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(1500)  # table htmx-swaps into #table
-        self.verify_tab_active(tab_name)
+        self.verify_tab_active(tab_name)  # waits for the htmx swap to mark the tab active
 
     def verify_tab_active(self, tab_name):
         tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
