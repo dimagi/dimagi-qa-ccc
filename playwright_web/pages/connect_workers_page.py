@@ -1,6 +1,8 @@
 import re
 import time
 from datetime import date, datetime, timedelta
+from playwright.sync_api import expect
+
 
 from utils.helpers import LocatorLoader, TestDataLoader
 
@@ -817,18 +819,6 @@ class ConnectWorkersPage(BasePage):
             "input[type=checkbox]"
         ).first.uncheck()
 
-    def verify_resend_cooldown(self, phone):
-        """Connect_worker_09 - resending a registered invite within 24h is refused
-        with a cooldown message. Uses a real registered number (demo numbers do not
-        enforce the cooldown). The resend is skipped, so no SMS is sent - but this
-        relies on the invite being <24h old; refresh it if the assertion flips."""
-        body = self.resend_worker_and_message(phone)
-        assert "sent in the last 24 hours" in body.lower() and phone in body, (
-            f"Expected a 24h-cooldown skip message naming {phone}; the invite may be "
-            f"older than 24h (resend would then succeed and message the real user)."
-        )
-        self._step(f"Resend of {phone} refused - 24h cooldown")
-
     def _first_pending_invite_row(self):
         return self.page.locator(self.PENDING_INVITE_ROW).first
 
@@ -924,19 +914,21 @@ class ConnectWorkersPage(BasePage):
     def resend_selected_invite(self, expect_text=None, timeout_seconds=30):
         """Click Resend Invite(s) for the selected row and return any message shown
         (Connect_worker_09 expects a cooldown message within 24h). With expect_text
-        the page body is polled until it appears (the resend result is async and the
-        message can take longer than a fixed wait), else the last body is returned."""
-        import time
-
+        the page body is waited on until it contains that text (the resend result is
+        async), else the body is read after a short wait."""
         self._step("Resend the selected invite")
         self.click(self.RESEND_INVITES_BTN)
-        self.page.wait_for_timeout(2500)
-        body = self.page.inner_text("body")
-        deadline = time.monotonic() + timeout_seconds
-        while expect_text and expect_text.lower() not in body.lower() and time.monotonic() < deadline:
-            self.page.wait_for_timeout(1500)
-            body = self.page.inner_text("body")
-        return body
+        body_loc = self.page.locator("body")
+        if expect_text:
+            try:
+                expect(body_loc).to_contain_text(
+                    re.compile(re.escape(expect_text), re.I), timeout=timeout_seconds * 1000
+                )
+            except AssertionError:
+                pass  # the caller asserts on the returned body with its own message
+        else:
+            self.page.wait_for_timeout(2500)
+        return self.page.inner_text("body")
 
     def select_worker_rows(self, phones):
         for p in phones:
@@ -964,7 +956,8 @@ class ConnectWorkersPage(BasePage):
 
     def delete_worker_invite(self, phone, timeout_seconds=120):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
-        confirm modal, and wait for it to disappear."""
+        confirm modal, and wait for it to disappear. The delete is submitted once: a
+        row that is still there after the wait is a real failure, not retried."""
         import time
 
         if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
@@ -973,19 +966,12 @@ class ConnectWorkersPage(BasePage):
             self._step(f"No invite row for {phone} to delete")
             return
         deadline = time.monotonic() + timeout_seconds
-        retry_at = time.monotonic() + timeout_seconds / 2
-        retried = False
         self._submit_invite_delete(phone)
         while True:
             self._goto_workers_list()
             if not self.worker_row_present(phone):
                 self._step(f"Invite {phone} deleted")
                 return
-            if not retried and time.monotonic() >= retry_at:
-                # The first delete may have been dropped (e.g. raced a pending
-                # resend); submit it once more rather than only waiting.
-                retried = True
-                self._submit_invite_delete(phone)
             if time.monotonic() >= deadline:
                 raise AssertionError(f"Invite {phone} still present {timeout_seconds}s after delete")
 
