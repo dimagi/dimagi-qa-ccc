@@ -2,6 +2,8 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
+from playwright.sync_api import expect
+
 from utils.helpers import LocatorLoader, TestDataLoader
 
 from pages.base_page import BasePage
