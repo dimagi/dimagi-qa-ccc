@@ -440,8 +440,12 @@ class ConnectWorkersPage(BasePage):
     def verify_tab_active(self, tab_name):
         tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
         tab.wait_for(state="visible", timeout=15000)
-        cls = tab.get_attribute("class") or ""
-        assert "active" in cls, f"Tab '{tab_name}' is not active (class={cls!r})"
+        # The active class is applied once the htmx swap lands; poll for it instead of
+        # reading the class a single time after a fixed sleep.
+        try:
+            expect(tab).to_have_class(re.compile(r"\bactive\b"), timeout=15000)
+        except AssertionError:
+            raise AssertionError(f"Tab '{tab_name}' is not active (class={tab.get_attribute('class')!r})")
         self._step(f"Tab '{tab_name}' is active")
 
     def click_name_in_table(self, name):
