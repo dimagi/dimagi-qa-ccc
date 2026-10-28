@@ -402,9 +402,16 @@ MAESTRO_RECOVERY_FIXTURE:
 # OPPORTUNITY). TBD values keep the web test skipped until the worker is seeded and
 # the Learn app's module/form/question names are copied from its CCZ.
 # RESET: every run completes one more Learn form, so the worker's progress only
-# goes up. Before it reaches 100% (web_test_data.yaml LEARN_TAB_02_HYBRID.total_lessons),
-# reset the worker's learning in Connect (or re-seed a fresh worker and update these
-# values); the web test skips with a message once the worker is complete.
+# goes up, and there is no known way to roll it back. Before the worker reaches 100%
+# (LEARN_TAB_02_HYBRID.total_lessons) the QA owner (whoever runs the hybrid suite)
+# re-seeds a fresh worker:
+#   1. In Connect, as the PM org (PM_Automation_01), open the opportunity's Workers page
+#      and invite a new unregistered phone number.
+#   2. Register that number on a device/PersonalID, accept the invite, and finish ONE
+#      Learn form by hand so learning is started but not complete.
+#   3. Update here: phone_number, username, backup_code (and the *_staging values), and in
+#      web_test_data.yaml LEARN_TAB_02_HYBRID: worker_name (and opportunity_name if it changed).
+# The web test skips with a message once the worker is complete.
 MAESTRO_LEARN_TAB_02:
   country_code: "+7426"
   phone_number: "TBD"

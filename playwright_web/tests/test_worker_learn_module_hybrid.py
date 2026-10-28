@@ -43,7 +43,7 @@ def _require_learn_data(test_data, config):
     """Web + mobile data for the test, or skip naming exactly what is still TBD."""
     data = test_data.get("LEARN_TAB_02_HYBRID") or {}
     worker = env_by_flow([FLOW], config.env)[FLOW]
-    missing = [f"LEARN_TAB_02_HYBRID.{k}" for k in ("opportunity_name", "worker_name") if _is_tbd(data.get(k))]
+    missing = [f"LEARN_TAB_02_HYBRID.{k}" for k in ("opportunity_name", "worker_name", "total_lessons") if _is_tbd(data.get(k))]
     missing += [f"MAESTRO_LEARN_TAB_02.{k.lower()}" for k in REQUIRED_MOBILE_KEYS if _is_tbd(worker.get(k))]
     if missing:
         pytest.skip(
