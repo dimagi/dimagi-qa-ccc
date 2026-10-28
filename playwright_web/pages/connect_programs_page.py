@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -95,9 +97,12 @@ class ConnectProgramsPage(BasePage):
         # submit button then stays hidden for the whole 30s). Open it again if so.
         try:
             self.page.locator(submit_btn).first.wait_for(state="visible", timeout=5000)
-        except Exception:  # noqa: BLE001 - panel closed: toggle it open and re-pick the org
-            self._step("Invite panel not open - clicking Invite again")
-            self.click(invite_btn)
+        except PlaywrightTimeoutError:
+            # Invite toggles the panel: only click again if it is really closed (org
+            # select hidden), otherwise a late-opening panel would be closed again.
+            if not self.page.locator(org_select).first.is_visible():
+                self._step("Invite panel not open - clicking Invite again")
+                self.click(invite_btn)
             self.page.locator(submit_btn).first.wait_for(state="visible", timeout=10000)
             self.select_by_visible_text_forced(org_select, network_manager)
         self.click(submit_btn)

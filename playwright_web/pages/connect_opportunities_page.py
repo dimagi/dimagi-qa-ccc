@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from utils.helpers import LocatorLoader
@@ -176,7 +178,7 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(5000)
         try:
             opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
-        except Exception as error:  # noqa: BLE001 - retry once on any form failure
+        except PlaywrightTimeoutError as error:  # only load/timeouts are retried
             # Log why the first attempt failed: the retry used to hide it, leaving only
             # the reload timeout in the report. Re-open the form by URL (not reload) so a
             # half-loaded page cannot hang it, then give the app lists time to load.
