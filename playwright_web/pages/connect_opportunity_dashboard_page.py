@@ -90,7 +90,12 @@ class OpportunityDashboardPage(BasePage):
         containers; assert the containers and the funnel heading are present."""
         self.page.locator(self.FUNNEL_CONTAINER).first.wait_for(state="visible", timeout=30000)
         self.page.locator(self.WORKER_PROGRESS_CONTAINER).first.wait_for(state="visible", timeout=30000)
-        assert self.page.locator(self.FUNNEL_HEADING).count() > 0, "Worker Progress Funnel heading not found"
+        # The funnel body is HTMX-swapped into its container after the container itself
+        # is visible, so wait for the heading rather than counting it once.
+        try:
+            self.page.locator(self.FUNNEL_HEADING).first.wait_for(state="visible", timeout=30000)
+        except Exception:
+            raise AssertionError("Worker Progress Funnel heading not found")
         self._step("Funnel + worker-progress graphs present")
 
     def verify_stat_panels(self, panels):
@@ -626,7 +631,9 @@ class OpportunityDashboardPage(BasePage):
         self.page.wait_for_timeout(1500)
 
     def displaying_count_text(self):
-        if self.page.locator(self.WORKERS_DISPLAYING_COUNT).count() == 0:
+        try:
+            self.page.locator(self.WORKERS_DISPLAYING_COUNT).first.wait_for(state="visible", timeout=10000)
+        except Exception:
             return ""
         text = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first.inner_text().strip()
         self._step(f"Displaying-count line: {text!r}")
