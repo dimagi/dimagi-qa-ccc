@@ -20,23 +20,10 @@ add-budget/send-message batch and are not here.
 import pytest
 
 from flows.olp_setup import PM_ORG
+from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-
-
-def _open_dashboard(page, test_data, config, settings, organization=PM_ORG):
-    connect_page = login_to_connect(page, config, settings, organization)
-    olp = ConnectOpportunityListPage(connect_page)
-    olp.verify_loaded()
-    name = env_value(test_data.get("OPD"), "opportunity_name", config)
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-        name = olp.first_row_name()
-    olp.open_opportunity(name)
-    dash = OpportunityDashboardPage(connect_page)
-    dash.verify_loaded()
-    dash.dashboard_url = dash.page.url
-    return dash
 
 
 @pytest.fixture(scope="module")
@@ -44,18 +31,7 @@ def dashboard(browser, config, settings, test_data):
     """One authenticated session for the whole module: log in, open the dashboard,
     yield it to every test, then close the context (logout) at the end. The login
     is retried once to absorb the occasional CommCareHQ login flake."""
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    try:
-        try:
-            dash = _open_dashboard(page, test_data, config, settings)
-        except Exception:
-            page.close()
-            page = context.new_page()
-            dash = _open_dashboard(page, test_data, config, settings)
-        yield dash
-    finally:
-        context.close()
+    yield from dashboard_session(browser, config, settings, test_data)
 
 
 @pytest.fixture(scope="module")
@@ -303,7 +279,7 @@ def test_opd_23_setup_incomplete_redirect(session, test_data, config):
     the Add Payment Units page."""
     dash, base = session
     opp_id = _opd(test_data, "incomplete_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.incomplete_opp_id not configured")
     dash.page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/")
@@ -317,7 +293,7 @@ def test_opd_26_test_opportunity_badge(session, test_data, config):
     """OD_26: a test opportunity (is_test) shows the 'Test' badge in the header."""
     dash, base = session
     opp_id = _opd(test_data, "test_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.test_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
@@ -329,7 +305,7 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
     is present and its URL is reachable (200)."""
     dash, base = session
     opp_id = _opd(test_data, "microplanning_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.microplanning_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
@@ -352,7 +328,7 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     until the fixture opp's end date has actually passed (badge reads 'Ended')."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         pytest.skip("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
