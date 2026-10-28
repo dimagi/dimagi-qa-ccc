@@ -55,8 +55,11 @@ login_page:
   email_error_txt: "org.commcare.dalvik:id/personalid_email_error"
   # The skip confirmation reuses the app-linking Yes/No strings, not Skip/Cancel,
   # and Material buttons render them upper-cased - match both spellings.
-  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
-  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
+  # The skip confirmation is "Skip email?" YES/NO on 2.64 and "Protect your
+  # account" SKIP/ADD EMAIL on 2.65. The positive button flips meaning between
+  # them (YES skips on 2.64, ADD EMAIL stays on 2.65), so match labels, not ids.
+  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes' or @text='SKIP' or @text='Skip']"
+  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No' or @text='ADD EMAIL' or @text='Add Email']"
   # StandardAlertDialog renders its message in a plain TextView, NOT in
   # connect_message_message - that id belongs to the full-screen message
   # fragment. Match on the text.
@@ -260,5 +263,9 @@ manage_profile:
   edit_save_btn: "org.commcare.dalvik:id/btn_save"
   edit_cancel_btn: "org.commcare.dalvik:id/btn_cancel"
   # The OTP confirmation raised when the email is changed.
-  otp_confirm_send: "//android.widget.Button[contains(@text,'Send Code') or contains(@text,'SEND CODE')]"
+  # 2.65 email change: Save -> Confirm Backup Code -> Verify Email (Send code)
+  # -> code entry. The 2.64 "Verify your new email" confirmation dialog is gone.
+  email_change_backup_code_input: "org.commcare.dalvik:id/backup_code_view"
+  email_change_backup_code_continue: "org.commcare.dalvik:id/connect_backup_code_button"
+  otp_confirm_send: "org.commcare.dalvik:id/send_otp_button"
   save_photo_btn: "org.commcare.dalvik:id/save_photo_button"

@@ -106,50 +106,85 @@ appId: org.commcare.dalvik
     enabled: true
 
 # ---------------------------------------------------------------- MP_10
-# Saving an email change asks for confirmation first; Cancel returns to the form
-# with the entered values still there.
+# Saving an email change asks for the current backup code first; backing out
+# returns to the form with the entered values still there.
+#
+# 2.65 (CCCT-2786) replaced the old "Verify your new email" confirmation dialog
+# with this re-authentication step: Save goes straight to Confirm Backup Code
+# (PersonalIdProfileEditFragment.startEmailChangeAuth, BackupCodeWorkflow
+# EMAIL_CHANGE). A name change in the same edit is saved at this moment, before
+# the backup code - MP_12 relies on that.
 - tapOn:
     id: "org.commcare.dalvik:id/btn_save"
 - extendedWaitUntil:
     visible:
-      text: "Verify your new email"
+      id: "org.commcare.dalvik:id/backup_code_view"
     timeout: 30000
 - assertVisible:
-    text: ".*6-digit code.*"
-- tapOn:
-    text: "Cancel"
+    text: "Confirm Backup Code"
+# The numeric keypad comes up with the screen and swallows the first Back.
+- hideKeyboard
+- back
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/profile_email_edit_text"
+    timeout: 30000
 - assertVisible:
     id: "org.commcare.dalvik:id/profile_email_edit_text"
     text: ".*mpedit.*"
 
 # ---------------------------------------------------------------- MP_11
-# Send Code opens the Verify Email screen for the new address.
+# After the backup code, the Verify Email screen shows the new address in full,
+# and Send code opens code entry for it.
 - tapOn:
     id: "org.commcare.dalvik:id/btn_save"
 - extendedWaitUntil:
     visible:
-      text: "Verify your new email"
+      id: "org.commcare.dalvik:id/backup_code_view"
     timeout: 30000
 - tapOn:
-    text: "Send Code"
+    id: "org.commcare.dalvik:id/backup_code_view"
+- inputText: "${BACKUP_CODE}"
+- tapOn:
+    id: "org.commcare.dalvik:id/connect_backup_code_button"
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/send_otp_button"
+    timeout: 30000
+# Matched on a fragment: Maestro text selectors are regular expressions and a
+# plus-addressed email contains "+", which reads as "one or more".
+- assertVisible:
+    id: "org.commcare.dalvik:id/send_otp_address"
+    text: ".*mpedit.*"
+# By id: the label's on-screen casing is not pinned down on 2.65.
+- tapOn:
+    id: "org.commcare.dalvik:id/send_otp_button"
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/otp_code_view"
     timeout: 30000
-# Matched on a fragment: Maestro text selectors are regular expressions and a
-# plus-addressed email contains "+", which reads as "one or more".
 - assertVisible:
     text: ".*mpedit.*"
 
 # ---------------------------------------------------------------- MP_12
 # Abandon verification without entering a code.
 #
-# Back from the verification screen returns to Edit Profile with the form still
+# Backing out of verification returns to Edit Profile with the form still
 # populated - specified behaviour (CCCT-2460), not a bug. The name has already
 # been committed by this point, which is the whole point of the case: the app
 # saves the name before the OTP step, so abandoning verification leaves the new
 # name in place and the email unchanged.
-- back
+#
+# On 2.65 Back retraces code entry -> Verify Email -> Confirm Backup Code ->
+# Edit Profile one screen at a time (no popUpTo on that path), and a raised
+# keyboard eats a press, so press until the form is back rather than counting.
+- repeat:
+    while:
+      notVisible:
+        id: "org.commcare.dalvik:id/profile_name_edit_text"
+    times: 5
+    commands:
+      - back
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/profile_name_edit_text"

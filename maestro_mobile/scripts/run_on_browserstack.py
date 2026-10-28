@@ -46,19 +46,12 @@ TEST_FLOWS = [
     "profile_discard.yaml",
     "profile_forget.yaml",
     "recovery_email_prompt.yaml",
-    # SKIPPED, 2026-09-10: signup_email_add.yaml and signup_email_verify.yaml are
-    # held out until the 2.65 APK ships. Between them they cover SE_01-SE_09 and
-    # SE_12 - adding and verifying an email DURING signup - and they pass, but
-    # only against the unreleased 2.65 build they were written on. Running the
-    # suite on 2.65 to keep them green would put every other flow on an
-    # unreleased build too, which is the worse trade: those flows are the stable
-    # regression set.
-    #
-    # Nothing else depends on them. Each registers its own account from a cleared
-    # app, so holding them out changes no other flow's starting state.
-    #
-    # TO RE-ENABLE once 2.65 is released: add the two names here, and drop
-    # @pytest.mark.skip from tests/mobile_tests/test_tc_11.py (SE_10, same gap).
+    # SE_01-SE_09, SE_12: adding and verifying an email DURING signup. Held out
+    # from 2026-09-10 until the suite moved to the 2.65 APK: signup completes only
+    # with the qaAutomation placeholder photo that 2.65 carries. Each registers
+    # its own account from a cleared app, so they share no state with the rest.
+    "signup_email_add.yaml",
+    "signup_email_verify.yaml",
 ]
 POLL_INTERVAL_SECONDS = 15
 
