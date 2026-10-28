@@ -7,6 +7,10 @@ appId: org.commcare.dalvik
 #
 # Consequence: run this through that script, not `maestro test` directly -
 # run directly, the variables below are undefined.
+onFlowComplete:
+  # Runs whether the flow passed or failed: restores the resting name if a
+  # failure stranded the account under the temporary one.
+  - runFlow: shared_restore_profile_name.yaml
 ---
 # MP_05 - MP_07: editing the name on Manage Profile.
 # Renames to NEW_NAME and restores USERNAME at the end, so the account is left at
