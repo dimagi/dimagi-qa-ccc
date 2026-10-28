@@ -99,9 +99,10 @@ env:
 # seconds after the code is submitted (a server round-trip), so wait for its OK
 # button and tap it - an early optional tap races the dialog and leaves it
 # covering the screen when the next step runs.
+# 60s: the Account Recovered dialog's server round-trip sometimes takes >30s.
 - extendedWaitUntil:
     visible: { id: "org.commcare.dalvik:id/connect_message_button" }
-    timeout: 30000
+    timeout: 60000
 - tapOn: { id: "org.commcare.dalvik:id/connect_message_button" }
 - extendedWaitUntil:
     notVisible: { id: "org.commcare.dalvik:id/backup_code_view" }

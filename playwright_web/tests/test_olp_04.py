@@ -22,5 +22,5 @@ def test_olp_04_verify_opportunity_details_in_dashboard(page, test_data, config,
     connect_home_page.signin_to_connect_page_using_cchq()
     connect_home_page.select_organization_from_list("PM_Automation_01")
 
-    connect_opp_page.click_opportunity_in_opportunity(olp4_data["opportunity_name"])
+    connect_opp_page.click_opportunity_in_opportunity(olp4_data["opportunity_name"], exact=False)
     opp_dashboard_page.navigate_to_opportunity_and_verify_all_fields_present_in_connect(olp4_data)

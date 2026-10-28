@@ -1,3 +1,12 @@
+# CCCT-2882: the Opportunities List opens on Active, non-test only. Unsuffixed =
+# prod (shipped there too - the check caught the release), _staging = stage.
+OLP_DEFAULT_FILTERS:
+  expected: true
+  expected_staging: true
+  status: "Active"
+  is_test: "No"
+  badge_count: 2
+
 OLP_1:
   program_name: "Demo Program"
   program_description: "Demo Program created by automation"

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pages.base_page import BasePage
+from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from utils.helpers import LocatorLoader
 
 locators = LocatorLoader()
@@ -207,12 +208,21 @@ class ConnectOpportunitiesPage(BasePage):
         self.click_submit_btn()
         self.page.wait_for_timeout(3000)
 
-    def click_opportunity_in_opportunity(self, value):
+    def click_opportunity_in_opportunity(self, value, exact=True):
+        """exact=False matches by substring, for data that names a family of rows
+        (OLP_4: 'Demo Opportunity' for the dated 'Demo Opportunity_<date>' rows)."""
         self.page.wait_for_timeout(5000)
         try:
             self.select_by_visible_text(self.PAGE_SIZE, "100")
             self.page.wait_for_timeout(10000)
         except Exception:
             print("Dropdown not present")
-        self.click_link_by_text(value)
+        link = ConnectOpportunityListPage.ROW_LINK_BY_EXACT_NAME.format(name=value)
+        if not exact:
+            link = ConnectOpportunityListPage.ROW_LINK_BY_NAME.format(name=value)
+        if self.page.locator(link).count() == 0:
+            # The list opens on default filters (Active, non-test only - CCCT-2882)
+            # and a freshly created opportunity is test/non-active, so it is hidden.
+            ConnectOpportunityListPage(self.page).show_all_opportunities()
+        self.click(link)
         self.page.wait_for_timeout(3000)

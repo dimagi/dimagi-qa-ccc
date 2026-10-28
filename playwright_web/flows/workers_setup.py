@@ -10,7 +10,7 @@ links themselves stay exercised, rather than deep-linking by URL.
 
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-from utils.helpers import with_page_size
+from utils.helpers import with_all_opportunities, with_page_size
 
 
 def goto_opportunity_list(connect_page, opps_url):
@@ -24,7 +24,7 @@ def goto_opportunity_list(connect_page, opps_url):
     # Always reload the list at a large page_size so every opportunity is on one page
     # (see OPP_LIST_PAGE_SIZE) - a smaller default page hides opps pushed down by the
     # Demo-Opportunity flood, which is what makes an existing opp look "not in the list".
-    connect_page.goto(with_page_size(opps_url))
+    connect_page.goto(with_page_size(with_all_opportunities(opps_url)))
     connect_page.wait_for_load_state("load")
     olp.verify_loaded()
     return olp
