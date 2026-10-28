@@ -21,7 +21,7 @@ class LoginPage(BasePage):
             print("No Cookies alert present")
         self.type(self.USERNAME_ELE, username)
         self.page.locator(self.PASSWORD_ELE).first.fill(password)
-        self.page.locator(self.PASSWORD_ELE).first.press("Enter")
+        self.page.locator(self.PASSWORD_ELE).first.press("Enter", no_wait_after=True)
         self.page.wait_for_timeout(3000)
 
     # HQ's login page is occasionally slow to render the form; this is a bounded
