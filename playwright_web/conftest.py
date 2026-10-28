@@ -1,8 +1,16 @@
 import base64
+import os
 
 import pytest
 
 from utils.helpers import ConfigLoader, SettingsLoader, TestDataLoader
+
+
+def pytest_ignore_collect(collection_path):
+    """The tasking setup helper is a one-off utility, not a test: don't collect it
+    (so it never shows as a per-run skip) unless explicitly run with SETUP_TASKING=1."""
+    if collection_path.name == "test_setup_tasking_opportunity.py":
+        return os.getenv("SETUP_TASKING") != "1"
 
 
 def pytest_addoption(parser):
