@@ -817,18 +817,6 @@ class ConnectWorkersPage(BasePage):
             "input[type=checkbox]"
         ).first.uncheck()
 
-    def verify_resend_cooldown(self, phone):
-        """Connect_worker_09 - resending a registered invite within 24h is refused
-        with a cooldown message. Uses a real registered number (demo numbers do not
-        enforce the cooldown). The resend is skipped, so no SMS is sent - but this
-        relies on the invite being <24h old; refresh it if the assertion flips."""
-        body = self.resend_worker_and_message(phone)
-        assert "sent in the last 24 hours" in body.lower() and phone in body, (
-            f"Expected a 24h-cooldown skip message naming {phone}; the invite may be "
-            f"older than 24h (resend would then succeed and message the real user)."
-        )
-        self._step(f"Resend of {phone} refused - 24h cooldown")
-
     def _first_pending_invite_row(self):
         return self.page.locator(self.PENDING_INVITE_ROW).first
 
@@ -922,8 +910,7 @@ class ConnectWorkersPage(BasePage):
         self.page.wait_for_timeout(400)
 
     def resend_selected_invite(self):
-        """Click Resend Invite(s) for the selected row and return any message shown
-        (Connect_worker_09 expects a cooldown message within 24h)."""
+        """Click Resend Invite(s) for the selected row and return any message shown."""
         self._step("Resend the selected invite")
         self.click(self.RESEND_INVITES_BTN)
         self.page.wait_for_timeout(2500)

@@ -118,13 +118,6 @@ def test_connect_worker_13_not_found_deletable(workers, test_data):
     workers.verify_not_found_deletable(data["not_found_phone"])
 
 
-def test_connect_worker_09_resend_cooldown(workers, test_data):
-    """Connect_worker_09: resending a registered invite within 24h is refused with
-    a cooldown message (real number; demo numbers don't enforce the cooldown)."""
-    data = test_data.get("WORKER_LIFECYCLE")
-    workers.verify_resend_cooldown(data["cooldown_phone"])
-
-
 def test_learn_tab_03_assessment_failed(workers, test_data):
     """Learn_tab_03: a worker who failed the assessment shows Assessment 'Failed'."""
     data = test_data.get("WORKER_LIFECYCLE")

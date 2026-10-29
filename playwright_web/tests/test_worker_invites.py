@@ -65,8 +65,8 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list, test_data):
     Connect_worker_08: the invite can then be deleted.
 
     Sends one SMS to a reserved number and self-cleans by deleting the invite.
-    (Connect_worker_09 - the 24h resend cooldown - needs a *registered* pending
-    number, so it is deferred to the seeded data.)"""
+    (Connect_worker_09 - the 24h resend cooldown - is manual by design: every resend
+    texts a real registered number.)"""
     workers = workers_list
     reserved = test_data.get("WORKER_INVITES")["reserved_invite"]
 
