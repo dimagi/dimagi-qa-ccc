@@ -170,6 +170,12 @@ LDVP:
   assessment_fail_score: "10"
   assessment_pass_score: "90"
   reject_reason: "LDVP automation - no location"
+  # How long web waits for Connect to process a device submission (learn module,
+  # assessment, visit) before the next device session. Instant on prod; staging
+  # can take a long while - a learn module went uncounted for 50+ minutes on
+  # 2026-10-29.
+  sync_timeout_seconds: 300
+  sync_timeout_seconds_staging: 5400
   second_payment: "50"
 
 # Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite

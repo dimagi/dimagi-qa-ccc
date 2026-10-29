@@ -156,7 +156,8 @@ def test_ldvp_flows_resolve_their_workers():
     # one the LDVP opportunity invites, or TC-INV-004 asserts on the wrong account.
     from flows.mobile_runner import env_by_flow
 
-    flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_deliver.yaml",
+    flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_assess_fail.yaml",
+             "ldvp_assess_pass.yaml", "ldvp_deliver.yaml",
              "ldvp_payment.yaml", "ldvp_decline_confirm.yaml", "ldvp_rollback.yaml"]
     env = env_by_flow(flows, "stage")
     assert set(env) == set(flows)

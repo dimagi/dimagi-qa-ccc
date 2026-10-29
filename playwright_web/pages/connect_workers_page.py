@@ -628,11 +628,11 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Worker '{worker}' username: {username}")
         return username
 
-    def payments_cell(self, worker, header_prefix):
-        """Text of the worker's Payments-tab cell under the column whose header
-        starts with `header_prefix` (case-insensitive) - e.g. 'Accrued' for what
-        the worker earned, 'Confirm' for their receipt confirmation. Prefix match
-        because the currency columns are suffixed ('Accrued (INR)')."""
+    def table_cell(self, worker, header_prefix):
+        """Text of the worker's cell, in the current workers-page tab, under the
+        column whose header starts with `header_prefix` (case-insensitive) - e.g.
+        Payments 'Accrued' / 'Confirm', Learn 'Modules completed' / 'Assessment'.
+        Prefix match because the currency columns are suffixed ('Accrued (INR)')."""
         headers = self._header_texts()
         idx = next((i for i, h in enumerate(headers) if h.lower().startswith(header_prefix.lower())), None)
         assert idx is not None, f"'{header_prefix}' column not found in {headers}"
@@ -640,7 +640,7 @@ class ConnectWorkersPage(BasePage):
         return cell.inner_text().strip()
 
     def _last_paid_text(self, worker):
-        return self.payments_cell(worker, "last paid")
+        return self.table_cell(worker, "last paid")
 
     def make_payment_for_worker(self, worker, amount=1):
         """Payment Processing_2 - import a payment for the worker and confirm the

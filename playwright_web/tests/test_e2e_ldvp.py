@@ -7,14 +7,12 @@ from pages.connect_home_page import ConnectHomePage
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from utils.helpers import poll_until
 
-# How long web waits for something the device did to show up. The device ->
-# CommCare HQ -> Connect hop takes minutes on staging.
-SYNC_TIMEOUT = 900
-POLL_SECONDS = 20
+POLL_SECONDS = 30
 
 
-# Drives a real device via BrowserStack Maestro builds - six device sessions, so
-# a full run takes about an hour. Not in the per-PR gate.
+# Drives a real device via BrowserStack Maestro builds - eight device sessions,
+# each gated on web, so a full run takes an hour or more on staging. Not in the
+# per-PR gate.
 @pytest.mark.on_demand
 def test_e2e_ldvp(page, test_data, config, settings):
     """CCCT-2670 - Learn, Deliver, Verify, Payment, end to end.
@@ -34,6 +32,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
     ldvp = test_data.get("LDVP")
     run = new_run()
     unit_amount = int(ldvp["amount"])
+    # How long web waits for Connect to process something the device submitted.
+    # The device -> CommCare HQ -> Connect hop is instant on prod but can take a
+    # long while on staging, so the limit is per environment test data.
+    sync_timeout = int(ldvp["sync_timeout_seconds_staging" if config.env == "stage" else "sync_timeout_seconds"])
 
     # The worker comes from mobile_workers.yaml - the same entry the device signs
     # in with - so web asserts on the identity the device actually used.
@@ -67,16 +69,6 @@ def test_e2e_ldvp(page, test_data, config, settings):
         f"(see MAESTRO_LDVP_WORKER in test_data/mobile_workers.yaml)."
     )
 
-    # --- 2. DEVICE: uninvited worker looks; invited worker learns ---
-    run_device_flow(
-        ["ldvp_uninvited.yaml", "ldvp_learn.yaml"],
-        FAIL_SCORE=ldvp["assessment_fail_score"],
-        PASS_SCORE=ldvp["assessment_pass_score"],
-        MAX_DAILY=ldvp["max_daily"],
-        MAX_TOTAL=ldvp["max_total"],
-    )
-
-    # --- 3. WEB: accepted (TC-INV-003) and passed (TC-LRN-003 / TC-LRN-005) ---
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
     def reload_workers(tab=None):
@@ -85,28 +77,51 @@ def test_e2e_ldvp(page, test_data, config, settings):
         if tab:
             workers.click_tab_by_name(tab)
 
-    reload_workers()
-    poll_until(lambda: workers.verify_worker_status(phone, "Invite accepted"),
-               SYNC_TIMEOUT, POLL_SECONDS, reload_workers)
-    reload_workers("Learn")
-    poll_until(lambda: workers.verify_assessment_status(worker_name, "Passed"),
-               SYNC_TIMEOUT, POLL_SECONDS, lambda: reload_workers("Learn"))
+    def wait_on_web(check, tab=None):
+        reload_workers(tab)
+        return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
 
-    # --- 4. DEVICE: four visits ---
-    run_device_flow(["ldvp_deliver.yaml"], **run.device_env())
+    # The learn part is three device sessions, each followed by a web wait for
+    # Connect to have processed what it submitted: on staging that can take far
+    # longer than a device session should sit re-syncing.
 
-    # --- 5. WEB: what each visit became, then review (TC-DLV-002..005) ---
+    # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
+    run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
+
+    # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
+    wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
+    wait_on_web(lambda: _assert_cell(workers.table_cell(worker_name, "modules completed"), "100%",
+                                     "Modules completed"), tab="Learn")
+
+    # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
+    run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
+    wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
+
+    # --- 5. DEVICE: failed state shown (TC-LRN-004); pass it (TC-LRN-005) ---
+    run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
+    wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
+
+    # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, four visits ---
+    run_device_flow(
+        ["ldvp_deliver.yaml"],
+        PASS_SCORE=ldvp["assessment_pass_score"],
+        MAX_DAILY=ldvp["max_daily"],
+        MAX_TOTAL=ldvp["max_total"],
+        **run.device_env(),
+    )
+
+    # --- 7. WEB: what each visit became, then review (TC-DLV-002..005) ---
     user_id = workers.worker_user_id(opp.base_url, opp.org_slug, opp.opp_id, worker_name)
     workers.goto_worker_visits_page(opp.base_url, opp.org_slug, opp.opp_id, user_id)
     v1, v2, v3 = (run.visits[k][0] for k in ("V1", "V2", "V3"))
     for name in (v1, v2, v3):
-        workers.wait_for_visit(name, timeout_seconds=SYNC_TIMEOUT)
+        workers.wait_for_visit(name, timeout_seconds=sync_timeout)
     visits = WorkerVisitsPage(opp.connect_page)
 
     # The duplicate shares V1's name, so V1 must show exactly two rows: the
     # original still pending and the copy marked duplicate (TC-DLV-004).
     poll_until(lambda: _assert_statuses(visits, v1, ["duplicate", "pending"]),
-               SYNC_TIMEOUT, POLL_SECONDS, opp.connect_page.reload)
+               sync_timeout, POLL_SECONDS, opp.connect_page.reload)
     _assert_statuses(visits, v2, ["pending"])  # TC-DLV-003: recorded without location
     _assert_statuses(visits, v3, ["over_limit"])  # TC-DLV-005
 
@@ -128,32 +143,32 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     reload_payments()
     want = expected_earned(approved=1, unit_amount=unit_amount)
-    poll_until(lambda: _assert_amount(workers.payments_cell(worker_name, "accrued"), want, "Accrued"),
-               SYNC_TIMEOUT, POLL_SECONDS, reload_payments)
+    poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), want, "Accrued"),
+               sync_timeout, POLL_SECONDS, reload_payments)
 
     # Pay exactly what was earned, so the device's transferred total can only be
     # right one way.
     workers.make_payment_for_worker(worker_name, amount=want)
     workers.wait_for_last_paid_populated(worker_name)
 
-    # --- 6. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
+    # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
     run_device_flow(["ldvp_payment.yaml"], VISIT_NAME_V2=v2, EARNED=want, TRANSFERRED=want)
 
-    # --- 7. WEB: the confirmation shows (TC-PAY-002); a second payment ---
+    # --- 9. WEB: the confirmation shows (TC-PAY-002); a second payment ---
     reload_payments()
-    poll_until(lambda: _assert_confirmed(workers.payments_cell(worker_name, "confirm")),
-               SYNC_TIMEOUT, POLL_SECONDS, reload_payments)
+    poll_until(lambda: _assert_confirmed(workers.table_cell(worker_name, "confirm")),
+               sync_timeout, POLL_SECONDS, reload_payments)
     second = int(ldvp["second_payment"])
     workers.make_payment_for_worker(worker_name, amount=second)
 
-    # --- 8. DEVICE: answering No leaves it unconfirmed (TC-PAY-003) ---
+    # --- 10. DEVICE: answering No leaves it unconfirmed (TC-PAY-003) ---
     run_device_flow(["ldvp_decline_confirm.yaml"], SECOND_PAYMENT=second, TRANSFERRED=want + second)
 
-    # --- 9. WEB: roll the second payment back ---
+    # --- 11. WEB: roll the second payment back ---
     reload_payments()
     workers.rollback_last_payment()
 
-    # --- 10. DEVICE: the rollback is reflected (TC-PAY-004) ---
+    # --- 12. DEVICE: the rollback is reflected (TC-PAY-004) ---
     run_device_flow(["ldvp_rollback.yaml"], TRANSFERRED=want)
     print(f"STEP [LDVP] Chain complete for {opp.opportunity_name!r}; payments page {payments_url}")
 
@@ -161,6 +176,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
 def _assert_statuses(visits, name, expected):
     statuses = sorted(visits.visit_statuses(name))
     assert statuses == sorted(expected), f"Visit {name!r} rows have statuses {statuses}, expected {expected}"
+
+
+def _assert_cell(text, expected, column):
+    assert text.strip() == expected, f"{column} reads {text!r}, expected {expected!r}"
 
 
 def _assert_amount(text, expected, column):

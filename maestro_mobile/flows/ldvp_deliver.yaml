@@ -1,5 +1,7 @@
-# LDVP deliver session (CCCT-2670): download the deliver app and submit four
-# visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
+# LDVP deliver session (CCCT-2670), after web saw the assessment Passed. Starts
+# on the learn-complete view - TC-LRN-005 device half (certificate) and TC-DLV-001
+# (delivery details) - claims the job, then downloads the deliver app and
+# submits four visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
 # TC-DLV-004 (V1 again, identical: the duplicate) and TC-DLV-005 (V3, the third
 # counted visit of the day against a max of 2: Over Limit). Web reads every
 # verdict afterwards; this session only has to get them submitted in order.
@@ -18,6 +20,9 @@ env:
   USERNAME: "QA LDVP Worker"
   BACKUP_CODE: "609100"
   OPPORTUNITY: "Demo Opportunity"
+  PASS_SCORE: "90"
+  MAX_DAILY: "2"
+  MAX_TOTAL: "4"
   VISIT_MODULE: "Case List"
   VISIT_FORM: "[Rr]egistration [Ff]orm"
   # Injected per run by flows/ldvp_values.py; defaults only matter by hand.
@@ -30,22 +35,82 @@ env:
   VISIT_NAME_V3: "LDVP-V3-000000"
   VISIT_ID_V3: "0000003"
 ---
-- runFlow: shared_ldvp_signin.yaml
 - setLocation:
     latitude: 28.6139
     longitude: 77.2090
-- runFlow: shared_ldvp_job_list.yaml
+- runFlow: shared_ldvp_open_learn.yaml
 
-# 2.65: tapping a claimed opportunity's card opens the delivery home screen; its
-# cta_button downloads the deliver app on a fresh install and then opens it.
+# --- TC-LRN-005: the certificate ---
+# Web has already seen Connect record the pass; this sync only brings it down.
+- repeat:
+    while:
+      notVisible:
+        id: "learn_complete_completed_on"
+    times: 6
+    commands:
+      - tapOn:
+          id: "learn_progress_sync_card"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "learn_complete_completed_on"
+          timeout: 20000
+          optional: true
+- assertVisible:
+    id: "learn_complete_completed_on"
+    text: "Completed on .*"
+# The certificate is collapsed by default. The opportunity name, the worker's
+# name and the score make it discriminate: a stale certificate from another run
+# would name a different opportunity.
 - tapOn:
-    text: "${OPPORTUNITY}"
-- extendedWaitUntil:
-    visible:
-      id: "cta_button"
-    timeout: 30000
+    id: "certificate_header"
+- assertVisible:
+    id: "cert_subject_text"
+    text: ".*${OPPORTUNITY}.*"
+- assertVisible:
+    id: "cert_person_text"
+    text: ".*${USERNAME}.*"
+- assertVisible:
+    id: "cert_score_text"
+    text: ".*${PASS_SCORE}.*"
+- assertVisible:
+    id: "cert_date_text"
+
+# --- TC-DLV-001: the delivery details match the payment unit set up on web ---
+- scrollUntilVisible:
+    element:
+      id: "card_max_earnings"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "info_card_value_text"
+    text: "${MAX_TOTAL}"
+    childOf:
+      id: "card_total_visits"
+- assertVisible:
+    id: "info_card_subtitle_text"
+    text: "Up to ${MAX_DAILY} per day"
+    childOf:
+      id: "card_total_visits"
+
+# --- Claim the job and open the deliver app ---
+# Download App on the learn-complete screen claims the job and moves on to the
+# delivery home, whose cta_button then downloads and opens the deliver app - the
+# path shared_open_deliver_app.yaml already proves on 2.65.
 - tapOn:
     id: "cta_button"
+    text: "(?i)download app"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 600000
+- runFlow:
+    when:
+      notVisible:
+        text: "Sync with Server"
+    commands:
+      - tapOn:
+          id: "cta_button"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"

@@ -121,6 +121,8 @@ WORKER_BY_FLOW = {
     # Seeding only - registers the invited worker once per environment.
     "seed_ldvp_worker.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_learn.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_assess_fail.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_assess_pass.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_deliver.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_payment.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_decline_confirm.yaml": "MAESTRO_LDVP_WORKER",

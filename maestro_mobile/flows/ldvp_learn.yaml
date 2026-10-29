@@ -1,31 +1,26 @@
-# LDVP learn session (CCCT-2670): accept the invite, learn, fail the assessment,
-# retake it, earn the certificate and read the delivery details.
+# LDVP learn session 1 (CCCT-2670): accept the invite and complete both learn
+# modules. Covers TC-INV-002 and the device half of TC-LRN-001; web then waits
+# for Connect to count both modules (TC-LRN-001/002 web half).
 #
-# Covers TC-INV-002, TC-LRN-001, TC-LRN-002, TC-LRN-004 (device half),
-# TC-LRN-005 (device half) and TC-DLV-001. The web halves are asserted by
-# test_e2e_ldvp.py once this session ends.
+# The Connect learn screens are the 2.65 redesign (CCCT-2785). Ids and strings
+# are read from commcare-android at tag commcare_2.65.0:
+#   ConnectLearnProgressView while learning - progress_card_bar_count "N of M",
+#     progress_card_info_text (failed-attempt banner), learn_progress_sync_card,
+#     learn_progress_continue_title, cta_subtitle_text / cta_button
+#   ConnectLearnCompleteView once passed - learn_complete_completed_on,
+#     certificate_header (collapsed) over cert_subject_text / cert_person_text /
+#     cert_score_text / cert_date_text, and the delivery cards card_total_visits
+#     / card_max_earnings (info_card_value_text, info_card_subtitle_text)
+# The learn app itself: module "Surveys" with forms "Learn 1", "Learn 2" and the
+# assessment "Assesss" (one Int question, the score). 2.65 puts the form's FINISH
+# button in its top bar, still id nav_btn_next.
 #
-# The learn app's own screens follow the Appium tc_03 path: the [Master] Learn
-# App copy has two learn forms, "Learn 1" and "Learn 2", plus an assessment form
-# whose only question is the score, so the test chooses pass or fail by what it
-# types.
-#
-# The Connect learn screens are the 2.65 redesign (CCCT-2785), which replaced
-# every id the Appium suite used. Ids and strings here are read from
-# commcare-android at tag commcare_2.65.0:
-#   ConnectLearnProgressView (view_connect_learn_progress.xml) while learning -
-#     progress_card_bar_count "N of M", progress_card_info_text (failed-attempt
-#     banner), learn_progress_sync_card, cta_subtitle_text / cta_button
-#   ConnectLearnCompleteView (view_connect_learn_complete.xml) once passed -
-#     certificate_header (collapsed by default) over cert_subject_text /
-#     cert_person_text / cert_score_text / cert_date_text, and the delivery
-#     cards card_total_visits / card_max_earnings (info_card_value_text,
-#     info_card_subtitle_text "Up to N per day")
-#
-# Submissions reach Connect through CommCare HQ, so the count can lag the
-# device's own sync (seen on staging: still "0 of 2" right after Learn 1 synced).
-# Each check therefore re-syncs until the expected state shows, a bounded number
-# of times, and only then asserts.
+# Why the learn part is several sessions: a submission travels device ->
+# CommCare HQ -> Connect, which is instant on prod but can take a long while on
+# staging. So each session submits and ends, and test_e2e_ldvp.py polls Connect
+# on web until it has processed the submission before starting the next one.
+# A device-side wait cannot do that: re-syncing inside one session gave up after
+# minutes while staging took far longer (2026-10-29).
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
@@ -34,18 +29,14 @@ env:
   BACKUP_CODE: "609100"
   # The runner injects the run's values; these only matter for a hand run.
   OPPORTUNITY: "Demo Opportunity"
-  FAIL_SCORE: "10"
-  PASS_SCORE: "90"
-  MAX_DAILY: "2"
-  MAX_TOTAL: "4"
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
 
 # --- TC-INV-002: open the invite and accept it ---
-# 2.65: the card is the tap target; a new opportunity opens the job intro, whose
-# bottom bar button (cta_button) accepts it and downloads the Learn App, which
-# then opens on its home screen. Allow for a real download.
+# 2.65: a new opportunity's card opens the job intro, whose bottom bar button
+# (cta_button) accepts it and downloads the Learn App, which then opens on its
+# home screen. Allow for a real download.
 - tapOn:
     text: "${OPPORTUNITY}"
 - extendedWaitUntil:
@@ -64,7 +55,7 @@ env:
       text: "View Job Status"
     timeout: 600000
 
-# --- TC-LRN-001: one module done moves progress to 1 of 2 ---
+# --- TC-LRN-001: submit both modules ---
 - tapOn: "Start"
 - tapOn:
     id: "row_txt"
@@ -88,53 +79,11 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
-# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
-# button in the form's top bar (still nav_btn_next), and CommCare sends the form
-# straight away, so this is on the home screen the moment it returns. A bare
-# "Sync Successful" also shows when nothing was sent.
+# Proof the form was saved and sent, not just closed: CommCare sends it the
+# moment FINISH is tapped. A bare "Sync Successful" also shows when nothing was
+# sent, so it is not accepted here.
 - assertVisible:
     text: ".*form sent to server.*"
-- tapOn: "Sync with Server"
-- extendedWaitUntil:
-    visible:
-      text: ".*Sync Successful.*|.*form sent to server.*"
-    timeout: 180000
-- tapOn: "View Job Status"
-# Re-sync until the count reads 1 of 2 (Connect may not have processed the form yet).
-- extendedWaitUntil:
-    visible:
-      id: "learn_progress_sync_card|learn_complete_cta_bar"
-    timeout: 60000
-- repeat:
-    while:
-      notVisible:
-        id: "progress_card_bar_count"
-        text: "1 of 2"
-    times: 15
-    commands:
-      - tapOn:
-          id: "learn_progress_sync_card"
-          optional: true
-      - extendedWaitUntil:
-          visible:
-            id: "progress_card_bar_count"
-            text: "1 of 2"
-          timeout: 20000
-          optional: true
-- assertVisible:
-    id: "progress_card_bar_count"
-    text: "1 of 2"
-- assertVisible:
-    id: "cta_subtitle_text"
-    text: "Learn Modules"
-
-# --- TC-LRN-002: both modules done asks for the assessment ---
-- tapOn:
-    id: "cta_button"
-- extendedWaitUntil:
-    visible:
-      text: "View Job Status"
-    timeout: 60000
 - tapOn: "Start"
 - tapOn:
     id: "row_txt"
@@ -158,252 +107,8 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
-# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
-# button in the form's top bar (still nav_btn_next), and CommCare sends the form
-# straight away, so this is on the home screen the moment it returns. A bare
-# "Sync Successful" also shows when nothing was sent.
+# Proof the form was saved and sent, not just closed: CommCare sends it the
+# moment FINISH is tapped. A bare "Sync Successful" also shows when nothing was
+# sent, so it is not accepted here.
 - assertVisible:
     text: ".*form sent to server.*"
-- tapOn: "Sync with Server"
-- extendedWaitUntil:
-    visible:
-      text: ".*Sync Successful.*|.*form sent to server.*"
-    timeout: 180000
-- tapOn: "View Job Status"
-# Re-sync until the count reads 2 of 2 (Connect may not have processed the form yet).
-- extendedWaitUntil:
-    visible:
-      id: "learn_progress_sync_card|learn_complete_cta_bar"
-    timeout: 60000
-- repeat:
-    while:
-      notVisible:
-        id: "progress_card_bar_count"
-        text: "2 of 2"
-    times: 15
-    commands:
-      - tapOn:
-          id: "learn_progress_sync_card"
-          optional: true
-      - extendedWaitUntil:
-          visible:
-            id: "progress_card_bar_count"
-            text: "2 of 2"
-          timeout: 20000
-          optional: true
-- assertVisible:
-    id: "progress_card_bar_count"
-    text: "2 of 2"
-- assertVisible:
-    id: "cta_subtitle_text"
-    text: "Complete assessment"
-- assertVisible:
-    id: "learn_progress_continue_title"
-    text: "Assessment"
-
-# --- TC-LRN-004: a failing score blocks the job ---
-- tapOn:
-    id: "cta_button"
-- extendedWaitUntil:
-    visible:
-      text: "View Job Status"
-    timeout: 60000
-- tapOn: "Start"
-- tapOn:
-    id: "row_txt"
-    index: 0
-- scrollUntilVisible:
-    element:
-      text: ".*[Aa]ssess.*"
-    direction: DOWN
-    timeout: 20000
-- tapOn: ".*[Aa]ssess.*"
-- extendedWaitUntil:
-    visible:
-      id: "nav_btn_next"
-    timeout: 60000
-# The score is the form's only question; same tap point the visit forms use.
-- tapOn:
-    point: "50%,32%"
-- inputText: "${FAIL_SCORE}"
-- repeat:
-    times: 6
-    commands:
-      - tapOn:
-          id: "nav_btn_next"
-          optional: true
-- tapOn:
-    id: "nav_btn_finish"
-    optional: true
-- extendedWaitUntil:
-    visible:
-      text: "Sync with Server"
-    timeout: 120000
-# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
-# button in the form's top bar (still nav_btn_next), and CommCare sends the form
-# straight away, so this is on the home screen the moment it returns. A bare
-# "Sync Successful" also shows when nothing was sent.
-- assertVisible:
-    text: ".*form sent to server.*"
-- tapOn: "Sync with Server"
-- extendedWaitUntil:
-    visible:
-      text: ".*Sync Successful.*|.*form sent to server.*"
-    timeout: 180000
-- tapOn: "View Job Status"
-# Re-sync until the failed-attempt banner shows (Connect may not have processed the form yet).
-- extendedWaitUntil:
-    visible:
-      id: "learn_progress_sync_card|learn_complete_cta_bar"
-    timeout: 60000
-- repeat:
-    while:
-      notVisible:
-        id: "progress_card_info_text"
-        text: "You didn.t pass the assessment.*"
-    times: 15
-    commands:
-      - tapOn:
-          id: "learn_progress_sync_card"
-          optional: true
-      - extendedWaitUntil:
-          visible:
-            id: "progress_card_info_text"
-            text: "You didn.t pass the assessment.*"
-          timeout: 20000
-          optional: true
-- assertVisible:
-    id: "progress_card_info_text"
-    text: "You didn.t pass the assessment.*"
-# Failing keeps the worker on the learning screen: no certificate, no
-# delivery cards, and the bottom bar offers the assessment again.
-- assertVisible:
-    id: "cta_subtitle_text"
-    text: "Take assessment"
-- assertNotVisible:
-    id: "certificate_header"
-- assertNotVisible:
-    id: "card_total_visits"
-
-# --- TC-LRN-005: retake with a passing score and earn the certificate ---
-- tapOn:
-    id: "cta_button"
-- extendedWaitUntil:
-    visible:
-      text: "View Job Status"
-    timeout: 60000
-- tapOn: "Start"
-- tapOn:
-    id: "row_txt"
-    index: 0
-- scrollUntilVisible:
-    element:
-      text: ".*[Aa]ssess.*"
-    direction: DOWN
-    timeout: 20000
-- tapOn: ".*[Aa]ssess.*"
-- extendedWaitUntil:
-    visible:
-      id: "nav_btn_next"
-    timeout: 60000
-# The score is the form's only question; same tap point the visit forms use.
-- tapOn:
-    point: "50%,32%"
-- inputText: "${PASS_SCORE}"
-- repeat:
-    times: 6
-    commands:
-      - tapOn:
-          id: "nav_btn_next"
-          optional: true
-- tapOn:
-    id: "nav_btn_finish"
-    optional: true
-- extendedWaitUntil:
-    visible:
-      text: "Sync with Server"
-    timeout: 120000
-# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
-# button in the form's top bar (still nav_btn_next), and CommCare sends the form
-# straight away, so this is on the home screen the moment it returns. A bare
-# "Sync Successful" also shows when nothing was sent.
-- assertVisible:
-    text: ".*form sent to server.*"
-- tapOn: "Sync with Server"
-- extendedWaitUntil:
-    visible:
-      text: ".*Sync Successful.*|.*form sent to server.*"
-    timeout: 180000
-- tapOn: "View Job Status"
-# Re-sync until the learn-complete view shows (Connect may not have processed the form yet).
-- extendedWaitUntil:
-    visible:
-      id: "learn_progress_sync_card|learn_complete_cta_bar"
-    timeout: 60000
-- repeat:
-    while:
-      notVisible:
-        id: "learn_complete_completed_on"
-    times: 15
-    commands:
-      - tapOn:
-          id: "learn_progress_sync_card"
-          optional: true
-      - extendedWaitUntil:
-          visible:
-            id: "learn_complete_completed_on"
-          timeout: 20000
-          optional: true
-- assertVisible:
-    id: "learn_complete_completed_on"
-- assertVisible:
-    id: "learn_complete_completed_on"
-    text: "Completed on .*"
-# The certificate is collapsed by default. The opportunity name, the worker's
-# name and the score are what make this discriminate: a stale certificate from
-# another run would name a different opportunity.
-- tapOn:
-    id: "certificate_header"
-- assertVisible:
-    id: "cert_subject_text"
-    text: ".*${OPPORTUNITY}.*"
-- assertVisible:
-    id: "cert_person_text"
-    text: ".*${USERNAME}.*"
-- assertVisible:
-    id: "cert_score_text"
-    text: ".*${PASS_SCORE}.*"
-- assertVisible:
-    id: "cert_date_text"
-
-# --- TC-DLV-001: the delivery details match the payment unit set up on web ---
-- scrollUntilVisible:
-    element:
-      id: "card_max_earnings"
-    direction: DOWN
-    timeout: 20000
-- assertVisible:
-    id: "info_card_value_text"
-    text: "${MAX_TOTAL}"
-    childOf:
-      id: "card_total_visits"
-- assertVisible:
-    id: "info_card_subtitle_text"
-    text: "Up to ${MAX_DAILY} per day"
-    childOf:
-      id: "card_total_visits"
-- assertVisible:
-    id: "cta_button"
-    text: "(?i)download app"
-
-# --- Claim the job ---
-# Download App on the learn-complete screen claims the job and moves on to the
-# delivery home. Ending the session here leaves ldvp_deliver.yaml on the path
-# shared_open_deliver_app.yaml already proves on 2.65: a claimed job's card opens
-# the delivery home, whose cta_button downloads and opens the deliver app.
-- tapOn:
-    id: "cta_button"
-- extendedWaitUntil:
-    visible:
-      id: "connect_delivery_home_tabs"
-    timeout: 600000
