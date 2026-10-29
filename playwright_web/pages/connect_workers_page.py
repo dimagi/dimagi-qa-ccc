@@ -800,6 +800,14 @@ class ConnectWorkersPage(BasePage):
         )
         self._step(f"Worker '{identifier}' shows status '{expected_status}'")
 
+    def worker_status(self, identifier):
+        """The worker row's status as Connect labels it (the StatusIndicatorColumn
+        x-tooltip.raw), e.g. 'Invite pending', 'User not found', 'Invite accepted'."""
+        self._await_list_table()
+        row = self.page.locator(self.DATA_ROW_BY_TEXT.format(text=identifier)).first
+        row.wait_for(state="visible", timeout=15000)
+        return row.locator("xpath=.//*[@x-tooltip.raw]").first.get_attribute("x-tooltip.raw")
+
     def verify_not_found_display(self, phone):
         """Connect_worker_06 - a not-found (unregistered) worker shows the status
         'User not found' with no display name (Name column '—'); only the mobile
