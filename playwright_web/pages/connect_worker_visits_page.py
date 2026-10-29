@@ -403,6 +403,51 @@ class WorkerVisitsPage(BasePage):
         self._step(f"PM agreed visit {visit_id} (Agree now disabled)")
         return True
 
+    # -- one named visit (CCCT-2670 LDVP) ---------------------------------------
+    # The LDVP test submits its own visits with run-unique entity names, so it
+    # reviews exactly those rather than "the first reviewable row". A duplicate
+    # carries its original's name, which is why lookups return every match and
+    # review picks the one still pending.
+
+    def visit_statuses(self, entity_name):
+        """data-visit-status of every row naming `entity_name`, in table order."""
+        self._await_table()
+        rows = self.page.locator(self.VISIT_ROW_ANY).filter(has_text=entity_name)
+        return [rows.nth(i).get_attribute("data-visit-status") for i in range(rows.count())]
+
+    def review_visit(self, entity_name, approve, text):
+        """NM-approve (with justification) or NM-reject (with reason) the pending
+        visit named `entity_name`, then confirm its status changed."""
+        self._await_table()
+        rows = self.page.locator(self.VISIT_ROW_ANY).filter(has_text=entity_name)
+        pending = [rows.nth(i).get_attribute("data-visit-id") for i in range(rows.count())
+                   if rows.nth(i).get_attribute("data-visit-status") == "pending"]
+        assert pending, (
+            f"No pending visit named {entity_name!r} to review; statuses: {self.visit_statuses(entity_name)}"
+        )
+        visit_id = pending[0]
+        self._open_row_by_id(visit_id)
+        if approve:
+            action, field, submit, expected = (self.VISIT_ACTION_APPROVE, self.VISIT_APPROVE_MODAL_JUSTIFICATION,
+                                               self.VISIT_APPROVE_MODAL_SUBMIT, "approved")
+        else:
+            action, field, submit, expected = (self.VISIT_ACTION_REJECT, self.VISIT_REJECT_MODAL_REASON,
+                                               self.VISIT_REJECT_MODAL_SUBMIT, "rejected")
+        assert self.page.locator(action).count() > 0, (
+            f"Visit {entity_name!r} offers no review action - is automatic visit verification on, "
+            f"or is this login not the Network Manager?"
+        )
+        self.click(action)
+        self.page.locator(field).first.wait_for(state="visible", timeout=10000)
+        self.type(field, text)
+        self.click(submit)
+        self.page.wait_for_load_state("load")
+        self.page.wait_for_timeout(2000)
+        self._open_row_by_id(visit_id)
+        status = self._visit_status(visit_id)
+        assert status == expected, f"Visit {entity_name!r} is {status!r} after review, expected {expected!r}"
+        self._step(f"Visit {entity_name!r} ({visit_id}) now {status}")
+
     def action_bar_button_set(self):
         """Return the set of individual-review buttons present in #visit-actions -
         a subset of {'Approve','Reject','Agree','Disagree'}. Empty under auto-verify

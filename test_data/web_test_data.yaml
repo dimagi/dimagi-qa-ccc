@@ -146,6 +146,25 @@ WORKER_DELIVER_FILTERS:
   last_active_options: ["Any time", "1 day ago", "3 days ago", "7 days ago"]
   yes_no_options: ["---------", "Yes", "No"]
 
+# LDVP end to end (CCCT-2670, playwright_web/tests/test_e2e_ldvp.py). A fresh
+# opportunity per run under a fresh program, the same way the OLP regression test
+# builds one, because a worker learns and takes the assessment once per
+# opportunity. The payment unit limits are low on purpose: max_daily 2 makes the
+# third visit of the day Over Limit (TC-DLV-005) within one device session.
+# Overrides OLP_2 for the payment unit; OLP_1 / OLP_3 are used as they are.
+LDVP:
+  payment_unit_name: "LDVP Visit"
+  amount: "100"
+  description: "LDVP Visit"
+  max_total: "4"
+  max_daily: "2"
+  days: 30
+  # The opportunity's passing score is OLP_1.passing_score (40).
+  assessment_fail_score: "10"
+  assessment_pass_score: "90"
+  reject_reason: "LDVP automation - no location"
+  second_payment: "50"
+
 # Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite
 # is an unregistered reserved automation number; the test invites and deletes it.
 WORKER_INVITES:
