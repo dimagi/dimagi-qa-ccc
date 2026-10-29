@@ -85,7 +85,20 @@ class ConnectProgramsPage(BasePage):
             ) from None
 
     def invite_network_manager(self, program_name, network_manager):
-        self.click(self.INVITE_BTN_BY_PROGRAM.format(program=program_name))
+        # The card's Invite button opens its dialog through Alpine, and on a long
+        # programs list (prod has 140+ cards) a click right after the new program
+        # appears can land before the card is wired up and do nothing - the dialog
+        # never shows and its submit button stays hidden. Click until it opens.
+        submit = self.page.locator(self.INVITE_SUBMIT_BTN_BY_PROGRAM.format(program=program_name)).first
+        for attempt in range(3):
+            self.click(self.INVITE_BTN_BY_PROGRAM.format(program=program_name))
+            try:
+                submit.wait_for(state="visible", timeout=10000)
+                break
+            except Exception:
+                if attempt == 2:
+                    raise
+                self._step("Invite dialog did not open - clicking Invite again")
         org_select = self.INVITE_ORG_SELECT_BY_PROGRAM.format(program=program_name)
         self.page.locator(org_select).first.wait_for(state="attached")
         self.select_by_visible_text_forced(org_select, network_manager)
