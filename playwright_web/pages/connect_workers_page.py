@@ -4,6 +4,8 @@ from datetime import date, datetime, timedelta
 from playwright.sync_api import expect
 
 
+from playwright.sync_api import expect
+
 from utils.helpers import LocatorLoader, TestDataLoader
 
 from pages.base_page import BasePage
@@ -436,14 +438,17 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Click '{tab_name}' tab")
         self.click(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name))
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(1500)  # table htmx-swaps into #table
-        self.verify_tab_active(tab_name)
+        self.verify_tab_active(tab_name)  # waits for the htmx swap to mark the tab active
 
     def verify_tab_active(self, tab_name):
         tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
         tab.wait_for(state="visible", timeout=15000)
-        cls = tab.get_attribute("class") or ""
-        assert "active" in cls, f"Tab '{tab_name}' is not active (class={cls!r})"
+        # The active class is applied once the htmx swap lands; poll for it instead of
+        # reading the class a single time after a fixed sleep.
+        try:
+            expect(tab).to_have_class(re.compile(r"\bactive\b"), timeout=15000)
+        except AssertionError:
+            raise AssertionError(f"Tab '{tab_name}' is not active (class={tab.get_attribute('class')!r})")
         self._step(f"Tab '{tab_name}' is active")
 
     def click_name_in_table(self, name):
