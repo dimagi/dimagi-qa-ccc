@@ -20,6 +20,9 @@ from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import parse_org_and_opp
 
 
+CREATE_ATTEMPTS = 3
+
+
 @dataclass
 class LdvpOpp:
     connect_page: object
@@ -36,18 +39,48 @@ def create_ldvp_opportunity(page, config, settings, test_data):
         "payment_unit_name", "amount", "description", "max_total", "max_daily")}}
     days = int(ldvp["days"])
 
+    env = "staging" if "staging" in config.get("cchq_url") else "prod"
+
     learn_app_name, delivery_app_name = login_cchq_and_copy_master_apps(page, config, settings)
     connect_page = open_connect_as_org(page, config)
-    program_name = create_program_with_nm_handshake(connect_page, olp1_data)
+
+    # Reuse one long-lived program whose NM handshake is already done. The
+    # handshake (create, invite NM, NM applies, PM accepts) is the slowest and
+    # flakiest part of this setup on staging, and the program does not need to
+    # be fresh - only the opportunity does. With none recorded for this
+    # environment, make one and say so, so its name can be added to LDVP.
+    program_name = ldvp.get("program_name_staging" if env == "staging" else "program_name")
+    if program_name:
+        ConnectHomePage(connect_page).click_programs_in_sidebar()
+    else:
+        program_name = create_program_with_nm_handshake(connect_page, olp1_data)
+        print(f"STEP [LDVP] Created program {program_name!r} - record it as LDVP.program_name"
+              f"{'_staging' if env == 'staging' else ''} in web_test_data.yaml to reuse it")
 
     opportunities = ConnectOpportunitiesPage(connect_page)
-    ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
-    env = "staging" if "staging" in config.get("cchq_url") else "prod"
-    opportunity_name = opportunities.create_opportunity_in_connect_page(
-        olp1_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
-    )
+    opportunity_name = None
+    for attempt in range(1, CREATE_ATTEMPTS + 1):
+        try:
+            ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
+            opportunity_name = opportunities.create_opportunity_in_connect_page(
+                olp1_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
+            )
+            break
+        except Exception as error:
+            # The learn/deliver app dropdowns are filled by Connect asking staging
+            # HQ for the domain's apps, and on staging that sometimes outlasts the
+            # form's 30s wait - and the form's own retry then reloads a page that is
+            # still hung (2 of the first 4 setup runs, 2026-10-29). Start again from
+            # the programs list rather than failing the whole hour-long run here.
+            # The failure is before submit, so a retry cannot create a second copy.
+            if attempt == CREATE_ATTEMPTS:
+                raise
+            print(f"STEP [LDVP] Opportunity form attempt {attempt} failed ({type(error).__name__}); retrying")
+            connect_page.goto(config.get("connect_url"), wait_until="domcontentloaded", timeout=120000)
+            ConnectHomePage(connect_page).click_programs_in_sidebar()
     opportunities.create_payment_unit_in_connect_page(payment_unit, days=days)
-    opportunities.setup_budget_in_connect_page(test_data.get("OLP_3"), days=days)
+    budget = {**test_data.get("OLP_3"), "total_budget_value": ldvp["total_budget_value"]}
+    opportunities.setup_budget_in_connect_page(budget, days=days)
 
     # The payment unit and budget pages leave no opportunity URL behind, so open
     # the opportunity from the list to read its ids, as tasking_config does.

@@ -153,12 +153,19 @@ WORKER_DELIVER_FILTERS:
 # third visit of the day Over Limit (TC-DLV-005) within one device session.
 # Overrides OLP_2 for the payment unit; OLP_1 / OLP_3 are used as they are.
 LDVP:
+  # A program with the Network Manager handshake already complete; each run adds
+  # its own fresh opportunity to it. Staging's was made by the first setup run
+  # (2026-10-29). Prod has none yet: the first prod run creates one and prints
+  # its name to record here as program_name.
+  program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
   payment_unit_name: "LDVP Visit"
   amount: "100"
   description: "LDVP Visit"
   max_total: "4"
   max_daily: "2"
   days: 30
+  # Budget page shows amount x max_total x workers (OLP_3: 10) = 100 x 4 x 10.
+  total_budget_value: "4000"
   # The opportunity's passing score is OLP_1.passing_score (40).
   assessment_fail_score: "10"
   assessment_pass_score: "90"
