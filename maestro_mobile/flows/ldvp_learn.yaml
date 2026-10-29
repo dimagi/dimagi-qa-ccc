@@ -88,6 +88,12 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
+# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
+# button in the form's top bar (still nav_btn_next), and CommCare sends the form
+# straight away, so this is on the home screen the moment it returns. A bare
+# "Sync Successful" also shows when nothing was sent.
+- assertVisible:
+    text: ".*form sent to server.*"
 - tapOn: "Sync with Server"
 - extendedWaitUntil:
     visible:
@@ -152,6 +158,12 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
+# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
+# button in the form's top bar (still nav_btn_next), and CommCare sends the form
+# straight away, so this is on the home screen the moment it returns. A bare
+# "Sync Successful" also shows when nothing was sent.
+- assertVisible:
+    text: ".*form sent to server.*"
 - tapOn: "Sync with Server"
 - extendedWaitUntil:
     visible:
@@ -227,6 +239,12 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
+# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
+# button in the form's top bar (still nav_btn_next), and CommCare sends the form
+# straight away, so this is on the home screen the moment it returns. A bare
+# "Sync Successful" also shows when nothing was sent.
+- assertVisible:
+    text: ".*form sent to server.*"
 - tapOn: "Sync with Server"
 - extendedWaitUntil:
     visible:
@@ -305,6 +323,12 @@ env:
     visible:
       text: "Sync with Server"
     timeout: 120000
+# Proof the form was saved and sent, not just closed. 2.65 puts the FINISH
+# button in the form's top bar (still nav_btn_next), and CommCare sends the form
+# straight away, so this is on the home screen the moment it returns. A bare
+# "Sync Successful" also shows when nothing was sent.
+- assertVisible:
+    text: ".*form sent to server.*"
 - tapOn: "Sync with Server"
 - extendedWaitUntil:
     visible:
