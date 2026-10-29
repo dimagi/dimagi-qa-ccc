@@ -90,8 +90,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
     wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
-    wait_on_web(lambda: _assert_cell(workers.table_cell(worker_name, "modules completed"), "100%",
-                                     "Modules completed"), tab="Learn")
+    wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
+                                        "Modules completed"), tab="Learn")
 
     # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
     run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
@@ -178,8 +178,15 @@ def _assert_statuses(visits, name, expected):
     assert statuses == sorted(expected), f"Visit {name!r} rows have statuses {statuses}, expected {expected}"
 
 
-def _assert_cell(text, expected, column):
-    assert text.strip() == expected, f"{column} reads {text!r}, expected {expected!r}"
+def _assert_percent(text, expected, column):
+    # Connect renders "100.0%" on prod, so compare the number, not the string.
+    # A dash before Connect has recorded anything is "not yet", so it must fail as
+    # an assertion that the web wait retries, not as a ValueError that ends it.
+    try:
+        value = float(text.strip().rstrip("%"))
+    except ValueError:
+        value = None
+    assert value == expected, f"{column} reads {text!r}, expected {expected}%"
 
 
 def _assert_amount(text, expected, column):
