@@ -395,3 +395,37 @@ MAESTRO_RECOVERY_FIXTURE:
   backup_code: "129104"
   phone_number_staging: "1290204"
   backup_code_staging: "129204"
+
+# --- CCCT-2670 LDVP end to end -------------------------------------------------
+#
+# Same reserved block as the web invite test's number (WORKER_INVITES
+# reserved_invite +74267426090) so the chain reads as one: web invites the
+# number, the device takes it from there. 7426090 itself is NOT used - the
+# invite test needs it to stay unregistered (Connect_worker_12 asserts that a
+# resend to it is skipped as "not registered on PersonalID").
+#
+# Nothing to seed by hand. The first LDVP run on an environment registers each
+# number (pre-invited signup - shared_ldvp_signin.yaml takes the Confirm-code
+# branch); every run after that recovers it with the backup code. Registering
+# needs a 2.65 build (qaAutomation placeholder photo).
+#
+# Numbers differ per environment for the usual reason: one PersonalID number
+# cannot hold a session on two environments at once.
+
+# Invited to every run's fresh opportunity; learns, delivers and is paid.
+MAESTRO_LDVP_WORKER:
+  country_code: "+7426"
+  phone_number: "7426093"
+  username: "QA LDVP Worker"
+  backup_code: "609300"
+  phone_number_staging: "7426091"
+  backup_code_staging: "609100"
+
+# Never invited to anything - TC-INV-004 checks it cannot see the opportunity.
+MAESTRO_LDVP_UNINVITED:
+  country_code: "+7426"
+  phone_number: "7426094"
+  username: "QA LDVP Uninvited"
+  backup_code: "609400"
+  phone_number_staging: "7426092"
+  backup_code_staging: "609200"

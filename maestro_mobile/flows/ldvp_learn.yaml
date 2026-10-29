@@ -1,0 +1,301 @@
+# LDVP learn session (CCCT-2670): accept the invite, learn, fail the assessment,
+# retake it, earn the certificate and read the delivery details.
+#
+# Covers TC-INV-002, TC-LRN-001, TC-LRN-002, TC-LRN-004 (device half),
+# TC-LRN-005 (device half) and TC-DLV-001. The web halves are asserted by
+# test_e2e_ldvp.py once this session ends.
+#
+# Same path as the Appium tc_03 (test_04_learn_app_assessments_delivery_app),
+# which this ports: the [Master] Learn App copy has two learn forms, "Learn 1"
+# and "Learn 2", plus an assessment form whose only question is the score, so the
+# test chooses pass or fail by what it types. Its status texts are the ones
+# LearnAppPage.verify_job_status already asserts.
+#
+# Ids: connect_learning_status_text / connect_learning_progress_text /
+# connect_learning_button / btnSync on the learn progress screen;
+# connect_learn_cert_subject / connect_learn_cert_person on the certificate;
+# connect_delivery_max_daily_text / connect_delivery_total_visits_text on the
+# opportunity details (all from locators/mobile_locators.yaml learn_app_page).
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  # The runner injects the run's values; these only matter for a hand run.
+  OPPORTUNITY: "Demo Opportunity"
+  FAIL_SCORE: "10"
+  PASS_SCORE: "90"
+  PASSING_SCORE: "40"
+  MAX_DAILY: "2"
+  MAX_TOTAL: "4"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+
+# --- TC-INV-002: open the invite and accept it ---
+# 2.65 (CCCT-2785): the card is the tap target; a new opportunity opens the job
+# intro, whose bottom bar button (cta_button) accepts it and downloads the Learn
+# App. Allow a long timeout: this is a real download.
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "cta_button"
+    timeout: 30000
+- assertVisible:
+    id: "tv_job_title"
+- tapOn:
+    id: "cta_button"
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    text: "Start|DOWNLOAD|Download"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "View Job Status"
+    timeout: 600000
+
+# --- TC-LRN-001: first module moves progress past 0% ---
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Learn 1"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Learn 1"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+- tapOn: "View Job Status"
+- extendedWaitUntil:
+    visible:
+      id: "btnSync"
+    timeout: 30000
+- tapOn:
+    id: "btnSync"
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_status_text"
+      text: ".*Finish learning to earn your certificate.*"
+    timeout: 120000
+- assertNotVisible:
+    id: "connect_learning_progress_text"
+    text: "0%|100%"
+- assertVisible:
+    id: "connect_learning_button"
+    text: "(?i)continue learning"
+
+# --- TC-LRN-002: the second module asks for the assessment ---
+- tapOn:
+    id: "connect_learning_button"
+- extendedWaitUntil:
+    visible:
+      text: "Start"
+    timeout: 60000
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Learn 2"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Learn 2"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+- tapOn: "View Job Status"
+- extendedWaitUntil:
+    visible:
+      id: "btnSync"
+    timeout: 30000
+- tapOn:
+    id: "btnSync"
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_status_text"
+      text: ".*Complete the assessment to finish training.*"
+    timeout: 120000
+- assertVisible:
+    id: "connect_learning_button"
+    text: "(?i)go to assessment"
+
+# --- TC-LRN-004: a failing score blocks the job ---
+- tapOn:
+    id: "connect_learning_button"
+- extendedWaitUntil:
+    visible:
+      text: "Start"
+    timeout: 60000
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: ".*[Aa]ssess.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: ".*[Aa]ssess.*"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+# The score is the form's first question; same tap point the visit forms use.
+- tapOn:
+    point: "50%,32%"
+- inputText: "${FAIL_SCORE}"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+- tapOn: "View Job Status"
+- extendedWaitUntil:
+    visible:
+      id: "btnSync"
+    timeout: 30000
+- tapOn:
+    id: "btnSync"
+# The status text spans lines ("...Please try again.\nYour score: 10\nPassing
+# score: 40"), and Maestro matches the whole text, so [\s\S] bridges the breaks.
+- extendedWaitUntil:
+    visible:
+      id: "connect_learning_status_text"
+      text: "[\\s\\S]*did not earn a passing score[\\s\\S]*Your score: ${FAIL_SCORE}[\\s\\S]*Passing score: ${PASSING_SCORE}[\\s\\S]*"
+    timeout: 120000
+- assertNotVisible:
+    id: "connect_learn_cert_title"
+- assertNotVisible:
+    id: "connect_delivery_button"
+- assertVisible:
+    id: "connect_learning_button"
+    text: "(?i)go to assessment"
+
+# --- TC-LRN-005: retake with a passing score and earn the certificate ---
+- tapOn:
+    id: "connect_learning_button"
+- extendedWaitUntil:
+    visible:
+      text: "Start"
+    timeout: 60000
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: ".*[Aa]ssess.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: ".*[Aa]ssess.*"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${PASS_SCORE}"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+- tapOn: "View Job Status"
+- extendedWaitUntil:
+    visible:
+      id: "btnSync"
+    timeout: 30000
+- tapOn:
+    id: "btnSync"
+# The opportunity name and the worker's name are what make this discriminate:
+# a stale certificate from another run would name a different opportunity.
+- extendedWaitUntil:
+    visible:
+      id: "connect_learn_cert_subject"
+      text: ".*${OPPORTUNITY}.*"
+    timeout: 120000
+- assertVisible:
+    id: "connect_learn_cert_person"
+    text: ".*${USERNAME}.*"
+- assertVisible:
+    id: "connect_learn_cert_date"
+
+# --- TC-DLV-001: the details match the payment unit set up on web ---
+- tapOn:
+    id: "connect_learning_button"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_max_daily_text"
+    timeout: 30000
+- assertVisible:
+    id: "connect_delivery_max_daily_text"
+    text: "(?s).*\\b${MAX_DAILY}\\b.*"
+- assertVisible:
+    id: "connect_delivery_total_visits_text"
+    text: "(?s).*\\b${MAX_TOTAL}\\b.*"
+- assertVisible:
+    id: "connect_delivery_button"

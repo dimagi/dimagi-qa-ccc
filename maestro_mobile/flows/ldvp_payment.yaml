@@ -1,0 +1,112 @@
+# LDVP payment session (CCCT-2670), after web approved V1, rejected V2 and paid
+# 100. Covers the device halves of TC-VER-001/002/003, TC-PAY-001 and TC-PAY-002.
+#
+# Ids from locators/mobile_locators.yaml delivery_app_page (2.65, CCCT-2785):
+# the delivery home screen has tabs (connect_delivery_home_tabs); the payment
+# confirmation card sits in its header (connect_payment_confirm_label with
+# Yes / Ask me later); the Visits tab carries the payment-unit row (tvApproved,
+# tvDeliveryTotalAmount) and the Payment tab the transferred total.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  VISIT_NAME_V2: "LDVP-V2-000000"
+  EARNED: "100"
+  TRANSFERRED: "100"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+# Web paid before this session started (a Maestro build cannot pause for it),
+# so the push went out before this fresh install signed in and will never reach
+# its shade. The app's notification history is kept server side and does list
+# it, so that is what is read here (master Notifications_08 / _12).
+- tapOn:
+    id: "action_bell"
+- extendedWaitUntil:
+    visible:
+      text: "(?s).*(Payment received|You have received a payment).*"
+    timeout: 120000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+
+# --- TC-PAY-001: the confirmation card asks whether the payment arrived ---
+- extendedWaitUntil:
+    visible:
+      id: "connect_payment_confirm_label"
+    timeout: 60000
+- assertVisible:
+    id: "connect_payment_confirm_yes_button"
+- assertVisible:
+    id: "connect_payment_confirm_no_button"
+
+# --- TC-PAY-002 (device half): confirm receipt; web checks the rest ---
+- tapOn:
+    id: "connect_payment_confirm_yes_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "connect_payment_confirm_label"
+    timeout: 30000
+
+# --- TC-VER-001 / TC-VER-003: one approved visit, earning one unit ---
+# 1 approved and 100 earned together are what discriminate: the rejected V2,
+# the duplicate and the over-limit V3 would each have pushed one of them up.
+- tapOn:
+    text: "Visits"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "tvApproved"
+    timeout: 30000
+- assertVisible:
+    id: "tvApproved"
+    text: "(?s)\\D*1\\b.*"
+- assertVisible:
+    id: "tvDeliveryTotalAmount"
+    text: "(?s).*\\b${EARNED}\\b.*"
+
+# --- TC-VER-002: the rejected visit reads Not Approved ---
+- tapOn:
+    id: "imgArrowForward"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_list"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ".*${VISIT_NAME_V2}.*"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    text: "(?i).*not approved.*|.*rejected.*"
+- back
+
+# --- TC-PAY-001: transferred total ---
+- tapOn:
+    text: "Payments?"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_transferred_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_transferred_amount"
+    text: "(?s).*\\b${TRANSFERRED}\\b.*"

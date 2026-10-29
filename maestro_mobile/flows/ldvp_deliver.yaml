@@ -1,0 +1,249 @@
+# LDVP deliver session (CCCT-2670): download the deliver app and submit four
+# visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
+# TC-DLV-004 (V1 again, identical: the duplicate) and TC-DLV-005 (V3, the third
+# counted visit of the day against a max of 2: Over Limit). Web reads every
+# verdict afterwards; this session only has to get them submitted in order.
+#
+# The visit block is the one worker_blocked_visit.yaml uses (Start -> Case List
+# -> Registration Form -> name -> next -> id -> walk past the rest), repeated
+# inline per visit because runFlow with per-call env is unproven on Maestro
+# 1.39.13 and every experiment costs a full device run. Keep the four in step by
+# hand. A visit "with location" taps RECORD LOCATION on the GPS question, as the
+# Appium DeliveryAppPage.submit_form(record_loc=True) does; setLocation below
+# gives the device a fix to record.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  VISIT_MODULE: "Case List"
+  VISIT_FORM: "[Rr]egistration [Ff]orm"
+  # Injected per run by flows/ldvp_values.py; defaults only matter by hand.
+  VISIT_NAME_V1: "LDVP-V1-000000"
+  VISIT_ID_V1: "0000001"
+  VISIT_NAME_V2: "LDVP-V2-000000"
+  VISIT_ID_V2: "0000002"
+  VISIT_NAME_V1_DUP: "LDVP-V1-000000"
+  VISIT_ID_V1_DUP: "0000001"
+  VISIT_NAME_V3: "LDVP-V3-000000"
+  VISIT_ID_V3: "0000003"
+---
+- runFlow: shared_ldvp_signin.yaml
+- setLocation:
+    latitude: 28.6139
+    longitude: 77.2090
+- runFlow: shared_ldvp_job_list.yaml
+
+# 2.65: tapping a claimed opportunity's card opens the delivery home screen; its
+# cta_button downloads the deliver app on a fresh install and then opens it.
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "cta_button"
+    timeout: 30000
+- tapOn:
+    id: "cta_button"
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 600000
+
+# --- V1: with location (TC-DLV-002) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V1}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V1}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    text: "RECORD LOCATION"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 30000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- V2: no location (TC-DLV-003) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V2}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V2}"
+- tapOn:
+    id: "nav_btn_next"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- V1 again, identical: the duplicate (TC-DLV-004) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V1_DUP}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V1_DUP}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    text: "RECORD LOCATION"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 30000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- V3: third counted visit today, over the max of 2 (TC-DLV-005) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V3}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V3}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    text: "RECORD LOCATION"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 30000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000

@@ -149,3 +149,25 @@ def test_wrong_backup_code_differs_from_every_real_account():
             assert resolved["WRONG_BACKUP_CODE"] != resolved.get("BACKUP_CODE"), (
                 f"{flow} on {env} would log in with its 'wrong' code"
             )
+
+
+def test_ldvp_flows_resolve_their_workers():
+    # CCCT-2670: the uninvited flow must sign in as a different worker from the
+    # one the LDVP opportunity invites, or TC-INV-004 asserts on the wrong account.
+    from flows.mobile_runner import env_by_flow
+
+    flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_deliver.yaml",
+             "ldvp_payment.yaml", "ldvp_ask_later.yaml", "ldvp_rollback.yaml"]
+    env = env_by_flow(flows, "stage")
+    assert set(env) == set(flows)
+    invited = {env[f]["PHONE_NUMBER"] for f in flows[1:]}
+    assert invited == {"7426091"}
+    assert env["ldvp_uninvited.yaml"]["PHONE_NUMBER"] == "7426092"
+
+
+def test_ldvp_workers_differ_per_environment():
+    from flows.mobile_runner import env_by_flow
+
+    stage = env_by_flow(["ldvp_learn.yaml"], "stage")["ldvp_learn.yaml"]["PHONE_NUMBER"]
+    prod = env_by_flow(["ldvp_learn.yaml"], "prod")["ldvp_learn.yaml"]["PHONE_NUMBER"]
+    assert stage != prod

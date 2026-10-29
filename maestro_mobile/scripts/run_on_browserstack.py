@@ -113,6 +113,16 @@ WORKER_BY_FLOW = {
     "signup_email_add.yaml": "MAESTRO_SIGNUP_EMAIL_ADD",
     "signup_email_verify.yaml": "MAESTRO_SIGNUP_EMAIL_VERIFY",
     "probe_fresh_registration.yaml": "MAESTRO_INTEGRITY_PROBE",
+    # CCCT-2670 LDVP end to end. Every session of the chain is the one invited
+    # worker; only the uninvited check signs in as someone else. Run only by
+    # playwright_web/tests/test_e2e_ldvp.py, never from TEST_FLOWS: each one
+    # needs the opportunity that test creates and the web steps between them.
+    "ldvp_uninvited.yaml": "MAESTRO_LDVP_UNINVITED",
+    "ldvp_learn.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_deliver.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_payment.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_ask_later.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_rollback.yaml": "MAESTRO_LDVP_WORKER",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

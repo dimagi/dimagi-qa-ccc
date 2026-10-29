@@ -1,0 +1,51 @@
+# LDVP rollback session (CCCT-2670, TC-PAY-004), after web rolled back the
+# 50 payment. The rollback notification is listed and the transferred total is
+# back to the first payment alone.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  TRANSFERRED: "100"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+# Web paid before this session started (a Maestro build cannot pause for it),
+# so the push went out before this fresh install signed in and will never reach
+# its shade. The app's notification history is kept server side and does list
+# it, so that is what is read here (master Notifications_08 / _12).
+- tapOn:
+    id: "action_bell"
+- extendedWaitUntil:
+    visible:
+      text: "(?is).*(roll ?back|revert).*"
+    timeout: 120000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+- tapOn:
+    text: "Payments?"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_transferred_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_transferred_amount"
+    text: "(?s).*\\b${TRANSFERRED}\\b.*"
