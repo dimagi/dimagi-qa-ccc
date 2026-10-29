@@ -157,7 +157,7 @@ def test_ldvp_flows_resolve_their_workers():
     from flows.mobile_runner import env_by_flow
 
     flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_deliver.yaml",
-             "ldvp_payment.yaml", "ldvp_ask_later.yaml", "ldvp_rollback.yaml"]
+             "ldvp_payment.yaml", "ldvp_decline_confirm.yaml", "ldvp_rollback.yaml"]
     env = env_by_flow(flows, "stage")
     assert set(env) == set(flows)
     invited = {env[f]["PHONE_NUMBER"] for f in flows[1:]}

@@ -72,7 +72,6 @@ def test_e2e_ldvp(page, test_data, config, settings):
         ["ldvp_uninvited.yaml", "ldvp_learn.yaml"],
         FAIL_SCORE=ldvp["assessment_fail_score"],
         PASS_SCORE=ldvp["assessment_pass_score"],
-        PASSING_SCORE=test_data.get("OLP_1")["passing_score"],
         MAX_DAILY=ldvp["max_daily"],
         MAX_TOTAL=ldvp["max_total"],
     )
@@ -137,7 +136,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     workers.make_payment_for_worker(worker_name, amount=want)
     workers.wait_for_last_paid_populated(worker_name)
 
-    # --- 6. DEVICE: statuses, earned, the confirmation card; tap Yes ---
+    # --- 6. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
     run_device_flow(["ldvp_payment.yaml"], VISIT_NAME_V2=v2, EARNED=want, TRANSFERRED=want)
 
     # --- 7. WEB: the confirmation shows (TC-PAY-002); a second payment ---
@@ -147,8 +146,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
     second = int(ldvp["second_payment"])
     workers.make_payment_for_worker(worker_name, amount=second)
 
-    # --- 8. DEVICE: Ask me later (TC-PAY-003) ---
-    run_device_flow(["ldvp_ask_later.yaml"], TRANSFERRED=want + second)
+    # --- 8. DEVICE: answering No leaves it unconfirmed (TC-PAY-003) ---
+    run_device_flow(["ldvp_decline_confirm.yaml"], SECOND_PAYMENT=second, TRANSFERRED=want + second)
 
     # --- 9. WEB: roll the second payment back ---
     reload_payments()

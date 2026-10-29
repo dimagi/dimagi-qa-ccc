@@ -1,6 +1,16 @@
 # LDVP rollback session (CCCT-2670, TC-PAY-004), after web rolled back the
-# 50 payment. The rollback notification is listed and the transferred total is
-# back to the first payment alone.
+# 50 payment. The rollback is listed in the notification history, the transferred
+# total is back to the first payment alone, and the unconfirmed row is gone.
+#
+# Ids and strings are from commcare-android at tag commcare_2.65.0
+# (fragment_connect_delivery_home.xml, ConnectDeliveryPaymentFragment): the
+# delivery home has tabs Dashboard / Payment / Visits / More
+# (connect_delivery_home_tabs). The Payment tab shows payment_earned_amount and
+# payment_transferred_amount over one row per payment. An unconfirmed row reads
+# "Transferred" (tv_payment_status) and shows a `confirm` control, which opens a
+# "Confirm Transferred Payment" dialog (tv_payment_amount, ri_yes / ri_no); a
+# confirmed row reads "Received" and hides `confirm`. 2.65 has no "Ask me
+# later" card - confirmation is per row.
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"
@@ -12,15 +22,16 @@ env:
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
-# Web paid before this session started (a Maestro build cannot pause for it),
-# so the push went out before this fresh install signed in and will never reach
-# its shade. The app's notification history is kept server side and does list
-# it, so that is what is read here (master Notifications_08 / _12).
+
+# --- TC-PAY-004: the rollback notification in the app's notification history ---
+# Web acted before this session started (a Maestro build cannot pause for it),
+# so the push went out before this fresh install signed in and never reaches its
+# shade. The notification history is kept server side and lists it.
 - tapOn:
     id: "action_bell"
 - extendedWaitUntil:
     visible:
-      text: "(?is).*(roll ?back|revert).*"
+      text: "(?is).*(roll ?back|revert|reversed).*"
     timeout: 120000
 - back
 - extendedWaitUntil:
@@ -39,7 +50,7 @@ env:
       id: "connect_delivery_home_tabs"
     timeout: 30000
 - tapOn:
-    text: "Payments?"
+    text: "Payment"
     childOf:
       id: "connect_delivery_home_tabs"
 - extendedWaitUntil:
@@ -49,3 +60,5 @@ env:
 - assertVisible:
     id: "payment_transferred_amount"
     text: "(?s).*\\b${TRANSFERRED}\\b.*"
+- assertNotVisible:
+    id: "confirm"
