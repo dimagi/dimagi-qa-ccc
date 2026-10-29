@@ -404,10 +404,13 @@ MAESTRO_RECOVERY_FIXTURE:
 # invite test needs it to stay unregistered (Connect_worker_12 asserts that a
 # resend to it is skipped as "not registered on PersonalID").
 #
-# Nothing to seed by hand. The first LDVP run on an environment registers each
-# number (pre-invited signup - shared_ldvp_signin.yaml takes the Confirm-code
-# branch); every run after that recovers it with the backup code. Registering
-# needs a 2.65 build (qaAutomation placeholder photo).
+# SEEDING: the invited worker must be registered BEFORE it is ever invited -
+# Connect resolves an invite only when it is sent, so an invite to a number
+# PersonalID does not know stays "User not found" even after the number signs up.
+# Run seed_ldvp_worker.yaml once per environment on a 2.65 build (staging's was
+# registered on 2026-10-29). The uninvited worker needs no seeding: it is never
+# invited, so its first ldvp_uninvited run registers it in-flow
+# (shared_ldvp_signin.yaml takes the Confirm-code branch).
 #
 # Numbers differ per environment for the usual reason: one PersonalID number
 # cannot hold a session on two environments at once.

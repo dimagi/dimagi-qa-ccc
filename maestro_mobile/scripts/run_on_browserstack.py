@@ -118,6 +118,8 @@ WORKER_BY_FLOW = {
     # playwright_web/tests/test_e2e_ldvp.py, never from TEST_FLOWS: each one
     # needs the opportunity that test creates and the web steps between them.
     "ldvp_uninvited.yaml": "MAESTRO_LDVP_UNINVITED",
+    # Seeding only - registers the invited worker once per environment.
+    "seed_ldvp_worker.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_learn.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_deliver.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_payment.yaml": "MAESTRO_LDVP_WORKER",

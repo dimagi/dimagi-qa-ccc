@@ -57,12 +57,15 @@ def test_e2e_ldvp(page, test_data, config, settings):
     opp = create_ldvp_opportunity(page, config, settings, test_data)
     print(f"STEP [LDVP] Opportunity {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
     workers = invite_and_wait(opp, full_number, phone)
-    # The first run on an environment invites a number PersonalID does not know
-    # yet - the device registers it later - and Connect labels that "User not
-    # found". Every later run invites a registered number: "Invite pending".
+    # The worker has to be registered before it is invited: an invite to a number
+    # PersonalID does not know reads "User not found" and never attaches to the
+    # account when the number signs up later.
     status = workers.worker_status(phone)
-    assert status in ("Invite pending", "User not found"), f"Invited worker shows {status!r}"
-    print(f"STEP [LDVP] Invited {full_number}: {status!r}")
+    assert status == "Invite pending", (
+        f"Invited worker shows {status!r}, expected 'Invite pending'. 'User not found' means "
+        f"{full_number} is not registered on this environment - run seed_ldvp_worker.yaml once "
+        f"(see MAESTRO_LDVP_WORKER in test_data/mobile_workers.yaml)."
+    )
 
     # --- 2. DEVICE: uninvited worker looks; invited worker learns ---
     run_device_flow(

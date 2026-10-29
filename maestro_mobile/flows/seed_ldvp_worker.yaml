@@ -1,0 +1,15 @@
+appId: org.commcare.dalvik
+---
+# One-off: registers the LDVP worker (MAESTRO_LDVP_WORKER) on an environment.
+# NOT in TEST_FLOWS. Run once per environment on a 2.65 build, before the first
+# test_e2e_ldvp run there:
+#   python maestro_mobile/scripts/run_on_browserstack.py --app-env prod \
+#     --flows seed_ldvp_worker.yaml
+#
+# Needed because Connect resolves an invite only when it is sent: inviting a
+# number PersonalID does not know yet records "User not found", and that invite
+# does not attach to the account when the number signs up later (seen on
+# staging 2026-10-29, opportunity f2b49c35). So the worker must exist first.
+# Staging's was registered by the first LDVP run. Re-running this on an
+# environment where the account exists just recovers it - harmless.
+- runFlow: shared_ldvp_signin.yaml
