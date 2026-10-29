@@ -154,9 +154,10 @@ WORKER_DELIVER_FILTERS:
 # Overrides OLP_2 for the payment unit; OLP_1 / OLP_3 are used as they are.
 LDVP:
   # A program with the Network Manager handshake already complete; each run adds
-  # its own fresh opportunity to it. Staging's was made by the first setup run
-  # (2026-10-29). Prod has none yet: the first prod run creates one and prints
-  # its name to record here as program_name.
+  # its own fresh opportunity to it. Both were made by the first setup run that
+  # got through the handshake on that environment (2026-10-29); if one is ever
+  # deleted or ends, remove the key and the next run creates and prints a new one.
+  program_name: "Demo Program_29-Oct-2026 : 16:14"
   program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
   payment_unit_name: "LDVP Visit"
   amount: "100"

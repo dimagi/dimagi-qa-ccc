@@ -9,6 +9,7 @@ OLP_2, so the daily limit is reachable in one device session.
 from dataclasses import dataclass
 
 from flows.olp_setup import (
+    PM_ORG,
     create_program_with_nm_handshake,
     login_cchq_and_copy_master_apps,
     open_connect_as_org,
@@ -76,8 +77,11 @@ def create_ldvp_opportunity(page, config, settings, test_data):
             if attempt == CREATE_ATTEMPTS:
                 raise
             print(f"STEP [LDVP] Opportunity form attempt {attempt} failed ({type(error).__name__}); retrying")
-            connect_page.goto(config.get("connect_url"), wait_until="domcontentloaded", timeout=120000)
-            ConnectHomePage(connect_page).click_programs_in_sidebar()
+            # Straight to the programs list by URL: the page a failed attempt leaves
+            # behind may not carry the sidebar (seen on prod).
+            connect_page.goto(f"{config.get('connect_url')}/a/{PM_ORG.lower()}/program/",
+                              wait_until="domcontentloaded", timeout=120000)
+            connect_page.wait_for_load_state("networkidle", timeout=120000)
     opportunities.create_payment_unit_in_connect_page(payment_unit, days=days)
     budget = {**test_data.get("OLP_3"), "total_budget_value": ldvp["total_budget_value"]}
     opportunities.setup_budget_in_connect_page(budget, days=days)
