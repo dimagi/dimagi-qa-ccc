@@ -1,8 +1,6 @@
 import re
 import time
 from datetime import date, datetime, timedelta
-from playwright.sync_api import expect
-
 
 from playwright.sync_api import expect
 
