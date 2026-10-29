@@ -55,9 +55,9 @@ env:
 - assertVisible:
     id: "progress_card_bar_count"
     text: "2 of 2"
-- assertVisible:
-    id: "cta_subtitle_text"
-    text: "Complete assessment"
+# Not the bottom bar's subtitle: it depends on whether the learn app is
+# installed ("Download Learn" on the fresh install every session starts as), not
+# on learning progress.
 - assertVisible:
     id: "learn_progress_continue_title"
     text: "Assessment"

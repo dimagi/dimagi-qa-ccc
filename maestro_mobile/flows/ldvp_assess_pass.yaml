@@ -55,11 +55,9 @@ env:
 - assertVisible:
     id: "progress_card_info_text"
     text: "You didn.t pass the assessment.*"
-# No certificate, no delivery cards, and the bottom bar offers the assessment
-# again.
-- assertVisible:
-    id: "cta_subtitle_text"
-    text: "Take assessment"
+# No certificate and no delivery cards: the worker is still on the learning
+# view. (The bottom bar's subtitle reflects whether the learn app is installed,
+# so it is not asserted.)
 - assertNotVisible:
     id: "certificate_header"
 - assertNotVisible:
