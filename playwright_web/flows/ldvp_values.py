@@ -9,7 +9,9 @@ import time
 from dataclasses import dataclass, field
 
 # Visits in the order the deliver session submits them. V1_DUP repeats V1 exactly
-# (TC-DLV-004); V3 is the one over the daily limit of 2 (TC-DLV-005).
+# (TC-DLV-004) and, as the third visit of the day, still fits the daily limit of
+# 3 - Connect checks the limit before duplicates and counts duplicates toward it.
+# V3 is the fourth, over the limit (TC-DLV-005).
 VISIT_KEYS = ("V1", "V2", "V1_DUP", "V3")
 
 

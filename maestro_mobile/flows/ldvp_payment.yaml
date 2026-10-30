@@ -1,5 +1,5 @@
-# LDVP payment session (CCCT-2670), after web approved V1, rejected V2 and paid
-# the earned amount. Covers the device halves of TC-VER-001/002/003, TC-PAY-001
+# LDVP payment session (CCCT-2670), after Connect auto-approved V1 and V2 and web
+# paid the earned amount. Covers the device halves of TC-VER-001/003, TC-PAY-001
 # and TC-PAY-002.
 #
 # Ids and strings are from commcare-android at tag commcare_2.65.0
@@ -18,9 +18,8 @@ env:
   USERNAME: "QA LDVP Worker"
   BACKUP_CODE: "609100"
   OPPORTUNITY: "Demo Opportunity"
-  VISIT_NAME_V2: "LDVP-V2-000000"
-  EARNED: "100"
-  TRANSFERRED: "100"
+  EARNED: "200"
+  TRANSFERRED: "200"
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
@@ -52,10 +51,10 @@ env:
       id: "connect_delivery_home_tabs"
     timeout: 30000
 
-# --- TC-VER-001: one approved visit ---
-# The rejected V2, the duplicate and the over-limit V3 would each have pushed the
-# approved count or the earned amount up, so 1 approved and 100 earned together
-# are what discriminate.
+# --- TC-VER-001: two approved visits ---
+# V1 and V2 were auto-approved; had the duplicate or the over-limit V3 been
+# counted, the approved count or the earned amount would be higher, so 2 approved
+# and 200 earned together are what discriminate.
 - tapOn:
     text: "Visits"
     childOf:
@@ -66,27 +65,7 @@ env:
     timeout: 30000
 - assertVisible:
     id: "tvApproved"
-    text: "(?s)\\D*1\\b.*"
-
-# --- TC-VER-002: the rejected visit says so ---
-# Only V2 was rejected (V1 approved, its copy duplicate, V3 over limit), so a
-# rejected status on the list belongs to it.
-- tapOn:
-    id: "imgArrowForward"
-- extendedWaitUntil:
-    visible:
-      id: "delivery_list"
-    timeout: 30000
-- scrollUntilVisible:
-    element:
-      id: "delivery_item_name"
-      text: ".*${VISIT_NAME_V2}.*"
-    direction: DOWN
-    timeout: 20000
-- assertVisible:
-    id: "delivery_item_status"
-    text: "(?i).*(reject|not approved).*"
-- back
+    text: "(?s)\\D*2\\b.*"
 
 # --- TC-VER-003 / TC-PAY-001: earned, transferred, and an unconfirmed payment ---
 - tapOn:

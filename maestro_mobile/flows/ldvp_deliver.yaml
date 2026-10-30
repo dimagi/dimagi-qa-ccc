@@ -2,8 +2,8 @@
 # on the learn-complete view - TC-LRN-005 device half (certificate) and TC-DLV-001
 # (delivery details) - claims the job, then downloads the deliver app and
 # submits four visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
-# TC-DLV-004 (V1 again, identical: the duplicate) and TC-DLV-005 (V3, the third
-# counted visit of the day against a max of 2: Over Limit). Web reads every
+# TC-DLV-004 (V1 again, identical: the duplicate) and TC-DLV-005 (V3, the fourth
+# counted visit of the day against a max of 3: Over Limit). Web reads every
 # verdict afterwards; this session only has to get them submitted in order.
 #
 # The visit block is the one worker_blocked_visit.yaml uses (Start -> Case List
@@ -21,7 +21,7 @@ env:
   BACKUP_CODE: "609100"
   OPPORTUNITY: "Demo Opportunity"
   PASS_SCORE: "90"
-  MAX_DAILY: "2"
+  MAX_DAILY: "3"
   MAX_TOTAL: "4"
   VISIT_MODULE: "Case List"
   VISIT_FORM: "[Rr]egistration [Ff]orm"
@@ -294,7 +294,7 @@ env:
       text: ".*Sync Successful.*|.*form sent to server.*"
     timeout: 180000
 
-# --- V3: third counted visit today, over the max of 2 (TC-DLV-005) ---
+# --- V3: fourth counted visit today, over the max of 3 (TC-DLV-005) ---
 - tapOn: "Start"
 - tapOn: "${VISIT_MODULE}"
 - scrollUntilVisible:

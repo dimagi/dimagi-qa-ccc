@@ -163,7 +163,10 @@ LDVP:
   amount: "100"
   description: "LDVP Visit"
   max_total: "4"
-  max_daily: "2"
+  # 3, not 2: Connect counts a duplicate toward the daily limit and checks the
+  # limit before duplicates, so with 2 the V1 copy would read over_limit. With 3,
+  # V1 and V2 are approved, the copy is duplicate and V3 is over the limit.
+  max_daily: "3"
   days: 30
   # Budget page shows amount x max_total x workers (OLP_3: 10) = 100 x 4 x 10.
   total_budget_value: "4000"

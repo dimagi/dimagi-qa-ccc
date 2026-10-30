@@ -3,9 +3,7 @@ import os
 import pytest
 
 from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait, resume_ldvp_opportunity
-from flows.olp_setup import PM_ORG
 from flows.ldvp_values import expected_earned, new_run
-from pages.connect_home_page import ConnectHomePage
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import poll_until
@@ -26,7 +24,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     device can see the result, since a Maestro build cannot pause.
 
     Plan: test_plans/CCCT-2670_LDVP_Automation_Test_Plan.xlsx. Covers TC-INV-001..004,
-    TC-LRN-001..005, TC-DLV-001..005, TC-VER-001..003, TC-PAY-001..004 and, for
+    TC-LRN-001..005, TC-DLV-001..005, TC-VER-001 and 003, TC-PAY-001..004 and, for
     free, TC-REG-002 (every session after the first starts from a cleared app and
     recovers the account, and progress has to be there).
 
@@ -125,7 +123,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
         **run.device_env(),
     )
 
-    # --- 7. WEB: what each visit became, then review (TC-DLV-002..005) ---
+    # --- 7. WEB: what each visit became (TC-DLV-002..005, TC-VER-001) ---
     user_id = workers.worker_user_id(opp.base_url, opp.org_slug, opp.opp_id, worker_name)
     workers.goto_worker_visits_page(opp.base_url, opp.org_slug, opp.opp_id, user_id)
     v1, v2, v3 = (run.visits[k][0] for k in ("V1", "V2", "V3"))
@@ -133,31 +131,23 @@ def test_e2e_ldvp(page, test_data, config, settings):
         workers.wait_for_visit(name, timeout_seconds=sync_timeout)
     visits = WorkerVisitsPage(opp.connect_page)
 
-    # The duplicate shares V1's name, so V1 must show exactly two rows: the
-    # original still pending and the copy marked duplicate (TC-DLV-004).
-    poll_until(lambda: _assert_statuses(visits, v1, ["duplicate", "pending"]),
+    # LDVP opportunities approve visits automatically (it cannot be switched off;
+    # manual approve/reject is its own test on a manual-review opportunity). The
+    # duplicate shares V1's name, so V1 must show exactly two rows: the original
+    # approved and the copy marked duplicate (TC-DLV-004).
+    poll_until(lambda: _assert_statuses(visits, v1, ["approved", "duplicate"]),
                sync_timeout, POLL_SECONDS, opp.connect_page.reload)
-    _assert_statuses(visits, v2, ["pending"])  # TC-DLV-003: recorded without location
+    _assert_statuses(visits, v2, ["approved"])  # TC-DLV-003: recorded without location
     _assert_statuses(visits, v3, ["over_limit"])  # TC-DLV-005
 
-    # Review as the Network Manager, the org that approves and rejects visits.
-    home = ConnectHomePage(opp.connect_page)
-    nm = test_data.get("OLP_1")["network_manager"]
-    home.select_organization_from_list(nm)
-    nm_slug = test_data.get("OLP_1")["network_manager_slug"]
-    workers.goto_worker_visits_page(opp.base_url, nm_slug, opp.opp_id, user_id)
-    visits.review_visit(v1, approve=True, text="LDVP automation - approved")  # TC-VER-001
-    visits.review_visit(v2, approve=False, text=ldvp["reject_reason"])  # TC-VER-002
-    home.select_organization_from_list(PM_ORG)
-
-    # --- TC-VER-003: only the approved visit is earned ---
+    # --- TC-VER-003: only the approved visits are earned (V1 and V2) ---
     payments_url = workers_url + "payments/"
 
     def reload_payments():
         reload_workers("Payments")
 
     reload_payments()
-    want = expected_earned(approved=1, unit_amount=unit_amount)
+    want = expected_earned(approved=2, unit_amount=unit_amount)
     poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), want, "Accrued"),
                sync_timeout, POLL_SECONDS, reload_payments)
 
@@ -167,7 +157,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
-    run_device_flow(["ldvp_payment.yaml"], VISIT_NAME_V2=v2, EARNED=want, TRANSFERRED=want)
+    run_device_flow(["ldvp_payment.yaml"], EARNED=want, TRANSFERRED=want)
 
     # --- 9. WEB: the confirmation shows (TC-PAY-002); a second payment ---
     reload_payments()
