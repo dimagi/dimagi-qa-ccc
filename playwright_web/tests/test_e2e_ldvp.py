@@ -1,10 +1,13 @@
+import os
+
 import pytest
 
-from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait
+from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait, resume_ldvp_opportunity
 from flows.olp_setup import PM_ORG
 from flows.ldvp_values import expected_earned, new_run
 from pages.connect_home_page import ConnectHomePage
 from pages.connect_worker_visits_page import WorkerVisitsPage
+from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import poll_until
 
 POLL_SECONDS = 30
@@ -26,6 +29,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
     TC-LRN-001..005, TC-DLV-001..005, TC-VER-001..003, TC-PAY-001..004 and, for
     free, TC-REG-002 (every session after the first starts from a cleared app and
     recovers the account, and progress has to be there).
+
+    To resume a run that stopped at delivery, set LDVP_RESUME_OPP_ID and
+    LDVP_RESUME_OPP_NAME to an opportunity whose worker has already passed the
+    assessment: setup, invite and the learn sessions (stages 1-5) are skipped.
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -55,19 +62,26 @@ def test_e2e_ldvp(page, test_data, config, settings):
             f"{summary['failed']} failed - see {summary['build_url']}"
         )
 
-    # --- 1. WEB: fresh opportunity, invite (TC-INV-001) ---
-    opp = create_ldvp_opportunity(page, config, settings, test_data)
-    print(f"STEP [LDVP] Opportunity {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
-    workers = invite_and_wait(opp, full_number, phone)
-    # The worker has to be registered before it is invited: an invite to a number
-    # PersonalID does not know reads "User not found" and never attaches to the
-    # account when the number signs up later.
-    status = workers.worker_status(phone)
-    assert status == "Invite pending", (
-        f"Invited worker shows {status!r}, expected 'Invite pending'. 'User not found' means "
-        f"{full_number} is not registered on this environment - run seed_ldvp_worker.yaml once "
-        f"(see MAESTRO_LDVP_WORKER in test_data/mobile_workers.yaml)."
-    )
+    resume_id = os.environ.get("LDVP_RESUME_OPP_ID")
+    if resume_id:
+        opp = resume_ldvp_opportunity(page, config, settings, resume_id, os.environ["LDVP_RESUME_OPP_NAME"])
+        workers = ConnectWorkersPage(opp.connect_page)
+        print(f"STEP [LDVP] Resuming {opp.opportunity_name!r} ({opp.opp_id}) at delivery, run stamp {run.stamp}")
+    else:
+        # --- 1. WEB: fresh opportunity, invite (TC-INV-001) ---
+        opp = create_ldvp_opportunity(page, config, settings, test_data)
+        print(f"STEP [LDVP] Opportunity {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
+        workers = invite_and_wait(opp, full_number, phone)
+        # The worker has to be registered before it is invited: an invite to a number
+        # PersonalID does not know reads "User not found" and never attaches to the
+        # account when the number signs up later.
+        status = workers.worker_status(phone)
+        assert status == "Invite pending", (
+            f"Invited worker shows {status!r}, expected 'Invite pending'. 'User not found' means "
+            f"{full_number} is not registered on this environment - run seed_ldvp_worker.yaml once "
+            f"(see MAESTRO_LDVP_WORKER in test_data/mobile_workers.yaml)."
+        )
+
 
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
@@ -81,25 +95,26 @@ def test_e2e_ldvp(page, test_data, config, settings):
         reload_workers(tab)
         return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
 
-    # The learn part is three device sessions, each followed by a web wait for
-    # Connect to have processed what it submitted: on staging that can take far
-    # longer than a device session should sit re-syncing.
+    if not resume_id:
+        # The learn part is three device sessions, each followed by a web wait for
+        # Connect to have processed what it submitted: on staging that can take far
+        # longer than a device session should sit re-syncing.
 
-    # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
-    run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
+        # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
+        run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
 
-    # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
-    wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
-    wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
-                                        "Modules completed"), tab="Learn")
+        # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
+        wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
+        wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
+                                            "Modules completed"), tab="Learn")
 
-    # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
-    run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
-    wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
+        # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
+        run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
+        wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
 
-    # --- 5. DEVICE: failed state shown (TC-LRN-004); pass it (TC-LRN-005) ---
-    run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
-    wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
+        # --- 5. DEVICE: failed state shown (TC-LRN-004); pass it (TC-LRN-005) ---
+        run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
+        wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
 
     # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, four visits ---
     run_device_flow(

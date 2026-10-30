@@ -38,98 +38,111 @@ env:
 - setLocation:
     latitude: 28.6139
     longitude: 77.2090
-- runFlow: shared_ldvp_open_learn.yaml
-
-# --- TC-LRN-005: the certificate ---
-# Web has already seen Connect record the pass; this sync only brings it down.
-- repeat:
-    while:
-      notVisible:
-        id: "learn_complete_completed_on"
-    times: 6
-    commands:
-      - tapOn:
-          id: "learn_progress_sync_card"
-          optional: true
-      - extendedWaitUntil:
-          visible:
-            id: "learn_complete_completed_on"
-          timeout: 20000
-          optional: true
-- assertVisible:
-    id: "learn_complete_completed_on"
-    text: "Completed on .*"
-# The certificate is collapsed by default. The opportunity name, the worker's
-# name and the score make it discriminate: a stale certificate from another run
-# would name a different opportunity.
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
 - tapOn:
-    id: "certificate_header"
-# On prod the first tap was recorded but the section stayed collapsed - the view
-# was still settling after the sync (2026-10-29) - so tap the chevron as well if
-# the certificate has not opened.
+    text: "${OPPORTUNITY}"
+# A passed but unclaimed job opens the learn-complete view; a job already
+# claimed (a resumed run, LDVP_RESUME_OPP_ID) opens the delivery dashboard.
 - extendedWaitUntil:
     visible:
-      id: "cert_subject_text"
-    timeout: 10000
-    optional: true
+      id: "learn_complete_completed_on|learn_progress_sync_card|connect_delivery_home_tabs"
+    timeout: 60000
+
 - runFlow:
     when:
       notVisible:
-        id: "cert_subject_text"
+        id: "connect_delivery_home_tabs"
     commands:
+      # --- TC-LRN-005: the certificate ---
+      # Web has already seen Connect record the pass; this sync only brings it down.
+      - repeat:
+          while:
+            notVisible:
+              id: "learn_complete_completed_on"
+          times: 6
+          commands:
+            - tapOn:
+                id: "learn_progress_sync_card"
+                optional: true
+            - extendedWaitUntil:
+                visible:
+                  id: "learn_complete_completed_on"
+                timeout: 20000
+                optional: true
+      - assertVisible:
+          id: "learn_complete_completed_on"
+          text: "Completed on .*"
+      # The certificate is collapsed by default. The opportunity name, the worker's
+      # name and the score make it discriminate: a stale certificate from another run
+      # would name a different opportunity.
       - tapOn:
-          id: "certificate_chevron"
+          id: "certificate_header"
+      # On prod the first tap was recorded but the section stayed collapsed - the view
+      # was still settling after the sync (2026-10-29) - so tap the chevron as well if
+      # the certificate has not opened.
       - extendedWaitUntil:
           visible:
             id: "cert_subject_text"
           timeout: 10000
-- assertVisible:
-    id: "cert_subject_text"
-    text: ".*${OPPORTUNITY}.*"
-- assertVisible:
-    id: "cert_person_text"
-    text: ".*${USERNAME}.*"
-- assertVisible:
-    id: "cert_score_text"
-    text: ".*${PASS_SCORE}.*"
-- assertVisible:
-    id: "cert_date_text"
+          optional: true
+      - runFlow:
+          when:
+            notVisible:
+              id: "cert_subject_text"
+          commands:
+            - tapOn:
+                id: "certificate_chevron"
+            - extendedWaitUntil:
+                visible:
+                  id: "cert_subject_text"
+                timeout: 10000
+      - assertVisible:
+          id: "cert_subject_text"
+          text: ".*${OPPORTUNITY}.*"
+      - assertVisible:
+          id: "cert_person_text"
+          text: ".*${USERNAME}.*"
+      - assertVisible:
+          id: "cert_score_text"
+          text: ".*${PASS_SCORE}.*"
+      - assertVisible:
+          id: "cert_date_text"
 
-# --- TC-DLV-001: the delivery details match the payment unit set up on web ---
-- scrollUntilVisible:
-    element:
-      id: "card_max_earnings"
-    direction: DOWN
-    timeout: 20000
-- assertVisible:
-    id: "info_card_value_text"
-    text: "${MAX_TOTAL}"
-    childOf:
-      id: "card_total_visits"
-- assertVisible:
-    id: "info_card_subtitle_text"
-    text: "Up to ${MAX_DAILY} per day"
-    childOf:
-      id: "card_total_visits"
+      # --- TC-DLV-001: the delivery details match the payment unit set up on web ---
+      - scrollUntilVisible:
+          element:
+            id: "card_max_earnings"
+          direction: DOWN
+          timeout: 20000
+      - assertVisible:
+          id: "info_card_value_text"
+          text: "${MAX_TOTAL}"
+          childOf:
+            id: "card_total_visits"
+      - assertVisible:
+          id: "info_card_subtitle_text"
+          text: "Up to ${MAX_DAILY} per day"
+          childOf:
+            id: "card_total_visits"
+      # --- Claim the job ---
+      # Download App claims it and downloads the Delivery App on this same
+      # screen, then opens the app - there is no delivery screen in between.
+      - tapOn:
+          id: "cta_button"
+          text: "(?i)download app"
 
-# --- Claim the job and open the deliver app ---
-# Download App on the learn-complete screen claims the job and moves on to the
-# delivery home, whose cta_button then downloads and opens the deliver app - the
-# path shared_open_deliver_app.yaml already proves on 2.65.
-- tapOn:
-    id: "cta_button"
-    text: "(?i)download app"
-- extendedWaitUntil:
-    visible:
-      id: "connect_delivery_home_tabs"
-    timeout: 600000
+# --- Resumed run: the job is claimed; the dashboard's button downloads and opens
+# the Delivery App the same way ---
 - runFlow:
     when:
-      notVisible:
-        text: "Sync with Server"
+      visible:
+        id: "connect_delivery_home_tabs"
     commands:
       - tapOn:
           id: "cta_button"
+
+# Either way the Delivery App opens on its home screen. Allow a real download.
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"

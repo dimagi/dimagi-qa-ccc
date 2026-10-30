@@ -82,9 +82,11 @@ def create_ldvp_opportunity(page, config, settings, test_data):
             connect_page.goto(f"{config.get('connect_url')}/a/{PM_ORG.lower()}/program/",
                               wait_until="domcontentloaded", timeout=120000)
             connect_page.wait_for_load_state("networkidle", timeout=120000)
-    opportunities.create_payment_unit_in_connect_page(payment_unit, days=days)
+    # Starts today: the OLP default (two days out) leaves the job "not started
+    # yet" on the device, and a visit made then earns nothing.
+    opportunities.create_payment_unit_in_connect_page(payment_unit, days=days, start_offset_days=0)
     budget = {**test_data.get("OLP_3"), "total_budget_value": ldvp["total_budget_value"]}
-    opportunities.setup_budget_in_connect_page(budget, days=days)
+    opportunities.setup_budget_in_connect_page(budget, days=days, start_offset_days=0)
 
     # The payment unit and budget pages leave no opportunity URL behind, so open
     # the opportunity from the list to read its ids, as tasking_config does.
@@ -101,3 +103,12 @@ def invite_and_wait(opp, full_number, phone_number):
     workers.invite_workers(opp.base_url, opp.org_slug, opp.opp_id, [full_number])
     workers.wait_for_worker_in_list(opp.base_url, opp.org_slug, opp.opp_id, phone_number)
     return workers
+
+
+def resume_ldvp_opportunity(page, config, settings, opp_id, opportunity_name):
+    """An existing LDVP opportunity, for resuming a run at delivery: log in and
+    point at it without creating anything."""
+    from flows.tasking_static import login_to_connect
+
+    connect_page = login_to_connect(page, config, settings, PM_ORG)
+    return LdvpOpp(connect_page, PM_ORG.lower(), opp_id, opportunity_name, config.get("connect_url"))
