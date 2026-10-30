@@ -7,7 +7,7 @@ Gated on two data files, and skips with a clean message until both are filled in
   - web_test_data.yaml LEARN_TAB_02_HYBRID: the opportunity and worker (needs a
     worker whose learning is started but not complete)
   - mobile_workers.yaml MAESTRO_LEARN_TAB_02: the worker's sign-in and the Learn
-    app's module/form/question names, copied from that opportunity's Learn app CCZ
+    app's module and (label-only) form names, copied from that opportunity's Learn app CCZ
 The mobile flow is built from commcare-android source (see its own header
 comment) but is NOT yet device-validated - expect to refine it against the first
 real BrowserStack run, as every flow in this suite was.
