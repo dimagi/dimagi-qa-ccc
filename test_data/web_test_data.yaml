@@ -116,19 +116,27 @@ WORKER_VISIT_VERIFICATION_PAGE_9:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
-# VV_31/32 (NM reject/approve) + VV_33/34 (PM agree/disagree). Needs a MANUAL-review
-# opportunity (automatic visit verification OFF) where PM=PM_Automation_01 and
-# NM=Network Manager (the automation account is a member of both orgs). Needs seeded
-# submitted visits: >=2 pending/unreviewed (NM approve + reject) and >=2 NM-approved
-# with PM review pending (PM agree + disagree). Actions are one-way and deplete the
-# pool, so seed a buffer. Set opportunity_name/worker_name once Anshu provides them -
-# while they start with "TBD" the four review tests skip.
+# VV_31/32 (NM reject/approve) + VV_33/34 (PM agree/disagree) + VV_35 + GAP-40/42/43-NM.
+# Needs a MANUAL-review opportunity (automatic visit verification OFF). Anshu seeded one
+# on PROD only (2026-10-15): "Manual approval opp", program "Automation Program",
+# workspace "Manual Workflow". It is its own PM/NM pair - PM "PM Automation 2"
+# (slug pm-automation-2) and NM "Network Manager 2" (slug network-manager-2); the
+# automation account is a member of both. The role comes from the org slug in the URL,
+# so the tests open the visits page by direct URL under whichever slug they need.
+# One worker (Add_Budget_user, +74262425260), 20 visits seeded: 10 pending, 5 approved,
+# 5 rejected. NM actions are one-way and deplete the pending pool (reject needs a
+# pending visit; approve also works on a rejected one), so mutating runs are finite.
+# Unsuffixed keys are prod; there is no staging equivalent, so these tests skip on stage.
 WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
-  opportunity_name: "TBD - Anshu manual-review opp"
-  worker_name: "TBD - seeded worker"
-  network_manager: "Network Manager"
+  opportunity_id: "5c94bd74-23d6-4760-a666-42d3944dfdfd"
+  nm_org_slug: "network-manager-2"
+  pm_org_slug: "pm-automation-2"
+  worker_name: "Add_Budget_user"
+  worker_user_id: "1385565e-de0f-4cdd-bd5c-df8c026016cd"
   reject_reason: "Automation NM reject reason"
   approve_justification: "Automation NM approve justification"
+  rejected_status: "rejected"
+  approved_status: "approved"
 
 # GAP-SRC-W-44 (individual action-bar gating) + GAP-SRC-W-45 (manual-verify endpoints
 # return 403 + HX-Trigger:reload_table under auto-verify). Any opportunity/worker with
