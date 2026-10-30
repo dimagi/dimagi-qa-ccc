@@ -15,15 +15,7 @@ PM_ORG = "PM_Automation_01"
 # "[08/12] ..." on 2026-08-03; the brackets are part of the real names, so a
 # search string must not span them.
 LEARN_APP_MASTER = "[Master] Learn App"
-# The delivery master is opened by URL, not by name: from 2026-10-30 it is the
-# work-area app below, and on prod it shares the name "[Master] Delivery App"
-# with the old one (175667a8...), so a name match could pick either. The staging
-# master lives in the connectqa domain; it is still copied into
-# connectqa-automation like the rest.
-DELIVER_APP_MASTER_URL = {
-    "prod": "https://www.commcarehq.org/a/connectqa-automation-prod/apps/view/31941698b8564d57ac86b687e7a5b6ca/",
-    "staging": "https://staging.commcarehq.org/a/connectqa/apps/view/0b0db23b5786498db7e03e35a85de3a1/",
-}
+DELIVER_APP_MASTER = "[Master] Delivery App"
 
 
 @dataclass
@@ -49,8 +41,7 @@ def login_cchq_and_copy_master_apps(page, config, settings):
     learn_app_name = cchq_application_page.create_copy_of_learn_app()
     cchq_home_page.verify_app_present_under_applications_tab(learn_app_name)
 
-    env = "staging" if "staging" in config.get("cchq_url") else "prod"
-    cchq_home_page.open_app_by_url(DELIVER_APP_MASTER_URL[env])
+    cchq_home_page.select_app_under_applications_tab(DELIVER_APP_MASTER)
     delivery_app_name = cchq_application_page.create_copy_of_delivery_app()
     cchq_home_page.verify_app_present_under_applications_tab(delivery_app_name)
     return learn_app_name, delivery_app_name

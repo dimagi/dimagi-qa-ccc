@@ -27,9 +27,8 @@ OLP_1:
   learn_app_domain_staging: "connectqa-automation"
   deliver_app_domain: "connectqa-automation-prod"
   deliver_app_domain_staging: "connectqa-automation"
-  # Master apps are hardcoded in playwright_web/flows/olp_setup.py: the learn
-  # master by name ("[Master] Learn App"), the delivery master by URL per
-  # environment (DELIVER_APP_MASTER_URL) - the old learn_app/deliver_app
+  # Master app names are hardcoded in playwright_web/flows/olp_setup.py
+  # ("[Master] Learn App" / "[Master] Delivery App") - the old learn_app/deliver_app
   # keys here were stale and unread, so they were removed.
   learn_app_description: "This is Learn App"
   passing_score: "40"

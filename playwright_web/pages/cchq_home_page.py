@@ -18,10 +18,6 @@ class CCHQHomePage(BasePage):
         self.page.wait_for_load_state("load")
         assert "/apps/view" in self.page.url
 
-    def open_app_by_url(self, url):
-        self.page.goto(url, wait_until="load")
-        assert "/apps/view" in self.page.url, f"App did not open from {url}: landed on {self.page.url}"
-
     def verify_app_present_under_applications_tab(self, app):
         self.click(self.APPLICATIONS_TAB, force=True)
         link = self.page.get_by_role("link", name=app, exact=False).first
