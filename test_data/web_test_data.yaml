@@ -294,8 +294,9 @@ TASKING_HYBRID:
   task_type: "Relearn Task Unit"
   # Visit statuses that mean "processed normally, not blocked by the pending task" for
   # TC-E2E-003. "Over Limit" is what Connect assigns once the worker has used the
-  # payment unit's daily/total visit cap; every push runs this test on both
-  # environments against one worker, so later runs in a day land there.
+  # payment unit's DAILY cap (max daily 10 on prod, checked 30 Oct 2026; the total cap is
+  # 1000 and is not the limit being hit). Every push runs this test against one worker, so
+  # later runs in a day land there; it clears the next day, so no limit change is needed.
   allowed_visit_statuses: ["Approved", "Pending", "Over Limit"]
   # Shown on a visit that Connect blocked because a task was outstanding (TC-E2E-002).
   # TC-E2E-003 asserts it is absent, so the check is about task blocking, not status wording.
