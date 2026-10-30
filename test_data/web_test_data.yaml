@@ -298,6 +298,10 @@ TASKING_HYBRID:
   # total cap is 1000 and is not the limit being hit). Every push runs this test against one worker, so
   # later runs in a day land there; it clears the next day, so no limit change is needed.
   allowed_visit_statuses: ["Approved", "Pending", "Over Limit"]
+  # Payment unit caps on this opportunity, checked in Connect on 30 Oct 2026. The same on
+  # prod and staging, so given once (informational; the tests do not read them).
+  payment_unit_max_daily: 10
+  payment_unit_max_total: 1000
   # Shown on a visit that Connect blocked because a task was outstanding (TC-E2E-002).
   # TC-E2E-003 asserts it is absent, so the check is about task blocking, not status wording.
   blocking_flag: "pending task"
