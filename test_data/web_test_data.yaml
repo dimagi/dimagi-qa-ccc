@@ -300,6 +300,19 @@ TASKING_HYBRID:
   opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
   opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
   task_type: "Relearn Task Unit"
+  # Visit statuses that mean "processed normally, not blocked by the pending task" for
+  # TC-E2E-003. "Over Limit" is what Connect assigns once the worker has used the
+  # payment unit's DAILY cap (max daily 10 on both prod and staging, checked 30 Oct 2026; the
+  # total cap is 1000 and is not the limit being hit). Every push runs this test against one worker, so
+  # later runs in a day land there; it clears the next day, so no limit change is needed.
+  allowed_visit_statuses: ["Approved", "Pending", "Over Limit"]
+  # Payment unit caps on this opportunity, checked in Connect on 30 Oct 2026. The same on
+  # prod and staging, so given once (informational; the tests do not read them).
+  payment_unit_max_daily: 10
+  payment_unit_max_total: 1000
+  # Shown on a visit that Connect blocked because a task was outstanding (TC-E2E-002).
+  # TC-E2E-003 asserts it is absent, so the check is about task blocking, not status wording.
+  blocking_flag: "pending task"
   opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
   opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
   # The mobile worker lives in test_data/mobile_workers.yaml under
