@@ -71,7 +71,7 @@ OLP_11:
   org_name: "PM_Automation_01"
 
 WORKER_LIST_VIEW_1_2_3:
-  opportunity_name: "Demo Opportunity"
+  opportunity_name: "covid_opp_test"
 
 WORKER_LIST_VIEW_4:
   opportunity_name: "covid_opp_test"
