@@ -151,6 +151,7 @@ WORKER_DELIVER_FILTERS:
 WORKER_INVITES:
   opportunity_name: "covid_opp_test"
   reserved_invite: "+74267426090"
+  not_registered_message: "not registered on personalid"
 
 # Gap-derived worker-page cases (GAP-SRC-W-46/47/48/49/50/51/52).
 WORKER_GAPS:

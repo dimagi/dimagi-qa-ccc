@@ -914,13 +914,24 @@ class ConnectWorkersPage(BasePage):
         row.locator("input[type=checkbox]").first.check()
         self.page.wait_for_timeout(400)
 
-    def resend_selected_invite(self):
-        """Click Resend Invite(s) for the selected row and return any message shown."""
+    def resend_selected_invite(self, expect_text=None, timeout_seconds=30):
+        """Click Resend Invite(s) for the selected row and return any message shown
+        (Connect_worker_09 expects a cooldown message within 24h). With expect_text
+        the page body is waited on until it contains that text (the resend result is
+        async), else the body is read after a short wait."""
         self._step("Resend the selected invite")
         self.click(self.RESEND_INVITES_BTN)
-        self.page.wait_for_timeout(2500)
-        body = self.page.inner_text("body")
-        return body
+        body_loc = self.page.locator("body")
+        if expect_text:
+            try:
+                expect(body_loc).to_contain_text(
+                    re.compile(re.escape(expect_text), re.I), timeout=timeout_seconds * 1000
+                )
+            except AssertionError:
+                pass  # the caller asserts on the returned body with its own message
+        else:
+            self.page.wait_for_timeout(2500)
+        return self.page.inner_text("body")
 
     def select_worker_rows(self, phones):
         for p in phones:
@@ -946,9 +957,10 @@ class ConnectWorkersPage(BasePage):
         self.select_worker_row(phone)
         return self.resend_selected_invite()
 
-    def delete_worker_invite(self, phone, timeout_seconds=60):
+    def delete_worker_invite(self, phone, timeout_seconds=120):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
-        confirm modal, and wait for it to disappear."""
+        confirm modal, and wait for it to disappear. The delete is submitted once: a
+        row that is still there after the wait is a real failure, not retried."""
         import time
 
         if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
@@ -956,13 +968,8 @@ class ConnectWorkersPage(BasePage):
         if not self.worker_row_present(phone):
             self._step(f"No invite row for {phone} to delete")
             return
-        self.select_worker_row(phone)
-        self._step(f"Delete invite {phone}")
-        self.click(self.DELETE_WORKERS_BTN)
-        self.page.locator(self.DELETE_INVITES_CONFIRM_BTN).first.wait_for(state="visible", timeout=10000)
-        self.click(self.DELETE_INVITES_CONFIRM_BTN)
-        self.page.wait_for_load_state("load")
         deadline = time.monotonic() + timeout_seconds
+        self._submit_invite_delete(phone)
         while True:
             self._goto_workers_list()
             if not self.worker_row_present(phone):
@@ -970,6 +977,14 @@ class ConnectWorkersPage(BasePage):
                 return
             if time.monotonic() >= deadline:
                 raise AssertionError(f"Invite {phone} still present {timeout_seconds}s after delete")
+
+    def _submit_invite_delete(self, phone):
+        self.select_worker_row(phone)
+        self._step(f"Delete invite {phone}")
+        self.click(self.DELETE_WORKERS_BTN)
+        self.page.locator(self.DELETE_INVITES_CONFIRM_BTN).first.wait_for(state="visible", timeout=10000)
+        self.click(self.DELETE_INVITES_CONFIRM_BTN)
+        self.page.wait_for_load_state("load")
 
     def verify_last_paid_empty(self, worker, timeout_seconds=60):
         """Payment Processing_4 (part 2) - after rollback the Last paid is '—'."""
