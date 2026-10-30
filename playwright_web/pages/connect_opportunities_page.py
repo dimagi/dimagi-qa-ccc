@@ -207,6 +207,11 @@ class ConnectOpportunitiesPage(BasePage):
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
         self.page.wait_for_timeout(3000)
+        # A rejected budget re-renders the form with field errors and leaves the
+        # opportunity unfinished; without this check the run carried on and failed
+        # minutes later as an invite that never appeared.
+        errors = [t.strip() for t in self.page.locator("[id^='error_']").all_inner_texts() if t.strip()]
+        assert not errors, f"Budget was not saved: {errors}"
 
     def click_opportunity_in_opportunity(self, value, exact=True):
         """exact=False matches by substring, for data that names a family of rows

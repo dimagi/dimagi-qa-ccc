@@ -157,6 +157,9 @@ LDVP:
   # its own fresh opportunity to it. Both were made by the first setup run that
   # got through the handshake on that environment (2026-10-29); if one is ever
   # deleted or ends, remove the key and the next run creates and prints a new one.
+  # Both start 2026-10-31 (made before LDVP programs started on the day they are
+  # created), so an LDVP opportunity - which starts the day it is made - cannot be
+  # created in them before then.
   program_name: "Demo Program_29-Oct-2026 : 16:14"
   program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
   payment_unit_name: "LDVP Visit"
