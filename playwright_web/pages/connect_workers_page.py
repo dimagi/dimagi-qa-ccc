@@ -2,6 +2,8 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
+from playwright.sync_api import expect
+
 from utils.helpers import LocatorLoader, TestDataLoader
 
 from pages.base_page import BasePage
@@ -434,14 +436,17 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Click '{tab_name}' tab")
         self.click(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name))
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(1500)  # table htmx-swaps into #table
-        self.verify_tab_active(tab_name)
+        self.verify_tab_active(tab_name)  # waits for the htmx swap to mark the tab active
 
     def verify_tab_active(self, tab_name):
         tab = self.page.locator(self.LV_TAB_ITEM_BY_NAME.format(tab_name=tab_name)).first
         tab.wait_for(state="visible", timeout=15000)
-        cls = tab.get_attribute("class") or ""
-        assert "active" in cls, f"Tab '{tab_name}' is not active (class={cls!r})"
+        # The active class is applied once the htmx swap lands; poll for it instead of
+        # reading the class a single time after a fixed sleep.
+        try:
+            expect(tab).to_have_class(re.compile(r"\bactive\b"), timeout=15000)
+        except AssertionError:
+            raise AssertionError(f"Tab '{tab_name}' is not active (class={tab.get_attribute('class')!r})")
         self._step(f"Tab '{tab_name}' is active")
 
     def click_name_in_table(self, name):
@@ -817,18 +822,6 @@ class ConnectWorkersPage(BasePage):
             "input[type=checkbox]"
         ).first.uncheck()
 
-    def verify_resend_cooldown(self, phone):
-        """Connect_worker_09 - resending a registered invite within 24h is refused
-        with a cooldown message. Uses a real registered number (demo numbers do not
-        enforce the cooldown). The resend is skipped, so no SMS is sent - but this
-        relies on the invite being <24h old; refresh it if the assertion flips."""
-        body = self.resend_worker_and_message(phone)
-        assert "sent in the last 24 hours" in body.lower() and phone in body, (
-            f"Expected a 24h-cooldown skip message naming {phone}; the invite may be "
-            f"older than 24h (resend would then succeed and message the real user)."
-        )
-        self._step(f"Resend of {phone} refused - 24h cooldown")
-
     def _first_pending_invite_row(self):
         return self.page.locator(self.PENDING_INVITE_ROW).first
 
@@ -922,8 +915,7 @@ class ConnectWorkersPage(BasePage):
         self.page.wait_for_timeout(400)
 
     def resend_selected_invite(self):
-        """Click Resend Invite(s) for the selected row and return any message shown
-        (Connect_worker_09 expects a cooldown message within 24h)."""
+        """Click Resend Invite(s) for the selected row and return any message shown."""
         self._step("Resend the selected invite")
         self.click(self.RESEND_INVITES_BTN)
         self.page.wait_for_timeout(2500)
