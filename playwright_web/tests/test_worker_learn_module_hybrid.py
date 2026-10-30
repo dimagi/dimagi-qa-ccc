@@ -59,6 +59,10 @@ def _completed_count(cell_text):
     return int(match.group())
 
 
+# Every run completes one more Learn form on the seeded worker, so the worker's progress
+# only goes up (2 lessons in total): excluded from automatic runs, run on purpose via a
+# manual dispatch with include_seed_consuming. Re-seed a worker when it reaches 100%.
+@pytest.mark.consumes_seed_data
 def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, config, settings, test_data):
     data, worker = _require_learn_data(test_data, config)
     opportunity_name = data["opportunity_name"]
