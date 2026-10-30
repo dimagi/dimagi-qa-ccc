@@ -414,10 +414,10 @@ MAESTRO_RECOVERY_FIXTURE:
 # The web test skips with a message once the worker is complete.
 MAESTRO_LEARN_TAB_02:
   country_code: "+7426"
-  phone_number: "TBD"
-  username: "TBD"
-  backup_code: "TBD"
-  learn_module: "TBD"
+  phone_number: "1291290"   # +74261291290 (same worker on stage and prod)
+  username: "Automation Worker_01"
+  backup_code: "123456"
+  learn_module: "Learn 1"   # Learn app modules: Learn 1, Learn 2, Assess
   learn_form: "TBD"
-  learn_question: "TBD"   # the first question's label, used to find its answer field
+  learn_question: "Module_1"   # the first question's label, used to find its answer field
   learn_answer: "Learn Automation"

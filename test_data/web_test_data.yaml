@@ -205,10 +205,10 @@ WORKER_LIFECYCLE:
 # TBD gates the test to a clean skip until Anshu seeds this.
 # The mobile side (worker_learn_module.yaml) is built but NOT device-validated.
 LEARN_TAB_02_HYBRID:
-  opportunity_name: "TBD - Anshu opp with a learning-in-progress worker"
-  worker_name: "TBD - seeded worker (learning started, not complete)"
+  opportunity_name: "OLP_Test_Opp"   # same name on stage and prod (PM_Automation_01)
+  worker_name: "Automation Worker_01"
   modules_completed_column: "Modules completed"
-  total_lessons: "TBD - number of lessons in the Learn app (skip once the worker reaches it)"
+  total_lessons: 2   # lessons excluding the assessment; the test skips once the worker reaches it
   # The mobile worker/flow values live in mobile_workers.yaml (MAESTRO_LEARN_TAB_02).
 
 PAYMENT_PROCESSING_1_2_3:
