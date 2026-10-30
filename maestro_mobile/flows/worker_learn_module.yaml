@@ -22,10 +22,8 @@
 #     flow's PENDING_WARNING wait.
 #
 # UNCONFIRMED (this test opportunity's specific Learn CCZ, only checkable live):
-#   - the literal module/form/question names (LEARN_MODULE/LEARN_FORM/LEARN_QUESTION,
-#     set in mobile_workers.yaml, are placeholders until the worker is seeded)
-#   - whether the first form is a plain question (safe for the tap-below-label +
-#     nav_btn_next pattern) or contains video/rich media that could stall Next
+#   - the module/form names (LEARN_MODULE/LEARN_FORM, set in mobile_workers.yaml) are
+#     the ones Anshu gave; the form is label-only and is submitted with Finish
 #   - how long after syncing the "completed X of Y" text/percent actually updates
 appId: org.commcare.dalvik
 # Every value below is replaced at run time from test_data/mobile_workers.yaml
@@ -38,8 +36,6 @@ env:
   OPPORTUNITY: ""
   LEARN_MODULE: ""
   LEARN_FORM: ""
-  LEARN_QUESTION: ""
-  LEARN_ANSWER: ""
   # The "completed N of M" count the Learn Progress screen should show once the
   # submission has synced (the web test passes the "Modules completed" count it read
   # beforehand, plus one).
@@ -138,20 +134,12 @@ env:
     direction: DOWN
     timeout: 20000
 - tapOn: "${LEARN_FORM}"
+# The Learn form ("You learned") is a label-only form: there is no field to fill, so
+# it is submitted by going straight to Finish.
 - extendedWaitUntil:
     visible:
-      id: "nav_btn_next"
+      id: "nav_btn_finish"
     timeout: 60000
-# Form widgets carry no resource ids, so the answer field is found relative to
-# its question label rather than by screen coordinates.
-- extendedWaitUntil:
-    visible:
-      text: "${LEARN_QUESTION}"
-    timeout: 60000
-- tapOn:
-    below:
-      text: "${LEARN_QUESTION}"
-- inputText: "${LEARN_ANSWER}"
 - repeat:
     times: 6
     commands:

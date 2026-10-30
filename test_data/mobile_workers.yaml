@@ -418,6 +418,4 @@ MAESTRO_LEARN_TAB_02:
   username: "Automation Worker_01"
   backup_code: "123456"
   learn_module: "Learn 1"   # Learn app modules: Learn 1, Learn 2, Assess
-  learn_form: "TBD"
-  learn_question: "Module_1"   # the first question's label, used to find its answer field
-  learn_answer: "Learn Automation"
+  learn_form: "You learned"   # label-only form: submitted with Finish, nothing to fill
