@@ -9,6 +9,8 @@ locators = LocatorLoader()
 
 class ConnectOpportunitiesPage(BasePage):
     OPP_NAME_INPUT = locators.get("connect_opportunities_page", "name_input")
+    CHECK_DUPLICATES_CHECKBOX = locators.get("connect_opportunities_page", "check_duplicates_checkbox")
+    VERIFICATION_FLAGS_SAVE_BTN = locators.get("connect_opportunities_page", "verification_flags_save_btn")
     OPP_CURRENCY_INPUT = locators.get("connect_opportunities_page", "currency_input")
     OPP_COUNTRY_INPUT = locators.get("connect_opportunities_page", "country_input")
     OPP_SHORT_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "short_description_input")
@@ -231,3 +233,25 @@ class ConnectOpportunitiesPage(BasePage):
             ConnectOpportunityListPage(self.page).show_all_opportunities()
         self.click(link)
         self.page.wait_for_timeout(3000)
+
+    def ensure_check_duplicates(self, base_url, org_slug, opp_id):
+        """Switch on the opportunity's Check Duplicates verification flag if it is
+        off, so a repeated entity reads 'duplicate' instead of passing as a new
+        visit. Only manual-review opportunities offer it."""
+        url = f"{base_url}/a/{org_slug}/opportunity/{opp_id}/verification_flags_config/"
+        self.page.goto(url)
+        self.page.wait_for_load_state("load")
+        checkbox = self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first
+        assert checkbox.count() > 0, (
+            "No Check Duplicates option - the opportunity still verifies visits automatically")
+        if checkbox.is_checked():
+            self._step("Check Duplicates already on")
+            return
+        checkbox.check()
+        self.click(self.VERIFICATION_FLAGS_SAVE_BTN)
+        self.page.wait_for_load_state("load")
+        self.page.goto(url)
+        self.page.wait_for_load_state("load")
+        assert self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first.is_checked(), (
+            "Check Duplicates did not stay on after Save")
+        self._step("Check Duplicates switched on")

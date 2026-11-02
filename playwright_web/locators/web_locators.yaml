@@ -62,6 +62,10 @@ connect_home_page:
 
 connect_opportunities_page:
   name_input: "id_name"
+  # Verification Rules Configuration page (verification_flags_config/). Check
+  # Duplicates is offered only when automatic visit verification is off.
+  check_duplicates_checkbox: "#id_duplicate"
+  verification_flags_save_btn: "//button[@type='submit' and normalize-space()='Save']"
   label_by_text: ".//label[normalize-space(.) = '{required_text}']"
   data_rows_no_detail: ".//tbody/tr[not(contains(@class,'detail-row'))]"
   row_second_cell: "./td[2]"

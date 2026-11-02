@@ -187,12 +187,15 @@ LDVP:
   second_payment: "50"
   # Reusable manual-review opportunity for approve/reject (prod), made 2026-11-02
   # from copies of the master apps in its own program, running to 2029-10-27.
-  # Payment unit: 100 per visit, 5 a day, 100 in total. Auto-approve is to be
-  # switched off by the devs. The LDVP worker is invited to it; it learns there
-  # once and is reused from then on.
+  # Payment unit: 100 per visit, 5 a day, 100 in total. Automatic visit
+  # verification switched off by the devs (2026-11-02). The LDVP worker is
+  # invited to it; it learns there once and is reused from then on.
   manual_opportunity_id: "1cc912d6-1043-417d-be1e-3809020c6142"
   manual_opportunity_name: "LDVP Manual Review_02-Nov-2026 : 13:14"
   manual_program_name: "LDVP Manual Program_02-Nov-2026 : 13:12"
+  # Its payment unit, for the delivery details the first run checks.
+  manual_max_daily: "5"
+  manual_max_total: "100"
 
 # Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite
 # is an unregistered reserved automation number; the test invites and deletes it.

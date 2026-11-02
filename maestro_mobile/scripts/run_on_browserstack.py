@@ -127,6 +127,7 @@ WORKER_BY_FLOW = {
     "ldvp_payment.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_decline_confirm.yaml": "MAESTRO_LDVP_WORKER",
     "ldvp_rollback.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_manual_review.yaml": "MAESTRO_LDVP_WORKER",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {
