@@ -33,7 +33,9 @@ def test_e2e_ldvp(page, test_data, config, settings):
     assessment; stages 1-5 are skipped). LDVP_RESUME_AT=assess resumes at the
     assessment instead (the worker has learned; stages 1-3 are skipped), and
     LDVP_RESUME_AT=pass at passing it (the worker has already failed it once;
-    stages 1-4 are skipped - the fail flow needs a never-taken assessment).
+    stages 1-4 are skipped - the fail flow needs a never-taken assessment), and
+    LDVP_RESUME_AT=verify at the web check of the visits (stages 1-6 are
+    skipped; set LDVP_RESUME_STAMP to the run stamp the visits were made with).
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -65,8 +67,12 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     resume_id = os.environ.get("LDVP_RESUME_OPP_ID")
     resume_at = os.environ.get("LDVP_RESUME_AT", "deliver") if resume_id else None
-    assert resume_at in (None, "assess", "pass", "deliver"), (
-        f"LDVP_RESUME_AT must be assess, pass or deliver, not {resume_at!r}")
+    assert resume_at in (None, "assess", "pass", "deliver", "verify"), (
+        f"LDVP_RESUME_AT must be assess, pass, deliver or verify, not {resume_at!r}")
+    if resume_at == "verify":
+        # The visits already exist under the stamp they were made with; a stamp
+        # is the last six digits of an epoch, so it round-trips through new_run.
+        run = new_run(now=int(os.environ["LDVP_RESUME_STAMP"]))
     if resume_id:
         opp = resume_ldvp_opportunity(page, config, settings, resume_id, os.environ["LDVP_RESUME_OPP_NAME"])
         workers = ConnectWorkersPage(opp.connect_page)
@@ -99,7 +105,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
         reload_workers(tab)
         return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
 
-    if resume_at != "deliver":
+    if resume_at not in ("deliver", "verify"):
         # The learn part is three device sessions, each followed by a web wait for
         # Connect to have processed what it submitted: on staging that can take far
         # longer than a device session should sit re-syncing.
@@ -122,14 +128,15 @@ def test_e2e_ldvp(page, test_data, config, settings):
         run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
         wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
 
-    # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, four visits ---
-    run_device_flow(
-        ["ldvp_deliver.yaml"],
-        PASS_SCORE=ldvp["assessment_pass_score"],
-        MAX_DAILY=ldvp["max_daily"],
-        MAX_TOTAL=ldvp["max_total"],
-        **run.device_env(),
-    )
+    if resume_at != "verify":
+        # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, four visits ---
+        run_device_flow(
+            ["ldvp_deliver.yaml"],
+            PASS_SCORE=ldvp["assessment_pass_score"],
+            MAX_DAILY=ldvp["max_daily"],
+            MAX_TOTAL=ldvp["max_total"],
+            **run.device_env(),
+        )
 
     # --- 7. WEB: what each visit became (TC-DLV-002..005, TC-VER-001) ---
     user_id = workers.worker_user_id(opp.base_url, opp.org_slug, opp.opp_id, worker_name)
@@ -139,23 +146,27 @@ def test_e2e_ldvp(page, test_data, config, settings):
         workers.wait_for_visit(name, timeout_seconds=sync_timeout)
     visits = WorkerVisitsPage(opp.connect_page)
 
-    # LDVP opportunities approve visits automatically (it cannot be switched off;
-    # manual approve/reject is its own test on a manual-review opportunity). The
-    # duplicate shares V1's name, so V1 must show exactly two rows: the original
-    # approved and the copy marked duplicate (TC-DLV-004).
-    poll_until(lambda: _assert_statuses(visits, v1, ["approved", "duplicate"]),
+    # LDVP opportunities verify visits automatically (it cannot be switched off;
+    # manual approve/reject is its own test on a manual-review opportunity). On
+    # such an opportunity Connect hides the Check Duplicates flag
+    # (OpportunityVerificationFlagsConfigForm) and, with it off, resets a
+    # duplicate to pending - so the copy of V1 is approved and paid like any
+    # other visit (TC-DLV-004; seen on prod 2026-11-02). Duplicate flagging is
+    # covered on the manual-review opportunity. V1 shows exactly two rows.
+    poll_until(lambda: _assert_statuses(visits, v1, ["approved", "approved"]),
                sync_timeout, POLL_SECONDS, opp.connect_page.reload)
     _assert_statuses(visits, v2, ["approved"])  # TC-DLV-003: recorded without location
     _assert_statuses(visits, v3, ["over_limit"])  # TC-DLV-005
 
-    # --- TC-VER-003: only the approved visits are earned (V1 and V2) ---
+    # --- TC-VER-003: only the approved visits are earned (V1, its copy and V2) ---
     payments_url = workers_url + "payments/"
 
     def reload_payments():
         reload_workers("Payments")
 
     reload_payments()
-    want = expected_earned(approved=2, unit_amount=unit_amount)
+    approved = 3
+    want = expected_earned(approved=approved, unit_amount=unit_amount)
     poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), want, "Accrued"),
                sync_timeout, POLL_SECONDS, reload_payments)
 
@@ -165,7 +176,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
-    run_device_flow(["ldvp_payment.yaml"], EARNED=want, TRANSFERRED=want)
+    run_device_flow(["ldvp_payment.yaml"], APPROVED=approved, EARNED=want, TRANSFERRED=want)
 
     # --- 9. WEB: the confirmation shows (TC-PAY-002); a second payment ---
     reload_payments()

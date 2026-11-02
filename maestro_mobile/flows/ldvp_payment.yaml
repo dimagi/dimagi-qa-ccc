@@ -1,4 +1,4 @@
-# LDVP payment session (CCCT-2670), after Connect auto-approved V1 and V2 and web
+# LDVP payment session (CCCT-2670), after Connect auto-approved V1, its copy and V2 and web
 # paid the earned amount. Covers the device halves of TC-VER-001/003, TC-PAY-001
 # and TC-PAY-002.
 #
@@ -18,8 +18,9 @@ env:
   USERNAME: "QA LDVP Worker"
   BACKUP_CODE: "609100"
   OPPORTUNITY: "Demo Opportunity"
-  EARNED: "200"
-  TRANSFERRED: "200"
+  APPROVED: "3"
+  EARNED: "300"
+  TRANSFERRED: "300"
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
@@ -51,10 +52,10 @@ env:
       id: "connect_delivery_home_tabs"
     timeout: 30000
 
-# --- TC-VER-001: two approved visits ---
-# V1 and V2 were auto-approved; had the duplicate or the over-limit V3 been
-# counted, the approved count or the earned amount would be higher, so 2 approved
-# and 200 earned together are what discriminate.
+# --- TC-VER-001: the approved visits ---
+# V1, its copy and V2 were auto-approved (an auto-verified opportunity cannot
+# flag duplicates); had the over-limit V3 been counted, the approved count or
+# the earned amount would be higher.
 - tapOn:
     text: "Visits"
     childOf:
@@ -65,7 +66,7 @@ env:
     timeout: 30000
 - assertVisible:
     id: "tvApproved"
-    text: "(?s)\\D*2\\b.*"
+    text: "(?s)\\D*${APPROVED}\\b.*"
 
 # --- TC-VER-003 / TC-PAY-001: earned, transferred, and an unconfirmed payment ---
 - tapOn:
