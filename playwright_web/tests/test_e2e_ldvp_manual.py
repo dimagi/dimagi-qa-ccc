@@ -18,11 +18,11 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     """CCCT-2670 - manual approve/reject, on the reusable manual-review opportunity.
 
     The LDVP opportunities test_e2e_ldvp.py creates verify visits automatically,
-    which cannot be switched off and hides Check Duplicates. This test uses one
-    long-lived opportunity with automatic verification off (LDVP.manual_* in
-    web_test_data.yaml): Check Duplicates is switched on, the worker submits
-    V1, V2, a copy of V1 and V3, and the Network Manager approves V1 and rejects
-    V2. Covers TC-DLV-004 (duplicate flagged), TC-VER-001, TC-VER-002 and
+    which cannot be switched off and hides the verification flags. This test uses
+    one long-lived opportunity with automatic verification off (LDVP.manual_* in
+    web_test_data.yaml). It still auto-approves unflagged visits, so the PM sets
+    flags that hold every visit for review; the worker submits V1, V2, a copy of
+    V1 and V3, and the Network Manager approves V1 and rejects V2. Covers TC-DLV-004 (duplicate flagged), TC-VER-001, TC-VER-002 and
     TC-VER-003 (only the approved visit earns).
 
     The worker accepts, learns and passes the assessment there once; a run that
@@ -69,8 +69,14 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
         reload_workers(tab)
         return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
 
-    # --- 1. WEB: Check Duplicates on (needed for TC-DLV-004) ---
-    ConnectOpportunitiesPage(opp.connect_page).ensure_check_duplicates(opp.base_url, opp.org_slug, opp.opp_id)
+    # --- 1. WEB: verification flags that hold every visit for review ---
+    # The opportunity still auto-approves any visit with no flag, so each one has
+    # to carry a flag: Check Duplicates marks the copy of V1 (TC-DLV-004), Check
+    # GPS flags V2 (sent without a location), and Location Distance flags V1 and
+    # V3, which are sent from the same mock point as earlier beneficiaries'.
+    ConnectOpportunitiesPage(opp.connect_page).ensure_verification_flags(
+        opp.base_url, opp.org_slug, opp.opp_id, duplicate=True, gps=True,
+        location_m=int(ldvp["manual_location_distance_m"]))
 
     # --- 2. One time per opportunity: accept, learn, fail, then pass the assessment ---
     reload_workers()

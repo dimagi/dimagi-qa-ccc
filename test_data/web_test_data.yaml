@@ -193,6 +193,9 @@ LDVP:
   # Its payment unit, for the delivery details the first run checks.
   manual_max_daily: "5"
   manual_max_total: "100"
+  # Location Distance flag (metres) the manual test sets: every visit comes from
+  # the same mock point, so each is within this of an earlier beneficiary's.
+  manual_location_distance_m: "50"
 
 # Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite
 # is an unregistered reserved automation number; the test invites and deletes it.

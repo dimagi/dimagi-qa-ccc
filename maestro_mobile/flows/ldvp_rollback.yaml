@@ -1,12 +1,7 @@
 # LDVP rollback session (CCCT-2670, TC-PAY-004), after web rolled back the
-# 50 payment. The transferred total is back to the first payment alone and the
-# unconfirmed row is gone.
-#
-# No notification check: Connect's payment_delete sends "Payment updated" as a
-# plain push (send_push_notification_task), and unlike the payment notice it
-# never shows in the app's notification history - a fresh sign-in after the
-# rollback found the list empty (prod 2026-11-02). Its push reaches only a
-# device already signed in, which a Maestro session cannot be across the web step.
+# 50 payment. The rollback is listed in the notification history, the
+# transferred total is back to the first payment alone and the unconfirmed row
+# is gone.
 #
 # Ids and strings are from commcare-android at tag commcare_2.65.0
 # (fragment_connect_delivery_home.xml, ConnectDeliveryPaymentFragment): the
@@ -28,6 +23,32 @@ env:
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
+
+# --- TC-PAY-004: the rollback notification in the app's notification history ---
+# Connect's payment_delete sends "Payment updated" / "There has been an
+# adjustment to your earnings for <opportunity>." - it never says rollback. On
+# prod 2026-11-02 a fresh sign-in found the list empty after 2 minutes of plain
+# waiting, so tap the screen's cloud sync (notification_cloud_sync, which
+# reloads from the server) while waiting.
+- tapOn:
+    id: "action_bell"
+- repeat:
+    while:
+      notVisible:
+        text: "(?is).*(Payment updated|adjustment to your earnings).*"
+    times: 6
+    commands:
+      - tapOn:
+          id: "notification_cloud_sync"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            text: "(?is).*(Payment updated|adjustment to your earnings).*"
+          timeout: 20000
+          optional: true
+- assertVisible:
+    text: "(?is).*(Payment updated|adjustment to your earnings).*"
+- back
 
 # --- TC-PAY-004: the rollback reflected in the transferred total ---
 - extendedWaitUntil:

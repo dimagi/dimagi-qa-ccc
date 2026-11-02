@@ -10,6 +10,8 @@ locators = LocatorLoader()
 class ConnectOpportunitiesPage(BasePage):
     OPP_NAME_INPUT = locators.get("connect_opportunities_page", "name_input")
     CHECK_DUPLICATES_CHECKBOX = locators.get("connect_opportunities_page", "check_duplicates_checkbox")
+    CHECK_GPS_CHECKBOX = locators.get("connect_opportunities_page", "check_gps_checkbox")
+    LOCATION_DISTANCE_INPUT = locators.get("connect_opportunities_page", "location_distance_input")
     VERIFICATION_FLAGS_SAVE_BTN = locators.get("connect_opportunities_page", "verification_flags_save_btn")
     OPP_CURRENCY_INPUT = locators.get("connect_opportunities_page", "currency_input")
     OPP_COUNTRY_INPUT = locators.get("connect_opportunities_page", "country_input")
@@ -234,24 +236,31 @@ class ConnectOpportunitiesPage(BasePage):
         self.click(link)
         self.page.wait_for_timeout(3000)
 
-    def ensure_check_duplicates(self, base_url, org_slug, opp_id):
-        """Switch on the opportunity's Check Duplicates verification flag if it is
-        off, so a repeated entity reads 'duplicate' instead of passing as a new
-        visit. Only manual-review opportunities offer it."""
+    def ensure_verification_flags(self, base_url, org_slug, opp_id, duplicate, gps, location_m):
+        """Set the opportunity's Check Duplicates, Check GPS and Location Distance
+        (metres, 0 = off) verification flags, saving only if something differs.
+        A flagged visit is never auto-approved, so these hold visits for review.
+        Only opportunities without automatic visit verification offer them."""
         url = f"{base_url}/a/{org_slug}/opportunity/{opp_id}/verification_flags_config/"
-        self.page.goto(url)
-        self.page.wait_for_load_state("load")
-        checkbox = self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first
-        assert checkbox.count() > 0, (
-            "No Check Duplicates option - the opportunity still verifies visits automatically")
-        if checkbox.is_checked():
-            self._step("Check Duplicates already on")
+
+        def current():
+            self.page.goto(url)
+            self.page.wait_for_load_state("load")
+            dup = self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first
+            assert dup.count() > 0, (
+                "No Check Duplicates option - the opportunity still verifies visits automatically")
+            return (dup.is_checked(), self.page.locator(self.CHECK_GPS_CHECKBOX).first.is_checked(),
+                    int(self.page.locator(self.LOCATION_DISTANCE_INPUT).first.input_value() or 0))
+
+        wanted = (duplicate, gps, location_m)
+        if current() == wanted:
+            self._step(f"Verification flags already duplicate/gps/location = {wanted}")
             return
-        checkbox.check()
+        self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first.set_checked(duplicate)
+        self.page.locator(self.CHECK_GPS_CHECKBOX).first.set_checked(gps)
+        self.page.locator(self.LOCATION_DISTANCE_INPUT).first.fill(str(location_m))
         self.click(self.VERIFICATION_FLAGS_SAVE_BTN)
         self.page.wait_for_load_state("load")
-        self.page.goto(url)
-        self.page.wait_for_load_state("load")
-        assert self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first.is_checked(), (
-            "Check Duplicates did not stay on after Save")
-        self._step("Check Duplicates switched on")
+        saved = current()
+        assert saved == wanted, f"Verification flags read {saved} after Save, expected {wanted}"
+        self._step(f"Verification flags set: duplicate/gps/location = {wanted}")
