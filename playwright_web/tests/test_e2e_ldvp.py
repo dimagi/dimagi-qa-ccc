@@ -31,7 +31,9 @@ def test_e2e_ldvp(page, test_data, config, settings):
     To resume a run, set LDVP_RESUME_OPP_ID and LDVP_RESUME_OPP_NAME to its
     opportunity. By default it resumes at delivery (the worker has passed the
     assessment; stages 1-5 are skipped). LDVP_RESUME_AT=assess resumes at the
-    assessment instead (the worker has learned; stages 1-3 are skipped).
+    assessment instead (the worker has learned; stages 1-3 are skipped), and
+    LDVP_RESUME_AT=pass at passing it (the worker has already failed it once;
+    stages 1-4 are skipped - the fail flow needs a never-taken assessment).
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -63,7 +65,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     resume_id = os.environ.get("LDVP_RESUME_OPP_ID")
     resume_at = os.environ.get("LDVP_RESUME_AT", "deliver") if resume_id else None
-    assert resume_at in (None, "assess", "deliver"), f"LDVP_RESUME_AT must be assess or deliver, not {resume_at!r}"
+    assert resume_at in (None, "assess", "pass", "deliver"), (
+        f"LDVP_RESUME_AT must be assess, pass or deliver, not {resume_at!r}")
     if resume_id:
         opp = resume_ldvp_opportunity(page, config, settings, resume_id, os.environ["LDVP_RESUME_OPP_NAME"])
         workers = ConnectWorkersPage(opp.connect_page)
@@ -110,9 +113,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
             wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
                                                 "Modules completed"), tab="Learn")
 
-        # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
-        run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
-        wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
+        if resume_at != "pass":
+            # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
+            run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
+            wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
 
         # --- 5. DEVICE: failed state shown (TC-LRN-004); pass it (TC-LRN-005) ---
         run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
