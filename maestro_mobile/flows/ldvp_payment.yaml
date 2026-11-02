@@ -21,6 +21,8 @@ env:
   APPROVED: "3"
   EARNED: "300"
   TRANSFERRED: "300"
+  # "false" only when a run resumes at this session: see TC-PAY-001 below.
+  CHECK_PAYMENT_PUSH: "true"
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
@@ -28,16 +30,22 @@ env:
 # --- TC-PAY-001: the payment notification in the app's notification history ---
 # Web acted before this session started (a Maestro build cannot pause for it),
 # so the push went out before this fresh install signed in and never reaches its
-# shade. The notification history is kept server side and lists it.
-- tapOn:
-    id: "action_bell"
-- extendedWaitUntil:
-    visible:
-      # The history list shows the push's body only, not its "Payment received"
-      # title (seen on prod 2026-11-02).
-      text: "(?s).*(A payment is now available|Payment received).*"
-    timeout: 120000
-- back
+# shade. The server hands a not-yet-delivered notification to the next sign-in's
+# history, and only once: a re-run of this session finds the list empty
+# (prod 2026-11-02), so a resumed run skips the check.
+- runFlow:
+    when:
+      true: ${CHECK_PAYMENT_PUSH == 'true'}
+    commands:
+      - tapOn:
+          id: "action_bell"
+      - extendedWaitUntil:
+          visible:
+            # The history list shows the push's body only, not its "Payment
+            # received" title (seen on prod 2026-11-02).
+            text: "(?s).*(A payment is now available|Payment received).*"
+          timeout: 120000
+      - back
 - extendedWaitUntil:
     visible:
       id: "rvJobList"

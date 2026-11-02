@@ -180,7 +180,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
         workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
-    run_device_flow(["ldvp_payment.yaml"], APPROVED=approved, EARNED=want, TRANSFERRED=want)
+    # A resumed session cannot see the payment notification again: the server
+    # delivers it to one sign-in only.
+    run_device_flow(["ldvp_payment.yaml"], APPROVED=approved, EARNED=want, TRANSFERRED=want,
+                    CHECK_PAYMENT_PUSH="false" if resume_at == "payment" else "true")
 
     # --- 9. WEB: the confirmation shows (TC-PAY-002); a second payment ---
     reload_payments()
