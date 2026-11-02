@@ -278,7 +278,7 @@ class ConnectOpportunityListPage(BasePage):
 
     # -- row open / kebab -------------------------------------------------------
 
-    def has_opportunity(self, name, exact=False):
+    def has_opportunity(self, name, exact=True):
         """Whether the list shows an opportunity `name` (exact-name match when
         exact=True, else substring). If it is not on the current list this RELOADS the
         page with the default filters cleared (show_all_opportunities) and checks
@@ -288,7 +288,7 @@ class ConnectOpportunityListPage(BasePage):
             self.show_all_opportunities()
         return self.page.locator(loc.format(name=name)).count() > 0
 
-    def open_opportunity(self, name, exact=False):
+    def open_opportunity(self, name, exact=True):
         self._step(f"Open opportunity '{name}'{' (exact)' if exact else ''}")
         loc = self.ROW_LINK_BY_EXACT_NAME if exact else self.ROW_LINK_BY_NAME
         if self.page.locator(loc.format(name=name)).count() == 0:
