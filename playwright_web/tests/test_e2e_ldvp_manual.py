@@ -26,8 +26,8 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     TC-VER-003 (only the approved visit earns).
 
     The worker accepts, learns and passes the assessment there once; a run that
-    finds the invite still pending does that first. The payment unit allows 5
-    visits a day and each run counts 4, so it runs once a day per opportunity.
+    finds the invite still pending does that first. The payment unit allows 20
+    visits a day and 100 in total; each run counts 4, so about 25 runs in all.
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
