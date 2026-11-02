@@ -442,13 +442,15 @@ class WorkerVisitsPage(BasePage):
         self.type(field, text)
         self.click(submit)
         self.page.wait_for_load_state("load")
-        # The review posts over htmx and the table re-renders only when the
-        # response's reload_table trigger lands, so the row can still read the old
-        # status for a while: on prod 2026-11-02 it read 'pending' 2s after an
-        # approval that had gone through. Wait for the row to change.
+        # The review posts over htmx, and the worker's visits table does not
+        # re-render on its own afterwards: on prod 2026-11-02 the row still read
+        # 'pending' 30s after an approval that had gone through. Reload until the
+        # row shows the new status.
         status = None
-        for _ in range(15):
-            self.page.wait_for_timeout(2000)
+        for _ in range(6):
+            self.page.wait_for_timeout(3000)
+            self.page.reload(wait_until="load")
+            self._await_table()
             status = self._visit_status(visit_id)
             if status == expected:
                 break
