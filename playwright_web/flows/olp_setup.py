@@ -56,13 +56,13 @@ def open_connect_as_org(page, config, organization=PM_ORG):
     return connect_page
 
 
-def create_program_with_nm_handshake(connect_page, olp1_data, start_offset_days=2):
+def create_program_with_nm_handshake(connect_page, olp1_data, start_offset_days=2, days=365):
     """PM creates program and invites the NM org, NM applies, PM accepts."""
     connect_home_page = ConnectHomePage(connect_page)
     connect_programs_page = ConnectProgramsPage(connect_page)
 
     connect_home_page.click_programs_in_sidebar()
-    program_name = connect_programs_page.create_program(olp1_data, start_offset_days)
+    program_name = connect_programs_page.create_program(olp1_data, start_offset_days, days)
     connect_programs_page.invite_network_manager(program_name, olp1_data["network_manager"])
 
     connect_home_page.select_organization_from_list(olp1_data["network_manager"])

@@ -54,9 +54,10 @@ def create_ldvp_opportunity(page, config, settings, test_data):
     if program_name:
         ConnectHomePage(connect_page).click_programs_in_sidebar()
     else:
-        # Starts today: an opportunity has to start within its program, and the
-        # LDVP opportunity starts today.
-        program_name = create_program_with_nm_handshake(connect_page, olp1_data, start_offset_days=0)
+        # Starts today and outlasts the opportunity: an opportunity has to lie
+        # within its program, and the LDVP opportunity starts today.
+        program_name = create_program_with_nm_handshake(connect_page, olp1_data, start_offset_days=0,
+                                                        days=max(365, days + 5))
         print(f"STEP [LDVP] Created program {program_name!r} - record it as LDVP.program_name"
               f"{'_staging' if env == 'staging' else ''} in web_test_data.yaml to reuse it")
 
