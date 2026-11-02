@@ -24,7 +24,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     device can see the result, since a Maestro build cannot pause.
 
     Plan: test_plans/CCCT-2670_LDVP_Automation_Test_Plan.xlsx. Covers TC-INV-001..004,
-    TC-LRN-001..005, TC-DLV-001..005, TC-VER-001 and 003, TC-PAY-001..004 and, for
+    TC-LRN-001..005, TC-DLV-001..003 and 005, TC-VER-001 and 003, TC-PAY-001..004 and, for
     free, TC-REG-002 (every session after the first starts from a cleared app and
     recovers the account, and progress has to be there).
 
@@ -137,6 +137,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
             PASS_SCORE=ldvp["assessment_pass_score"],
             MAX_DAILY=ldvp["max_daily"],
             MAX_TOTAL=ldvp["max_total"],
+            SUBMIT_DUPLICATE="false",
             **run.device_env(),
         )
 
@@ -145,7 +146,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     def reload_payments():
         reload_workers("Payments")
 
-    approved = 3
+    approved = 2
     want = expected_earned(approved=approved, unit_amount=unit_amount)
 
     if resume_at != "payment":
@@ -158,18 +159,17 @@ def test_e2e_ldvp(page, test_data, config, settings):
         visits = WorkerVisitsPage(opp.connect_page)
 
         # LDVP opportunities verify visits automatically (it cannot be switched off;
-        # manual approve/reject is its own test on a manual-review opportunity). On
-        # such an opportunity Connect hides the Check Duplicates flag
-        # (OpportunityVerificationFlagsConfigForm) and, with it off, resets a
-        # duplicate to pending - so the copy of V1 is approved and paid like any
-        # other visit (TC-DLV-004; seen on prod 2026-11-02). Duplicate flagging is
-        # covered on the manual-review opportunity. V1 shows exactly two rows.
-        poll_until(lambda: _assert_statuses(visits, v1, ["approved", "approved"]),
+        # manual approve/reject is its own test on a manual-review opportunity).
+        # This chain submits no duplicate: an auto-verified opportunity cannot flag
+        # one, approves and pays it, and the app then counts it differently from web
+        # (known behaviour, prod 2026-11-02). Duplicates (TC-DLV-004) are covered on
+        # the manual-review opportunity.
+        poll_until(lambda: _assert_statuses(visits, v1, ["approved"]),
                    sync_timeout, POLL_SECONDS, opp.connect_page.reload)
         _assert_statuses(visits, v2, ["approved"])  # TC-DLV-003: recorded without location
         _assert_statuses(visits, v3, ["over_limit"])  # TC-DLV-005
 
-        # --- TC-VER-003: only the approved visits are earned (V1, its copy and V2) ---
+        # --- TC-VER-003: only the approved visits are earned (V1 and V2) ---
         reload_payments()
         poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), want, "Accrued"),
                    sync_timeout, POLL_SECONDS, reload_payments)

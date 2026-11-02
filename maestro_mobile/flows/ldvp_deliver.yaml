@@ -1,10 +1,10 @@
 # LDVP deliver session (CCCT-2670), after web saw the assessment Passed. Starts
 # on the learn-complete view - TC-LRN-005 device half (certificate) and TC-DLV-001
 # (delivery details) - claims the job, then downloads the deliver app and
-# submits four visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
-# TC-DLV-004 (V1 again, identical: the duplicate) and TC-DLV-005 (V3, the fourth
-# counted visit of the day against a max of 3: Over Limit). Web reads every
-# verdict afterwards; this session only has to get them submitted in order.
+# submits its visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
+# TC-DLV-004 (V1 again, identical: the duplicate - manual-review opportunity
+# only, SUBMIT_DUPLICATE) and TC-DLV-005 (V3, over the daily limit). Web reads
+# every verdict afterwards; this session only has to get them submitted in order.
 #
 # The visit block is the one worker_blocked_visit.yaml uses (Start -> Case List
 # -> Registration Form -> name -> next -> id -> walk past the rest), repeated
@@ -21,7 +21,7 @@ env:
   BACKUP_CODE: "609100"
   OPPORTUNITY: "Demo Opportunity"
   PASS_SCORE: "90"
-  MAX_DAILY: "3"
+  MAX_DAILY: "2"
   MAX_TOTAL: "4"
   VISIT_MODULE: "Case List"
   VISIT_FORM: "[Rr]egistration [Ff]orm"
@@ -34,6 +34,8 @@ env:
   VISIT_ID_V1_DUP: "0000001"
   VISIT_NAME_V3: "LDVP-V3-000000"
   VISIT_ID_V3: "0000003"
+  # "true" on the manual-review opportunity only - see the duplicate block.
+  SUBMIT_DUPLICATE: "false"
 ---
 - setLocation:
     latitude: 28.6139
@@ -244,57 +246,65 @@ env:
     timeout: 180000
 
 # --- V1 again, identical: the duplicate (TC-DLV-004) ---
-- tapOn: "Start"
-- tapOn: "${VISIT_MODULE}"
-- scrollUntilVisible:
-    element:
-      text: "${VISIT_FORM}"
-    direction: DOWN
-    timeout: 20000
-- tapOn: "${VISIT_FORM}"
-- extendedWaitUntil:
-    visible:
-      id: "nav_btn_next"
-    timeout: 60000
-- tapOn:
-    point: "50%,32%"
-- inputText: "${VISIT_NAME_V1_DUP}"
-- tapOn:
-    id: "nav_btn_next"
-- tapOn:
-    point: "50%,32%"
-- inputText: "${VISIT_ID_V1_DUP}"
-- tapOn:
-    id: "nav_btn_next"
-- tapOn:
-    text: "RECORD LOCATION"
-    optional: true
-- extendedWaitUntil:
-    visible:
-      id: "nav_btn_next"
-    timeout: 30000
-- repeat:
-    times: 6
+# Only on the manual-review opportunity. On an auto-verified one Connect cannot
+# flag a duplicate, approves and pays it, and the app then counts it differently
+# from web (a known behaviour), so the auto chain leaves it out.
+- runFlow:
+    when:
+      true: ${SUBMIT_DUPLICATE == 'true'}
     commands:
+      - tapOn: "Start"
+      - tapOn: "${VISIT_MODULE}"
+      - scrollUntilVisible:
+          element:
+            text: "${VISIT_FORM}"
+          direction: DOWN
+          timeout: 20000
+      - tapOn: "${VISIT_FORM}"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_btn_next"
+          timeout: 60000
+      - tapOn:
+          point: "50%,32%"
+      - inputText: "${VISIT_NAME_V1_DUP}"
       - tapOn:
           id: "nav_btn_next"
+      - tapOn:
+          point: "50%,32%"
+      - inputText: "${VISIT_ID_V1_DUP}"
+      - tapOn:
+          id: "nav_btn_next"
+      - tapOn:
+          text: "RECORD LOCATION"
           optional: true
-- tapOn:
-    id: "nav_btn_finish"
-    optional: true
-- extendedWaitUntil:
-    visible:
-      text: "Sync with Server"
-    timeout: 120000
-- assertVisible:
-    text: ".*form sent to server.*"
-- tapOn: "Sync with Server"
-- extendedWaitUntil:
-    visible:
-      text: ".*Sync Successful.*|.*form sent to server.*"
-    timeout: 180000
+      - extendedWaitUntil:
+          visible:
+            id: "nav_btn_next"
+          timeout: 30000
+      - repeat:
+          times: 6
+          commands:
+            - tapOn:
+                id: "nav_btn_next"
+                optional: true
+      - tapOn:
+          id: "nav_btn_finish"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            text: "Sync with Server"
+          timeout: 120000
+      - assertVisible:
+          text: ".*form sent to server.*"
+      - tapOn: "Sync with Server"
+      - extendedWaitUntil:
+          visible:
+            text: ".*Sync Successful.*|.*form sent to server.*"
+          timeout: 180000
 
-# --- V3: fourth counted visit today, over the max of 3 (TC-DLV-005) ---
+# --- V3: over the daily limit (TC-DLV-005): the third counted visit against a
+# max of 2 on the auto chain, the fourth against 3 with the duplicate ---
 - tapOn: "Start"
 - tapOn: "${VISIT_MODULE}"
 - scrollUntilVisible:

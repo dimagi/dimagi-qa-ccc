@@ -94,6 +94,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
         PASS_SCORE=ldvp["assessment_pass_score"],
         MAX_DAILY=ldvp["manual_max_daily"],
         MAX_TOTAL=ldvp["manual_max_total"],
+        SUBMIT_DUPLICATE="true",
         **run.device_env(),
     )
 
