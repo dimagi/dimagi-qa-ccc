@@ -22,6 +22,14 @@ appId: org.commcare.dalvik
     clearState: true
     permissions:
       all: allow
+# The phone screen's CONTINUE enables only once the app has a location fix
+# (PersonalIdPhoneFragment.allowedToContinue: valid phone && consent &&
+# location != null, commcare_2.65.0). A BrowserStack device's own GPS sometimes
+# has none, and then the button stays grey: two of the four 2026-11-02 sessions
+# failed exactly there. Give it one. Same point as ldvp_deliver.yaml.
+- setLocation:
+    latitude: 28.6139
+    longitude: 77.2090
 - runFlow: shared_login_signup.yaml
 - extendedWaitUntil:
     notVisible:
