@@ -27,11 +27,13 @@ env:
 # Web acted before this session started (a Maestro build cannot pause for it),
 # so the push went out before this fresh install signed in and never reaches its
 # shade. The notification history is kept server side and lists it.
+# Connect's payment_delete sends "Payment updated" / "There has been an
+# adjustment to your earnings for <opportunity>." - it never says rollback.
 - tapOn:
     id: "action_bell"
 - extendedWaitUntil:
     visible:
-      text: "(?is).*(roll ?back|revert|reversed).*"
+      text: "(?is).*(Payment updated|adjustment to your earnings).*"
     timeout: 120000
 - back
 - extendedWaitUntil:

@@ -171,6 +171,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     # --- 11. WEB: roll the second payment back ---
     reload_payments()
+    # Rollback lives in the Last-paid history popup, not on the Payments tab.
+    workers.click_last_paid_and_verify_history(worker_name)
     workers.rollback_last_payment()
 
     # --- 12. DEVICE: the rollback is reflected (TC-PAY-004) ---
