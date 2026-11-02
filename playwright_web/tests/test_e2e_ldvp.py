@@ -28,9 +28,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
     free, TC-REG-002 (every session after the first starts from a cleared app and
     recovers the account, and progress has to be there).
 
-    To resume a run that stopped at delivery, set LDVP_RESUME_OPP_ID and
-    LDVP_RESUME_OPP_NAME to an opportunity whose worker has already passed the
-    assessment: setup, invite and the learn sessions (stages 1-5) are skipped.
+    To resume a run, set LDVP_RESUME_OPP_ID and LDVP_RESUME_OPP_NAME to its
+    opportunity. By default it resumes at delivery (the worker has passed the
+    assessment; stages 1-5 are skipped). LDVP_RESUME_AT=assess resumes at the
+    assessment instead (the worker has learned; stages 1-3 are skipped).
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -61,10 +62,12 @@ def test_e2e_ldvp(page, test_data, config, settings):
         )
 
     resume_id = os.environ.get("LDVP_RESUME_OPP_ID")
+    resume_at = os.environ.get("LDVP_RESUME_AT", "deliver") if resume_id else None
+    assert resume_at in (None, "assess", "deliver"), f"LDVP_RESUME_AT must be assess or deliver, not {resume_at!r}"
     if resume_id:
         opp = resume_ldvp_opportunity(page, config, settings, resume_id, os.environ["LDVP_RESUME_OPP_NAME"])
         workers = ConnectWorkersPage(opp.connect_page)
-        print(f"STEP [LDVP] Resuming {opp.opportunity_name!r} ({opp.opp_id}) at delivery, run stamp {run.stamp}")
+        print(f"STEP [LDVP] Resuming {opp.opportunity_name!r} ({opp.opp_id}) at {resume_at}, run stamp {run.stamp}")
     else:
         # --- 1. WEB: fresh opportunity, invite (TC-INV-001) ---
         opp = create_ldvp_opportunity(page, config, settings, test_data)
@@ -93,18 +96,19 @@ def test_e2e_ldvp(page, test_data, config, settings):
         reload_workers(tab)
         return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
 
-    if not resume_id:
+    if resume_at != "deliver":
         # The learn part is three device sessions, each followed by a web wait for
         # Connect to have processed what it submitted: on staging that can take far
         # longer than a device session should sit re-syncing.
 
-        # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
-        run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
+        if not resume_at:
+            # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
+            run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
 
-        # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
-        wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
-        wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
-                                            "Modules completed"), tab="Learn")
+            # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
+            wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
+            wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
+                                                "Modules completed"), tab="Learn")
 
         # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
         run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
