@@ -1,4 +1,5 @@
 import os
+from datetime import date, timedelta
 
 import pytest
 
@@ -175,8 +176,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
                    sync_timeout, POLL_SECONDS, reload_payments)
 
         # Pay exactly what was earned, so the device's transferred total can only be
-        # right one way.
-        workers.make_payment_for_worker(worker_name, amount=want)
+        # right one way. Dated yesterday: Rollback Last Payment picks the newest by
+        # date_paid, a date with no time, so two payments made today tie and it can
+        # roll back this one instead of the second (prod 2026-11-02).
+        workers.make_payment_for_worker(worker_name, amount=want, paid_on=date.today() - timedelta(days=1))
         workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
@@ -200,6 +203,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
     # Rollback lives in the Last-paid history popup, not on the Payments tab.
     workers.click_last_paid_and_verify_history(worker_name)
     workers.rollback_last_payment()
+    # It must have removed the second payment, leaving only what was earned.
+    reload_payments()
+    poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "total paid"), want, "Total paid"),
+               sync_timeout, POLL_SECONDS, reload_payments)
 
     # --- 12. DEVICE: the rollback is reflected (TC-PAY-004) ---
     run_device_flow(["ldvp_rollback.yaml"], TRANSFERRED=want)

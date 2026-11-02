@@ -642,11 +642,12 @@ class ConnectWorkersPage(BasePage):
     def _last_paid_text(self, worker):
         return self.table_cell(worker, "last paid")
 
-    def make_payment_for_worker(self, worker, amount=1):
+    def make_payment_for_worker(self, worker, amount=1, paid_on=None):
         """Payment Processing_2 - import a payment for the worker and confirm the
         success message. Builds a one-row workbook in a temp file (leaving the
         committed test_data/make_payment.xlsx untouched) with the headers the
-        importer expects; only username/amount/date are used to match and apply."""
+        importer expects; only username/amount/date are used to match and apply.
+        paid_on (a date) defaults to today."""
         import os
         import tempfile
         from datetime import date
@@ -661,7 +662,7 @@ class ConnectWorkersPage(BasePage):
         # Phone is not used for matching (import keys on username); a reserved-block
         # placeholder keeps the row well-formed.
         ws.append([username, worker_ref["payment_import_placeholder_phone"], worker, str(amount),
-                   date.today().isoformat(), None, None])
+                   (paid_on or date.today()).isoformat(), None, None])
         path = os.path.join(tempfile.mkdtemp(), "make_payment.xlsx")
         wb.save(path)
 

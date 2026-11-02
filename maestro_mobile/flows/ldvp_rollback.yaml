@@ -1,6 +1,12 @@
 # LDVP rollback session (CCCT-2670, TC-PAY-004), after web rolled back the
-# 50 payment. The rollback is listed in the notification history, the transferred
-# total is back to the first payment alone, and the unconfirmed row is gone.
+# 50 payment. The transferred total is back to the first payment alone and the
+# unconfirmed row is gone.
+#
+# No notification check: Connect's payment_delete sends "Payment updated" as a
+# plain push (send_push_notification_task), and unlike the payment notice it
+# never shows in the app's notification history - a fresh sign-in after the
+# rollback found the list empty (prod 2026-11-02). Its push reaches only a
+# device already signed in, which a Maestro session cannot be across the web step.
 #
 # Ids and strings are from commcare-android at tag commcare_2.65.0
 # (fragment_connect_delivery_home.xml, ConnectDeliveryPaymentFragment): the
@@ -23,19 +29,7 @@ env:
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
 
-# --- TC-PAY-004: the rollback notification in the app's notification history ---
-# Web acted before this session started (a Maestro build cannot pause for it),
-# so the push went out before this fresh install signed in and never reaches its
-# shade. The notification history is kept server side and lists it.
-# Connect's payment_delete sends "Payment updated" / "There has been an
-# adjustment to your earnings for <opportunity>." - it never says rollback.
-- tapOn:
-    id: "action_bell"
-- extendedWaitUntil:
-    visible:
-      text: "(?is).*(Payment updated|adjustment to your earnings).*"
-    timeout: 120000
-- back
+# --- TC-PAY-004: the rollback reflected in the transferred total ---
 - extendedWaitUntil:
     visible:
       id: "rvJobList"
