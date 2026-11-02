@@ -33,7 +33,9 @@ env:
     id: "action_bell"
 - extendedWaitUntil:
     visible:
-      text: "(?s).*(Payment received|You have received a payment).*"
+      # The history list shows the push's body only, not its "Payment received"
+      # title (seen on prod 2026-11-02).
+      text: "(?s).*(A payment is now available|Payment received).*"
     timeout: 120000
 - back
 - extendedWaitUntil:
