@@ -427,6 +427,12 @@ class WorkerVisitsPage(BasePage):
         )
         visit_id = pending[0]
         self._open_row_by_id(visit_id)
+        # The details panel (and its action bar) is already showing whichever
+        # visit was open before, so wait until it is this one's: on prod
+        # 2026-11-02 a reject meant for V2 landed on V1, still on screen.
+        self.page.locator(self.VISIT_DETAILS_CONTAINER).filter(has_text=entity_name).first.wait_for(
+            state="visible", timeout=15000)
+        self.page.wait_for_load_state("networkidle")
         if approve:
             action, field, submit, expected = (self.VISIT_ACTION_APPROVE, self.VISIT_APPROVE_MODAL_JUSTIFICATION,
                                                self.VISIT_APPROVE_MODAL_SUBMIT, "approved")
