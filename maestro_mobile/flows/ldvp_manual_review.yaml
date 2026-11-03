@@ -48,8 +48,8 @@ env:
 # Rejected / Pending) are what tell the states apart: being listed under
 # Rejected is the check. Earlier runs left visits of both kinds on this reused
 # opportunity, so each check is by this run's visit name. (The reason line is
-# not nested under the name's row in the view tree, so it is checked only as
-# present on the filtered list.)
+# not delivery_item_status and not nested under the name's row in the view
+# tree, so it is checked only as present on the filtered list.)
 - tapOn:
     text: "Rejected"
 - scrollUntilVisible:
@@ -59,7 +59,6 @@ env:
     direction: DOWN
     timeout: 30000
 - assertVisible:
-    id: "delivery_item_status"
     text: ".*${REJECT_REASON}.*"
 
 # --- TC-VER-001: the approved visit is listed as approved ---
