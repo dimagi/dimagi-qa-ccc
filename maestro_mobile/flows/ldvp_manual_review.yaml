@@ -45,9 +45,11 @@ env:
 # The list marks a visit by icon only - a red cross for rejected, a green tick
 # for approved - and shows a rejected visit's reason in its status line, never
 # the word "rejected" (prod 2026-11-03). Its filter chips (All / Approved /
-# Rejected / Pending) are what tell the states apart, and the reason confirms
-# it is the NM's rejection. Earlier runs left visits of both kinds on this
-# reused opportunity, so each check is by this run's visit name.
+# Rejected / Pending) are what tell the states apart: being listed under
+# Rejected is the check. Earlier runs left visits of both kinds on this reused
+# opportunity, so each check is by this run's visit name. (The reason line is
+# not nested under the name's row in the view tree, so it is checked only as
+# present on the filtered list.)
 - tapOn:
     text: "Rejected"
 - scrollUntilVisible:
@@ -59,9 +61,6 @@ env:
 - assertVisible:
     id: "delivery_item_status"
     text: ".*${REJECT_REASON}.*"
-    childOf:
-      containsDescendants:
-        - text: ".*${VISIT_NAME_V2}.*"
 
 # --- TC-VER-001: the approved visit is listed as approved ---
 - tapOn:
