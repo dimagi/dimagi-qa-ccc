@@ -191,7 +191,7 @@ LDVP:
   manual_opportunity_id: "1cc912d6-1043-417d-be1e-3809020c6142"
   manual_opportunity_name: "LDVP Manual Review_02-Nov-2026 : 13:14"
   manual_program_name: "LDVP Manual Program_02-Nov-2026 : 13:12"
-  # The staging twin, made 2026-11-03 the same way (to 2029-10-29). Automatic visit
+  # The staging twin, made 2026-11-03 the same way (about 3 years). Automatic visit
   # verification has to be switched off by the devs before the manual test can
   # use it.
   manual_opportunity_id_staging: "69eec75f-36d2-4d12-91f0-961326b98163"
