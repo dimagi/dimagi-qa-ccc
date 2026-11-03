@@ -2,6 +2,7 @@ import os
 from datetime import date, timedelta
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait, resume_ldvp_opportunity
 from flows.ldvp_values import expected_earned, new_run
@@ -99,14 +100,23 @@ def test_e2e_ldvp(page, test_data, config, settings):
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
     def reload_workers(tab=None):
-        opp.connect_page.goto(workers_url)
-        opp.connect_page.wait_for_load_state("load")
+        # 90s: a staging page load overran the default 30s mid-run (2026-11-03).
+        opp.connect_page.goto(workers_url, timeout=90000)
+        opp.connect_page.wait_for_load_state("load", timeout=90000)
         if tab:
             workers.click_tab_by_name(tab)
 
     def wait_on_web(check, tab=None):
-        reload_workers(tab)
-        return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
+        def attempt():
+            # A load that still times out is one more "not yet" for the wait,
+            # not the end of the run.
+            try:
+                reload_workers(tab)
+            except PlaywrightTimeoutError as error:
+                raise AssertionError(f"Workers page did not load: {error}") from None
+            return check()
+
+        return poll_until(attempt, sync_timeout, POLL_SECONDS, lambda: None)
 
     if resume_at not in ("deliver", "verify", "payment"):
         # The learn part is three device sessions, each followed by a web wait for

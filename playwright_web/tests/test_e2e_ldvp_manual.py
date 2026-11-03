@@ -1,4 +1,5 @@
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from flows.ldvp_setup import resume_ldvp_opportunity
 from flows.ldvp_values import new_run
@@ -37,13 +38,13 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     run = new_run()
     unit_amount = int(ldvp["amount"])
     sync_timeout = int(ldvp["sync_timeout_seconds_staging" if config.env == "stage" else "sync_timeout_seconds"])
-    assert config.env == "prod", "The manual-review opportunity exists on prod only so far"
+    suffix = "_staging" if config.env == "stage" else ""
 
     worker = env_by_flow(["ldvp_learn.yaml"], config.env)["ldvp_learn.yaml"]
     phone, worker_name = worker["PHONE_NUMBER"], worker["USERNAME"]
 
-    opp = resume_ldvp_opportunity(page, config, settings, ldvp["manual_opportunity_id"],
-                                  ldvp["manual_opportunity_name"])
+    opp = resume_ldvp_opportunity(page, config, settings, ldvp[f"manual_opportunity_id{suffix}"],
+                                  ldvp[f"manual_opportunity_name{suffix}"])
     workers = ConnectWorkersPage(opp.connect_page)
     print(f"STEP [LDVP-M] {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
 
@@ -61,14 +62,23 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
     def reload_workers(tab=None):
-        opp.connect_page.goto(workers_url)
-        opp.connect_page.wait_for_load_state("load")
+        # 90s: a staging page load overran the default 30s mid-run (2026-11-03).
+        opp.connect_page.goto(workers_url, timeout=90000)
+        opp.connect_page.wait_for_load_state("load", timeout=90000)
         if tab:
             workers.click_tab_by_name(tab)
 
     def wait_on_web(check, tab=None):
-        reload_workers(tab)
-        return poll_until(check, sync_timeout, POLL_SECONDS, lambda: reload_workers(tab))
+        def attempt():
+            # A load that still times out is one more "not yet" for the wait,
+            # not the end of the run.
+            try:
+                reload_workers(tab)
+            except PlaywrightTimeoutError as error:
+                raise AssertionError(f"Workers page did not load: {error}") from None
+            return check()
+
+        return poll_until(attempt, sync_timeout, POLL_SECONDS, lambda: None)
 
     # --- 1. WEB: verification flags that hold every visit for review ---
     # The opportunity still auto-approves any visit with no flag, so each one has

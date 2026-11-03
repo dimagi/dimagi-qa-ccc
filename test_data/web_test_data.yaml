@@ -191,6 +191,12 @@ LDVP:
   manual_opportunity_id: "1cc912d6-1043-417d-be1e-3809020c6142"
   manual_opportunity_name: "LDVP Manual Review_02-Nov-2026 : 13:14"
   manual_program_name: "LDVP Manual Program_02-Nov-2026 : 13:12"
+  # The staging twin, made 2026-11-03 the same way (to 2029-10-29). Automatic visit
+  # verification has to be switched off by the devs before the manual test can
+  # use it.
+  manual_opportunity_id_staging: "69eec75f-36d2-4d12-91f0-961326b98163"
+  manual_opportunity_name_staging: "LDVP Manual Review_03-Nov-2026 : 18:47"
+  manual_program_name_staging: "LDVP Manual Program_03-Nov-2026 : 18:44"
   # Its payment unit, for the delivery details the first run checks.
   manual_max_daily: "20"
   manual_max_total: "100"
