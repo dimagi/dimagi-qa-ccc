@@ -22,7 +22,8 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     one long-lived opportunity with automatic verification off (LDVP.manual_* in
     web_test_data.yaml). It still auto-approves unflagged visits, so the PM sets
     flags that hold every visit for review; the worker submits V1, V2, a copy of
-    V1 and V3, and the Network Manager approves V1 and rejects V2. Covers TC-DLV-004 (duplicate flagged), TC-VER-001, TC-VER-002 and
+    V1 and V3, the Network Manager approves V1 and rejects V2, and the Program
+    Manager agrees V1 - a managed opportunity pays only then. Covers TC-DLV-004 (duplicate flagged), TC-VER-001, TC-VER-002 and
     TC-VER-003 (only the approved visit earns).
 
     The worker accepts, learns and passes the assessment there once; a run that
@@ -124,12 +125,18 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     visits.review_visit(v2, approve=False, text=ldvp["reject_reason"])
     home.select_organization_from_list(PM_ORG)
 
-    # --- 6. WEB: only the approved visit earns (TC-VER-003) ---
+    # --- 6. WEB: the Program Manager agrees V1 ---
+    # A managed opportunity pays a visit only once the PM agrees with the NM's
+    # approval; until then Accrued does not move (prod 2026-11-03).
+    workers.goto_worker_visits_page(opp.base_url, opp.org_slug, opp.opp_id, user_id)
+    visits.pm_agree_visit(v1)
+
+    # --- 7. WEB: only the approved visit earns (TC-VER-003) ---
     earned = accrued_before + unit_amount
     wait_on_web(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), earned, "Accrued"),
                 tab="Payments")
 
-    # --- 7. DEVICE: V2 shows rejected; earned matches web ---
+    # --- 8. DEVICE: V2 shows rejected; earned matches web ---
     run_device_flow(["ldvp_manual_review.yaml"], VISIT_NAME_V2=v2, EARNED=earned)
     print(f"STEP [LDVP-M] Done: V1 approved, V2 rejected, copy duplicate, V3 pending; earned {earned}")
 

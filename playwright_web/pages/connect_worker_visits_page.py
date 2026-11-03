@@ -404,6 +404,42 @@ class WorkerVisitsPage(BasePage):
         return True
 
     # -- one named visit (CCCT-2670 LDVP) ---------------------------------------
+
+    def pm_agree_visit(self, entity_name):
+        """PM-agree the NM-approved visit named `entity_name`. On a managed
+        opportunity the work is paid only once the PM agrees: until then Connect
+        keeps it pending (CompletedWork._update_status)."""
+        self._await_table()
+        rows = self.page.locator(self.VISIT_ROW_ANY).filter(has_text=entity_name)
+        approved = [rows.nth(i).get_attribute("data-visit-id") for i in range(rows.count())
+                    if rows.nth(i).get_attribute("data-visit-status") == "approved"]
+        assert approved, (
+            f"No approved visit named {entity_name!r} for the PM to agree; statuses: "
+            f"{self.visit_statuses(entity_name)}"
+        )
+        visit_id = approved[0]
+        self._open_row_by_id(visit_id)
+        self.page.locator(self.VISIT_DETAILS_CONTAINER).filter(has_text=entity_name).first.wait_for(
+            state="visible", timeout=15000)
+        self.page.wait_for_load_state("networkidle")
+        agree = self.page.locator(self.VISIT_PM_AGREE).first
+        assert agree.count() > 0 and agree.is_enabled(), (
+            f"Visit {entity_name!r} offers no enabled Agree - is this login the Program Manager?")
+        self.click(self.VISIT_PM_AGREE)
+        self.page.wait_for_load_state("load")
+        # Same as review_visit: the table does not re-render by itself.
+        for _ in range(6):
+            self.page.wait_for_timeout(3000)
+            self.page.reload(wait_until="load")
+            self._await_table()
+            self._open_row_by_id(visit_id)
+            self.page.locator(self.VISIT_DETAILS_CONTAINER).filter(has_text=entity_name).first.wait_for(
+                state="visible", timeout=15000)
+            if not self.page.locator(self.VISIT_PM_AGREE).first.is_enabled():
+                break
+        assert not self.page.locator(self.VISIT_PM_AGREE).first.is_enabled(), (
+            f"Agree still enabled for {entity_name!r} after agreeing")
+        self._step(f"PM agreed visit {entity_name!r} ({visit_id})")
     # The LDVP test submits its own visits with run-unique entity names, so it
     # reviews exactly those rather than "the first reviewable row". A duplicate
     # carries its original's name, which is why lookups return every match and
