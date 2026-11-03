@@ -7,8 +7,7 @@ clicking the canvas - they exercise the side panel for that work area, not the
 click-to-select itself. The deny/approve cases (10/11) change seeded data.
 
 Reuses the OPD.microplanning_opp_id_staging fixture (the "OLP Test opp" already
-used by test_opd_gaps.py::test_opd_28) - staging only, skips on prod, same as
-that module's `session` fixture.
+used by test_opd_gaps.py::test_opd_28); prod uses its own OLP_Test_Opp (OPD.microplanning_opp_id).
 """
 
 import pytest
@@ -23,16 +22,14 @@ from pages.connect_workers_page import ConnectWorkersPage
 def _opp(test_data, config):
     opd = test_data.get("OPD") or {}
     opp_id = env_value(opd, "microplanning_opp_id", config)
-    slug = env_value(opd, "gap_org_slug", config)
+    slug = env_value(opd, "org_slug", config)
     if not opp_id or not slug:
-        pytest.skip("OPD.microplanning_opp_id/gap_org_slug not configured for this env")
+        pytest.skip("OPD.microplanning_opp_id/org_slug not configured for this env")
     return opp_id, slug
 
 
 @pytest.fixture(scope="module")
 def session(browser, config, settings, test_data):
-    if config.env == "prod":
-        pytest.skip("Microplanning fixture opp exists on staging only")
     opp_id, slug = _opp(test_data, config)
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
@@ -391,11 +388,18 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
     """The seeded work area named by MICROPLANNING_REVIEW.<key>, fetched fresh so
     it reflects what earlier runs consumed. Skips (naming the reseed request) if it
     is gone or no longer REQUEST_FOR_INACCESSIBLE."""
-    work_area_id = env_value(test_data.get("MICROPLANNING_REVIEW"), key, config)
-    if work_area_id is None:
+    review = test_data.get("MICROPLANNING_REVIEW")
+    work_area_id = env_value(review, key, config)
+    work_area_slug = env_value(review, key.replace("_id", "_slug"), config)
+    if work_area_id is None and work_area_slug is None:
         pytest.skip(f"MICROPLANNING_REVIEW.{key} not configured for this env")
-    by_id = {wa["id"]: wa for wa in micro.fetch_all_work_areas(base, slug, opp_id)}
-    work_area = by_id.get(work_area_id)
+    work_areas = micro.fetch_all_work_areas(base, slug, opp_id)
+    if work_area_id is not None:
+        work_area = next((wa for wa in work_areas if wa["id"] == work_area_id), None)
+    else:
+        # Prod's work areas are named by their code (e.g. KOTA0002), not the numeric id.
+        work_area = next((wa for wa in work_areas if wa.get("slug") == work_area_slug), None)
+    work_area_id = work_area_id if work_area_id is not None else work_area_slug
     if work_area is None or work_area.get("status") != "REQUEST_FOR_INACCESSIBLE":
         status = work_area.get("status") if work_area else "not found"
         pytest.skip(
