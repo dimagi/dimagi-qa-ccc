@@ -33,7 +33,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
     To resume a run, set LDVP_RESUME_OPP_ID and LDVP_RESUME_OPP_NAME to its
     opportunity. By default it resumes at delivery (the worker has passed the
     assessment; stages 1-5 are skipped). LDVP_RESUME_AT=assess resumes at the
-    assessment instead (the worker has learned; stages 1-3 are skipped), and
+    assessment instead (the worker has learned; stages 1-2 are skipped and the
+    web waits of stage 3 still run), and
     LDVP_RESUME_AT=pass at passing it (the worker has already failed it once;
     stages 1-4 are skipped - the fail flow needs a never-taken assessment), and
     LDVP_RESUME_AT=verify at the web check of the visits (stages 1-6 are
@@ -127,7 +128,11 @@ def test_e2e_ldvp(page, test_data, config, settings):
             # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
             run_device_flow(["ldvp_uninvited.yaml", "ldvp_learn.yaml"])
 
+        if resume_at != "pass":
             # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
+            # Also on a run resumed at the assessment: staging can still be
+            # processing the learn modules, and the assessment session needs them
+            # counted (2026-11-03 it started too early and saw fewer than 2 of 2).
             wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
             wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
                                                 "Modules completed"), tab="Learn")
