@@ -487,7 +487,9 @@ worker_visits_page:
   # Action-bar buttons live directly under #visit-actions (not inside a .modal).
   visit_action_reject: "//div[@id='visit-actions']//button[normalize-space()='Reject'][not(ancestor::div[contains(@class,'modal')])]"
   visit_action_approve: "//div[@id='visit-actions']//button[normalize-space()='Approve'][not(ancestor::div[contains(@class,'modal')])]"
-  visit_reject_modal_reason: "//div[contains(@class,'modal')]//textarea[@name='reason']"
+  # Scoped to the modal holding the Reject submit: the page also carries a hidden
+  # suspend-user modal whose textarea is name="reason" too, and it comes first.
+  visit_reject_modal_reason: "//div[contains(@class,'modal')][.//button[@type='submit'][normalize-space()='Reject']]//textarea[@name='reason']"
   visit_reject_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Reject']"
   visit_approve_modal_justification: "//div[contains(@class,'modal')]//textarea[@name='justification']"
   visit_approve_modal_submit: "//div[contains(@class,'modal')]//button[@type='submit'][normalize-space()='Approve']"
