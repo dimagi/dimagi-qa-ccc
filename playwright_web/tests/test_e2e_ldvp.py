@@ -2,7 +2,7 @@ import os
 from datetime import date, timedelta
 
 import pytest
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Error as PlaywrightError
 
 from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait, resume_ldvp_opportunity
 from flows.ldvp_values import expected_earned, new_run
@@ -109,11 +109,12 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     def wait_on_web(check, tab=None):
         def attempt():
-            # A load that still times out is one more "not yet" for the wait,
-            # not the end of the run.
+            # A load that still times out, or a dropped connection
+            # (ERR_NETWORK_CHANGED ended a 3-hour staging wait, 2026-11-03), is
+            # one more "not yet" for the wait, not the end of the run.
             try:
                 reload_workers(tab)
-            except PlaywrightTimeoutError as error:
+            except PlaywrightError as error:
                 raise AssertionError(f"Workers page did not load: {error}") from None
             return check()
 
