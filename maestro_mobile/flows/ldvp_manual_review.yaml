@@ -13,7 +13,9 @@ env:
   USERNAME: "QA LDVP Worker"
   BACKUP_CODE: "609100"
   OPPORTUNITY: "LDVP Manual Review"
+  VISIT_NAME_V1: "LDVP-V1-000000"
   VISIT_NAME_V2: "LDVP-V2-000000"
+  REJECT_REASON: "LDVP automation - no location"
   EARNED: "100"
 ---
 - runFlow: shared_ldvp_signin.yaml
@@ -40,23 +42,39 @@ env:
     visible:
       id: "delivery_list"
     timeout: 30000
+# The list marks a visit by icon only - a red cross for rejected, a green tick
+# for approved - and shows a rejected visit's reason in its status line, never
+# the word "rejected" (prod 2026-11-03). Its filter chips (All / Approved /
+# Rejected / Pending) are what tell the states apart, and the reason confirms
+# it is the NM's rejection. Earlier runs left visits of both kinds on this
+# reused opportunity, so each check is by this run's visit name.
+- tapOn:
+    text: "Rejected"
 - scrollUntilVisible:
     element:
       id: "delivery_item_name"
       text: ".*${VISIT_NAME_V2}.*"
     direction: DOWN
-    timeout: 20000
-# Earlier runs left rejected visits on this reused opportunity too, so the
-# status must be the one in V2's own row.
+    timeout: 30000
 - assertVisible:
     id: "delivery_item_status"
-    text: "(?i).*(reject|not approved).*"
+    text: ".*${REJECT_REASON}.*"
     childOf:
       containsDescendants:
         - text: ".*${VISIT_NAME_V2}.*"
+
+# --- TC-VER-001: the approved visit is listed as approved ---
+- tapOn:
+    text: "Approved"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${VISIT_NAME_V1}.*"
+    direction: DOWN
+    timeout: 30000
 - back
 
-# --- TC-VER-001 / TC-VER-003: only the approved visits are earned ---
+# --- TC-VER-003: only the approved visits are earned ---
 - tapOn:
     text: "Payment"
     childOf:

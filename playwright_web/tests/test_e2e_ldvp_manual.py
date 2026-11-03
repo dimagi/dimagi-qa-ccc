@@ -136,8 +136,9 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     wait_on_web(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), earned, "Accrued"),
                 tab="Payments")
 
-    # --- 8. DEVICE: V2 shows rejected; earned matches web ---
-    run_device_flow(["ldvp_manual_review.yaml"], VISIT_NAME_V2=v2, EARNED=earned)
+    # --- 8. DEVICE: V2 listed as rejected with its reason, V1 as approved; earned matches web ---
+    run_device_flow(["ldvp_manual_review.yaml"], VISIT_NAME_V1=v1, VISIT_NAME_V2=v2,
+                    REJECT_REASON=ldvp["reject_reason"], EARNED=earned)
     print(f"STEP [LDVP-M] Done: V1 approved, V2 rejected, copy duplicate, V3 pending; earned {earned}")
 
 
