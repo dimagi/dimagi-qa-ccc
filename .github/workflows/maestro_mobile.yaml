@@ -40,6 +40,23 @@ on:
         options:
           - manual
           - post-deploy
+      # Feature run: one app area, picked by each flow's `tags:` header. The flows
+      # input overrides it.
+      feature:
+        description: "What to run"
+        required: false
+        default: "Full suite"
+        type: choice
+        options:
+          - Full suite
+          - Login
+          - Map
+          - Profile
+          - Recovery
+      flows:
+        description: "Or: space-separated flow files to run, e.g. profile_view.yaml (overrides What to run)"
+        required: false
+        default: ""
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.
@@ -185,9 +202,19 @@ jobs:
         # Uploads the environment's APK and maestro_mobile/flows, runs them on a
         # real device via App Automate, and polls until the build finishes. Exits
         # non-zero unless the build status is "passed".
+        env:
+          FEATURE: ${{ inputs.feature }}
+          FLOWS_INPUT: ${{ inputs.flows }}
         run: |
           set -o pipefail
-          python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee bs_output.log
+          SELECT_ARGS=()
+          if [ -n "$FLOWS_INPUT" ]; then
+            read -ra FLOW_FILES <<< "$FLOWS_INPUT"
+            SELECT_ARGS=(--flows "${FLOW_FILES[@]}")
+          elif [ -n "$FEATURE" ] && [ "$FEATURE" != "Full suite" ]; then
+            SELECT_ARGS=(--tag "${FEATURE,,}")
+          fi
+          python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" "${SELECT_ARGS[@]}" | tee bs_output.log
 
       - name: Parse Results
         id: aggregate

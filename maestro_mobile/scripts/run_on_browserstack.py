@@ -198,6 +198,30 @@ def env_by_flow(flows, app_env=None):
     return resolved
 
 
+def flow_tags(flow):
+    """Tags from a flow's header (`tags: [profile]`), as a set."""
+    with open(FLOWS_DIR / flow, encoding="utf-8") as fh:
+        header = next(yaml.safe_load_all(fh)) or {}
+    return set(header.get("tags") or [])
+
+
+def select_flows(tags=None, flows=None):
+    """The flows a run executes: an explicit list, the TEST_FLOWS carrying any of
+    the tags (suite order kept), or all of TEST_FLOWS.
+
+    Tags only pick among TEST_FLOWS, so seed and sub-flows never run on their own.
+    """
+    if flows:
+        return list(flows)
+    if not tags:
+        return list(TEST_FLOWS)
+    wanted = set(tags)
+    selected = [flow for flow in TEST_FLOWS if flow_tags(flow) & wanted]
+    if not selected:
+        raise ValueError(f"No flow in TEST_FLOWS carries tag(s) {sorted(wanted)}")
+    return selected
+
+
 def _yaml_quote(value):
     escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -532,6 +556,11 @@ def main():
     parser = argparse.ArgumentParser(description="Run Maestro flows on BrowserStack")
     parser.add_argument("--flows", nargs="+", help=f"flow files to run (default: {' '.join(TEST_FLOWS)})")
     parser.add_argument(
+        "--tag",
+        action="append",
+        help="run only the suite flows carrying this tag, e.g. profile (repeatable; --flows wins)",
+    )
+    parser.add_argument(
         "--env",
         action="append",
         metavar="KEY=VALUE",
@@ -554,7 +583,13 @@ def main():
         key, value = item.split("=", 1)
         env[key] = value
 
-    summary = run_flows(flows=args.flows, env=env, app_env=args.app_env)
+    try:
+        flows = select_flows(tags=args.tag, flows=args.flows)
+    except ValueError as exc:
+        parser.error(str(exc))
+    print(f"Running {len(flows)} flow(s): {' '.join(flows)}")
+
+    summary = run_flows(flows=flows, env=env, app_env=args.app_env)
     print(json.dumps(summary["sessions"], indent=2, default=str)[:2000])
     sys.exit(0 if summary["status"] == "SUCCESS" else 1)
 

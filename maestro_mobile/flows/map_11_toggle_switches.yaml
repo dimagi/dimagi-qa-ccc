@@ -12,6 +12,7 @@
 # text form matched the pre-2.64 build these flows were written against and
 # stopped matching on 2.64.
 appId: org.commcare.dalvik
+tags: [map]
 ---
 - runFlow: shared_map_open.yaml
 
