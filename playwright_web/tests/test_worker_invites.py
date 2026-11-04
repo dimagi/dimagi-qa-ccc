@@ -65,10 +65,11 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list, test_data):
     Connect_worker_08: the invite can then be deleted.
 
     Sends one SMS to a reserved number and self-cleans by deleting the invite.
-    (Connect_worker_09 - the 24h resend cooldown - needs a *registered* pending
-    number, so it is deferred to the seeded data.)"""
+    (Connect_worker_09 - the 24h resend cooldown - is manual by design: every resend
+    texts a real registered number.)"""
     workers = workers_list
     reserved = test_data.get("WORKER_INVITES")["reserved_invite"]
+    skipped_msg = test_data.get("WORKER_INVITES")["not_registered_message"].lower()
 
     # Clear any leftover from an interrupted prior run.
     if workers.worker_row_present(reserved):
@@ -80,8 +81,8 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list, test_data):
 
     # _12 - resending a not-registered number is skipped with a naming message.
     workers.select_worker_row(reserved)
-    body = workers.resend_selected_invite()
-    assert "not registered on personalid" in body.lower() and reserved in body, (
+    body = workers.resend_selected_invite(expect_text=skipped_msg)
+    assert skipped_msg in body.lower() and reserved in body, (
         f"Expected a 'skipped - not registered on PersonalID' message naming {reserved}; "
         f"body did not contain it."
     )
