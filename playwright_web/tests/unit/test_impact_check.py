@@ -101,6 +101,27 @@ def test_markdown_report_lists_hits(tmp_path):
     assert "`opp_list.add_button` | `add-opportunity`" in markdown
 
 
+def test_selected_tests_cover_locator_hits_doc_mentions_and_pr_markers(tmp_path):
+    root = _fake_suite(tmp_path)
+    (root / "tests" / "test_tagged.py").write_text(
+        "import pytest\n\n@pytest.mark.pending_prod(pr=1406)\ndef test_copy():\n    pass\n"
+    )
+    (root / "tests" / "test_other_pr.py").write_text(
+        "import pytest\n\n@pytest.mark.replaced_by_pr(15830)\ndef test_original():\n    pass\n"
+    )
+
+    report = impact_check.analyse(DIFF, root=root, pr=1406)
+    assert report["selected_tests"] == ["tests/test_direct.py", "tests/test_tagged.py", "tests/test_via_flow.py"]
+
+
+def test_tests_marked_for_pr_matches_both_marker_forms_but_not_other_prs(tmp_path):
+    root = _fake_suite(tmp_path)
+    (root / "tests" / "test_kw.py").write_text("@pytest.mark.pending_prod(pr=1406)\n")
+    (root / "tests" / "test_pos.py").write_text("@pytest.mark.replaced_by_pr(1406)\n")
+    (root / "tests" / "test_prefix.py").write_text("@pytest.mark.replaced_by_pr(14060)\n")
+    assert impact_check.tests_marked_for_pr(1406, root) == ["tests/test_kw.py", "tests/test_pos.py"]
+
+
 def test_runs_against_the_real_suite_without_hits_for_an_empty_diff():
     report = impact_check.analyse("")
-    assert report == {"changed_files": [], "locator_hits": [], "doc_mentions": {}}
+    assert report == {"changed_files": [], "locator_hits": [], "doc_mentions": {}, "selected_tests": []}

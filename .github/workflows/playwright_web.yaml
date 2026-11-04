@@ -32,6 +32,14 @@ on:
         description: "Or: comma-separated Connect PR numbers to treat as deployed (overrides deployed_sha)"
         required: false
         default: ""
+      connect_pr:
+        description: "Feature run: only the tests this commcare-connect PR affects. The PR must be on the chosen environment; on stage it counts as deployed."
+        required: false
+        default: ""
+      tests:
+        description: "Or: space-separated test files to run, e.g. tests/test_olp_04.py (overrides connect_pr's selection)"
+        required: false
+        default: ""
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -112,7 +120,11 @@ jobs:
       # deployed: originals run, pending_prod copies skip. The token only reads the
       # public commcare-connect repo to compare commits.
       DEPLOYED_SHA: ${{ inputs.deployed_sha }}
-      DEPLOYED_PRS: ${{ inputs.deployed_prs }}
+      # A feature run on stage treats its PR as deployed (the caller put it there);
+      # on prod it doesn't, so prod still checks the original behaviour.
+      DEPLOYED_PRS: ${{ inputs.deployed_prs || (inputs.deployed_sha == '' && matrix.environment == 'stage' && inputs.connect_pr) || '' }}
+      CONNECT_PR: ${{ inputs.connect_pr }}
+      TESTS_INPUT: ${{ inputs.tests }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
@@ -188,14 +200,38 @@ jobs:
         # HTML report / notifications - those cover the browser tests only.
         run: python -m pytest tests/unit --tb=short
 
+      - name: Select Tests
+        id: select
+        working-directory: playwright_web
+        # Feature runs only: an explicit file list, or the tests the Connect PR affects
+        # (utils/impact_check.py). Empty output means the whole suite runs.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "$TESTS_INPUT" ]; then
+            SELECTED="$TESTS_INPUT"
+          elif [ -n "$CONNECT_PR" ]; then
+            SELECTED="$(python -m utils.impact_check --pr "$CONNECT_PR" --tests | tr '\n' ' ')"
+            if [ -z "${SELECTED// /}" ]; then
+              echo "::notice::No tests map to commcare-connect PR #$CONNECT_PR - nothing to run."
+              echo "none=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+          echo "Selected: ${SELECTED:-whole suite}"
+          echo "files=$SELECTED" >> "$GITHUB_OUTPUT"
+
       - name: Run Playwright Web Tests
         id: run_tests
+        if: steps.select.outputs.none != 'true'
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
+        env:
+          SELECTED: ${{ steps.select.outputs.files }}
         run: |
           MARKER_ARGS=()
           [ -n "$PYTEST_MARKERS" ] && MARKER_ARGS=(-m "$PYTEST_MARKERS")
-          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          read -ra TEST_ARGS <<< "$SELECTED"
+          xvfb-run --auto-servernum -- python -m pytest "${TEST_ARGS[@]}" --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload JUnit report
         if: always()

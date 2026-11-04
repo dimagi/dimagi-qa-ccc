@@ -13,6 +13,7 @@ diff, confirms each hit, and looks for behaviour changes no locator captures.
     python -m utils.impact_check --pr 1406            # needs the gh CLI
     python -m utils.impact_check --diff connect.diff  # a saved `gh pr diff` output
     python -m utils.impact_check --pr 1406 --json
+    python -m utils.impact_check --pr 1406 --tests    # test files a feature run executes
 """
 
 import argparse
@@ -147,7 +148,17 @@ def find_doc_mentions(changes, root=PLAYWRIGHT_ROOT):
     return mentions
 
 
-def analyse(diff_text, root=PLAYWRIGHT_ROOT):
+def tests_marked_for_pr(pr, root=PLAYWRIGHT_ROOT):
+    """Test files carrying pending_prod / replaced_by_pr markers for this PR."""
+    marker = re.compile(rf"(?:pending_prod|replaced_by_pr)\(\s*(?:pr\s*=\s*)?['\"]?{pr}['\"]?\s*\)")
+    return sorted(
+        f"tests/{path.name}"
+        for path in (root / "tests").glob("test_*.py")
+        if marker.search(path.read_text(encoding="utf-8"))
+    )
+
+
+def analyse(diff_text, root=PLAYWRIGHT_ROOT, pr=None):
     changes = parse_diff(diff_text)
     with open(root / "locators" / "web_locators.yaml", encoding="utf-8") as f:
         locators = yaml.safe_load(f)
@@ -156,10 +167,19 @@ def analyse(diff_text, root=PLAYWRIGHT_ROOT):
     for hit in hits:
         hit.pages = sorted(locator_users.get((hit.section, hit.key), ()))
         hit.tests = sorted({test for page in hit.pages for test in module_tests.get(page, ())})
+    doc_mentions = find_doc_mentions(changes, root)
+
+    # What a feature run for this PR executes: tests behind a vanishing locator, tests
+    # of pages that cite a changed Connect file, and tests already tagged for the PR.
+    selected = {test for hit in hits for test in hit.tests}
+    selected |= {test for pages in doc_mentions.values() for page in pages for test in module_tests.get(page, ())}
+    if pr is not None:
+        selected |= set(tests_marked_for_pr(pr, root))
     return {
         "changed_files": [change.path for change in changes],
         "locator_hits": [hit.__dict__ for hit in hits],
-        "doc_mentions": find_doc_mentions(changes, root),
+        "doc_mentions": doc_mentions,
+        "selected_tests": sorted(selected),
     }
 
 
@@ -188,6 +208,7 @@ def main(argv=None):
     source.add_argument("--pr", type=int, help=f"{CONNECT_REPO} PR number (diff fetched with gh)")
     source.add_argument("--diff", type=Path, help="path to a unified diff")
     parser.add_argument("--json", action="store_true", help="print JSON instead of markdown")
+    parser.add_argument("--tests", action="store_true", help="print only the test files to run, one per line")
     args = parser.parse_args(argv)
 
     if args.pr:
@@ -198,8 +219,13 @@ def main(argv=None):
     else:
         diff_text = args.diff.read_text(encoding="utf-8")
 
-    report = analyse(diff_text)
-    sys.stdout.write(json.dumps(report, indent=2) + "\n" if args.json else to_markdown(report, args.pr))
+    report = analyse(diff_text, pr=args.pr)
+    if args.tests:
+        sys.stdout.write("".join(f"{test}\n" for test in report["selected_tests"]))
+    elif args.json:
+        sys.stdout.write(json.dumps(report, indent=2) + "\n")
+    else:
+        sys.stdout.write(to_markdown(report, args.pr))
 
 
 if __name__ == "__main__":
