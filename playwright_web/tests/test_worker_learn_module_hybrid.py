@@ -3,11 +3,10 @@ submits a Learn form on mobile. Modeled on test_e2e_relearn_lifecycle.py: web
 drives setup/assertions, a Maestro flow (worker_learn_module.yaml) drives the
 device.
 
-Gated on two data files, and skips with a clean message until both are filled in:
-  - web_test_data.yaml LEARN_TAB_02_HYBRID: the opportunity and worker (needs a
-    worker whose learning is started but not complete)
-  - mobile_workers.yaml MAESTRO_LEARN_TAB_02: the worker's sign-in and the Learn
-    app's module and (label-only) form names, copied from that opportunity's Learn app CCZ
+Data is seeded (Anshu): the worker and opportunity are in web_test_data.yaml
+LEARN_TAB_02_HYBRID, the worker's sign-in and the Learn app's module and (label-only)
+form names in mobile_workers.yaml MAESTRO_LEARN_TAB_02. The test is gated by the
+consumes_seed_data marker, so it only runs on a manual dispatch with include_seed_consuming.
 The mobile flow is built from commcare-android source (see its own header
 comment) but is NOT yet device-validated - expect to refine it against the first
 real BrowserStack run, as every flow in this suite was.
@@ -62,7 +61,12 @@ def _completed_count(cell_text, total_lessons):
     assert match, f"No number in the Modules completed cell: {cell_text!r}"
     value = float(match.group())
     if "%" in (cell_text or ""):
-        return round(value / 100 * total_lessons)
+        lessons = value / 100 * total_lessons
+        assert abs(lessons - round(lessons)) < 0.05, (
+            f"{cell_text!r} of {total_lessons} lessons is not a whole number of lessons "
+            f"({lessons:.2f}): check LEARN_TAB_02_HYBRID.total_lessons"
+        )
+        return round(lessons)
     return int(value)
 
 
@@ -110,8 +114,8 @@ def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, co
         if after > before:
             break
         connect_page.wait_for_timeout(6000)
-    assert after > before, (
-        f"'{column}' for '{worker_name}' did not increase after the mobile submission "
+    assert after == before + 1, (
+        f"'{column}' for '{worker_name}' should rise by exactly 1 after the mobile submission "
         f"(was {before}, now {after})"
     )
     print(f"STEP [Hybrid] {column} for {worker_name}: {before} -> {after}")

@@ -408,9 +408,9 @@ MAESTRO_RECOVERY_FIXTURE:
 #   1. In Connect, as the PM org (PM_Automation_01), open the opportunity's Workers page
 #      and invite a new unregistered phone number.
 #   2. Register that number on a device/PersonalID, accept the invite, and finish ONE
-#      Learn form by hand so learning is started but not complete. Complete "Learn 2"
-#      (not "Learn 1"): the flow submits learn_module below, and resubmitting a module
-#      that is already done may not increase "Modules completed".
+#      Learn form by hand so learning is started but not complete. Complete "Learn 1"
+#      (not "Learn 2"): the flow submits learn_module below ("Learn 2"), and resubmitting
+#      a module that is already done may not increase "Modules completed".
 #   3. Update here: phone_number, username, backup_code, and in
 #      web_test_data.yaml LEARN_TAB_02_HYBRID: worker_name (and opportunity_name if it changed).
 # The web test skips with a message once the worker is complete.
