@@ -722,3 +722,15 @@ INVOICE_CUSTOM:
 
 INVOICE_VALIDATION:
   future_days_ahead: 5
+
+LANDING:
+  # Fixture opportunities for test_connect_landing.py (Connect landing page and
+  # 2.65 delivery tabs; plan: test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx).
+  # Each is made once per environment and held in one state; the suite only reads
+  # them and checks the state first. No other suite may use them.
+  #
+  # F3 Ended: an LDVP opportunity (Worker A joined, 2 approved visits, payment
+  # confirmed, rollback done) that ends 2026-11-06. Made by test_e2e_ldvp.py with
+  # LDVP_DAYS=2 on 2026-11-04; rebuild the same way if it is ever deleted.
+  ended_opportunity_id: "440f0769-2aea-41e5-a6a4-724757ec0c39"
+  ended_opportunity_name: "Demo Opportunity_04-Nov-2026 : 19:11"
