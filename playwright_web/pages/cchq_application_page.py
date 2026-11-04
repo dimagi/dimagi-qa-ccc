@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from pages.base_page import BasePage
@@ -37,18 +38,31 @@ class CCHQApplicationPage(BasePage):
         self.page.wait_for_timeout(5000)
         return full_name
 
+    @staticmethod
+    def _app_id_from_url(url):
+        match = re.search(r"/apps/view/([^/]+)", url)
+        return match.group(1) if match else None
+
     def click_copy_button(self):
         # The button's presence is guaranteed by _open_copy_form; still wait for it
         # to be actionable so a slow render surfaces here rather than as a bare click
-        # timeout, and confirm the copy by the resulting navigation.
+        # timeout.
         button = self.page.locator(self.COPY_BUTTON).first
         button.wait_for(state="visible", timeout=60000)
         self.scroll_into_view(self.COPY_BUTTON)
+        source_app_id = self._app_id_from_url(self.page.url)
         button.click(force=True)
-        self.page.wait_for_url("**/apps/view/**", timeout=60000)
-        self.page.wait_for_timeout(5000)
+        # The source app's own settings URL already matches /apps/view/, so confirm
+        # the copy by navigation to a different app id; otherwise the next step runs
+        # against the source app (which has no Make New Version button).
+        self.page.wait_for_url(
+            lambda url: self._app_id_from_url(url) not in (None, source_app_id),
+            timeout=120000,
+        )
+        self.page.wait_for_load_state("load")
 
     def click_make_new_version_button(self):
+        self.page.locator(self.MAKE_NEW_VERSION_BUTTON).first.wait_for(state="visible", timeout=60000)
         self.click(self.MAKE_NEW_VERSION_BUTTON)
         self.click(self.RELEASED_BUTTON)
 

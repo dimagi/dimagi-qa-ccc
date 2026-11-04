@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -85,11 +87,25 @@ class ConnectProgramsPage(BasePage):
             ) from None
 
     def invite_network_manager(self, program_name, network_manager):
-        self.click(self.INVITE_BTN_BY_PROGRAM.format(program=program_name))
+        invite_btn = self.INVITE_BTN_BY_PROGRAM.format(program=program_name)
         org_select = self.INVITE_ORG_SELECT_BY_PROGRAM.format(program=program_name)
+        submit_btn = self.INVITE_SUBMIT_BTN_BY_PROGRAM.format(program=program_name)
+        self.click(invite_btn)
         self.page.locator(org_select).first.wait_for(state="attached")
         self.select_by_visible_text_forced(org_select, network_manager)
-        self.click(self.INVITE_SUBMIT_BTN_BY_PROGRAM.format(program=program_name))
+        # On prod the Invite panel sometimes stays closed after the first click (the
+        # submit button then stays hidden for the whole 30s). Open it again if so.
+        try:
+            self.page.locator(submit_btn).first.wait_for(state="visible", timeout=5000)
+        except PlaywrightTimeoutError:
+            # Invite toggles the panel: only click again if it is really closed (org
+            # select hidden), otherwise a late-opening panel would be closed again.
+            if not self.page.locator(org_select).first.is_visible():
+                self._step("Invite panel not open - clicking Invite again")
+                self.click(invite_btn)
+            self.page.locator(submit_btn).first.wait_for(state="visible", timeout=10000)
+            self.select_by_visible_text_forced(org_select, network_manager)
+        self.click(submit_btn)
         self.page.wait_for_load_state("networkidle")
         self.page.wait_for_timeout(2000)
 
