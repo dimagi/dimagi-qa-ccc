@@ -394,6 +394,8 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
     if work_area_id is None and work_area_slug is None:
         pytest.skip(f"MICROPLANNING_REVIEW.{key} not configured for this env")
     work_areas = micro.fetch_all_work_areas(base, slug, opp_id)
+    # The key the lookup used, so the reseed hint below names the field to update.
+    lookup_key = key if work_area_id is not None else key.replace("_id", "_slug")
     if work_area_id is not None:
         work_area = next((wa for wa in work_areas if wa["id"] == work_area_id), None)
     else:
@@ -405,7 +407,7 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
         pytest.skip(
             f"Work area {work_area_id} on opportunity {opp_id} is no longer REQUEST_FOR_INACCESSIBLE "
             f"(now: {status}). Deny/approve consume it - ask Anshu to reseed that work area (or point "
-            f"MICROPLANNING_REVIEW.{key} at a fresh one)."
+            f"MICROPLANNING_REVIEW.{lookup_key} at a fresh one)."
         )
     return work_area
 
@@ -437,6 +439,7 @@ def test_microplanning_09_review_inaccessibility_details(review_session, test_da
     assert micro.review_reason(), "Reason is empty"
 
 
+@pytest.mark.consumes_seed_data
 def test_microplanning_10_deny_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Deny -> push notification sent, work
     area status updates (to NOT_VISITED - see act_on_inaccessibility_request).
@@ -451,6 +454,7 @@ def test_microplanning_10_deny_inaccessibility_request(review_session, test_data
     assert micro.selected_feature_status() == "NOT_VISITED", "Work area status did not update to NOT_VISITED after deny"
 
 
+@pytest.mark.consumes_seed_data
 def test_microplanning_11_approve_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Approve as Inaccessible -> work area is
     marked inaccessible (status INACCESSIBLE). Consumes
