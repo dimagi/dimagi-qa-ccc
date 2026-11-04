@@ -98,10 +98,26 @@ appId: org.commcare.dalvik
 # --- The pending-task warning must be showing (TC-E2E-006, first half) ---
 # cv_relearn_tasks_pending is on the deliver app's home job tile as well as the
 # Connect delivery-progress card, so it can be checked here without going back.
+# The warning only arrives with a sync, and the login sync can run before the web side's
+# task assignment has reached CommCare HQ (it lags on staging) - the home screen then
+# shows no warning, and waiting without syncing never changes that (stage run, 4 Nov
+# 2026: tile showed no warning, last synced seconds earlier). So sync again until it
+# shows, a bounded number of times, then assert it.
+- repeat:
+    while:
+      notVisible:
+        text: ".*${PENDING_WARNING}.*"
+    times: 6
+    commands:
+      - tapOn: "Sync with Server"
+      - extendedWaitUntil:
+          visible:
+            text: ".*Sync Successful.*"
+          timeout: 180000
 - extendedWaitUntil:
     visible:
       text: ".*${PENDING_WARNING}.*"
-    timeout: 120000
+    timeout: 30000
 
 # Sync so the case property set at assignment arrives and unhides the form.
 - tapOn: "Sync with Server"
