@@ -6,6 +6,7 @@ the payment unit comes from the LDVP block (max 2 a day, 4 in total) instead of
 OLP_2, so the daily limit is reachable in one device session.
 """
 
+import os
 from dataclasses import dataclass
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -41,7 +42,9 @@ def create_ldvp_opportunity(page, config, settings, test_data):
     olp1_data = test_data.get("OLP_1")
     payment_unit = {**test_data.get("OLP_2"), **{k: ldvp[k] for k in (
         "payment_unit_name", "amount", "description", "max_total", "max_daily")}}
-    days = int(ldvp["days"])
+    # LDVP_DAYS shortens the opportunity: the landing-page plan's ended
+    # opportunity (S3) is a normal LDVP run that ends two days later.
+    days = int(os.environ.get("LDVP_DAYS", ldvp["days"]))
 
     env = "staging" if "staging" in config.get("cchq_url") else "prod"
 
