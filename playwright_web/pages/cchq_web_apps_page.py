@@ -6,6 +6,9 @@ needs no worker credential. Submissions made this way are attributed to the work
 HQ user id, which is what Connect keys visits on.
 """
 
+import time
+from pathlib import Path
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
@@ -29,6 +32,7 @@ class WebAppsPage(BasePage):
     GPS_UNSET = locators.get("cchq_web_apps_page", "gps_unset_label")
     SUBMIT = locators.get("cchq_web_apps_page", "form_submit_button")
     SUBMITTED = locators.get("cchq_web_apps_page", "form_submitted_message")
+    WORKER_ROW = locators.get("cchq_web_apps_page", "worker_row_by_name")
 
     def open(self, hq_url, domain):
         self._step(f"Open Web Apps for {domain}")
@@ -49,7 +53,7 @@ class WebAppsPage(BasePage):
         box.wait_for(state="visible", timeout=20000)
         box.fill(worker_username)
         box.press("Enter")
-        self.page.get_by_text(worker_username, exact=False).first.click()
+        self.page.locator(self.WORKER_ROW.format(name=worker_username)).first.click()
         self.page.locator(self.LOGIN_AS_CONFIRM).first.click()
         self.page.locator(self.WORKING_AS_BANNER).first.wait_for(state="visible", timeout=30000)
 
@@ -60,8 +64,6 @@ class WebAppsPage(BasePage):
         # Work out where Web Apps is: the app list (click the tile) or already inside the app
         # (after a previous submit). Staging renders 200+ tiles slowly after "Log in as", so a
         # short wait for the tile mistakes "not rendered yet" for "already inside".
-        import time
-
         tile_sel = self.APP_TILE.format(name=app_name)
         inside_sels = [self.MENU_ENTRY.format(text=module), self.MENU_ENTRY.format(text=form), self.NAME_TEXTAREA]
         deadline = time.monotonic() + 60
@@ -72,8 +74,9 @@ class WebAppsPage(BasePage):
                 self._click_first_visible(tile_sel, timeout_ms=10000)
                 break
             if time.monotonic() > deadline:
-                shot = "/tmp/web_apps_open_form_timeout.png"
-                self.page.screenshot(path=shot)
+                shot = Path("test-results") / "web_apps_open_form_timeout.png"  # uploaded as a CI artifact
+                shot.parent.mkdir(exist_ok=True)
+                self.page.screenshot(path=str(shot))
                 raise AssertionError(
                     f"Neither the '{app_name}' tile nor its menu appeared in Web Apps "
                     f"(url={self.page.url}; screenshot {shot}; page text: "
@@ -96,8 +99,6 @@ class WebAppsPage(BasePage):
         return any(matches.nth(i).is_visible() for i in range(matches.count()))
 
     def _click_first_visible(self, selector, timeout_ms=30000):
-        import time
-
         deadline = time.monotonic() + timeout_ms / 1000
         while time.monotonic() < deadline:
             matches = self.page.locator(selector)
@@ -130,4 +131,3 @@ class WebAppsPage(BasePage):
             self.page.locator(self.SUBMITTED).first.wait_for(state="visible", timeout=20000)
         except PlaywrightTimeoutError:
             self.page.wait_for_load_state("networkidle")
-            self.page.wait_for_timeout(5000)

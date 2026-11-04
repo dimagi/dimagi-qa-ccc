@@ -79,14 +79,17 @@ def _open_review_visits(connect_page, config, data, role):
 
 
 SEED_SETTLE_SECONDS = 240
-SEED_PROCESSING_SECONDS = 60
+APPROVE_STICK_SECONDS = 300
 
 
 @pytest.fixture(scope="module")
 def review_pool(connect, test_data, config, settings):
     """The review data with a topped-up pool of visits, for the tests whose actions are
     one-way. Seeds just the shortfall of pending visits via HQ Web Apps, waits for Connect
-    to show them, then NM-approves a few so VV_33/34/35 have PM-review items."""
+    to show them, then NM-approves a few so VV_33/34/35 have PM-review items.
+
+    Only tests marked consumes_seed_data use this fixture (VV_31-35, GAP-42), so it never
+    seeds or reviews on automatic PR / post-deploy runs: opt-in via include_seed_consuming."""
     data = _require_review_data(test_data, config)
     connect_page, _ = connect
     need_pending = int(data["seed_pending_target"]) + int(data["seed_pm_review_items"])
@@ -103,24 +106,27 @@ def review_pool(connect, test_data, config, settings):
             connect_page.wait_for_timeout(15000)
         else:
             pytest.fail(f"Seeded {len(names)} visits but Connect still shows fewer than {need_pending} pending")
-        # Listed is not the same as settled: an NM approve made within seconds of a visit first
-        # appearing did not stick (still pending minutes later; approving the same visit a few
-        # minutes on worked, as did approvals ~1 minute after seeding). Give Connect's
-        # post-ingest processing time to finish before acting on the new visits.
-        connect_page.wait_for_timeout(SEED_PROCESSING_SECONDS * 1000)
 
+    # Listed is not the same as settled: an NM approve made within seconds of a visit first
+    # appearing did not stick (still pending later; approving a minute or more on worked). So
+    # poll the approve itself - a visit whose approve does not stick is retried - until the
+    # wanted number of approvals have stuck, or fail the fixture.
     wanted = int(data["seed_pm_review_items"])
-    approved = attempts = 0
-    while approved < wanted and attempts < wanted + 3:
-        attempts += 1
+    approved = 0
+    deadline = time.monotonic() + APPROVE_STICK_SECONDS
+    while approved < wanted and time.monotonic() < deadline:
         visits = _open_review_visits(connect_page, config, data, "nm")
         try:
             if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"], only_status="pending"):
                 break
             approved += 1
         except AssertionError:
-            # The approve didn't stick (visit still processing) - wait and retry.
-            connect_page.wait_for_timeout(30000)
+            connect_page.wait_for_timeout(5000)  # the approve did not stick yet: re-open and retry
+    if approved < wanted:
+        pytest.fail(
+            f"Only {approved} of {wanted} NM approvals stuck within {APPROVE_STICK_SECONDS}s, so "
+            "VV_33/34/35 would have no PM-review items (not skipping silently)"
+        )
     return data
 
 
@@ -599,6 +605,7 @@ def test_vv_35_agree_then_cannot_disagree(connect, test_data, config, review_poo
     assert cannot_disagree, "An agreed visit could still be disagreed - agree/disagree must be exclusive"
 
 
+@pytest.mark.consumes_seed_data
 @pytest.mark.xfail(
     reason=(
         "MTP VV_35 says a disagreed visit cannot then be agreed, but the product leaves Agree "

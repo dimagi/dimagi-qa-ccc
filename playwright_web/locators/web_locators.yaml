@@ -653,7 +653,10 @@ cchq_web_apps_page:
   restore_as_tile: "//div[contains(@class,'js-restore-as-item')]"
   filter_workers_input: "//input[@placeholder='Filter workers']"
   login_as_confirm: "//button[normalize-space()='Log in']"
-  working_as_banner: "//*[contains(normalize-space(),'Working as')]"
+  # Scoped to the deepest element holding the text: an unscoped //*[contains(normalize-space(),..)] also matches
+  # <html>/<body>, so it would pass on any page that mentions the text.
+  working_as_banner: "//body//*[contains(normalize-space(),'Working as')][not(.//*[contains(normalize-space(),'Working as')])]"
+  worker_row_by_name: "//*[contains(normalize-space(text()),'{name}')]"
   app_tile_by_name: "//*[contains(@class,'appicon-title')][normalize-space()='{name}']"
   # Matches the text node (the entry's label sits in a nested element); callers click the
   # first VISIBLE match, since the nav dropdown can hold hidden duplicates.
@@ -669,7 +672,7 @@ cchq_web_apps_page:
   gps_search_button: "//button[normalize-space()='Search']"
   gps_unset_label: "//*[contains(normalize-space(text()),'??.?????')]"
   form_submit_button: "//button[normalize-space()='Submit']"
-  form_submitted_message: "//*[contains(normalize-space(),'successfully')]"
+  form_submitted_message: "//body//*[contains(normalize-space(),'successfully')][not(.//*[contains(normalize-space(),'successfully')])]"
 
 # --- Microplanning (Microplanning_01-40) ---
 # Reached from the opportunity dashboard's "View Progress Map" stat panel

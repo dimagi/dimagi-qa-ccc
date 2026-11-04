@@ -7,6 +7,8 @@ records as that worker's pending visits (proven on prod 2026-10-16)."""
 import time
 from urllib.parse import urlsplit
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.cchq_login_page import LoginPage
 from pages.cchq_web_apps_page import WebAppsPage
 
@@ -21,7 +23,7 @@ def _submit_one(web_apps, hq_url, data, name, attempts=3):
             web_apps.fill_delivery_form(name, data["seed_entity_id"], data["seed_location"])
             web_apps.submit()
             return
-        except Exception as exc:
+        except (PlaywrightTimeoutError, AssertionError) as exc:
             body = web_apps.page.inner_text("body")[:300] if not web_apps.page.is_closed() else ""
             print(f"Seed attempt {attempt}/{attempts} for {name} failed at {web_apps.page.url}: "
                   f"{type(exc).__name__}; page text: {body!r}")
