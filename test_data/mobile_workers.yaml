@@ -419,5 +419,5 @@ MAESTRO_LEARN_TAB_02:
   phone_number: "1291290"   # +74261291290 (same worker on stage and prod)
   username: "Automation Worker_01"
   backup_code: "123456"
-  learn_module: "Learn 1"   # Learn app modules: Learn 1, Learn 2, Assess
+  learn_module: "Learn 2"   # Learn app modules: Learn 1, Learn 2, Assess. Learn 1 is the one already completed on the seeded worker (Anshu, 4 Nov 2026, stage and prod)
   learn_form: "You learned"   # label-only form: submitted with Finish, nothing to fill
