@@ -52,11 +52,18 @@ def _require_learn_data(test_data, config):
     return data, worker
 
 
-def _completed_count(cell_text):
-    """The modules-completed number in a Learn tab cell (e.g. '2' or '2/5' -> 2)."""
-    match = re.search(r"\d+", cell_text or "")
+def _completed_count(cell_text, total_lessons):
+    """Lessons completed, from a Learn tab 'Modules completed' cell.
+
+    Connect shows this column as a percentage of the lessons (e.g. '50.0%', seen live on
+    stage and prod: 50.0% for 1 of 2 lessons). A plain count ('2' or '2/5') is also accepted.
+    """
+    match = re.search(r"\d+(?:\.\d+)?", cell_text or "")
     assert match, f"No number in the Modules completed cell: {cell_text!r}"
-    return int(match.group())
+    value = float(match.group())
+    if "%" in (cell_text or ""):
+        return round(value / 100 * total_lessons)
+    return int(value)
 
 
 # Every run completes one more Learn form on the seeded worker, so the worker's progress
@@ -74,9 +81,9 @@ def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, co
     workers = ConnectWorkersPage(connect_page)
     workers.click_tab_by_name("Learn")
     workers.verify_learn_table_headers_present()
-    before = _completed_count(workers.learn_column_value(worker_name, column))
-    total = data.get("total_lessons")
-    if not _is_tbd(total) and before >= int(total):
+    total = int(data["total_lessons"])
+    before = _completed_count(workers.learn_column_value(worker_name, column), total)
+    if before >= total:
         pytest.skip(
             f"'{worker_name}' is already at {before}/{total} lessons: re-seed the worker (reset its "
             "learning, see MAESTRO_LEARN_TAB_02 in mobile_workers.yaml) so Resume opens the Learn Progress screen again"
@@ -99,7 +106,7 @@ def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, co
     for _ in range(15):  # ~90s
         dashboard.goto_worker_tab("workers")  # re-enter to force a fresh load
         workers.click_tab_by_name("Learn")
-        after = _completed_count(workers.learn_column_value(worker_name, column))
+        after = _completed_count(workers.learn_column_value(worker_name, column), total)
         if after > before:
             break
         connect_page.wait_for_timeout(6000)
