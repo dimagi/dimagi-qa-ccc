@@ -37,14 +37,14 @@ class LdvpOpp:
     base_url: str
 
 
-def create_ldvp_opportunity(page, config, settings, test_data):
+def create_ldvp_opportunity(page, config, settings, test_data, days=None):
     ldvp = test_data.get("LDVP")
     olp1_data = test_data.get("OLP_1")
     payment_unit = {**test_data.get("OLP_2"), **{k: ldvp[k] for k in (
         "payment_unit_name", "amount", "description", "max_total", "max_daily")}}
-    # LDVP_DAYS shortens the opportunity: the landing-page plan's ended
-    # opportunity (S3) is a normal LDVP run that ends two days later.
-    days = int(os.environ.get("LDVP_DAYS", ldvp["days"]))
+    # The landing suite's fixtures pass their own length; LDVP_DAYS shortens a
+    # whole LDVP run (its ended fixture, F3, is one that ends two days later).
+    days = days or int(os.environ.get("LDVP_DAYS", ldvp["days"]))
 
     env = "staging" if "staging" in config.get("cchq_url") else "prod"
 
