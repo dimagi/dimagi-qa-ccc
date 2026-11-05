@@ -26,8 +26,17 @@ appId: org.commcare.dalvik
     visible:
       id: "rvJobList"
     timeout: 60000
+# Down first, then back up: a card opened in an earlier session can sit above
+# where the list opens (prod 2026-11-05). The second scroll returns at once
+# when the first found it.
 - scrollUntilVisible:
     element:
       text: "${OPPORTUNITY}"
     direction: DOWN
+    timeout: 30000
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: UP
     timeout: 30000

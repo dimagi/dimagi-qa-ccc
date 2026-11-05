@@ -1,0 +1,180 @@
+# Connect landing page - the opportunity list reached from "Go to Connect menu"
+# (plan: test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx, sheet
+# "Landing (Opportunity List)"). Read-only against the LANDING fixture
+# opportunities; web checked each one is still in its state before this ran.
+#
+# Ids and strings are from commcare-android origin/commcare_2.65:
+# ConnectOpportunityListFragment (fragment_connect_jobs_list.xml), job cards
+# connect_job_list_item.xml (job_card_root > tvTitle, tvDateLabel, tvDate),
+# section headers tv_section_header, toolbar menu_connect.xml (action_sync,
+# action_bell - no overflow), Job Intro fragment_connect_job_intro.xml.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  # shared_ldvp_job_list.yaml scrolls to OPPORTUNITY; the test sets it to F1.
+  OPPORTUNITY: "Demo Opportunity"
+  OPP_DELIVERING: "Demo Opportunity"
+  OPP_NEW: "Demo Opportunity"
+  OPP_LEARNING: "Demo Opportunity"
+  OPP_ENDED: "Demo Opportunity"
+  # "true" once F3's end date has passed; before that its cases are skipped.
+  ENDED_CHECK: "false"
+---
+- runFlow: shared_ldvp_signin.yaml
+
+# --- TC-LND-001: "Go to Connect menu" opens the list ---
+- runFlow: shared_ldvp_job_list.yaml
+- assertVisible:
+    text: "Connect"
+- assertVisible:
+    id: "action_sync"
+- assertVisible:
+    id: "action_bell"
+
+# --- TC-LND-002 / 003: F1 is in progress, with an expiry date ---
+- assertVisible:
+    id: "job_card_root"
+    containsDescendants:
+      - text: "${OPP_DELIVERING}"
+      - text: "Expires on"
+- scrollUntilVisible:
+    element:
+      text: "In Progress"
+    direction: UP
+    timeout: 30000
+
+# --- TC-LND-002 / 004: F5 is new and opens its introduction ---
+- scrollUntilVisible:
+    element:
+      text: "New Opportunities"
+    direction: DOWN
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: "${OPP_NEW}"
+    direction: DOWN
+    timeout: 60000
+- tapOn:
+    text: "${OPP_NEW}"
+# The prod 2.65 build titles this screen "Connect", not "View Opportunity" as
+# the commcare_2.65 branch source does (prod 2026-11-05).
+- extendedWaitUntil:
+    visible:
+      text: "New Opportunity"
+    timeout: 30000
+- assertVisible:
+    text: "${OPP_NEW}"
+- assertVisible:
+    text: "Total Visits"
+- assertVisible:
+    text: "Days to complete"
+- scrollUntilVisible:
+    element:
+      text: "Maximum earnings"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    text: "Start Learning"
+- assertVisible:
+    text: "Download App"
+# Close only. Download App would accept the job and F5 would stop being New.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+
+# --- TC-LND-005: F6 is learning and opens Learning Progress ---
+- scrollUntilVisible:
+    element:
+      text: "${OPP_LEARNING}"
+    direction: UP
+    timeout: 60000
+- tapOn:
+    text: "${OPP_LEARNING}"
+# Titled "Connect" on the prod build too, not "Learning Progress": the screen
+# is told by its "Learn" chip and the modules card (prod 2026-11-05).
+- extendedWaitUntil:
+    visible:
+      text: "Modules Completed"
+    timeout: 30000
+- assertVisible:
+    text: "${OPP_LEARNING}"
+- assertVisible:
+    text: "Learn"
+- assertVisible:
+    text: "Continue Learning"
+- assertNotVisible:
+    id: "connect_delivery_home_tabs"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+
+# --- TC-LND-007: Sync ---
+- tapOn:
+    id: "action_sync"
+- extendedWaitUntil:
+    visible:
+      text: "Last synced: Just Now"
+    timeout: 60000
+
+# --- TC-LND-008: the bell opens notifications, Back returns ---
+- tapOn:
+    id: "action_bell"
+# Wait for the screen itself: a Back pressed while it is still opening is lost
+# and leaves the run on Notifications (prod 2026-11-05).
+- extendedWaitUntil:
+    visible:
+      text: "Notifications"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+
+# --- TC-LND-002 / 003 / 010, TC-DSH-005, TC-VIS-002: F3 has ended ---
+- runFlow:
+    when:
+      true: ${ENDED_CHECK == 'true'}
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "Completed / Expired Opportunities"
+          direction: DOWN
+          timeout: 60000
+      - scrollUntilVisible:
+          element:
+            text: "${OPP_ENDED}"
+          direction: DOWN
+          timeout: 60000
+      - assertVisible:
+          id: "job_card_root"
+          containsDescendants:
+            - text: "${OPP_ENDED}"
+            - text: "Expired on|Completed on"
+      - tapOn:
+          text: "${OPP_ENDED}"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_delivery_home_tabs"
+          timeout: 30000
+      - extendedWaitUntil:
+          visible:
+            id: "progress_card_info_text"
+            text: "The job has ended. You will not earn any progress for additional work."
+          timeout: 30000
+      - tapOn:
+          text: "Visits"
+          childOf:
+            id: "connect_delivery_home_tabs"
+      - extendedWaitUntil:
+          visible:
+            id: "tvRemaining"
+            text: "Days Over|All Visits Done"
+          timeout: 30000

@@ -753,3 +753,5 @@ LANDING:
   # web, so visits added later do not break it.
   delivering_opportunity_id: "2211ea82-4b4d-47fb-a513-154d481769c5"
   delivering_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:54"
+  # F3 has ended once today is past this date (its device cases wait until then).
+  ended_opportunity_end_date: "2026-11-06"

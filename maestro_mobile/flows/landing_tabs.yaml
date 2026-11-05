@@ -1,0 +1,318 @@
+# Connect 2.65 delivery screens - the Dashboard, Payment, Visits and More tabs
+# and the Visits detail screen, on the Delivering fixture (F1). Plan:
+# test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx, sheets "Delivery
+# Tabs", "Dashboard", "Visits", "Payment", "More".
+#
+# F1 is reused, so every count and amount comes from web, read just before this
+# session (APPROVED, PENDING, EARNED = Accrued, TRANSFERRED = Total paid,
+# VISITS_AMOUNT = approved x unit amount). The device must match web.
+#
+# Ids and strings are from commcare-android origin/commcare_2.65:
+# fragment_connect_delivery_home.xml (tabs Dashboard / Payment / Visits / More,
+# connect_delivery_cta_bar), fragment_connect_delivery_dashboard.xml,
+# view_connect_progress_card.xml, fragment_connect_delivery_payment.xml,
+# connect_payment_item.xml, dialog_payment_confirmation.xml,
+# fragment_connect_delivery_visits(_detail).xml, fragment_connect_delivery_more.xml.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  APPROVED: "2"
+  PENDING: "0"
+  EARNED: "200"
+  TRANSFERRED: "200"
+  VISITS_AMOUNT: "200"
+  MAX_TOTAL: "4"
+  MAX_DAILY: "2"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+
+# --- TC-LND-006 / TC-TAB-001: the tab shell ---
+- assertVisible:
+    text: "Delivery"
+- assertVisible:
+    text: "Dashboard"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- assertVisible:
+    text: "Payment"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- assertVisible:
+    text: "Visits"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- assertVisible:
+    text: "More"
+    childOf:
+      id: "connect_delivery_home_tabs"
+
+# --- TC-TAB-003: before the delivery app is installed (every session starts cleared) ---
+- assertVisible:
+    id: "cta_title_text"
+    text: "Continue your visits"
+- assertVisible:
+    id: "cta_subtitle_text"
+    text: "Download Delivery"
+- assertVisible:
+    id: "cta_button"
+    text: "Download App"
+
+# --- TC-DSH-001: header ---
+- assertVisible:
+    id: "delivery_chip_label"
+    text: "Delivery"
+- assertVisible:
+    id: "delivery_job_title"
+    text: "${OPPORTUNITY}"
+- assertVisible:
+    id: "delivery_expiry_value"
+
+# --- TC-DSH-002: Visit Progress ---
+- assertVisible:
+    id: "progress_card_title"
+    text: "Visit Progress"
+- assertVisible:
+    id: "semi_circle_value_text"
+    text: "\\d+ of ${MAX_TOTAL}"
+- assertVisible:
+    id: "semi_circle_description_text"
+    text: "total visits completed"
+- assertVisible:
+    id: "progress_card_bar_label"
+    text: "Daily Visits"
+# "N of M" with a daily limit; the remaining-today caption only then.
+- assertVisible:
+    id: "progress_card_bar_count"
+    text: "\\d+ of ${MAX_DAILY}"
+- assertVisible:
+    id: "progress_card_bar_caption"
+    text: "\\d+ visits? remaining today"
+
+# --- TC-DSH-004: the sync card ---
+- scrollUntilVisible:
+    element:
+      id: "delivery_sync_card"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "delivery_sync_card"
+- extendedWaitUntil:
+    visible:
+      id: "sync_card_subtext"
+      text: "Last synced: Just Now"
+    timeout: 60000
+
+# --- TC-DSH-003: Your Progress - per-unit count and total earnings ---
+- scrollUntilVisible:
+    element:
+      text: "Total earnings"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    text: "Your Progress"
+# Amounts render with the currency symbol ("₹100 each"), and the payment
+# unit's name carries a date stamp ("LDVP Visit_05-Nov-2026 : 13:55").
+- assertVisible:
+    text: ".*100 each"
+- assertVisible:
+    id: "info_card_value_text"
+    text: "(?s).*\\b${EARNED}\\b.*"
+
+# --- TC-TAB-002: swiping moves between tabs ---
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible:
+      id: "payment_earned_amount"
+    timeout: 15000
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible:
+      id: "rvPaymentUnits"
+    timeout: 15000
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible:
+      text: "Revisit Learning"
+    timeout: 15000
+- swipe:
+    direction: RIGHT
+- extendedWaitUntil:
+    visible:
+      id: "rvPaymentUnits"
+    timeout: 15000
+
+# --- TC-VIS-001 / 002: the payment unit card ---
+- assertVisible:
+    id: "tvDeliveryTitle"
+    text: "LDVP Visit.*"
+- assertVisible:
+    id: "tvApproved"
+    text: "(?s)\\D*${APPROVED}\\b.*"
+- assertVisible:
+    id: "tvDeliveryTotalAmount"
+    text: "(?s).*\\b${VISITS_AMOUNT}\\b.*"
+- assertVisible:
+    id: "tvRemaining"
+    text: "\\d+ in \\d+ days|\\d+ by tomorrow|\\d+ by today|All Visits Done"
+
+# --- TC-VIS-005 (+ TC-VIS-004 on F1): the detail screen and its filters ---
+- tapOn:
+    id: "imgArrowForward"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_list"
+    timeout: 30000
+- assertVisible:
+    text: "LDVP Visit.* Visits"
+- assertVisible:
+    id: "allTextView"
+    text: "All"
+- assertVisible:
+    id: "approvedTextView"
+    text: "Approved"
+- assertVisible:
+    id: "rejectedTextView"
+    text: "Rejected"
+- runFlow:
+    when:
+      true: ${PENDING == '0'}
+    commands:
+      - assertNotVisible:
+          id: "pendingTextView"
+- tapOn:
+    id: "approvedFilterButton"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_item_name"
+    timeout: 15000
+- back
+
+# --- TC-PMT-001: Earned / Transferred and a confirmed row ---
+- tapOn:
+    text: "Payment"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_earned_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_earned_amount"
+    text: "(?s).*\\b${EARNED}\\b.*"
+- assertVisible:
+    id: "payment_transferred_amount"
+    text: "(?s).*\\b${TRANSFERRED}\\b.*"
+- assertVisible:
+    id: "tv_payment_status"
+    text: "Received"
+
+# --- TC-PMT-002: Revert asks first; No keeps the confirmation ---
+- tapOn:
+    text: "Revert"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_confirmation_title"
+      text: "Revoke Payment Confirmation"
+    timeout: 15000
+- assertVisible:
+    id: "tv_payment_amount"
+- tapOn:
+    id: "ri_no"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_status"
+      text: "Received"
+    timeout: 15000
+
+# --- TC-PMT-003: revoke, then confirm again (leaves F1 as it was) ---
+- tapOn:
+    text: "Revert"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_confirmation_title"
+      text: "Revoke Payment Confirmation"
+    timeout: 15000
+- tapOn:
+    id: "ri_yes"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_status"
+      text: "Transferred"
+    timeout: 60000
+- tapOn:
+    id: "confirm"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_confirmation_title"
+      text: "Confirm Transferred Payment"
+    timeout: 15000
+- tapOn:
+    id: "ri_yes"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_status"
+      text: "Received"
+    timeout: 60000
+
+# --- TC-MOR-001 / 003 / 004: More - no tasks, revisit learning, certificate ---
+- tapOn:
+    text: "More"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_tasks_empty"
+    timeout: 30000
+- assertVisible:
+    id: "delivery_tasks_empty"
+    text: "No pending tasks available at the moment.*"
+- assertVisible:
+    id: "revisit_learning_title"
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "revisit_learning_completed"
+      text: "Completed .*"
+    timeout: 60000
+- tapOn:
+    id: "revisit_learning_certificate_button"
+- extendedWaitUntil:
+    visible:
+      id: "cert_subject_text"
+    timeout: 15000
+- assertVisible:
+    id: "cert_person_text"
+    text: ".*${USERNAME}.*"
+- assertVisible:
+    id: "cert_score_text"
+
+# --- TC-MOR-005: View opens the learn app (installs it first on a fresh install) ---
+- scrollUntilVisible:
+    element:
+      id: "revisit_learning_view_button"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "revisit_learning_view_button"
+- extendedWaitUntil:
+    notVisible:
+      id: "connect_delivery_home_tabs"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: "Learn 1|Start|Sync with Server"
+    timeout: 600000
