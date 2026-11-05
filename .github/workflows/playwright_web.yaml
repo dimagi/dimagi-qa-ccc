@@ -41,6 +41,14 @@ on:
         options:
           - manual
           - post-deploy
+      # Off by default. Tests marked consumes_seed_data permanently use up seeded
+      # fixtures (a PM Agree also accrues a payment), so they only run when someone
+      # means to. Ignored when source is post-deploy.
+      include_seed_consuming:
+        description: "Also run seed-consuming tests (VV_31-35, GAP-42); ignored for post-deploy"
+        required: false
+        default: false
+        type: boolean
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -114,9 +122,11 @@ jobs:
       # viewer_password to enable it in CI.
       viewer_username: ${{ secrets.viewer_username }}
       viewer_password: ${{ secrets.viewer_password }}
-      # Per-PR runs skip on_demand tests (real-device Maestro builds); a manual
-      # workflow_dispatch runs everything.
-      PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand' || '' }}
+      # PR runs skip on_demand tests (real-device Maestro builds). Every run excludes
+      # consumes_seed_data tests (they permanently use up seeded prod fixtures) - PR,
+      # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
+      # include_seed_consuming=true (and source other than post-deploy) runs them.
+      PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data') }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
