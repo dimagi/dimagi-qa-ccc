@@ -21,8 +21,22 @@ class LoginPage(BasePage):
             print("No Cookies alert present")
         self.type(self.USERNAME_ELE, username)
         self.page.locator(self.PASSWORD_ELE).first.fill(password)
-        self.page.locator(self.PASSWORD_ELE).first.press("Enter")
-        self.page.wait_for_timeout(3000)
+        self.page.locator(self.PASSWORD_ELE).first.press("Enter", no_wait_after=True)
+        self._wait_for_login_form_gone()
+
+    def _wait_for_login_form_gone(self):
+        """Login is done when the username field is gone (the page navigated away).
+        Bounded, and a timeout names the page it is stuck on, so a slow HQ or bad
+        credentials do not surface later as a misleading heading timeout."""
+        try:
+            self.page.locator(self.USERNAME_ELE).first.wait_for(
+                state="hidden", timeout=self.LOGIN_FORM_TIMEOUT_MS
+            )
+        except PlaywrightTimeoutError:
+            raise AssertionError(
+                f"Still on the login page {self.LOGIN_FORM_TIMEOUT_MS // 1000}s after submitting "
+                f"credentials: {self.page.url}"
+            ) from None
 
     # HQ's login page is occasionally slow to render the form; this is a bounded
     # wait for it to appear, not a guess at how long login takes.
@@ -67,15 +81,6 @@ class LoginPage(BasePage):
             settings.get(section="creds", key="hq_username", env_var="hq_username"),
             settings.get(section="creds", key="hq_password", env_var="hq_password"),
         )
-        self.page.wait_for_timeout(3000)
-
-        # Verify rather than assume: if the form is still up, the credentials or
-        # the submit did not take, and failing here names that instead of
-        # leaving the caller to time out on a heading.
-        if self.page.locator(self.USERNAME_ELE).first.is_visible():
-            raise AssertionError(
-                f"Still on the login page after submitting credentials: {self.page.url}"
-            )
 
     def navigate_to_connect_page(self, config):
         connect_url = config.get("connect_url")
