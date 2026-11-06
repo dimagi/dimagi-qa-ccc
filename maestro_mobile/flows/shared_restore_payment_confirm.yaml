@@ -21,6 +21,12 @@ appId: org.commcare.dalvik
           childOf:
             id: "connect_delivery_home_tabs"
           optional: true
+      # Let the payment list load before deciding there is nothing to confirm.
+      - extendedWaitUntil:
+          visible:
+            id: "tv_payment_status"
+          timeout: 30000
+          optional: true
       - runFlow:
           when:
             visible:
@@ -28,14 +34,21 @@ appId: org.commcare.dalvik
           commands:
             - tapOn:
                 id: "confirm"
+            # Yes only on the confirm dialog, never on another one.
             - extendedWaitUntil:
                 visible:
-                  id: "ri_yes"
+                  id: "tv_payment_confirmation_title"
+                  text: "Confirm Transferred Payment"
                 timeout: 15000
                 optional: true
-            - tapOn:
-                id: "ri_yes"
-                optional: true
+            - runFlow:
+                when:
+                  visible:
+                    id: "tv_payment_confirmation_title"
+                    text: "Confirm Transferred Payment"
+                commands:
+                  - tapOn:
+                      id: "ri_yes"
             - extendedWaitUntil:
                 visible:
                   id: "tv_payment_status"

@@ -743,7 +743,7 @@ LANDING:
   #
   # F5 New: Worker A invited and never accepted, so its card is always
   # "New". Nothing may tap Start on it. Rebuild: test_landing_fixtures.py with
-  # LANDING_FIXTURE=new (the suite does this itself when it finds it accepted).
+  # LANDING_FIXTURE=new.
   new_opportunity_id: "e60afe07-6335-4c0a-9b1e-0066377b4b96"
   new_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:41"
   #

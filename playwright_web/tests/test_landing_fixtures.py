@@ -35,10 +35,9 @@ def test_create_landing_fixture(page, test_data, config, settings):
                             reports=False, app_env=config.env)
         print(f"STEP [LANDING] ['ldvp_learn.yaml'] -> {summary['status']} ({summary['build_url']})")
         assert summary["status"] == "SUCCESS", f"ldvp_learn.yaml did not pass - see {summary['build_url']}"
-        workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
         def accepted():
-            opp.connect_page.goto(workers_url, timeout=90000)
+            workers.goto_workers_page(opp.base_url, opp.org_slug, opp.opp_id)
             workers.verify_worker_status(phone, "Invite accepted")
 
         poll_until(accepted, sync_timeout, POLL_SECONDS, lambda: None)

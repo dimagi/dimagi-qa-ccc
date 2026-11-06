@@ -5,6 +5,7 @@ import pytest
 
 from flows.ldvp_setup import resume_ldvp_opportunity
 from flows.tasking_static import require_hybrid_opp
+from utils.helpers import poll_until
 
 # Device sessions on BrowserStack, about 18 minutes. It assigns and deletes a task
 # and reverts then re-confirms a payment on prod, so it is opt-in: a manual
@@ -27,6 +28,8 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
 
     landing, ldvp = test_data.get("LANDING"), test_data.get("LDVP")
     suffix = "_staging" if config.env == "stage" else ""
+    # How long web waits for Connect to show what the device did.
+    sync_timeout = int(ldvp["sync_timeout_seconds_staging" if config.env == "stage" else "sync_timeout_seconds"])
 
     def fixture(key):
         opp_id = landing.get(f"{key}_opportunity_id{suffix}")
@@ -59,11 +62,14 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
         f"test_e2e_ldvp.py with LDVP_DAYS=300, then record it as LANDING.delivering_opportunity_id{suffix}")
     # landing_tabs.yaml reverts the payment and confirms it again. A run that stopped
     # in between leaves it unconfirmed, and the device checks would then fail.
-    confirm = workers.table_cell(worker_name, "confirm")
-    assert confirm and confirm not in ("—", "-"), (
-        f"F1 {f1_name!r}'s payment is not confirmed (Confirm reads {confirm!r}) - a previous run probably "
-        f"stopped between Revert and Confirm. Confirm it on the device as {worker_name} (F1 > Payment > "
-        f"Confirm > Yes), then re-run")
+    restore = (f"Confirm it on the device as {worker_name} (F1 > Payment > Confirm > Yes), then re-run")
+
+    def assert_f1_confirmed(when):
+        confirm = workers.table_cell(worker_name, "confirm")
+        assert confirm and confirm not in ("—", "-"), (
+            f"F1 {f1_name!r}'s payment is not confirmed {when} (Confirm reads {confirm!r}). {restore}")
+
+    assert_f1_confirmed("before this run - a previous run stopped between Revert and Confirm")
     print(f"STEP [LANDING] F1 from web: approved {approved}, pending {pending}, earned {earned}, "
           f"transferred {transferred}")
 
@@ -162,6 +168,15 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
             tasks.delete_tasks_for_workers([task_worker])
         print(f"STEP [LANDING] F4 task removed for {task_worker!r}")
     print(f"STEP [LANDING] {FLOWS} -> {summary['status']} ({summary['build_url']})")
+
+    # The payment landing_tabs.yaml reverted is confirmed again. Its onFlowComplete
+    # step cannot help after a crash or a dropped session, so check on web here,
+    # allowing for the device -> Connect delay.
+    def reload_payments():
+        open_workers(f1_id, "Payments")
+
+    reload_payments()
+    poll_until(lambda: assert_f1_confirmed("after the device stage"), sync_timeout, 15, reload_payments)
     assert summary["status"] == "SUCCESS", (
         f"Landing flows did not pass: {summary['passed']} passed / {summary['failed']} failed - "
         f"see {summary['build_url']}")
