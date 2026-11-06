@@ -1,4 +1,5 @@
 name: CommCare-Connect Playwright Web Suite
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('{0} · {1}{2}', (inputs.tests && 'Selected tests' || (inputs.feature && inputs.feature != 'Full suite' && !startsWith(inputs.feature, 'Connect PR') && inputs.feature) || (inputs.connect_pr && format('Connect PR #{0}', inputs.connect_pr)) || 'Full suite'), inputs.environment, inputs.source == 'post-deploy' && ' · post-deploy' || '') || github.event.pull_request.title }}"
 
 env:
   SEND_EMAIL: "true"
@@ -148,6 +149,8 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
 
     env:
+      # What this run covers, shown in Slack, email and the run name.
+      RUN_SCOPE: "${{ inputs.tests && format('Tests: {0}', inputs.tests) || (inputs.feature && inputs.feature != 'Full suite' && !startsWith(inputs.feature, 'Connect PR') && inputs.feature) || (inputs.connect_pr && format('Connect PR #{0}', inputs.connect_pr)) || 'Full suite' }}"
       TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
@@ -222,6 +225,7 @@ jobs:
           message = (
               f"⏳ 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
               f"👤 Triggered by: {actor}\n"
+              f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
               f"🚧 Status: In progress…\n"
               f"🕒 Started: {started_at}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
@@ -410,6 +414,7 @@ jobs:
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
             <p><b>Triggered by:</b> ${{ env.TRIGGERED_BY }}</p>
+            <p><b>Scope:</b> ${{ env.RUN_SCOPE }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -506,6 +511,7 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
+                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"🚫 Status: Cancelled (superseded by a newer run)"
                   f"{timing_line}\n"
                   f"🔗 Run: <{run_url}|View on GitHub>"
@@ -516,6 +522,7 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
+                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
                   f"{messaging_line}"
                   f"{bar}"
