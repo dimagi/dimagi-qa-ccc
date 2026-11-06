@@ -13,55 +13,47 @@ from utils.helpers import poll_until
 POLL_SECONDS = 30
 
 
-# Drives a real device via BrowserStack Maestro builds - eight device sessions,
-# each gated on web, so a full run takes an hour or more on staging. Not in the
-# per-PR gate.
+# Device sessions on BrowserStack, about an hour a run. Each run creates an
+# opportunity, app copies, payments and a rollback, so it is opt-in only: a manual
+# dispatch with include_seed_consuming, never PR or post-deploy.
 @pytest.mark.on_demand
+@pytest.mark.consumes_seed_data
 def test_e2e_ldvp(page, test_data, config, settings):
     """CCCT-2670 - Learn, Deliver, Verify, Payment, end to end.
 
-    A fresh opportunity per run (a worker learns and takes the assessment once
-    per opportunity), the worker invited on web, then web stages alternating
-    with device sessions. A session ends wherever web has to act before the
-    device can see the result, since a Maestro build cannot pause.
+    A fresh opportunity per run, then web stages alternating with device
+    sessions. A session ends wherever web has to act before the device can see
+    the result, since a Maestro build cannot pause.
 
     Plan: test_plans/CCCT-2670_LDVP_Automation_Test_Plan.xlsx. Covers TC-INV-001..004,
-    TC-LRN-001..005, TC-DLV-001..003 and 005, TC-VER-001 and 003, TC-PAY-001..004 and, for
-    free, TC-REG-002 (every session after the first starts from a cleared app and
-    recovers the account, and progress has to be there).
+    TC-LRN-001..005, TC-DLV-001..003 and 005, TC-VER-001 and 003, TC-PAY-001..004 and
+    TC-REG-002 (every session after the first recovers the account on a cleared app).
 
-    To resume a run, set LDVP_RESUME_OPP_ID and LDVP_RESUME_OPP_NAME to its
-    opportunity. By default it resumes at delivery (the worker has passed the
-    assessment; stages 1-5 are skipped). LDVP_RESUME_AT=assess resumes at the
-    assessment instead (the worker has learned; stages 1-2 are skipped and the
-    web waits of stage 3 still run), and
-    LDVP_RESUME_AT=pass at passing it (the worker has already failed it once;
-    stages 1-4 are skipped - the fail flow needs a never-taken assessment), and
-    LDVP_RESUME_AT=verify at the web check of the visits (stages 1-6 are
-    skipped; set LDVP_RESUME_STAMP to the run stamp the visits were made with),
-    and LDVP_RESUME_AT=payment at the device payment session (the worker has
-    been paid what it earned; stages 1-7 are skipped).
+    Resume a run with LDVP_RESUME_OPP_ID and LDVP_RESUME_OPP_NAME, and
+    LDVP_RESUME_AT one of:
+      deliver (default) - the worker has passed the assessment
+      assess            - the worker has learned
+      pass              - the worker has failed the assessment once
+      verify            - the visits are made; also set LDVP_RESUME_STAMP to their run stamp
+      payment           - the worker has been paid what it earned
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
     ldvp = test_data.get("LDVP")
     run = new_run()
     unit_amount = int(ldvp["amount"])
-    # How long web waits for Connect to process something the device submitted.
-    # The device -> CommCare HQ -> Connect hop is instant on prod but can take a
-    # long while on staging, so the limit is per environment test data.
+    # How long web waits for Connect to process a device submission: instant on
+    # prod, slow on staging.
     sync_timeout = int(ldvp["sync_timeout_seconds_staging" if config.env == "stage" else "sync_timeout_seconds"])
 
-    # The worker comes from mobile_workers.yaml - the same entry the device signs
-    # in with - so web asserts on the identity the device actually used.
+    # The same worker entry the device signs in with.
     worker = env_by_flow(["ldvp_learn.yaml"], config.env)["ldvp_learn.yaml"]
     phone, worker_name = worker["PHONE_NUMBER"], worker["USERNAME"]
     full_number = f"{worker['COUNTRY_CODE']}{phone}"
 
     def run_device_flow(flows, **values):
-        # Run values only. Worker keys must not go in here: run_flows lets env win
-        # over each flow's own worker, which would sign the uninvited check in as
-        # the invited worker.
+        # Run values only: env wins over each flow's own worker, so a worker key
+        # here would sign the uninvited check in as the invited worker.
         env = {"OPPORTUNITY": opp.opportunity_name, **{k: str(v) for k, v in values.items()}}
         summary = run_flows(flows=flows, env=env, reports=False, app_env=config.env)
         print(f"STEP [LDVP] {flows} -> {summary['status']} ({summary['build_url']})")
@@ -75,8 +67,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
     assert resume_at in (None, "assess", "pass", "deliver", "verify", "payment"), (
         f"LDVP_RESUME_AT must be assess, pass, deliver, verify or payment, not {resume_at!r}")
     if resume_at == "verify":
-        # The visits already exist under the stamp they were made with; a stamp
-        # is the last six digits of an epoch, so it round-trips through new_run.
+        # A stamp is the last six digits of an epoch, so it round-trips through new_run.
         run = new_run(now=int(os.environ["LDVP_RESUME_STAMP"]))
     if resume_id:
         opp = resume_ldvp_opportunity(page, config, settings, resume_id, os.environ["LDVP_RESUME_OPP_NAME"])
@@ -87,9 +78,8 @@ def test_e2e_ldvp(page, test_data, config, settings):
         opp = create_ldvp_opportunity(page, config, settings, test_data)
         print(f"STEP [LDVP] Opportunity {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
         workers = invite_and_wait(opp, full_number, phone)
-        # The worker has to be registered before it is invited: an invite to a number
-        # PersonalID does not know reads "User not found" and never attaches to the
-        # account when the number signs up later.
+        # An invite to a number PersonalID does not know stays "User not found",
+        # even after the number signs up.
         status = workers.worker_status(phone)
         assert status == "Invite pending", (
             f"Invited worker shows {status!r}, expected 'Invite pending'. 'User not found' means "
@@ -97,11 +87,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
             f"(see MAESTRO_LDVP_WORKER in test_data/mobile_workers.yaml)."
         )
 
-
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
     def reload_workers(tab=None):
-        # 90s: a staging page load overran the default 30s mid-run (2026-11-03).
+        # Staging page loads can overrun the default 30s.
         opp.connect_page.goto(workers_url, timeout=90000)
         opp.connect_page.wait_for_load_state("load", timeout=90000)
         if tab:
@@ -109,9 +98,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
     def wait_on_web(check, tab=None):
         def attempt():
-            # A load that still times out, or a dropped connection
-            # (ERR_NETWORK_CHANGED ended a 3-hour staging wait, 2026-11-03), is
-            # one more "not yet" for the wait, not the end of the run.
+            # A load timeout or dropped connection is one more "not yet", not the end.
             try:
                 reload_workers(tab)
             except PlaywrightError as error:
@@ -121,9 +108,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
         return poll_until(attempt, sync_timeout, POLL_SECONDS, lambda: None)
 
     if resume_at not in ("deliver", "verify", "payment"):
-        # The learn part is three device sessions, each followed by a web wait for
-        # Connect to have processed what it submitted: on staging that can take far
-        # longer than a device session should sit re-syncing.
+        # Each learn session is followed by a web wait for Connect to process it.
 
         if not resume_at:
             # --- 2. DEVICE: uninvited worker looks; invited worker accepts and learns ---
@@ -131,12 +116,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
 
         if resume_at != "pass":
             # --- 3. WEB: accepted (TC-INV-003); both modules counted (TC-LRN-001/003) ---
-            # Also on a run resumed at the assessment: staging can still be
-            # processing the learn modules, and the assessment session needs them
-            # counted (2026-11-03 it started too early and saw fewer than 2 of 2).
+            # Also when resumed at the assessment: it needs both modules counted.
             wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
             wait_on_web(lambda: assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
-                                                "Modules completed"), tab="Learn")
+                                               "Modules completed"), tab="Learn")
 
         if resume_at != "pass":
             # --- 4. DEVICE: 2 of 2 (TC-LRN-002); fail the assessment (TC-LRN-004) ---
@@ -148,7 +131,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
         wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
 
     if resume_at not in ("verify", "payment"):
-        # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, four visits ---
+        # --- 6. DEVICE: certificate (TC-LRN-005), details (TC-DLV-001), claim, visits ---
         run_device_flow(
             ["ldvp_deliver.yaml"],
             PASS_SCORE=ldvp["assessment_pass_score"],
@@ -175,12 +158,9 @@ def test_e2e_ldvp(page, test_data, config, settings):
             workers.wait_for_visit(name, timeout_seconds=sync_timeout)
         visits = WorkerVisitsPage(opp.connect_page)
 
-        # LDVP opportunities verify visits automatically (it cannot be switched off;
-        # manual approve/reject is its own test on a manual-review opportunity).
-        # This chain submits no duplicate: an auto-verified opportunity cannot flag
-        # one, approves and pays it, and the app then counts it differently from web
-        # (known behaviour, prod 2026-11-02). Duplicates (TC-DLV-004) are covered on
-        # the manual-review opportunity.
+        # LDVP opportunities verify automatically, and an auto-verified one approves
+        # and pays a duplicate (known behaviour), so no duplicate is submitted here;
+        # TC-DLV-004 is covered by the manual-review test.
         poll_until(lambda: _assert_statuses(visits, v1, ["approved"]),
                    sync_timeout, POLL_SECONDS, opp.connect_page.reload)
         _assert_statuses(visits, v2, ["approved"])  # TC-DLV-003: recorded without location
@@ -191,16 +171,13 @@ def test_e2e_ldvp(page, test_data, config, settings):
         poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "accrued"), want, "Accrued"),
                    sync_timeout, POLL_SECONDS, reload_payments)
 
-        # Pay exactly what was earned, so the device's transferred total can only be
-        # right one way. Dated yesterday: Rollback Last Payment picks the newest by
-        # date_paid, a date with no time, so two payments made today tie and it can
-        # roll back this one instead of the second (prod 2026-11-02).
+        # Pay exactly what was earned. Dated yesterday: Rollback Last Payment picks
+        # the newest by date only, so it must not tie with the second payment.
         workers.make_payment_for_worker(worker_name, amount=want, paid_on=date.today() - timedelta(days=1))
         workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
-    # A resumed session cannot see the payment notification again: the server
-    # delivers it to one sign-in only.
+    # The payment notification reaches one sign-in only, so a resumed session skips it.
     run_device_flow(["ldvp_payment.yaml"], APPROVED=approved, EARNED=want, TRANSFERRED=want,
                     CHECK_PAYMENT_PUSH="false" if resume_at == "payment" else "true")
 
@@ -214,12 +191,10 @@ def test_e2e_ldvp(page, test_data, config, settings):
     # --- 10. DEVICE: answering No leaves it unconfirmed (TC-PAY-003) ---
     run_device_flow(["ldvp_decline_confirm.yaml"], SECOND_PAYMENT=second, TRANSFERRED=want + second)
 
-    # --- 11. WEB: roll the second payment back ---
+    # --- 11. WEB: roll the second payment back (from the Last-paid history popup) ---
     reload_payments()
-    # Rollback lives in the Last-paid history popup, not on the Payments tab.
     workers.click_last_paid_and_verify_history(worker_name)
     workers.rollback_last_payment()
-    # It must have removed the second payment, leaving only what was earned.
     reload_payments()
     poll_until(lambda: _assert_amount(workers.table_cell(worker_name, "total paid"), want, "Total paid"),
                sync_timeout, POLL_SECONDS, reload_payments)
@@ -240,6 +215,5 @@ def _assert_amount(text, expected, column):
 
 
 def _assert_confirmed(text):
-    # Plan Q4: what the Confirm column shows once the worker taps Yes is not
-    # documented; anything but the empty dash means a confirmation arrived.
+    # Anything but the empty dash means a confirmation arrived.
     assert text and text not in ("—", "-"), f"Confirm column still empty: {text!r}"

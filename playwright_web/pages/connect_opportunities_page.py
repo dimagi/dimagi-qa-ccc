@@ -41,6 +41,7 @@ class ConnectOpportunitiesPage(BasePage):
     SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
     TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
     PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
+    FORM_FIELD_ERRORS = locators.get("connect_opportunities_page", "form_field_errors")
     ORGANIZATION_DROPDOWN = locators.get("connect_opportunities_page", "organization_dropdown")
 
     def __init__(self, page):
@@ -221,7 +222,7 @@ class ConnectOpportunitiesPage(BasePage):
         # A rejected budget re-renders the form with field errors and leaves the
         # opportunity unfinished; without this check the run carried on and failed
         # minutes later as an invite that never appeared.
-        errors = [t.strip() for t in self.page.locator("[id^='error_']").all_inner_texts() if t.strip()]
+        errors = [t.strip() for t in self.page.locator(self.FORM_FIELD_ERRORS).all_inner_texts() if t.strip()]
         assert not errors, f"Budget was not saved: {errors}"
 
     def click_opportunity_in_opportunity(self, value, exact=True):

@@ -8,6 +8,8 @@ OLP_2, so the daily limit is reachable in one device session.
 
 from dataclasses import dataclass
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from flows.olp_setup import (
     PM_ORG,
     create_program_with_nm_handshake,
@@ -16,6 +18,7 @@ from flows.olp_setup import (
 )
 from pages.connect_home_page import ConnectHomePage
 from pages.connect_opportunities_page import ConnectOpportunitiesPage
+from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from pages.connect_programs_page import ConnectProgramsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import parse_org_and_opp
@@ -62,28 +65,29 @@ def create_ldvp_opportunity(page, config, settings, test_data):
               f"{'_staging' if env == 'staging' else ''} in web_test_data.yaml to reuse it")
 
     opportunities = ConnectOpportunitiesPage(connect_page)
+    # Named "LDVP Opportunity_<time>" so LDVP runs stand out on prod.
+    opp_data = {**olp1_data, "opportunity_name": ldvp["opportunity_name"]}
+    org_url = f"{config.get('connect_url')}/a/{PM_ORG.lower()}"
     opportunity_name = None
     for attempt in range(1, CREATE_ATTEMPTS + 1):
+        opportunities.opp_full_name = None
         try:
             ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
             opportunity_name = opportunities.create_opportunity_in_connect_page(
-                olp1_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
+                opp_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
             )
             break
-        except Exception as error:
-            # The learn/deliver app dropdowns are filled by Connect asking staging
-            # HQ for the domain's apps, and on staging that sometimes outlasts the
-            # form's 30s wait - and the form's own retry then reloads a page that is
-            # still hung (2 of the first 4 setup runs, 2026-10-29). Start again from
-            # the programs list rather than failing the whole hour-long run here.
-            # The failure is before submit, so a retry cannot create a second copy.
+        except PlaywrightTimeoutError:
+            # Staging HQ is sometimes slow to fill the app dropdowns. The form
+            # submits inside this call, so retry only if nothing was created.
+            if opportunities.opp_full_name and _opportunity_exists(connect_page, org_url, opportunities.opp_full_name):
+                raise AssertionError(
+                    f"Opportunity {opportunities.opp_full_name!r} was created but its setup timed out - finish "
+                    f"or delete it on web; not retrying, which would create a second one") from None
             if attempt == CREATE_ATTEMPTS:
                 raise
-            print(f"STEP [LDVP] Opportunity form attempt {attempt} failed ({type(error).__name__}); retrying")
-            # Straight to the programs list by URL: the page a failed attempt leaves
-            # behind may not carry the sidebar (seen on prod).
-            connect_page.goto(f"{config.get('connect_url')}/a/{PM_ORG.lower()}/program/",
-                              wait_until="domcontentloaded", timeout=120000)
+            print(f"STEP [LDVP] Opportunity form attempt {attempt} timed out; retrying")
+            connect_page.goto(f"{org_url}/program/", wait_until="domcontentloaded", timeout=120000)
             connect_page.wait_for_load_state("networkidle", timeout=120000)
     # Starts today: the OLP default (two days out) leaves the job "not started
     # yet" on the device, and a visit made then earns nothing.
@@ -98,6 +102,11 @@ def create_ldvp_opportunity(page, config, settings, test_data):
     connect_page.wait_for_url("**/opportunity/**")
     org_slug, opp_id = parse_org_and_opp(connect_page.url)
     return LdvpOpp(connect_page, org_slug, opp_id, opportunity_name, config.get("connect_url"))
+
+
+def _opportunity_exists(connect_page, org_url, name):
+    connect_page.goto(f"{org_url}/opportunity/", wait_until="load", timeout=120000)
+    return ConnectOpportunityListPage(connect_page).has_opportunity(name)
 
 
 def invite_and_wait(opp, full_number, phone_number):

@@ -13,26 +13,24 @@ from utils.helpers import poll_until
 POLL_SECONDS = 30
 
 
-# Drives a real device via BrowserStack Maestro builds. Not in the per-PR gate.
+# Device sessions on BrowserStack. Reviews visits on the shared manual-review
+# opportunity and accrues a payment each run, so it is opt-in only (manual
+# dispatch with include_seed_consuming).
 @pytest.mark.on_demand
+@pytest.mark.consumes_seed_data
 def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     """CCCT-2670 - manual approve/reject, on the reusable manual-review opportunity.
 
-    The LDVP opportunities test_e2e_ldvp.py creates verify visits automatically,
-    which cannot be switched off and hides the verification flags. This test uses
-    one long-lived opportunity with automatic verification off (LDVP.manual_* in
-    web_test_data.yaml). It still auto-approves unflagged visits, so the PM sets
-    flags that hold every visit for review; the worker submits V1, V2, a copy of
-    V1 and V3, the Network Manager approves V1 and rejects V2, and the Program
-    Manager agrees V1 - a managed opportunity pays only then. Covers TC-DLV-004 (duplicate flagged), TC-VER-001, TC-VER-002 and
-    TC-VER-003 (only the approved visit earns).
+    One long-lived opportunity with automatic verification off (LDVP.manual_* in
+    web_test_data.yaml). The PM sets flags that hold every visit for review; the
+    worker submits V1, V2, a copy of V1 and V3; the Network Manager approves V1
+    and rejects V2; the Program Manager agrees V1, which is when a managed
+    opportunity pays. Covers TC-DLV-004, TC-VER-001, TC-VER-002 and TC-VER-003.
 
-    The worker accepts, learns and passes the assessment there once; a run that
-    finds the invite still pending does that first. The very first run on a new
-    opportunity fails at step 4: V1 has no earlier visit within the Location
-    Distance, so nothing flags it and it is auto-approved (staging 2026-11-04);
-    the next run passes. The payment unit allows 20
-    visits a day and 100 in total; each run counts 4, so about 25 runs in all.
+    A run that finds the invite still pending first has the worker accept, learn
+    and pass the assessment. The first run on a new opportunity fails at step 4
+    (V1 has no earlier visit within the Location Distance, so it is
+    auto-approved); the next run passes. Each run uses 4 of the unit's 100 visits.
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -52,8 +50,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     print(f"STEP [LDVP-M] {opp.opportunity_name!r} ({opp.opp_id}), run stamp {run.stamp}")
 
     def run_device_flow(flows, **values):
-        # Run values only - see test_e2e_ldvp.py: worker keys in env would override
-        # each flow's own worker.
+        # Run values only: worker keys here would override each flow's own worker.
         env = {"OPPORTUNITY": opp.opportunity_name, **{k: str(v) for k, v in values.items()}}
         summary = run_flows(flows=flows, env=env, reports=False, app_env=config.env)
         print(f"STEP [LDVP-M] {flows} -> {summary['status']} ({summary['build_url']})")
@@ -65,7 +62,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     workers_url = f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp.opp_id}/workers/"
 
     def reload_workers(tab=None):
-        # 90s: a staging page load overran the default 30s mid-run (2026-11-03).
+        # Staging page loads can overrun the default 30s.
         opp.connect_page.goto(workers_url, timeout=90000)
         opp.connect_page.wait_for_load_state("load", timeout=90000)
         if tab:
@@ -73,9 +70,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
 
     def wait_on_web(check, tab=None):
         def attempt():
-            # A load that still times out, or a dropped connection
-            # (ERR_NETWORK_CHANGED ended a 3-hour staging wait, 2026-11-03), is
-            # one more "not yet" for the wait, not the end of the run.
+            # A load timeout or dropped connection is one more "not yet", not the end.
             try:
                 reload_workers(tab)
             except PlaywrightError as error:
@@ -85,10 +80,8 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
         return poll_until(attempt, sync_timeout, POLL_SECONDS, lambda: None)
 
     # --- 1. WEB: verification flags that hold every visit for review ---
-    # The opportunity still auto-approves any visit with no flag, so each one has
-    # to carry a flag: Check Duplicates marks the copy of V1 (TC-DLV-004), Check
-    # GPS flags V2 (sent without a location), and Location Distance flags V1 and
-    # V3, which are sent from the same mock point as earlier beneficiaries'.
+    # Unflagged visits are still auto-approved, so every visit must carry a flag:
+    # duplicates (copy of V1), GPS (V2 has no location), distance (V1, V3).
     ConnectOpportunitiesPage(opp.connect_page).ensure_verification_flags(
         opp.base_url, opp.org_slug, opp.opp_id, duplicate=True, gps=True,
         location_m=int(ldvp["manual_location_distance_m"]))
@@ -99,17 +92,15 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
         print("STEP [LDVP-M] Worker has not joined yet - accepting, learning and passing the assessment")
         run_device_flow(["ldvp_learn.yaml"])
         wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
-        # The assessment session needs both modules counted, which staging can
-        # take hours to do.
+        # The assessment session needs both modules counted (slow on staging).
         wait_on_web(lambda: assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
-                                            "Modules completed"), tab="Learn")
+                                           "Modules completed"), tab="Learn")
         run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
         wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
         run_device_flow(["ldvp_assess_pass.yaml"], PASS_SCORE=ldvp["assessment_pass_score"])
     wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Passed"), tab="Learn")
 
-    # Earnings accumulate across runs on a reused opportunity, so measure this
-    # run's against what was there before it.
+    # Earnings accumulate across runs, so measure against what was there before.
     reload_workers("Payments")
     accrued_before = _amount(workers.table_cell(worker_name, "accrued"))
 
@@ -144,8 +135,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     home.select_organization_from_list(PM_ORG)
 
     # --- 6. WEB: the Program Manager agrees V1 ---
-    # A managed opportunity pays a visit only once the PM agrees with the NM's
-    # approval; until then Accrued does not move (prod 2026-11-03).
+    # A managed opportunity pays a visit only once the PM agrees.
     workers.goto_worker_visits_page(opp.base_url, opp.org_slug, opp.opp_id, user_id)
     visits.pm_agree_visit(v1)
 

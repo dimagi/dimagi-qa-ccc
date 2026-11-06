@@ -532,18 +532,8 @@ class WorkerVisitsPage(BasePage):
         self.type(field, text)
         self.click(submit)
         self.page.wait_for_load_state("load")
-        # The review posts over htmx, and the worker's visits table does not
-        # re-render on its own afterwards: on prod 2026-11-02 the row still read
-        # 'pending' 30s after an approval that had gone through. Reload until the
-        # row shows the new status.
-        status = None
-        for _ in range(6):
-            self.page.wait_for_timeout(3000)
-            self.page.reload(wait_until="load")
-            self._await_table()
-            status = self._visit_status(visit_id)
-            if status == expected:
-                break
+        # The table does not re-render after the review, so reload until it shows.
+        status = self._wait_for_visit_status(visit_id, expected, attempts=6)
         assert status == expected, f"Visit {entity_name!r} is {status!r} after review, expected {expected!r}"
         self._open_row_by_id(visit_id)
         self._step(f"Visit {entity_name!r} ({visit_id}) now {status}")

@@ -760,6 +760,7 @@ class ConnectWorkersPage(BasePage):
     SORT_LINK_BY_LABEL = locators.get("connect_workers_page", "sort_link_by_label")
     NAME_CELL_PS_BY_WORKER = locators.get("connect_workers_page", "name_cell_ps_by_worker")
     STATUS_TOOLTIP_BY_VALUE = locators.get("connect_workers_page", "status_tooltip_by_value")
+    STATUS_TOOLTIP = locators.get("connect_workers_page", "status_tooltip")
     DATA_ROW_BY_P_TEXT = locators.get("connect_workers_page", "data_row_by_p_text")
     DATA_ROW_BY_TEXT = locators.get("connect_workers_page", "data_row_by_text")
     PENDING_INVITE_ROW = locators.get("connect_workers_page", "pending_invite_row")
@@ -825,7 +826,7 @@ class ConnectWorkersPage(BasePage):
         self._await_list_table()
         row = self.page.locator(self.DATA_ROW_BY_TEXT.format(text=identifier)).first
         row.wait_for(state="visible", timeout=15000)
-        return row.locator("xpath=.//*[@x-tooltip.raw]").first.get_attribute("x-tooltip.raw")
+        return row.locator(self.STATUS_TOOLTIP).first.get_attribute("x-tooltip.raw")
 
     def verify_not_found_display(self, phone):
         """Connect_worker_06 - a not-found (unregistered) worker shows the status

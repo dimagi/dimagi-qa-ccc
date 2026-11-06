@@ -199,6 +199,8 @@ LDVP:
   # created in them before then.
   program_name: "Demo Program_29-Oct-2026 : 16:14"
   program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
+  # Each run's opportunity is "<opportunity_name>_<date : time>".
+  opportunity_name: "LDVP Opportunity"
   payment_unit_name: "LDVP Visit"
   amount: "100"
   description: "LDVP Visit"

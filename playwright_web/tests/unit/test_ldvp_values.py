@@ -27,11 +27,6 @@ def test_device_env_has_every_visit():
     assert env["VISIT_ID_V3"] == "2531933"
 
 
-def test_opportunity_suffix_differs_between_runs():
-    # A re-run must never find the previous run's opportunity by name.
-    assert new_run(now=NOW).opportunity_suffix != new_run(now=NOW + 60).opportunity_suffix
-
-
 def test_expected_earned_counts_only_approved():
     assert expected_earned(approved=1, unit_amount=100) == 100
     assert expected_earned(approved=0, unit_amount=100) == 0

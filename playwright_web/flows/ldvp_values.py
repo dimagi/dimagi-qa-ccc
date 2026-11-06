@@ -17,7 +17,6 @@ VISIT_KEYS = ("V1", "V2", "V1_DUP", "V3")
 @dataclass
 class LdvpRun:
     stamp: str
-    opportunity_suffix: str
     visits: dict = field(default_factory=dict)
 
     def device_env(self):
@@ -36,7 +35,6 @@ def new_run(now=None):
     visits["V1_DUP"] = visits["V1"]
     return LdvpRun(
         stamp=stamp,
-        opportunity_suffix=time.strftime("%y%m%d%H%M", time.localtime(now)),
         visits=visits,
     )
 
