@@ -1,4 +1,5 @@
 appId: org.commcare.dalvik
+tags: [profile]
 # This flow's data (name, backup code, any addresses) lives in
 # test_data/mobile_workers.yaml under MAESTRO_PROFILE_VIEW.
 # run_on_browserstack.py resolves it for the target environment and writes

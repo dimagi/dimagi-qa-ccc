@@ -49,6 +49,41 @@ on:
         required: false
         default: false
         type: boolean
+      # Feature run: pick an app area, or 'Connect PR' to run only the tests a
+      # commcare-connect PR affects (fill in connect_pr). The tests input overrides both.
+      feature:
+        description: "What to run"
+        required: false
+        default: "Full suite"
+        type: choice
+        options:
+          - Full suite
+          - Connect PR (fill in connect_pr)
+          - Opportunities
+          - Programs
+          - Opportunity dashboard
+          - Workers
+          - Tasks
+          - Messaging
+          - Microplanning
+          - Invoices
+          - PersonalID
+      deployed_sha:
+        description: "Deployed commcare-connect commit; picks pending_prod / replaced_by_pr tests per PR"
+        required: false
+        default: ""
+      deployed_prs:
+        description: "Or: comma-separated Connect PR numbers to treat as deployed (overrides deployed_sha)"
+        required: false
+        default: ""
+      connect_pr:
+        description: "Feature run: only the tests this commcare-connect PR affects. The PR must be on the chosen environment; on stage it counts as deployed."
+        required: false
+        default: ""
+      tests:
+        description: "Or: space-separated test files to run, e.g. tests/test_olp_04.py (overrides connect_pr's selection)"
+        required: false
+        default: ""
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -127,6 +162,17 @@ jobs:
       # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
       # include_seed_consuming=true (and source other than post-deploy) runs them.
       PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data') }}
+      # Connect PR gating (utils/pr_gating.py). Empty means no marked PR counts as
+      # deployed: originals run, pending_prod copies skip. The token only reads the
+      # public commcare-connect repo to compare commits.
+      DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+      # A feature run on stage treats its PR as deployed (the caller put it there);
+      # on prod it doesn't, so prod still checks the original behaviour.
+      DEPLOYED_PRS: ${{ inputs.deployed_prs || (inputs.deployed_sha == '' && matrix.environment == 'stage' && inputs.connect_pr) || '' }}
+      CONNECT_PR: ${{ inputs.connect_pr }}
+      FEATURE: ${{ inputs.feature }}
+      TESTS_INPUT: ${{ inputs.tests }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
@@ -200,14 +246,63 @@ jobs:
         # HTML report / notifications - those cover the browser tests only.
         run: python -m pytest tests/unit --tb=short
 
+      - name: Select Tests
+        id: select
+        working-directory: playwright_web
+        # Feature runs: an explicit file list, the tests a Connect PR affects
+        # (utils/impact_check.py), or one app area by test file name. Empty output
+        # means the whole suite runs.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SELECTED=""
+          AREA=""
+          case "$FEATURE" in
+            "Opportunities")          AREA="tests/test_olp_*.py" ;;
+            "Programs")               AREA="tests/test_plp_*.py" ;;
+            "Opportunity dashboard")  AREA="tests/test_opd_*.py" ;;
+            "Workers")                AREA="tests/test_worker_*.py" ;;
+            "Tasks")                  AREA="tests/test_task_*.py tests/test_e2e_relearn_lifecycle.py" ;;
+            "Messaging")              AREA="tests/test_messaging_*.py" ;;
+            "Microplanning")          AREA="tests/test_map_*.py tests/test_microplanning*.py" ;;
+            "Invoices")               AREA="tests/test_invoice_*.py" ;;
+            "PersonalID")             AREA="tests/test_pid_*.py" ;;
+          esac
+          if [ -n "$TESTS_INPUT" ]; then
+            SELECTED="$TESTS_INPUT"
+          elif [[ "$FEATURE" == "Connect PR"* || ( -n "$CONNECT_PR" && -z "$AREA" ) ]]; then
+            if [ -z "$CONNECT_PR" ]; then
+              echo "::error::Feature 'Connect PR' needs the connect_pr input (a commcare-connect PR number)."
+              exit 1
+            fi
+            SELECTED="$(python -m utils.impact_check --pr "$CONNECT_PR" --tests | tr '\n' ' ')"
+            if [ -z "${SELECTED// /}" ]; then
+              echo "::notice::No tests map to commcare-connect PR #$CONNECT_PR - nothing to run."
+              echo "none=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -n "$AREA" ]; then
+            shopt -s nullglob
+            SELECTED="$(echo $AREA)"
+            if [ -z "$SELECTED" ] || [ "$SELECTED" = "$AREA" ]; then
+              echo "::error::No test files match $FEATURE ($AREA)."
+              exit 1
+            fi
+          fi
+          echo "Selected: ${SELECTED:-whole suite}"
+          echo "files=$SELECTED" >> "$GITHUB_OUTPUT"
+
       - name: Run Playwright Web Tests
         id: run_tests
+        if: steps.select.outputs.none != 'true'
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
+        env:
+          SELECTED: ${{ steps.select.outputs.files }}
         run: |
           MARKER_ARGS=()
           [ -n "$PYTEST_MARKERS" ] && MARKER_ARGS=(-m "$PYTEST_MARKERS")
-          xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+          read -ra TEST_ARGS <<< "$SELECTED"
+          xvfb-run --auto-servernum -- python -m pytest "${TEST_ARGS[@]}" --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
 
       - name: Upload JUnit report
         if: always()

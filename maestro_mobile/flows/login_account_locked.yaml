@@ -1,4 +1,5 @@
 appId: org.commcare.dalvik
+tags: [login]
 env:
   COUNTRY_CODE: "+7426"
   PHONE_NUMBER: "7426005"
