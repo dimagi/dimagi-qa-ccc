@@ -42,8 +42,8 @@ def create_ldvp_opportunity(page, config, settings, test_data, days=None):
     olp1_data = test_data.get("OLP_1")
     payment_unit = {**test_data.get("OLP_2"), **{k: ldvp[k] for k in (
         "payment_unit_name", "amount", "description", "max_total", "max_daily")}}
-    # The landing suite's fixtures pass their own length; LDVP_DAYS shortens a
-    # whole LDVP run (its ended fixture, F3, is one that ends two days later).
+    # Callers may pass their own length; LDVP_DAYS shortens a whole run (for an
+    # opportunity that has to end soon).
     days = days or int(os.environ.get("LDVP_DAYS", ldvp["days"]))
 
     env = "staging" if "staging" in config.get("cchq_url") else "prod"
@@ -78,11 +78,12 @@ def create_ldvp_opportunity(page, config, settings, test_data, days=None):
             ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
             # fill_opportunity_form directly, not create_opportunity_in_connect_page:
             # that one re-submits once on its own, with no duplicate check.
-            connect_page.wait_for_timeout(5000)
+            connect_page.locator(opportunities.OPP_NAME_INPUT).first.wait_for(state="visible", timeout=30000)
             opportunity_name = opportunities.fill_opportunity_form(
                 opp_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
             )
-            connect_page.wait_for_timeout(3000)
+            # A created opportunity leaves the form page.
+            connect_page.wait_for_url(lambda url: "opportunity-init" not in url, timeout=60000)
             break
         except PlaywrightTimeoutError:
             # Staging HQ is sometimes slow to fill the app dropdowns. The form
