@@ -156,13 +156,21 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   seed_location: "Hyderabad"
   # Pending visits to keep available for the reject/approve tests, plus how many extra to
   # NM-approve up front so VV_33/34/35 (which need NM-approved, PM-review-pending visits)
-  # have items to act on. Each run seeds only the shortfall (P1 allows 200 visits/day).
+  # have items to act on. Each run seeds only the shortfall (daily/total caps per env: see the GROWTH note below).
   seed_pending_target: 6
   seed_pm_review_items: 4
-  # GROWTH: every opt-in run submits ~6 visits/cases (pool top-up) and accrues payments for the
-  # seeded worker, and nothing deletes them. Anshu's caps bound it: opportunity total 24000,
-  # payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest cap). The
-  # suite only runs these via include_seed_consuming, and a run never seeds when enough
+  # GROWTH: every opt-in run submits up to ~10 visits (pool top-up: seed_pending_target +
+  # seed_pm_review_items) and accrues payments for the seeded worker, and nothing deletes them.
+  # Caps read from each opp's dashboard and Payments Units table on 2026-11-06:
+  #   PROD    opp max service deliveries 24000, max budget INR 2,400,000;
+  #           payment unit P1: max daily 200, total deliveries 10000
+  #   STAGING opp max service deliveries 25000, max budget INR 4,500,000;
+  #           payment unit P1: max daily 200, total deliveries 10000
+  # Both envs therefore fit one top-up (up to 10 visits) per run and ~1,000 runs on the tightest
+  # cap (P1 total 10000). Each opt-in run's 2 PM Agrees accrue a real payment on prod.
+  # The dashboards show no separate per-user total cap. Run prod only on purpose (manual
+  # dispatch, include_seed_consuming).
+  # The suite only runs these via include_seed_consuming, and a run never seeds when enough
   # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
   approved_status: "approved"
