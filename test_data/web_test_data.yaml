@@ -161,13 +161,16 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   seed_pm_review_items: 4
   # GROWTH: every opt-in run submits up to ~10 visits (pool top-up: seed_pending_target +
   # seed_pm_review_items) and accrues payments for the seeded worker, and nothing deletes them.
-  # PROD caps (raised by Anshu; confirmation: TODO link the Slack thread/date here): opportunity
-  # total 24000, payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest
-  # cap); each opt-in run's 2 PM Agrees accrue a real prod payment.
-  # STAGING caps (read from the staging opp's payment unit table, 2026-11-06): Max daily 200,
-  # Total Deliveries 10000, so staging has the same per-day and total headroom as prod and one
-  # top-up (up to 10 visits) fits easily. Not yet confirmed: the staging opportunity budget
-  # (TODO: Anshu to confirm the staging numbers).
+  # Caps read from each opp's dashboard and Payments Units table on 2026-11-06:
+  #   PROD    opp max service deliveries 24000, max budget INR 2,400,000;
+  #           payment unit P1: max daily 200, total deliveries 10000
+  #   STAGING opp max service deliveries 25000, max budget INR 4,500,000;
+  #           payment unit P1: max daily 200, total deliveries 10000
+  # Both envs therefore fit one top-up (up to 10 visits) per run and ~1,000 runs on the tightest
+  # cap (P1 total 10000). Each opt-in run's 2 PM Agrees accrue a real payment on prod.
+  # TODO: link Anshu's confirmation of these caps and of the prod payment impact (Slack
+  # thread/date); the dashboards do not show a separate per-user total cap, so ask Anshu
+  # whether one exists.
   # The suite only runs these via include_seed_consuming, and a run never seeds when enough
   # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
