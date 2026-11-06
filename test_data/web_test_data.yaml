@@ -755,3 +755,12 @@ LANDING:
   delivering_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:54"
   # F3 has ended once today is past this date (its device cases wait until then).
   ended_opportunity_end_date: "2026-11-06"
+  learning_opportunity_id_staging: "67dae4af-5892-4ffe-a631-969234f2deed"
+  learning_opportunity_name_staging: "Demo Opportunity_05-Nov-2026 : 21:05"
+  new_opportunity_id_staging: "51e3645c-8be6-4e1d-9049-0e42a5afd721"
+  new_opportunity_name_staging: "Demo Opportunity_05-Nov-2026 : 21:48"
+  delivering_opportunity_id_staging: "af319ab9-657c-4c68-9b31-4866e2bc17af"
+  delivering_opportunity_name_staging: "Demo Opportunity_05-Nov-2026 : 21:16"
+  ended_opportunity_id_staging: "ff7340dd-5cbe-4496-96e1-723bba389f0c"
+  ended_opportunity_name_staging: "Demo Opportunity_05-Nov-2026 : 23:07"
+  ended_opportunity_end_date_staging: "2026-11-07"
