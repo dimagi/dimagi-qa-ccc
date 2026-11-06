@@ -1,5 +1,7 @@
 from urllib.parse import parse_qs, urlparse
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -37,6 +39,7 @@ class OpportunityDashboardPage(BasePage):
         "inactive": "/workers/deliver/?last_active=3",
         "services_delivered": "/workers/deliver/?sort=-last_active",
         "payments_earned": "/workers/payments/",
+        "microplanning": "/microplanning/",
     }
 
     # -- load / structure -------------------------------------------------------
@@ -90,7 +93,12 @@ class OpportunityDashboardPage(BasePage):
         containers; assert the containers and the funnel heading are present."""
         self.page.locator(self.FUNNEL_CONTAINER).first.wait_for(state="visible", timeout=30000)
         self.page.locator(self.WORKER_PROGRESS_CONTAINER).first.wait_for(state="visible", timeout=30000)
-        assert self.page.locator(self.FUNNEL_HEADING).count() > 0, "Worker Progress Funnel heading not found"
+        # The funnel body is HTMX-swapped into its container after the container itself
+        # is visible, so wait for the heading rather than counting it once.
+        try:
+            self.page.locator(self.FUNNEL_HEADING).first.wait_for(state="visible", timeout=30000)
+        except PlaywrightTimeoutError:
+            raise AssertionError("Worker Progress Funnel heading not found")
         self._step("Funnel + worker-progress graphs present")
 
     def verify_stat_panels(self, panels):
@@ -614,6 +622,12 @@ class OpportunityDashboardPage(BasePage):
         # WORKERS_TAB_LABEL already carries the loader's '#' prefix.
         loc = self.page.locator(self.WORKERS_TAB_LABEL)
         loc.first.wait_for(state="visible", timeout=15000)
+        # The "(N)" count is filled in after the tab renders; wait for a non-zero count
+        # so a label read too early is not mistaken for an empty opportunity.
+        try:
+            expect(loc.first).not_to_contain_text("(0)", timeout=30000)
+        except AssertionError:
+            pass  # genuinely zero: the caller asserts on the returned text
         text = loc.first.inner_text().strip()
         self._step(f"Connect Workers tab label: {text!r}")
         return text
@@ -626,7 +640,9 @@ class OpportunityDashboardPage(BasePage):
         self.page.wait_for_timeout(1500)
 
     def displaying_count_text(self):
-        if self.page.locator(self.WORKERS_DISPLAYING_COUNT).count() == 0:
+        try:
+            self.page.locator(self.WORKERS_DISPLAYING_COUNT).first.wait_for(state="visible", timeout=10000)
+        except PlaywrightTimeoutError:
             return ""
         text = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first.inner_text().strip()
         self._step(f"Displaying-count line: {text!r}")

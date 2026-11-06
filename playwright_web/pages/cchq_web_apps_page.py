@@ -1,0 +1,133 @@
+"""CommCare HQ Web Apps - submit a delivery form AS a Connect worker ("Log in as").
+
+Used to seed visits for the one-way review tests (VV_31-35): Connect/PersonalID workers
+authenticate to HQ with a token we can't mint without a device, but Web Apps' "Log in as"
+needs no worker credential. Submissions made this way are attributed to the worker's
+HQ user id, which is what Connect keys visits on.
+"""
+
+import time
+from pathlib import Path
+
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+from pages.base_page import BasePage
+from utils.helpers import LocatorLoader
+
+locators = LocatorLoader()
+
+
+class WebAppsPage(BasePage):
+    RESTORE_AS_TILE = locators.get("cchq_web_apps_page", "restore_as_tile")
+    FILTER_WORKERS = locators.get("cchq_web_apps_page", "filter_workers_input")
+    LOGIN_AS_CONFIRM = locators.get("cchq_web_apps_page", "login_as_confirm")
+    WORKING_AS_BANNER = locators.get("cchq_web_apps_page", "working_as_banner")
+    APP_TILE = locators.get("cchq_web_apps_page", "app_tile_by_name")
+    MENU_ENTRY = locators.get("cchq_web_apps_page", "menu_entry_by_text")
+    NAME_TEXTAREA = locators.get("cchq_web_apps_page", "question_name_textarea")
+    ID_INPUT = locators.get("cchq_web_apps_page", "question_id_input")
+    GPS_MAP = locators.get("cchq_web_apps_page", "gps_map")
+    GPS_SEARCH_INPUT = locators.get("cchq_web_apps_page", "gps_search_input")
+    GPS_SEARCH_BUTTON = locators.get("cchq_web_apps_page", "gps_search_button")
+    GPS_UNSET = locators.get("cchq_web_apps_page", "gps_unset_label")
+    SUBMIT = locators.get("cchq_web_apps_page", "form_submit_button")
+    SUBMITTED = locators.get("cchq_web_apps_page", "form_submitted_message")
+    WORKER_ROW = locators.get("cchq_web_apps_page", "worker_row_by_name")
+
+    def open(self, hq_url, domain):
+        self._step(f"Open Web Apps for {domain}")
+        # Web Apps pulls in heavy scripts/trackers, so a full "load" occasionally exceeds 30s on
+        # staging. The page is usable once parsed; the tile wait below covers the rest.
+        self.page.goto(f"{hq_url}/a/{domain}/cloudcare/apps/v2/", wait_until="domcontentloaded", timeout=90000)
+        self.page.locator(self.RESTORE_AS_TILE).first.wait_for(state="visible", timeout=90000)
+
+    def log_in_as(self, worker_username):
+        """Web Apps -> 'Log in as' -> filter -> pick the worker -> confirm. Filtering needs
+        Enter (typing alone leaves the full list), and picking a row opens a confirm dialog."""
+        self._step(f"Log in as {worker_username}")
+        banner = self.page.locator(self.WORKING_AS_BANNER).first
+        if banner.is_visible() and worker_username in banner.inner_text():
+            return  # a reload keeps the "Log in as" session; picking the worker again finds no dialog
+        self.page.locator(self.RESTORE_AS_TILE).first.click()
+        box = self.page.locator(self.FILTER_WORKERS).first
+        box.wait_for(state="visible", timeout=20000)
+        box.fill(worker_username)
+        box.press("Enter")
+        self.page.locator(self.WORKER_ROW.format(name=worker_username)).first.click()
+        self.page.locator(self.LOGIN_AS_CONFIRM).first.click()
+        self.page.locator(self.WORKING_AS_BANNER).first.wait_for(state="visible", timeout=30000)
+
+    def open_form(self, app_name, module, form):
+        """Navigate to the form from wherever Web Apps currently is: the app list (first
+        time) or inside the app (after a previous submit returns to its menu)."""
+        self._step(f"Open {app_name} > {module} > {form}")
+        # Work out where Web Apps is: the app list (click the tile) or already inside the app
+        # (after a previous submit). Staging renders 200+ tiles slowly after "Log in as", so a
+        # short wait for the tile mistakes "not rendered yet" for "already inside".
+        tile_sel = self.APP_TILE.format(name=app_name)
+        inside_sels = [self.MENU_ENTRY.format(text=module), self.MENU_ENTRY.format(text=form), self.NAME_TEXTAREA]
+        deadline = time.monotonic() + 60
+        while True:
+            if any(self._any_visible(sel) for sel in inside_sels):
+                break
+            if self._any_visible(tile_sel):
+                self._click_first_visible(tile_sel, timeout_ms=10000)
+                break
+            if time.monotonic() > deadline:
+                shot = Path("test-results") / "web_apps_open_form_timeout.png"  # uploaded as a CI artifact
+                shot.parent.mkdir(exist_ok=True)
+                self.page.screenshot(path=str(shot))
+                raise AssertionError(
+                    f"Neither the '{app_name}' tile nor its menu appeared in Web Apps "
+                    f"(url={self.page.url}; screenshot {shot}; page text: "
+                    f"{self.page.inner_text('body')[:300]!r})"
+                )
+            self.page.wait_for_timeout(500)
+        for entry in (module, form):
+            if self.page.locator(self.NAME_TEXTAREA).first.is_visible():
+                break
+            try:
+                # Staging's formplayer can take well over 8s to load each menu level.
+                self._click_first_visible(self.MENU_ENTRY.format(text=entry), timeout_ms=30000)
+            except AssertionError:
+                if entry == form:
+                    raise  # the form entry must be reachable; only the module may already be open
+        self.page.locator(self.NAME_TEXTAREA).first.wait_for(state="visible", timeout=45000)
+
+    def _any_visible(self, selector):
+        matches = self.page.locator(selector)
+        return any(matches.nth(i).is_visible() for i in range(matches.count()))
+
+    def _click_first_visible(self, selector, timeout_ms=30000):
+        deadline = time.monotonic() + timeout_ms / 1000
+        while time.monotonic() < deadline:
+            matches = self.page.locator(selector)
+            for i in range(matches.count()):
+                if matches.nth(i).is_visible():
+                    matches.nth(i).click()
+                    return
+            self.page.wait_for_timeout(500)
+        raise AssertionError(f"No visible element for {selector}")
+
+    def fill_delivery_form(self, entity_name, entity_id, location_query):
+        """name (required textarea), id (number) and a GPS point. Clicking the map does not
+        set the coordinates (they stay '??.?????'), so search a place instead."""
+        self._step(f"Fill delivery form: name={entity_name!r} id={entity_id} location={location_query!r}")
+        self.page.locator(self.NAME_TEXTAREA).first.fill(entity_name)
+        self.page.locator(self.ID_INPUT).first.fill(str(entity_id))
+        self.page.locator(self.GPS_SEARCH_INPUT).first.fill(location_query)
+        self._click_first_visible(self.GPS_SEARCH_BUTTON)
+        self.page.locator(self.GPS_UNSET).first.wait_for(state="hidden", timeout=20000)
+
+    def submit(self):
+        self._step("Submit delivery form")
+        self._click_first_visible(self.SUBMIT)
+        # The form closes (Submit disappears) as soon as it is sent, but the POST to HQ can
+        # still be in flight: closing the page right after the LAST submit dropped the final
+        # visit (3 of 4 arrived in Connect, prod 2026-10-16). Wait for HQ's confirmation
+        # message, falling back to the network settling.
+        self.page.locator(self.SUBMIT).first.wait_for(state="hidden", timeout=30000)
+        try:
+            self.page.locator(self.SUBMITTED).first.wait_for(state="visible", timeout=20000)
+        except PlaywrightTimeoutError:
+            self.page.wait_for_load_state("networkidle")
