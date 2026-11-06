@@ -6,6 +6,7 @@ the payment unit comes from the LDVP block (max 2 a day, 4 in total) instead of
 OLP_2, so the daily limit is reachable in one device session.
 """
 
+import os
 from dataclasses import dataclass
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -36,12 +37,14 @@ class LdvpOpp:
     base_url: str
 
 
-def create_ldvp_opportunity(page, config, settings, test_data):
+def create_ldvp_opportunity(page, config, settings, test_data, days=None):
     ldvp = test_data.get("LDVP")
     olp1_data = test_data.get("OLP_1")
     payment_unit = {**test_data.get("OLP_2"), **{k: ldvp[k] for k in (
         "payment_unit_name", "amount", "description", "max_total", "max_daily")}}
-    days = int(ldvp["days"])
+    # Callers may pass their own length; LDVP_DAYS shortens a whole run (for an
+    # opportunity that has to end soon).
+    days = days or int(os.environ.get("LDVP_DAYS", ldvp["days"]))
 
     env = "staging" if "staging" in config.get("cchq_url") else "prod"
 
@@ -75,11 +78,12 @@ def create_ldvp_opportunity(page, config, settings, test_data):
             ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
             # fill_opportunity_form directly, not create_opportunity_in_connect_page:
             # that one re-submits once on its own, with no duplicate check.
-            connect_page.wait_for_timeout(5000)
+            connect_page.locator(opportunities.OPP_NAME_INPUT).first.wait_for(state="visible", timeout=30000)
             opportunity_name = opportunities.fill_opportunity_form(
                 opp_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
             )
-            connect_page.wait_for_timeout(3000)
+            # A created opportunity leaves the form page.
+            connect_page.wait_for_url(lambda url: "opportunity-init" not in url, timeout=60000)
             break
         except PlaywrightTimeoutError:
             # Staging HQ is sometimes slow to fill the app dropdowns. The form
