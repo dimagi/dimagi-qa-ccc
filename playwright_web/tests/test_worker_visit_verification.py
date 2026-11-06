@@ -21,11 +21,13 @@ the module logs in once and each test opens its own opportunity/worker (from
 WORKER_VISIT_VERIFICATION_PAGE_<VV#> test data, numbered by current MTP VV id).
 """
 
+import time
 from urllib.parse import urlsplit
 
 import pytest
 
 from flows.olp_setup import PM_ORG
+from flows.seed_visits import seed_review_visits
 from flows.tasking_static import env_value, login_to_connect
 from flows.workers_setup import open_connect_workers, open_deliver_tab
 from pages.connect_worker_visits_page import WorkerVisitsPage
@@ -62,8 +64,11 @@ def _open_review_visits(connect_page, config, data, role):
     when the verification tab-set is present."""
     slug = data["nm_org_slug"] if role == "nm" else data["pm_org_slug"]
     base = config.get("connect_url")
+    # Newest first and a bigger page: the table is ascending by date at 20 rows/page, so
+    # without this a freshly seeded visit sits on page 2 and the finder never sees it.
     connect_page.goto(
-        f"{base}/a/{slug}/opportunity/{data['opportunity_id']}/user_visits/?user={data['worker_user_id']}"
+        f"{base}/a/{slug}/opportunity/{data['opportunity_id']}/user_visits/"
+        f"?user={data['worker_user_id']}&sort=-date_time&page_size=50"
     )
     connect_page.wait_for_load_state("load")
     visits = WorkerVisitsPage(connect_page)
@@ -71,6 +76,58 @@ def _open_review_visits(connect_page, config, data, role):
     if visits.has_review_tabs():
         visits.click_tab_by_name("All")
     return visits
+
+
+SEED_SETTLE_SECONDS = 240
+APPROVE_STICK_SECONDS = 300
+
+
+@pytest.fixture(scope="module")
+def review_pool(connect, test_data, config, settings):
+    """The review data with a topped-up pool of visits, for the tests whose actions are
+    one-way. Seeds just the shortfall of pending visits via HQ Web Apps, waits for Connect
+    to show them, then NM-approves a few so VV_33/34/35 have PM-review items.
+
+    Only tests marked consumes_seed_data use this fixture (VV_31-35, GAP-42), so it never
+    seeds or reviews on automatic PR / post-deploy runs: opt-in via include_seed_consuming."""
+    data = _require_review_data(test_data, config)
+    connect_page, _ = connect
+    need_pending = int(data["seed_pending_target"]) + int(data["seed_pm_review_items"])
+
+    visits = _open_review_visits(connect_page, config, data, "nm")
+    shortfall = need_pending - visits.visit_status_counts().get("pending", 0)
+    if shortfall > 0:
+        names = seed_review_visits(connect_page.context, config, settings, data, shortfall)
+        deadline = time.monotonic() + SEED_SETTLE_SECONDS
+        while time.monotonic() < deadline:
+            visits = _open_review_visits(connect_page, config, data, "nm")
+            if visits.visit_status_counts().get("pending", 0) >= need_pending:
+                break
+            connect_page.wait_for_timeout(15000)
+        else:
+            pytest.fail(f"Seeded {len(names)} visits but Connect still shows fewer than {need_pending} pending")
+
+    # Listed is not the same as settled: an NM approve made within seconds of a visit first
+    # appearing did not stick (still pending later; approving a minute or more on worked). So
+    # poll the approve itself - a visit whose approve does not stick is retried - until the
+    # wanted number of approvals have stuck, or fail the fixture.
+    wanted = int(data["seed_pm_review_items"])
+    approved = 0
+    deadline = time.monotonic() + APPROVE_STICK_SECONDS
+    while approved < wanted and time.monotonic() < deadline:
+        visits = _open_review_visits(connect_page, config, data, "nm")
+        try:
+            if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"], only_status="pending"):
+                break
+            approved += 1
+        except AssertionError:
+            connect_page.wait_for_timeout(5000)  # the approve did not stick yet: re-open and retry
+    if approved < wanted:
+        pytest.fail(
+            f"Only {approved} of {wanted} NM approvals stuck within {APPROVE_STICK_SECONDS}s, so "
+            "VV_33/34/35 would have no PM-review items (not skipping silently)"
+        )
+    return data
 
 
 @pytest.fixture(scope="module")
@@ -234,12 +291,12 @@ def test_vv_03_image_carousel(connect, test_data):
 
 
 @pytest.mark.consumes_seed_data
-def test_vv_31_nm_reject_visit(connect, test_data, config):
+def test_vv_31_nm_reject_visit(connect, test_data, config, review_pool):
     """VV_31: as the Network Manager, reject a pending visit via the Reason-for-
     Rejection modal; the visit becomes rejected. Opens the Visits page under the NM
     org's slug, so no org switch is needed."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     if not visits.nm_reject_a_visit(data["reject_reason"], data["rejected_status"]):
         pytest.skip(
@@ -249,12 +306,12 @@ def test_vv_31_nm_reject_visit(connect, test_data, config):
 
 
 @pytest.mark.consumes_seed_data
-def test_vv_32_nm_approve_visit(connect, test_data, config):
+def test_vv_32_nm_approve_visit(connect, test_data, config, review_pool):
     """VV_32: as the Network Manager, approve a pending visit via the Justification-
     for-Approval modal; the visit becomes approved. Opens the Visits page under the NM
     org's slug."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"]):
         pytest.skip(
@@ -264,12 +321,12 @@ def test_vv_32_nm_approve_visit(connect, test_data, config):
 
 
 @pytest.mark.consumes_seed_data
-def test_vv_33_pm_agree_visit(connect, test_data, config):
+def test_vv_33_pm_agree_visit(connect, test_data, config, review_pool):
     """VV_33: as the Program Manager, agree an NM-reviewed visit (the Agree button
     posts directly); payment accrues on agree. Manual runs only (consumes_seed_data):
     each run accrues a payment for the seeded worker. Uses the module's PM session."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_agree_a_visit():
         pytest.skip(
@@ -279,11 +336,11 @@ def test_vv_33_pm_agree_visit(connect, test_data, config):
 
 
 @pytest.mark.consumes_seed_data
-def test_vv_34_pm_disagree_visit(connect, test_data, config):
+def test_vv_34_pm_disagree_visit(connect, test_data, config, review_pool):
     """VV_34: as the Program Manager, disagree an NM-reviewed visit pending PM review
     (the Disagree button posts directly); no payment accrues. Uses the PM session."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_disagree_a_visit():
         pytest.skip(
@@ -493,14 +550,14 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, conf
 
 
 @pytest.mark.consumes_seed_data
-def test_gap_w_42_reject_requires_reason(connect, test_data, config):
+def test_gap_w_42_reject_requires_reason(connect, test_data, config, review_pool):
     """GAP-SRC-W-42 (partial): the in-UI Reject action requires a reason - submitting
     the Reject modal with an empty reason is blocked and the visit stays unreviewed.
     Runs as the NM on the manual-review opp; skips until seeded or when no rejectable
     visit is present. (The 100-visit bulk cap needs >100 seeded visits and is not
     covered here.)"""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     blocked = visits.nm_reject_blocked_without_reason(data["rejected_status"])
     if blocked is None:
@@ -512,13 +569,13 @@ def test_gap_w_42_reject_requires_reason(connect, test_data, config):
 
 
 @pytest.mark.consumes_seed_data
-def test_gap_w_42_approve_requires_justification(connect, test_data, config):
+def test_gap_w_42_approve_requires_justification(connect, test_data, config, review_pool):
     """GAP-SRC-W-42 (partial): the in-UI Approve action requires a justification -
     submitting the Approve modal with an empty justification is blocked and the visit
     stays unreviewed. Runs as the NM on the manual-review opp; skips until seeded or
     when no approvable visit is present."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     blocked = visits.nm_approve_blocked_without_justification(data["approved_status"])
     if blocked is None:
@@ -532,28 +589,43 @@ def test_gap_w_42_approve_requires_justification(connect, test_data, config):
 
 
 @pytest.mark.consumes_seed_data
-def test_vv_35_agree_and_disagree_are_mutually_exclusive(connect, test_data, config):
-    """VV_35 (Worker Visit Verification Page_35): a visit the PM has disagreed cannot
-    then be agreed, and vice versa. As the PM, disagree a reviewable visit and confirm
-    Agree is no longer actionable on it; if a second reviewable visit is available,
-    also agree one and confirm Disagree is no longer actionable. Skips until the
-    manual-review opp is seeded or when no PM-reviewable visit is present."""
+def test_vv_35_agree_then_cannot_disagree(connect, test_data, config, review_pool):
+    """VV_35 (Worker Visit Verification Page_35), agree-first direction: once the PM has
+    agreed a visit, Disagree is no longer actionable. Holds on prod."""
     connect_page, _ = connect
-    data = _require_review_data(test_data, config)
+    data = review_pool
+    visits = _open_review_visits(connect_page, config, data, "pm")
+
+    cannot_disagree = visits.pm_agree_then_cannot_disagree()
+    if cannot_disagree is None:
+        pytest.skip(
+            f"No PM-reviewable visit with an enabled Agree for '{data['worker_name']}' "
+            "- needs an NM-approved / PM-review-pending visit to cover VV_35."
+        )
+    assert cannot_disagree, "An agreed visit could still be disagreed - agree/disagree must be exclusive"
+
+
+@pytest.mark.consumes_seed_data
+@pytest.mark.xfail(
+    reason=(
+        "MTP VV_35 says a disagreed visit cannot then be agreed, but the product leaves Agree "
+        "enabled after Disagree (user_visit_details.html: Agree is only disabled when "
+        "review_status == 'agree'; Disagree only enabled while 'pending'), so a PM can flip "
+        "disagree -> agree. Seen live on prod 2026-10-16. Product bug or plan inaccuracy - "
+        "awaiting a decision; XPASSes if the product changes."
+    ),
+    strict=False,
+)
+def test_vv_35_disagree_then_cannot_agree(connect, test_data, config, review_pool):
+    """VV_35, disagree-first direction: a visit the PM has disagreed cannot then be agreed."""
+    connect_page, _ = connect
+    data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
 
     cannot_agree = visits.pm_disagree_then_cannot_agree()
     if cannot_agree is None:
         pytest.skip(
             f"No PM-reviewable visit with an enabled Disagree for '{data['worker_name']}' "
-            "- seed an NM-approved / PM-review-pending visit to cover VV_35."
+            "- needs an NM-approved / PM-review-pending visit to cover VV_35."
         )
     assert cannot_agree, "A disagreed visit could still be agreed - agree/disagree must be exclusive"
-
-    # Best-effort reverse direction on another visit; only assert if one was available.
-    cannot_disagree = visits.pm_agree_then_cannot_disagree()
-    if cannot_disagree is not None:
-        assert cannot_disagree, (
-            "An agreed visit could still be disagreed - agree/disagree must be exclusive"
-        )
-

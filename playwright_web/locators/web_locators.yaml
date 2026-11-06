@@ -646,6 +646,34 @@ cchq_case_list_map_page:
   # object instead.
   add_property_button: "//button[contains(@data-bind,'addProperty')]"
   save_button: "//div[@id='case-detail-screen-config-tab']//button[contains(@data-bind,'onSave')]"
+
+# CommCare HQ Web Apps (cloudcare) - used to submit delivery forms AS a Connect worker
+# ("Log in as"), so tests can seed their own visits. Structure confirmed live on prod 2026-10-16.
+cchq_web_apps_page:
+  restore_as_tile: "//div[contains(@class,'js-restore-as-item')]"
+  filter_workers_input: "//input[@placeholder='Filter workers']"
+  login_as_confirm: "//button[normalize-space()='Log in']"
+  # Scoped to the deepest element holding the text: an unscoped //*[contains(normalize-space(),..)] also matches
+  # <html>/<body>, so it would pass on any page that mentions the text.
+  working_as_banner: "//body//*[contains(normalize-space(),'Working as')][not(.//*[contains(normalize-space(),'Working as')])]"
+  worker_row_by_name: "//*[contains(normalize-space(text()),'{name}')]"
+  app_tile_by_name: "//*[contains(@class,'appicon-title')][normalize-space()='{name}']"
+  # Matches the text node (the entry's label sits in a nested element); callers click the
+  # first VISIBLE match, since the nav dropdown can hold hidden duplicates.
+  menu_entry_by_text: "//*[normalize-space(text())='{text}']"
+  # String questions render as textarea#str<N>; an unscoped (//textarea)[1] hits the hidden
+  # "report an issue" dialog's textarea that staging's Web Apps page carries first.
+  question_name_textarea: "//textarea[starts-with(@id,'str')]"
+  question_id_input: "//input[@type='text'][starts-with(@id,'int')]"
+  gps_map: "//div[contains(@class,'leaflet-container')]"
+  # The map's search box sits in the same input group as its Search button (other hidden
+  # text inputs on the page, e.g. the report-email dialog, come first in the DOM).
+  gps_search_input: "//button[normalize-space()='Search']/ancestor::div[.//input[@type='text']][1]//input[@type='text']"
+  gps_search_button: "//button[normalize-space()='Search']"
+  gps_unset_label: "//*[contains(normalize-space(text()),'??.?????')]"
+  form_submit_button: "//button[normalize-space()='Submit']"
+  form_submitted_message: "//body//*[contains(normalize-space(),'successfully')][not(.//*[contains(normalize-space(),'successfully')])]"
+
 # --- Microplanning (Microplanning_01-40) ---
 # Reached from the opportunity dashboard's "View Progress Map" stat panel
 # (PANEL_HREF["microplanning"], opportunity_delivery_stats). Map itself renders on

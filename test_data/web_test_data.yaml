@@ -135,6 +135,35 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   worker_user_id: "1385565e-de0f-4cdd-bd5c-df8c026016cd"
   reject_reason: "Automation NM reject reason"
   approve_justification: "Automation NM approve justification"
+  # Self-seeding: the review actions are one-way, so the tests top the pool up by submitting
+  # the delivery form in HQ Web Apps as the worker ("Log in as" - proven 2026-10-16; Connect
+  # records it as the worker's pending visit). The worker's HQ username is the id Connect shows.
+  hq_domain: "connectqa-automation-prod"
+  # Staging has its own manual-review opp ("Manual approval opp", program "Automation program"):
+  # PM org PM_Automation_02 (slug pm_automation_02), NM org NM_Automation (slug nm_automation),
+  # the same worker (HQ username identical to prod), and a different ConnectUser id.
+  opportunity_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  nm_org_slug_staging: "nm_automation"
+  pm_org_slug_staging: "pm_automation_02"
+  worker_user_id_staging: "b01fe03f-a852-4f81-b205-13faa445d226"
+  hq_domain_staging: "connectqa-automation"
+  hq_worker_username: "74531b63f0e73a64e226"
+  hq_app_name: "Manual Delivery App"
+  hq_app_name_staging: "[Manual approval] Delivery App"
+  hq_module: "Case List"
+  hq_form: "Registration Form"
+  seed_entity_id: 98765
+  seed_location: "Hyderabad"
+  # Pending visits to keep available for the reject/approve tests, plus how many extra to
+  # NM-approve up front so VV_33/34/35 (which need NM-approved, PM-review-pending visits)
+  # have items to act on. Each run seeds only the shortfall (P1 allows 200 visits/day).
+  seed_pending_target: 6
+  seed_pm_review_items: 4
+  # GROWTH: every opt-in run submits ~6 visits/cases (pool top-up) and accrues payments for the
+  # seeded worker, and nothing deletes them. Anshu's caps bound it: opportunity total 24000,
+  # payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest cap). The
+  # suite only runs these via include_seed_consuming, and a run never seeds when enough
+  # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
   approved_status: "approved"
 
