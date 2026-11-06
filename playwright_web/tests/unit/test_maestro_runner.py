@@ -167,6 +167,15 @@ def test_ldvp_flows_resolve_their_workers():
     assert env["ldvp_uninvited.yaml"]["PHONE_NUMBER"] == "7426092"
 
 
+def test_landing_task_flow_signs_in_as_the_tasking_worker():
+    # F4 needs a worker with a task on TASKING_HYBRID, not the LDVP worker.
+    from flows.mobile_runner import env_by_flow
+
+    for env_name in ("stage", "prod"):
+        env = env_by_flow(["landing_task.yaml", "worker_relearn_task.yaml"], env_name)
+        assert env["landing_task.yaml"]["PHONE_NUMBER"] == env["worker_relearn_task.yaml"]["PHONE_NUMBER"]
+
+
 def test_ldvp_workers_differ_per_environment():
     from flows.mobile_runner import env_by_flow
 

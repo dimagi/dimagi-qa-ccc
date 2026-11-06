@@ -139,6 +139,8 @@ WORKER_BY_FLOW = {
     # Connect landing page / 2.65 delivery tabs: test_connect_landing.py.
     "landing_list.yaml": "MAESTRO_LDVP_WORKER",
     "landing_tabs.yaml": "MAESTRO_LDVP_WORKER",
+    # F4: the pending-task screens, as the tasking worker on TASKING_HYBRID.
+    "landing_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

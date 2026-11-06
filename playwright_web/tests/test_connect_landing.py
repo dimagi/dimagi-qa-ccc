@@ -4,9 +4,10 @@ import pytest
 
 from flows.landing_setup import create_new_fixture
 from flows.ldvp_setup import resume_ldvp_opportunity
+from flows.tasking_static import require_hybrid_opp
 
 # Drives a real device via BrowserStack Maestro builds. Not in the per-PR gate.
-FLOWS = ["landing_list.yaml", "landing_tabs.yaml"]
+FLOWS = ["landing_list.yaml", "landing_tabs.yaml", "landing_task.yaml"]
 
 
 @pytest.mark.on_demand
@@ -89,24 +90,58 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     if not ended:
         print(f"STEP [LANDING] F3 {f3_name!r} has not ended yet - its cases are skipped this run")
 
-    summary = run_flows(
-        flows=FLOWS,
-        env={
-            "OPPORTUNITY": f1_name,
-            "OPP_DELIVERING": f1_name, "OPP_NEW": f5_name, "OPP_LEARNING": f6_name, "OPP_ENDED": f3_name,
-            "ENDED_CHECK": "true" if ended else "false",
-            "APPROVED": str(approved), "PENDING": str(pending),
-            "EARNED": str(earned), "TRANSFERRED": str(transferred),
-            "VISITS_AMOUNT": str(approved * int(ldvp["amount"])),
-            "MAX_TOTAL": ldvp["max_total"], "MAX_DAILY": ldvp["max_daily"],
-        },
-        reports=False, app_env=config.env,
-    )
+    # --- F4 Pending task: assigned now on the tasking opportunity, deleted after ---
+    # The relearn lifecycle test deletes any leftover task before assigning its own,
+    # but other tests share this worker, so the task never outlives this run.
+    from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
+    hybrid = require_hybrid_opp(test_data, config)
+    task_worker = env_by_flow(["landing_task.yaml"], config.env)["landing_task.yaml"]["USERNAME"]
+    tasks = ConnectAssignedTasksPage(opp.connect_page)
+
+    def open_tasks():
+        tasks.goto_task_list(opp.base_url, hybrid["org"], hybrid["opp_id"])
+        tasks.verify_page_loaded()
+
+    open_tasks()
+    assignable = tasks.create_modal_worker_labels()
+    assert any(task_worker in label for label in assignable), (
+        f"F4: {task_worker!r} cannot be given a task on {hybrid['opportunity_name']!r} - it must have "
+        f"accepted the invite there. Offered: {assignable or 'nobody'}")
+    if tasks.row_exists(task_worker):
+        tasks.delete_tasks_for_workers([task_worker])
+    tasks.create_task(hybrid["task_type"], task_worker, due_in_days=7)
+    tasks.verify_success_message("Task created successfully")
+    tasks.verify_task_row(task_worker, hybrid["task_type"], status="To Do")
+    print(f"STEP [LANDING] F4 task {hybrid['task_type']!r} assigned to {task_worker!r} "
+          f"on {hybrid['opportunity_name']!r}")
+
+    try:
+        summary = run_flows(
+            flows=FLOWS,
+            env={
+                "OPPORTUNITY": f1_name,
+                "OPP_DELIVERING": f1_name, "OPP_NEW": f5_name, "OPP_LEARNING": f6_name, "OPP_ENDED": f3_name,
+                "ENDED_CHECK": "true" if ended else "false",
+                "APPROVED": str(approved), "PENDING": str(pending),
+                "EARNED": str(earned), "TRANSFERRED": str(transferred),
+                "VISITS_AMOUNT": str(approved * int(ldvp["amount"])),
+                "MAX_TOTAL": ldvp["max_total"], "MAX_DAILY": ldvp["max_daily"],
+                # landing_task.yaml's own opportunity: OPPORTUNITY above is F1 for every flow.
+                "TASK_OPPORTUNITY": hybrid["opportunity_name"], "TASK_NAME": hybrid["task_type"],
+            },
+            reports=False, app_env=config.env,
+        )
+    finally:
+        # The web session can idle out over a long device build; reopening the
+        # list is enough to carry on.
+        open_tasks()
+        if tasks.row_exists(task_worker):
+            tasks.delete_tasks_for_workers([task_worker])
+        print(f"STEP [LANDING] F4 task removed for {task_worker!r}")
     print(f"STEP [LANDING] {FLOWS} -> {summary['status']} ({summary['build_url']})")
     assert summary["status"] == "SUCCESS", (
         f"Landing flows did not pass: {summary['passed']} passed / {summary['failed']} failed - "
         f"see {summary['build_url']}")
-
 
 def _count(text):
     # Counts and amounts render as "2", "200", "200.00" or "-" for none.
