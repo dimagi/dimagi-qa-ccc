@@ -159,7 +159,8 @@ def test_ldvp_flows_resolve_their_workers():
     flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_assess_fail.yaml",
              "ldvp_assess_pass.yaml", "ldvp_deliver.yaml",
              "ldvp_payment.yaml", "ldvp_decline_confirm.yaml", "ldvp_rollback.yaml",
-             "ldvp_manual_review.yaml", "landing_list.yaml", "landing_tabs.yaml"]
+             "ldvp_manual_review.yaml", "landing_list.yaml", "landing_tabs.yaml",
+             "landing_visits.yaml"]
     env = env_by_flow(flows, "stage")
     assert set(env) == set(flows)
     invited = {env[f]["PHONE_NUMBER"] for f in flows[1:]}

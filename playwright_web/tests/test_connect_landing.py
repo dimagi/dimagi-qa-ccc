@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 import pytest
@@ -7,7 +8,7 @@ from flows.ldvp_setup import resume_ldvp_opportunity
 from flows.tasking_static import require_hybrid_opp
 
 # Drives a real device via BrowserStack Maestro builds. Not in the per-PR gate.
-FLOWS = ["landing_list.yaml", "landing_tabs.yaml", "landing_task.yaml"]
+FLOWS = ["landing_list.yaml", "landing_tabs.yaml", "landing_task.yaml", "landing_visits.yaml"]
 
 
 @pytest.mark.on_demand
@@ -84,6 +85,22 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
         f"F6 {f6_name!r} reads {status!r} / assessment {assessment!r} - it must be accepted and not passed. "
         f"Rebuild it: test_landing_fixtures.py with LANDING_FIXTURE=learning")
 
+    # --- F2 Manual review: one earlier run's approved V1, rejected V2, pending V3 ---
+    # test_e2e_ldvp_manual.py leaves each run's visits like that; any complete set will do.
+    from pages.connect_worker_visits_page import WorkerVisitsPage
+    f2_id, f2_name = ldvp[f"manual_opportunity_id{suffix}"], ldvp[f"manual_opportunity_name{suffix}"]
+    f2_user = workers.worker_user_id(opp.base_url, opp.org_slug, f2_id, worker_name)
+    workers.goto_worker_visits_page(opp.base_url, opp.org_slug, f2_id, f2_user)
+    by_stamp = {}
+    for name, status in WorkerVisitsPage(opp.connect_page).named_visit_statuses(re.compile(r"LDVP-V[123]-\d{6}")):
+        by_stamp.setdefault(name.rsplit("-", 1)[1], {}).setdefault(name.split("-")[1], set()).add(status)
+    complete = [s for s, v in by_stamp.items()
+                if "approved" in v.get("V1", ()) and v.get("V2") == {"rejected"} and v.get("V3") == {"pending"}]
+    assert complete, (f"F2 {f2_name!r} has no run with V1 approved, V2 rejected and V3 pending - run "
+                      f"test_e2e_ldvp_manual.py once to add one")
+    f2_stamp = complete[0]
+    print(f"STEP [LANDING] F2 visits from web: run {f2_stamp} (V1 approved, V2 rejected, V3 pending)")
+
     # --- F3 Ended: its cases wait until the end date has passed ---
     f3_id, f3_name = fixture("ended")
     ended = date.today() > date.fromisoformat(landing[f"ended_opportunity_end_date{suffix}"])
@@ -128,6 +145,9 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
                 "MAX_TOTAL": ldvp["max_total"], "MAX_DAILY": ldvp["max_daily"],
                 # landing_task.yaml's own opportunity: OPPORTUNITY above is F1 for every flow.
                 "TASK_OPPORTUNITY": hybrid["opportunity_name"], "TASK_NAME": hybrid["task_type"],
+                # landing_visits.yaml: F2 and the visits web read above.
+                "OPP_MANUAL": f2_name, "REJECT_REASON": ldvp["reject_reason"],
+                **{f"F2_{k}": f"LDVP-{k}-{f2_stamp}" for k in ("V1", "V2", "V3")},
             },
             reports=False, app_env=config.env,
         )
