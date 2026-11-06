@@ -168,9 +168,8 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   #           payment unit P1: max daily 200, total deliveries 10000
   # Both envs therefore fit one top-up (up to 10 visits) per run and ~1,000 runs on the tightest
   # cap (P1 total 10000). Each opt-in run's 2 PM Agrees accrue a real payment on prod.
-  # The limits were raised on both envs by Akanksha (QA Lead) for these tests; the dashboards show
-  # no separate per-user total cap. Each opt-in run's 2 PM Agrees accrue a real payment on prod
-  # for the seeded worker, so run prod only on purpose (manual dispatch, include_seed_consuming).
+  # The dashboards show no separate per-user total cap. Run prod only on purpose (manual
+  # dispatch, include_seed_consuming).
   # The suite only runs these via include_seed_consuming, and a run never seeds when enough
   # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
