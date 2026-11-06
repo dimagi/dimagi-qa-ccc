@@ -159,10 +159,15 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   # have items to act on. Each run seeds only the shortfall (P1 allows 200 visits/day).
   seed_pending_target: 6
   seed_pm_review_items: 4
-  # GROWTH: every opt-in run submits ~6 visits/cases (pool top-up) and accrues payments for the
-  # seeded worker, and nothing deletes them. Anshu's caps bound it: opportunity total 24000,
-  # payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest cap). The
-  # suite only runs these via include_seed_consuming, and a run never seeds when enough
+  # GROWTH: every opt-in run submits up to ~10 visits (pool top-up: seed_pending_target +
+  # seed_pm_review_items) and accrues payments for the seeded worker, and nothing deletes them.
+  # PROD caps (raised by Anshu; confirmation: TODO link the Slack thread/date here): opportunity
+  # total 24000, payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest
+  # cap); each opt-in run's 2 PM Agrees accrue a real prod payment.
+  # STAGING caps: the P1 payment unit's daily cap was NOT raised and may be only 15/day (TODO:
+  # Anshu to confirm the staging numbers or raise them). A single top-up can need up to 10
+  # visits, so two opt-in runs in one day on staging could hit it: run staging at most once a day.
+  # The suite only runs these via include_seed_consuming, and a run never seeds when enough
   # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
   approved_status: "approved"
