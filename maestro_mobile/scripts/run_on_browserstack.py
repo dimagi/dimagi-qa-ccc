@@ -74,6 +74,9 @@ WORKER_BY_FLOW = {
     # Connect evaluated the blocked visit before the task completion is submitted.
     "worker_blocked_visit.yaml": "MAESTRO_WORKER_RELEARN_TASK",
     "worker_relearn_task.yaml": "MAESTRO_WORKER_RELEARN_TASK",
+    # Learn_tab_02 hybrid. Not in TEST_FLOWS - only the web test that seeds/reads
+    # the worker's Learn progress runs it.
+    "worker_learn_module.yaml": "MAESTRO_LEARN_TAB_02",
     "messaging_broadcast.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_survey.yaml": "MAESTRO_MESSAGING_HYBRID",
     "messaging_keyword.yaml": "MAESTRO_MESSAGING_HYBRID",

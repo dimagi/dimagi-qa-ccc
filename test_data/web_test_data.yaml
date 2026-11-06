@@ -236,6 +236,18 @@ WORKER_LIFECYCLE:
   # for _06/_13.
   not_found_phone: "+74261291230"
 
+# Learn_tab_02 hybrid (web+mobile): "modules completed" progress updates after a
+# device submits a Learn form. Needs a worker whose learning is started but not
+# 100% complete, on an opportunity whose Learn app has a known module/form name.
+# The data is seeded; the test is gated by the consumes_seed_data marker (opt-in dispatch).
+# The mobile side (worker_learn_module.yaml) is built but NOT device-validated.
+LEARN_TAB_02_HYBRID:
+  opportunity_name: "OLP_Test_Opp"   # same name on stage and prod (PM_Automation_01)
+  worker_name: "Automation Worker_01"
+  modules_completed_column: "Modules completed"
+  total_lessons: 2   # lessons excluding the assessment; the test skips once the worker reaches it
+  # The mobile worker/flow values live in mobile_workers.yaml (MAESTRO_LEARN_TAB_02).
+
 PAYMENT_PROCESSING_1_2_3:
   # Retargeted 2026-09-09: the old "Test Opp 151201"/"Automation User 10" no longer
   # exists on staging under PM_Automation_01. covid_opp_test has an accepted worker
@@ -329,6 +341,16 @@ TASKING_HYBRID:
   opp_id: "d3cb6361-46ae-4b0f-8d58-7a084ca561e3"
   opp_id_staging: "9d533d0d-b835-488a-8726-7d2aac52df95"
   task_type: "Relearn Task Unit"
+  # Visit statuses that mean "processed normally, not blocked by the pending task" for
+  # TC-E2E-003. "Over Limit" is what Connect assigns once the worker has used the
+  # payment unit's DAILY cap (max daily 10 on both prod and staging, checked 30 Oct 2026; the
+  # total cap is 1000 and is not the limit being hit). Every push runs this test against one worker, so
+  # later runs in a day land there; it clears the next day, so no limit change is needed.
+  allowed_visit_statuses: ["Approved", "Pending", "Over Limit"]
+  # Payment unit caps on this opportunity, checked in Connect on 30 Oct 2026. The same on
+  # prod and staging, so given once (informational; the tests do not read them).
+  payment_unit_max_daily: 10
+  payment_unit_max_total: 1000
   opportunity_name: "Demo Opportunity_04-Aug-2026 : 15:37"
   opportunity_name_staging: "Demo Opportunity_31-Jul-2026 : 18:39"
   # The mobile worker lives in test_data/mobile_workers.yaml under
@@ -499,6 +521,9 @@ OPD:
   # this one also has the MICROPLANNING flag). Org pm_automation_01.
   test_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
   microplanning_opp_id_staging: "3a4acce1-9c15-43ca-bf46-9924853ad750"
+  # Prod: OLP_Test_Opp in pm_automation_01 (Anshu, 3 Nov 2026). Like staging's, it has
+  # no work areas uploaded, so the cases that need a work area skip themselves.
+  microplanning_opp_id: "9c583306-ca43-4d74-a3bd-d0af6c6e57f3"
   # OD_37 ended opp - end date set to 2026-09-05; only shows as Ended after it
   # passes, so the test self-skips until the badge reads "Ended". Org pm_automation_01.
   ended_opp_id_staging: "4c853985-699a-4952-883f-4a91348c9cbe"
@@ -536,6 +561,13 @@ OPD:
 MICROPLANNING_REVIEW:
   opportunity_id_staging: "467a97c4-5c71-41cc-9e7c-8f7999b0b54c"
   org_slug_staging: "pm_automation_01"
+  # Prod (Anshu, 3 Nov 2026): the disposable opp, with KOTA0002-4 in
+  # REQUEST_FOR_INACCESSIBLE. Prod work areas are given by code, not numeric id.
+  opportunity_id: "8ffbfd51-f9fe-4c71-a5a9-44754ea128d4"
+  org_slug: "pm_automation_01"
+  details_work_area_slug: "KOTA0002"
+  deny_work_area_slug: "KOTA0003"
+  approve_work_area_slug: "KOTA0004"
   # The three seeded REQUEST_FOR_INACCESSIBLE work areas, one per test (deny/approve
   # permanently consume theirs; the details test only reads). Each test picks its
   # own by id so a skipped/failed test can never make two tests act on one area.
