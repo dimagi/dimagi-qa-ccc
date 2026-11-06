@@ -27,6 +27,12 @@ env:
   VISITS_AMOUNT: "200"
   MAX_TOTAL: "4"
   MAX_DAILY: "2"
+  UNIT_NAME: "LDVP Visit"
+  UNIT_AMOUNT: "100"
+onFlowComplete:
+  # Runs whether the flow passed or failed: confirms F1's payment again if the
+  # flow stopped between Revert and Confirm.
+  - runFlow: shared_restore_payment_confirm.yaml
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
@@ -122,9 +128,9 @@ env:
 - assertVisible:
     text: "Your Progress"
 # Amounts render with the currency symbol ("₹100 each"), and the payment
-# unit's name carries a date stamp ("LDVP Visit_<date : time>").
+# unit's name carries a date stamp ("<unit name>_<date : time>").
 - assertVisible:
-    text: ".*100 each"
+    text: ".*${UNIT_AMOUNT} each"
 - assertVisible:
     id: "info_card_value_text"
     text: "(?s).*\\b${EARNED}\\b.*"
@@ -158,7 +164,7 @@ env:
 # --- TC-VIS-001 / 002: the payment unit card ---
 - assertVisible:
     id: "tvDeliveryTitle"
-    text: "LDVP Visit.*"
+    text: "${UNIT_NAME}.*"
 - assertVisible:
     id: "tvApproved"
     text: "(?s)\\D*${APPROVED}\\b.*"
@@ -177,7 +183,7 @@ env:
       id: "delivery_list"
     timeout: 30000
 - assertVisible:
-    text: "LDVP Visit.* Visits"
+    text: "${UNIT_NAME}.* Visits"
 - assertVisible:
     id: "allTextView"
     text: "All"

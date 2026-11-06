@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from flows.landing_setup import FIXTURE_DAYS, create_new_fixture
+from flows.landing_setup import create_new_fixture, fixture_days
 from utils.helpers import poll_until
 
 POLL_SECONDS = 30
@@ -13,6 +13,7 @@ POLL_SECONDS = 30
 # (F6, one device session). The delivering (F1) and ended (F3) fixtures are full
 # LDVP runs: test_e2e_ldvp.py with LDVP_DAYS=300 or LDVP_DAYS=2.
 @pytest.mark.on_demand
+@pytest.mark.landing
 def test_create_landing_fixture(page, test_data, config, settings):
     """Create a landing fixture and print the ids to record under LANDING."""
     from flows.mobile_runner import env_by_flow, run_flows
@@ -25,7 +26,7 @@ def test_create_landing_fixture(page, test_data, config, settings):
     worker = env_by_flow(["ldvp_learn.yaml"], config.env)["ldvp_learn.yaml"]
     phone, worker_name = worker["PHONE_NUMBER"], worker["USERNAME"]
     opp, workers = create_new_fixture(page, config, settings, test_data, f"{worker['COUNTRY_CODE']}{phone}", phone)
-    print(f"STEP [LANDING] {kind} fixture {opp.opportunity_name!r} ({opp.opp_id}), {FIXTURE_DAYS} days")
+    print(f"STEP [LANDING] {kind} fixture {opp.opportunity_name!r} ({opp.opp_id}), {fixture_days(test_data, config)} days")
 
     if kind == "learning":
         # ldvp_learn.yaml accepts the invite and submits both learn modules; the

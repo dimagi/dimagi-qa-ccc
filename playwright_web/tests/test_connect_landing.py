@@ -3,18 +3,17 @@ from datetime import date
 
 import pytest
 
-from flows.landing_setup import create_new_fixture
 from flows.ldvp_setup import resume_ldvp_opportunity
 from flows.tasking_static import require_hybrid_opp
 
 # Device sessions on BrowserStack, about 18 minutes. It assigns and deletes a task
-# and reverts then re-confirms a payment on prod, so it is opt-in like the LDVP
-# tests (ldvp marker: a manual dispatch with include_ldvp, never PR or post-deploy).
+# and reverts then re-confirms a payment on prod, so it is opt-in: a manual
+# dispatch with include_landing, never PR or post-deploy.
 FLOWS = ["landing_list.yaml", "landing_tabs.yaml", "landing_task.yaml", "landing_visits.yaml"]
 
 
 @pytest.mark.on_demand
-@pytest.mark.ldvp
+@pytest.mark.landing
 def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     """Connect landing page (the list behind "Go to Connect menu") and the 2.65
     delivery tabs, on long-lived fixture opportunities.
@@ -22,8 +21,7 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     Plan: test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx. Nothing is
     created per run: web checks each fixture is still in its state, reads the
     values the device must show, and two device sessions compare. A fixture
-    that has moved fails here with how to rebuild it - except New (F5), which
-    is rebuilt on the spot because accepting it once is enough to spoil it.
+    that has moved fails here with how to rebuild it.
     """
     from flows.mobile_runner import env_by_flow, run_flows
 
@@ -44,10 +42,7 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     workers = ConnectWorkersPage(opp.connect_page)
 
     def open_workers(opp_id, tab=None):
-        opp.connect_page.goto(f"{opp.base_url}/a/{opp.org_slug}/opportunity/{opp_id}/workers/", timeout=90000)
-        opp.connect_page.wait_for_load_state("load", timeout=90000)
-        if tab:
-            workers.click_tab_by_name(tab)
+        workers.goto_workers_page(opp.base_url, opp.org_slug, opp_id, tab)
 
     # --- F1 Delivering: active, an approved visit and a payment; read its numbers ---
     open_workers(f1_id, "Deliver")
@@ -62,21 +57,23 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     assert approved >= 1 and transferred >= 1, (
         f"F1 {f1_name!r} has {approved} approved visits and {transferred} paid - it needs both. Rebuild it: "
         f"test_e2e_ldvp.py with LDVP_DAYS=300, then record it as LANDING.delivering_opportunity_id{suffix}")
+    # landing_tabs.yaml reverts the payment and confirms it again. A run that stopped
+    # in between leaves it unconfirmed, and the device checks would then fail.
+    confirm = workers.table_cell(worker_name, "confirm")
+    assert confirm and confirm not in ("—", "-"), (
+        f"F1 {f1_name!r}'s payment is not confirmed (Confirm reads {confirm!r}) - a previous run probably "
+        f"stopped between Revert and Confirm. Confirm it on the device as {worker_name} (F1 > Payment > "
+        f"Confirm > Yes), then re-run")
     print(f"STEP [LANDING] F1 from web: approved {approved}, pending {pending}, earned {earned}, "
           f"transferred {transferred}")
 
-    # --- F5 New: still only invited; rebuilt if someone accepted it ---
+    # --- F5 New: still only invited ---
     f5_id, f5_name = fixture("new")
     open_workers(f5_id)
     status = workers.worker_status(phone)
-    if status != "Invite pending":
-        print(f"STEP [LANDING] F5 {f5_name!r} reads {status!r}, not 'Invite pending' - building a new one")
-        full_number = f"{worker['COUNTRY_CODE']}{phone}"
-        new_opp, workers = create_new_fixture(page, config, settings, test_data, full_number, phone)
-        f5_id, f5_name = new_opp.opp_id, new_opp.opportunity_name
-        print(f"STEP [LANDING] Record the new F5: LANDING.new_opportunity_id{suffix}: \"{f5_id}\" / "
-              f"new_opportunity_name{suffix}: \"{f5_name}\"")
-        opp = new_opp
+    assert status == "Invite pending", (
+        f"F5 {f5_name!r} reads {status!r}, not 'Invite pending'. Rebuild it: test_landing_fixtures.py with "
+        f"LANDING_FIXTURE=new, then record it as LANDING.new_opportunity_id{suffix}")
 
     # --- F6 Learning: accepted, assessment never passed ---
     f6_id, f6_name = fixture("learning")
@@ -129,13 +126,15 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
         f"accepted the invite there. Offered: {assignable or 'nobody'}")
     if tasks.row_exists(task_worker):
         tasks.delete_tasks_for_workers([task_worker])
-    tasks.create_task(hybrid["task_type"], task_worker, due_in_days=7)
-    tasks.verify_success_message("Task created successfully")
-    tasks.verify_task_row(task_worker, hybrid["task_type"], status="To Do")
-    print(f"STEP [LANDING] F4 task {hybrid['task_type']!r} assigned to {task_worker!r} "
-          f"on {hybrid['opportunity_name']!r}")
 
+    # From here on the task is always deleted, whatever fails.
     try:
+        tasks.create_task(hybrid["task_type"], task_worker, due_in_days=7)
+        tasks.verify_success_message("Task created successfully")
+        tasks.verify_task_row(task_worker, hybrid["task_type"], status="To Do")
+        print(f"STEP [LANDING] F4 task {hybrid['task_type']!r} assigned to {task_worker!r} "
+              f"on {hybrid['opportunity_name']!r}")
+
         summary = run_flows(
             flows=FLOWS,
             env={
@@ -146,6 +145,7 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
                 "EARNED": str(earned), "TRANSFERRED": str(transferred),
                 "VISITS_AMOUNT": str(approved * int(ldvp["amount"])),
                 "MAX_TOTAL": ldvp["max_total"], "MAX_DAILY": ldvp["max_daily"],
+                "UNIT_NAME": ldvp["payment_unit_name"], "UNIT_AMOUNT": ldvp["amount"],
                 # landing_task.yaml's own opportunity: OPPORTUNITY above is F1 for every flow.
                 "TASK_OPPORTUNITY": hybrid["opportunity_name"], "TASK_NAME": hybrid["task_type"],
                 # landing_visits.yaml: F2 and the visits web read above.

@@ -729,6 +729,12 @@ LANDING:
   # Each is made once per environment and held in one state; the suite only reads
   # them and checks the state first. No other suite may use them.
   #
+  # Fixture length (test_landing_fixtures.py); a fixture must end inside the LDVP
+  # program, which ends on program_end_date.
+  fixture_days: 300
+  program_end_date: "2027-10-30"
+  program_end_date_staging: "2027-10-30"
+  #
   # F3 Ended: an LDVP opportunity (Worker A joined, approved visits, payment
   # confirmed) past its end date. Rebuild: test_e2e_ldvp.py with LDVP_DAYS=2, then
   # update ended_opportunity_end_date.

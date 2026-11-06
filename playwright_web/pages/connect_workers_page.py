@@ -188,6 +188,15 @@ class ConnectWorkersPage(BasePage):
     VISITS_SORT_NEWEST_FIRST = "-date_time"
     VISITS_PAGE_SIZE = 100
 
+    def goto_workers_page(self, base_url, org_slug, opp_id, tab=None):
+        """An opportunity's Workers page, optionally on one of its tabs (Learn,
+        Deliver, Payments). 90s: staging can be slow to serve it."""
+        self._step(f"Navigate to the Workers page of opp {opp_id}" + (f" ({tab} tab)" if tab else ""))
+        self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/workers/", timeout=90000)
+        self.page.wait_for_load_state("load", timeout=90000)
+        if tab:
+            self.click_tab_by_name(tab)
+
     def goto_worker_visits_page(self, base_url, org_slug, opp_id, user_id):
         """The Visits tab of the per-worker page. Needs ?user= like the Tasks tab."""
         self._step("Navigate to the worker's Visits tab")
