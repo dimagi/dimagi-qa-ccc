@@ -1,0 +1,144 @@
+# Connect 2.65 delivery screens with a pending task - TC-DSH-007 and TC-MOR-002
+# (plan: test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx, F4).
+#
+# Runs as the re-learn task worker (MAESTRO_WORKER_RELEARN_TASK) on the tasking
+# opportunity (TASKING_HYBRID). test_connect_landing.py assigns a task on web just
+# before this session and deletes it afterwards, so the opportunity is left as the
+# relearn lifecycle test expects it. Read-only on the device: the task is never
+# opened.
+#
+# Ids and strings are from commcare-android origin/commcare_2.65:
+#   delivery_task_card      fragment_connect_delivery_dashboard.xml, bound by
+#                           ConnectDeliveryDashboardFragment.bindBlockingTask
+#                           (chip connect_task_pending_chip, subtitle
+#                           connect_task_blocking_subtitle, no expiry)
+#   task_card_chip / task_card_title / task_card_subtitle / task_card_expiry
+#                           view_connect_task_card.xml; the title is the task's name
+#   tab_badge               ConnectDeliveryHomeFragment.updateMoreTabBadge - the
+#                           count of pending tasks on the More tab
+#   delivery_tasks_mandatory_group / delivery_tasks_mandatory_list
+#                           fragment_connect_delivery_more.xml
+#   connect_delivery_tasks_mandatory_title / _subtitle, connect_task_expires_on
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "3119728"
+  USERNAME: "Relearn Task User"
+  BACKUP_CODE: "123456"
+  # Not OPPORTUNITY: the suite sets that to F1 for every flow in the build.
+  TASK_OPPORTUNITY: "Demo Opportunity"
+  TASK_NAME: "Relearn Task Unit"
+  PENDING_WARNING: "Complete assigned tasks to continue delivering services"
+---
+- runFlow: shared_ldvp_signin.yaml
+# shared_ldvp_job_list.yaml's steps, inline: the runner bakes the build's env
+# (OPPORTUNITY = F1) into every file, subflows included, and a subflow's own env
+# beats what runFlow passes it - so it would look for F1 here.
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_login_button"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn: "Refresh Opportunities"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_login_button"
+          timeout: 120000
+- tapOn:
+    id: "connect_login_button"
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: "${TASK_OPPORTUNITY}"
+    direction: DOWN
+    timeout: 30000
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: "${TASK_OPPORTUNITY}"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "${TASK_OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+
+# The task was assigned on web moments ago. Sign-in fetches it with the job, but
+# if it is not on the dashboard yet, one sync brings it down.
+- extendedWaitUntil:
+    visible:
+      id: "delivery_task_card"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: "delivery_task_card"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "delivery_sync_card"
+          direction: DOWN
+          timeout: 20000
+      - tapOn:
+          id: "delivery_sync_card"
+      - extendedWaitUntil:
+          visible:
+            id: "sync_card_subtext"
+            text: "Last synced: Just Now"
+          timeout: 60000
+      - scrollUntilVisible:
+          element:
+            id: "delivery_task_card"
+          direction: UP
+          timeout: 30000
+
+# --- TC-DSH-007: the Dashboard's pending-task card ---
+- assertVisible:
+    id: "task_card_chip"
+    text: "Pending Task"
+- assertVisible:
+    id: "task_card_title"
+    text: "${TASK_NAME}"
+- assertVisible:
+    id: "task_card_subtitle"
+    text: "Complete to continue delivery."
+# The dashboard card never shows the expiry (showExpiry = false); More does.
+- assertNotVisible:
+    id: "task_card_expiry"
+# On 2.65 the pending task is shown by this card only: the Visit Progress card
+# carries no "Complete assigned tasks..." warning and is not greyed (by design).
+# The More tab carries the pending-task count.
+- assertVisible:
+    id: "tab_badge"
+    text: "[1-9]\\d*"
+
+# --- TC-MOR-002: More lists it as mandatory, with its due date ---
+- tapOn:
+    text: "More"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_tasks_mandatory_group"
+    timeout: 30000
+- assertNotVisible:
+    id: "delivery_tasks_empty"
+- assertVisible:
+    text: "Mandatory"
+- assertVisible:
+    text: "Complete tasks to continue delivery."
+- assertVisible:
+    id: "delivery_tasks_mandatory_list"
+    containsDescendants:
+      - id: "task_card_title"
+        text: "${TASK_NAME}"
+      - id: "task_card_expiry"
+        text: "Expires on .*"

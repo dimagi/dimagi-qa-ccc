@@ -1,0 +1,155 @@
+# Connect 2.65 Visits detail screen filters - TC-VIS-003 and TC-VIS-004, on the
+# manual-review opportunity (F2). Plan:
+# test_plans/Connect_Landing_And_Delivery_Tabs_Test_Plan.xlsx, sheet "Visits".
+#
+# F2 is shared with test_e2e_ldvp_manual.py, which adds four visits a run, so the
+# list is long and grows. test_connect_landing.py reads one earlier run's visits
+# from web - V1 approved, V2 rejected, V3 pending - and this checks each filter by
+# those names.
+#
+# The list shows a rejected visit's reason in its status line, not the word
+# "rejected", so being listed under a filter is what proves a visit's state.
+# Ids from commcare-android origin/commcare_2.65: fragment_connect_delivery_visits_detail.xml
+# (allFilterButton, approvedFilterButton, rejectedFilterButton, pendingFilterButton,
+# delivery_list), connect_delivery_item.xml (delivery_item_name, delivery_item_reason).
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  # Not OPPORTUNITY: the suite sets that to F1 for every flow in the build.
+  OPP_MANUAL: "LDVP Manual Review"
+  F2_V1: "LDVP-V1-000000"
+  F2_V2: "LDVP-V2-000000"
+  F2_V3: "LDVP-V3-000000"
+  REJECT_REASON: "LDVP automation - no location"
+---
+- runFlow: shared_ldvp_signin.yaml
+# shared_ldvp_job_list.yaml's steps, inline: the build's env (OPPORTUNITY = F1) is
+# baked into every file, subflows included, and would override what runFlow passes.
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_login_button"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn: "Refresh Opportunities"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_login_button"
+          timeout: 120000
+- tapOn:
+    id: "connect_login_button"
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: "${OPP_MANUAL}"
+    direction: DOWN
+    timeout: 30000
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: "${OPP_MANUAL}"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    text: "${OPP_MANUAL}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+- tapOn:
+    text: "Visits"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "imgArrowForward"
+    timeout: 30000
+- tapOn:
+    id: "imgArrowForward"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_list"
+    timeout: 30000
+
+# --- TC-VIS-003: all four filters are offered, and All lists every state ---
+- assertVisible:
+    id: "allFilterButton"
+- assertVisible:
+    id: "approvedFilterButton"
+- assertVisible:
+    id: "rejectedFilterButton"
+- assertVisible:
+    id: "pendingFilterButton"
+- tapOn:
+    id: "allFilterButton"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V1}.*"
+    direction: DOWN
+    timeout: 60000
+# The three were made a minute apart, so they sit together in the list.
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V2}.*"
+    direction: DOWN
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V3}.*"
+    direction: DOWN
+    timeout: 20000
+
+# --- TC-VIS-004: each filter lists its own visit and not the others ---
+# Absence is checked around the visit that is listed: the run's visits are
+# neighbours, so a wrongly listed one would be on screen with it.
+- tapOn:
+    id: "approvedFilterButton"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V1}.*"
+    direction: DOWN
+    timeout: 60000
+- assertNotVisible:
+    text: ".*${F2_V2}.*"
+- assertNotVisible:
+    text: ".*${F2_V3}.*"
+
+- tapOn:
+    id: "rejectedFilterButton"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V2}.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "delivery_item_reason"
+    text: ".*${REJECT_REASON}.*"
+- assertNotVisible:
+    text: ".*${F2_V1}.*"
+- assertNotVisible:
+    text: ".*${F2_V3}.*"
+
+- tapOn:
+    id: "pendingFilterButton"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${F2_V3}.*"
+    direction: DOWN
+    timeout: 60000
+- assertNotVisible:
+    text: ".*${F2_V1}.*"
+- assertNotVisible:
+    text: ".*${F2_V2}.*"

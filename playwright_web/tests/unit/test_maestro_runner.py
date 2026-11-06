@@ -159,12 +159,22 @@ def test_ldvp_flows_resolve_their_workers():
     flows = ["ldvp_uninvited.yaml", "ldvp_learn.yaml", "ldvp_assess_fail.yaml",
              "ldvp_assess_pass.yaml", "ldvp_deliver.yaml",
              "ldvp_payment.yaml", "ldvp_decline_confirm.yaml", "ldvp_rollback.yaml",
-             "ldvp_manual_review.yaml"]
+             "ldvp_manual_review.yaml", "landing_list.yaml", "landing_tabs.yaml",
+             "landing_visits.yaml"]
     env = env_by_flow(flows, "stage")
     assert set(env) == set(flows)
     invited = {env[f]["PHONE_NUMBER"] for f in flows[1:]}
     assert invited == {"7426091"}
     assert env["ldvp_uninvited.yaml"]["PHONE_NUMBER"] == "7426092"
+
+
+def test_landing_task_flow_signs_in_as_the_tasking_worker():
+    # F4 needs a worker with a task on TASKING_HYBRID, not the LDVP worker.
+    from flows.mobile_runner import env_by_flow
+
+    for env_name in ("stage", "prod"):
+        env = env_by_flow(["landing_task.yaml", "worker_relearn_task.yaml"], env_name)
+        assert env["landing_task.yaml"]["PHONE_NUMBER"] == env["worker_relearn_task.yaml"]["PHONE_NUMBER"]
 
 
 def test_ldvp_workers_differ_per_environment():

@@ -502,6 +502,18 @@ class WorkerVisitsPage(BasePage):
         rows = self.page.locator(self.VISIT_ROW_ANY).filter(has_text=entity_name)
         return [rows.nth(i).get_attribute("data-visit-status") for i in range(rows.count())]
 
+    def named_visit_statuses(self, name_pattern):
+        """(entity name, data-visit-status) for every row whose text matches
+        `name_pattern` (a compiled regex), in table order."""
+        self._await_table()
+        rows = self.page.locator(self.VISIT_ROW_ANY)
+        found = []
+        for i in range(rows.count()):
+            match = name_pattern.search(rows.nth(i).inner_text())
+            if match:
+                found.append((match.group(0), rows.nth(i).get_attribute("data-visit-status")))
+        return found
+
     def review_visit(self, entity_name, approve, text):
         """NM-approve (with justification) or NM-reject (with reason) the pending
         visit named `entity_name`, then confirm its status changed."""

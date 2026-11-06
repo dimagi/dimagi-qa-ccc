@@ -1,0 +1,57 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - run from onFlowComplete in landing_tabs.yaml, so it runs
+# whether the flow passed or failed.
+#
+# landing_tabs.yaml reverts F1's payment and confirms it again. If the flow
+# stopped in between, the payment is left unconfirmed on prod and the next run's
+# web pre-check fails. This confirms it again when the flow left the app on F1's
+# delivery screens.
+#
+# Every step is guarded: when the payment is already confirmed (the normal case),
+# or the app is somewhere else, this does nothing. It must never turn a passing
+# run into a failing one; if it cannot restore, the web pre-check says how.
+- runFlow:
+    when:
+      visible:
+        id: "connect_delivery_home_tabs"
+    commands:
+      - tapOn:
+          text: "Payment"
+          childOf:
+            id: "connect_delivery_home_tabs"
+          optional: true
+      # Let the payment list load before deciding there is nothing to confirm.
+      - extendedWaitUntil:
+          visible:
+            id: "tv_payment_status"
+          timeout: 30000
+          optional: true
+      - runFlow:
+          when:
+            visible:
+              id: "confirm"
+          commands:
+            - tapOn:
+                id: "confirm"
+            # Yes only on the confirm dialog, never on another one.
+            - extendedWaitUntil:
+                visible:
+                  id: "tv_payment_confirmation_title"
+                  text: "Confirm Transferred Payment"
+                timeout: 15000
+                optional: true
+            - runFlow:
+                when:
+                  visible:
+                    id: "tv_payment_confirmation_title"
+                    text: "Confirm Transferred Payment"
+                commands:
+                  - tapOn:
+                      id: "ri_yes"
+            - extendedWaitUntil:
+                visible:
+                  id: "tv_payment_status"
+                  text: "Received"
+                timeout: 60000
+                optional: true

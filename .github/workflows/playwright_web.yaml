@@ -57,6 +57,14 @@ on:
         required: false
         default: false
         type: boolean
+      # Off by default. The Connect landing suite (marker landing) assigns and
+      # deletes a task on the shared tasking opportunity and reverts then
+      # re-confirms a prod payment. Ignored when source is post-deploy.
+      include_landing:
+        description: "Also run the Connect landing / 2.65 delivery tabs suite; ignored for post-deploy"
+        required: false
+        default: false
+        type: boolean
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -136,9 +144,9 @@ jobs:
       # consumes_seed_data tests (they permanently use up seeded prod fixtures) - PR,
       # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
       # include_seed_consuming=true (and source other than post-deploy) runs them.
-      # ldvp tests are likewise excluded unless a non-post-deploy manual dispatch
-      # sets include_ldvp.
-      PYTEST_MARKERS: ${{ format('({0}){1}', github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data'), (github.event_name != 'workflow_dispatch' || inputs.include_ldvp != true || inputs.source == 'post-deploy') && ' and not ldvp' || '') }}
+      # ldvp and landing tests are likewise excluded unless a non-post-deploy
+      # manual dispatch sets include_ldvp / include_landing.
+      PYTEST_MARKERS: ${{ format('({0}){1}{2}', github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data'), (github.event_name != 'workflow_dispatch' || inputs.include_ldvp != true || inputs.source == 'post-deploy') && ' and not ldvp' || '', (github.event_name != 'workflow_dispatch' || inputs.include_landing != true || inputs.source == 'post-deploy') && ' and not landing' || '') }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
