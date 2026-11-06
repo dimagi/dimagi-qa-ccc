@@ -1,0 +1,39 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - invoked via runFlow, never listed in TEST_FLOWS.
+#
+# Skip the optional "Add your email (optional)" step that 2.64+ shows after the
+# backup code is accepted. Call it straight after tapping
+# connect_backup_code_button.
+#
+# A single optional tap here races the server: it runs right after CONTINUE,
+# looks for ~7s, gives up, and the email step can land after it and sit over
+# every later step. So wait for the screen the code submission actually leads
+# to, then skip the email step only if that is the one that came.
+#
+# After CONTINUE the app goes to exactly one of these (PersonalIdBackupCodeFragment):
+#   - the email step: the account has no email and email_otp_verification is on
+#   - a message dialog (connect_message_button): "Account Recovered" for a
+#     recovery that needs no email step, or the wrong-code error
+#   - photo capture (save_photo_button): a new registration with no email step
+# The message is a dialog drawn over the backup-code screen, which stays up
+# underneath it - so waiting for backup_code_view to disappear would hang for
+# every account that goes straight to "Account Recovered".
+#
+# Skipping the email step on a recovery leads to the same "Account Recovered"
+# dialog, so callers handle that dialog after this sub-flow either way.
+- extendedWaitUntil:
+    visible:
+      id: "personalid_email_skip_button|connect_message_button|save_photo_button"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "personalid_email_skip_button"
+    commands:
+      - tapOn:
+          id: "personalid_email_skip_button"
+      # The confirm dialog's buttons are Material buttons, which upper-case
+      # their labels: YES on 2.64, SKIP once 2.65 renames it.
+      - tapOn:
+          text: "YES|SKIP"
