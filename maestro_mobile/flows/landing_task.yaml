@@ -33,7 +33,7 @@ env:
 - runFlow: shared_ldvp_signin.yaml
 # shared_ldvp_job_list.yaml's steps, inline: the runner bakes the build's env
 # (OPPORTUNITY = F1) into every file, subflows included, and a subflow's own env
-# beats what runFlow passes it - so it would look for F1 here (staging 2026-11-06).
+# beats what runFlow passes it - so it would look for F1 here.
 - runFlow:
     when:
       notVisible:
@@ -115,7 +115,7 @@ env:
     id: "task_card_expiry"
 # Not asserted: the Visit Progress card's "Complete assigned tasks to continue
 # delivering services" warning. With this task pending, the 2.65 build showed no
-# warning there and the card was not greyed (staging 2026-11-06) - reported as a
+# warning there and the card was not greyed - reported as a
 # finding, not a step that fails the run.
 # The More tab carries the pending-task count.
 - assertVisible:

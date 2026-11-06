@@ -53,7 +53,7 @@ on:
       # copies and payments, or review visits, on every run, and take an hour or
       # more on staging. Ignored when source is post-deploy.
       include_ldvp:
-        description: "Also run the LDVP end-to-end tests (CCCT-2670); ignored for post-deploy"
+        description: "Also run the LDVP end-to-end and Connect landing tests; ignored for post-deploy"
         required: false
         default: false
         type: boolean

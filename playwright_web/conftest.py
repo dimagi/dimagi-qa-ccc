@@ -11,6 +11,9 @@ def pytest_ignore_collect(collection_path):
     (so it never shows as a per-run skip) unless explicitly run with SETUP_TASKING=1."""
     if collection_path.name == "test_setup_tasking_opportunity.py":
         return os.getenv("SETUP_TASKING") != "1"
+    # Same for the landing fixture builder: only with LANDING_FIXTURE set.
+    if collection_path.name == "test_landing_fixtures.py":
+        return not os.getenv("LANDING_FIXTURE")
 
 
 def pytest_addoption(parser):

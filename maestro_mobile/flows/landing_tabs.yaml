@@ -122,7 +122,7 @@ env:
 - assertVisible:
     text: "Your Progress"
 # Amounts render with the currency symbol ("₹100 each"), and the payment
-# unit's name carries a date stamp ("LDVP Visit_05-Nov-2026 : 13:55").
+# unit's name carries a date stamp ("LDVP Visit_<date : time>").
 - assertVisible:
     text: ".*100 each"
 - assertVisible:

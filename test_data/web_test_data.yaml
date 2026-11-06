@@ -729,27 +729,26 @@ LANDING:
   # Each is made once per environment and held in one state; the suite only reads
   # them and checks the state first. No other suite may use them.
   #
-  # F3 Ended: an LDVP opportunity (Worker A joined, 2 approved visits, payment
-  # confirmed, rollback done) that ends 2026-11-06. Made by test_e2e_ldvp.py with
-  # LDVP_DAYS=2 on 2026-11-04; rebuild the same way if it is ever deleted.
+  # F3 Ended: an LDVP opportunity (Worker A joined, approved visits, payment
+  # confirmed) past its end date. Rebuild: test_e2e_ldvp.py with LDVP_DAYS=2, then
+  # update ended_opportunity_end_date.
   ended_opportunity_id: "440f0769-2aea-41e5-a6a4-724757ec0c39"
   ended_opportunity_name: "Demo Opportunity_04-Nov-2026 : 19:11"
   #
-  # F5 New: Worker A invited 2026-11-05 and never accepted, so its card is always
+  # F5 New: Worker A invited and never accepted, so its card is always
   # "New". Nothing may tap Start on it. Rebuild: test_landing_fixtures.py with
   # LANDING_FIXTURE=new (the suite does this itself when it finds it accepted).
   new_opportunity_id: "e60afe07-6335-4c0a-9b1e-0066377b4b96"
   new_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:41"
   #
-  # F6 Learning: Worker A accepted and did both learn modules 2026-11-05, never
+  # F6 Learning: Worker A accepted and did both learn modules, never
   # the assessment, so the job stays in learning. Nothing may take the assessment
   # on it. Rebuild: test_landing_fixtures.py with LANDING_FIXTURE=learning.
   learning_opportunity_id: "3007fe0d-46a6-4b07-9326-4009fe6a377c"
   learning_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:44"
   #
-  # F1 Delivering: a full LDVP run 2026-11-05 with LDVP_DAYS=300 - Worker A
-  # passed, 2 approved visits + 1 over the limit, payment confirmed, rollback
-  # done. Active until about 2027-09-01. The suite reads expected values from
+  # F1 Delivering: a full LDVP run with LDVP_DAYS=300 - Worker A passed,
+  # approved visits, payment confirmed. The suite reads expected values from
   # web, so visits added later do not break it.
   delivering_opportunity_id: "2211ea82-4b4d-47fb-a513-154d481769c5"
   delivering_opportunity_name: "Demo Opportunity_05-Nov-2026 : 13:54"

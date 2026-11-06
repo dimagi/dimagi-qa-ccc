@@ -60,7 +60,7 @@ env:
 - tapOn:
     text: "${OPP_NEW}"
 # The prod 2.65 build titles this screen "Connect", not "View Opportunity" as
-# the commcare_2.65 branch source does (prod 2026-11-05).
+# the commcare_2.65 branch source does.
 - extendedWaitUntil:
     visible:
       text: "New Opportunity"
@@ -96,7 +96,7 @@ env:
 - tapOn:
     text: "${OPP_LEARNING}"
 # Titled "Connect" on the prod build too, not "Learning Progress": the screen
-# is told by its "Learn" chip and the modules card (prod 2026-11-05).
+# is told by its "Learn" chip and the modules card.
 - extendedWaitUntil:
     visible:
       text: "Modules Completed"
@@ -127,7 +127,7 @@ env:
 - tapOn:
     id: "action_bell"
 # Wait for the screen itself: a Back pressed while it is still opening is lost
-# and leaves the run on Notifications (prod 2026-11-05).
+# and leaves the run on Notifications.
 - extendedWaitUntil:
     visible:
       text: "Notifications"

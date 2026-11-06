@@ -7,11 +7,14 @@ from flows.landing_setup import create_new_fixture
 from flows.ldvp_setup import resume_ldvp_opportunity
 from flows.tasking_static import require_hybrid_opp
 
-# Drives a real device via BrowserStack Maestro builds. Not in the per-PR gate.
+# Device sessions on BrowserStack, about 18 minutes. It assigns and deletes a task
+# and reverts then re-confirms a payment on prod, so it is opt-in like the LDVP
+# tests (ldvp marker: a manual dispatch with include_ldvp, never PR or post-deploy).
 FLOWS = ["landing_list.yaml", "landing_tabs.yaml", "landing_task.yaml", "landing_visits.yaml"]
 
 
 @pytest.mark.on_demand
+@pytest.mark.ldvp
 def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     """Connect landing page (the list behind "Go to Connect menu") and the 2.65
     delivery tabs, on long-lived fixture opportunities.
@@ -50,7 +53,7 @@ def test_connect_landing_and_delivery_tabs(page, test_data, config, settings):
     open_workers(f1_id, "Deliver")
     approved = _count(workers.table_cell(worker_name, "approved"))
     # An auto-verify opportunity's Deliver tab has a Status column instead of
-    # Pending: nothing there waits for review (prod 2026-11-05).
+    # Pending: nothing there waits for review.
     pending = (_count(workers.table_cell(worker_name, "pending"))
                if "pending" in [c.lower() for c in workers.present_deliver_count_columns()] else 0)
     open_workers(f1_id, "Payments")
