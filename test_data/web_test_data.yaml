@@ -164,9 +164,10 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   # PROD caps (raised by Anshu; confirmation: TODO link the Slack thread/date here): opportunity
   # total 24000, payment unit 200/day, 10000 per user total (~1,700 opt-in runs on the tightest
   # cap); each opt-in run's 2 PM Agrees accrue a real prod payment.
-  # STAGING caps: the P1 payment unit's daily cap was NOT raised and may be only 15/day (TODO:
-  # Anshu to confirm the staging numbers or raise them). A single top-up can need up to 10
-  # visits, so two opt-in runs in one day on staging could hit it: run staging at most once a day.
+  # STAGING caps (read from the staging opp's payment unit table, 2026-11-06): Max daily 200,
+  # Total Deliveries 10000, so staging has the same per-day and total headroom as prod and one
+  # top-up (up to 10 visits) fits easily. Not yet confirmed: the staging opportunity budget
+  # (TODO: Anshu to confirm the staging numbers).
   # The suite only runs these via include_seed_consuming, and a run never seeds when enough
   # pending visits already exist. Ask Anshu to clean the opp up before a cap is near.
   rejected_status: "rejected"
