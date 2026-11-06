@@ -44,3 +44,13 @@ def new_run(now=None):
 def expected_earned(approved, unit_amount):
     """What the worker should have earned: only approved visits are paid."""
     return approved * unit_amount
+
+
+def assert_percent(text, expected, column):
+    """Connect renders "100.0%", so compare the number. A dash (nothing recorded
+    yet) fails as an assertion, which the web waits retry."""
+    try:
+        value = float(text.strip().rstrip("%"))
+    except ValueError:
+        value = None
+    assert value == expected, f"{column} reads {text!r}, expected {expected}%"

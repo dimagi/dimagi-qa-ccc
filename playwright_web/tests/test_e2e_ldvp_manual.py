@@ -2,7 +2,7 @@ import pytest
 from playwright.sync_api import Error as PlaywrightError
 
 from flows.ldvp_setup import resume_ldvp_opportunity
-from flows.ldvp_values import new_run
+from flows.ldvp_values import assert_percent, new_run
 from flows.olp_setup import PM_ORG
 from pages.connect_home_page import ConnectHomePage
 from pages.connect_opportunities_page import ConnectOpportunitiesPage
@@ -101,7 +101,7 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
         wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
         # The assessment session needs both modules counted, which staging can
         # take hours to do.
-        wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
+        wait_on_web(lambda: assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
                                             "Modules completed"), tab="Learn")
         run_device_flow(["ldvp_assess_fail.yaml"], FAIL_SCORE=ldvp["assessment_fail_score"])
         wait_on_web(lambda: workers.verify_assessment_status(worker_name, "Failed"), tab="Learn")
@@ -163,15 +163,6 @@ def test_e2e_ldvp_manual_review(page, test_data, config, settings):
 def _assert_statuses(visits, name, expected):
     statuses = sorted(visits.visit_statuses(name))
     assert statuses == sorted(expected), f"Visit {name!r} rows have statuses {statuses}, expected {expected}"
-
-
-def _assert_percent(text, expected, column):
-    # Connect renders "100.0%"; a dash means nothing recorded yet.
-    try:
-        value = float(text.strip().rstrip("%"))
-    except ValueError:
-        value = None
-    assert value == expected, f"{column} reads {text!r}, expected {expected}%"
 
 
 def _amount(text):

@@ -5,7 +5,7 @@ import pytest
 from playwright.sync_api import Error as PlaywrightError
 
 from flows.ldvp_setup import create_ldvp_opportunity, invite_and_wait, resume_ldvp_opportunity
-from flows.ldvp_values import expected_earned, new_run
+from flows.ldvp_values import assert_percent, expected_earned, new_run
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import poll_until
@@ -135,7 +135,7 @@ def test_e2e_ldvp(page, test_data, config, settings):
             # processing the learn modules, and the assessment session needs them
             # counted (2026-11-03 it started too early and saw fewer than 2 of 2).
             wait_on_web(lambda: workers.verify_worker_status(phone, "Invite accepted"))
-            wait_on_web(lambda: _assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
+            wait_on_web(lambda: assert_percent(workers.table_cell(worker_name, "modules completed"), 100,
                                                 "Modules completed"), tab="Learn")
 
         if resume_at != "pass":
@@ -232,17 +232,6 @@ def test_e2e_ldvp(page, test_data, config, settings):
 def _assert_statuses(visits, name, expected):
     statuses = sorted(visits.visit_statuses(name))
     assert statuses == sorted(expected), f"Visit {name!r} rows have statuses {statuses}, expected {expected}"
-
-
-def _assert_percent(text, expected, column):
-    # Connect renders "100.0%" on prod, so compare the number, not the string.
-    # A dash before Connect has recorded anything is "not yet", so it must fail as
-    # an assertion that the web wait retries, not as a ValueError that ends it.
-    try:
-        value = float(text.strip().rstrip("%"))
-    except ValueError:
-        value = None
-    assert value == expected, f"{column} reads {text!r}, expected {expected}%"
 
 
 def _assert_amount(text, expected, column):
