@@ -59,8 +59,7 @@ class LoginPage(BasePage):
         form being absent, rather than inferred from something having gone
         wrong. Anything else raises with the URL it actually landed on.
         """
-        # 90s, not the default 30s: HQ prod took 17-30s to serve this page on
-        # 2026-11-02 and three runs in a row died here before doing anything.
+        # 90s: HQ can take close to the default 30s to serve the login page.
         self.page.goto(config.get("cchq_url"), timeout=90000)
         self.page.wait_for_load_state("load", timeout=90000)
 

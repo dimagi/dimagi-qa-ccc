@@ -81,7 +81,7 @@ env:
       - tapOn:
           id: "certificate_header"
       # On prod the first tap was recorded but the section stayed collapsed - the view
-      # was still settling after the sync (2026-10-29) - so tap the chevron as well if
+      # was still settling after the sync - so tap the chevron as well if
       # the certificate has not opened.
       - extendedWaitUntil:
           visible:

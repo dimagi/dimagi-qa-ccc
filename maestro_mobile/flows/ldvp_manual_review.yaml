@@ -44,7 +44,7 @@ env:
     timeout: 30000
 # The list marks a visit by icon only - a red cross for rejected, a green tick
 # for approved - and shows a rejected visit's reason in its status line, never
-# the word "rejected" (prod 2026-11-03). Its filter chips (All / Approved /
+# the word "rejected". Its filter chips (All / Approved /
 # Rejected / Pending) are what tell the states apart: being listed under
 # Rejected is the check. Earlier runs left visits of both kinds on this reused
 # opportunity, so each check is by this run's visit name. (The reason line is

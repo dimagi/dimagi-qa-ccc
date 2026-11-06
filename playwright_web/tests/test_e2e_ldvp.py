@@ -15,9 +15,9 @@ POLL_SECONDS = 30
 
 # Device sessions on BrowserStack, about an hour a run. Each run creates an
 # opportunity, app copies, payments and a rollback, so it is opt-in only: a manual
-# dispatch with include_seed_consuming, never PR or post-deploy.
+# dispatch with include_ldvp, never PR or post-deploy.
 @pytest.mark.on_demand
-@pytest.mark.consumes_seed_data
+@pytest.mark.ldvp
 def test_e2e_ldvp(page, test_data, config, settings):
     """CCCT-2670 - Learn, Deliver, Verify, Payment, end to end.
 
@@ -140,6 +140,9 @@ def test_e2e_ldvp(page, test_data, config, settings):
             SUBMIT_DUPLICATE="false",
             **run.device_env(),
         )
+        delivered_on = date.today()
+    else:
+        delivered_on = None
 
     payments_url = workers_url + "payments/"
 
@@ -177,9 +180,14 @@ def test_e2e_ldvp(page, test_data, config, settings):
         workers.wait_for_last_paid_populated(worker_name)
 
     # --- 8. DEVICE: statuses, earned, transferred; confirm the payment (Yes) ---
+    # TC-DSH-006 only when the visits were made today in this run.
+    daily_check = delivered_on == date.today()
+    if not daily_check:
+        print("STEP [LDVP] Daily-limit message not checked: the visits were not made today in this run")
     # The payment notification reaches one sign-in only, so a resumed session skips it.
     run_device_flow(["ldvp_payment.yaml"], APPROVED=approved, EARNED=want, TRANSFERRED=want,
-                    CHECK_PAYMENT_PUSH="false" if resume_at == "payment" else "true")
+                    CHECK_PAYMENT_PUSH="false" if resume_at == "payment" else "true",
+                    DAILY_LIMIT_CHECK="true" if daily_check else "false")
 
     # --- 9. WEB: the confirmation shows (TC-PAY-002); a second payment ---
     reload_payments()

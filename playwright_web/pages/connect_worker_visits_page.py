@@ -10,7 +10,7 @@ rather than a hard-coded entity name.
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader
+from utils.helpers import LocatorLoader, poll_until
 
 locators = LocatorLoader()
 
@@ -475,19 +475,22 @@ class WorkerVisitsPage(BasePage):
             f"Visit {entity_name!r} offers no enabled Agree - is this login the Program Manager?")
         self.click(self.VISIT_PM_AGREE)
         self.page.wait_for_load_state("load")
-        # Same as review_visit: the table does not re-render by itself.
-        for _ in range(6):
-            self.page.wait_for_timeout(3000)
-            self.page.reload(wait_until="load")
-            self._await_table()
+
+        # The page does not re-render after the agree, so reload until Agree is disabled.
+        def agree_disabled():
             self._open_row_by_id(visit_id)
             self.page.locator(self.VISIT_DETAILS_CONTAINER).filter(has_text=entity_name).first.wait_for(
                 state="visible", timeout=15000)
-            if not self.page.locator(self.VISIT_PM_AGREE).first.is_enabled():
-                break
-        assert not self.page.locator(self.VISIT_PM_AGREE).first.is_enabled(), (
-            f"Agree still enabled for {entity_name!r} after agreeing")
+            assert not self.page.locator(self.VISIT_PM_AGREE).first.is_enabled(), (
+                f"Agree still enabled for {entity_name!r} after agreeing")
+
+        def reload():
+            self.page.reload(wait_until="load")
+            self._await_table()
+
+        poll_until(agree_disabled, timeout_seconds=20, poll_seconds=3, refresh=reload)
         self._step(f"PM agreed visit {entity_name!r} ({visit_id})")
+
     # The LDVP test submits its own visits with run-unique entity names, so it
     # reviews exactly those rather than "the first reviewable row". A duplicate
     # carries its original's name, which is why lookups return every match and
@@ -512,8 +515,8 @@ class WorkerVisitsPage(BasePage):
         visit_id = pending[0]
         self._open_row_by_id(visit_id)
         # The details panel (and its action bar) is already showing whichever
-        # visit was open before, so wait until it is this one's: on prod
-        # 2026-11-02 a reject meant for V2 landed on V1, still on screen.
+        # visit was open before, so wait until it is this one's, or a review can
+        # land on the previous visit.
         self.page.locator(self.VISIT_DETAILS_CONTAINER).filter(has_text=entity_name).first.wait_for(
             state="visible", timeout=15000)
         self.page.wait_for_load_state("networkidle")

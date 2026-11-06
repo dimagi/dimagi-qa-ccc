@@ -20,7 +20,7 @@
 # staging. So each session submits and ends, and test_e2e_ldvp.py polls Connect
 # on web until it has processed the submission before starting the next one.
 # A device-side wait cannot do that: re-syncing inside one session gave up after
-# minutes while staging took far longer (2026-10-29).
+# minutes while staging took far longer.
 appId: org.commcare.dalvik
 env:
   COUNTRY_CODE: "+7426"

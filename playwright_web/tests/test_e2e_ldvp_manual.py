@@ -15,9 +15,9 @@ POLL_SECONDS = 30
 
 # Device sessions on BrowserStack. Reviews visits on the shared manual-review
 # opportunity and accrues a payment each run, so it is opt-in only (manual
-# dispatch with include_seed_consuming).
+# dispatch with include_ldvp).
 @pytest.mark.on_demand
-@pytest.mark.consumes_seed_data
+@pytest.mark.ldvp
 def test_e2e_ldvp_manual_review(page, test_data, config, settings):
     """CCCT-2670 - manual approve/reject, on the reusable manual-review opportunity.
 

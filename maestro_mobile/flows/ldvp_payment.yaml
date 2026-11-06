@@ -23,6 +23,9 @@ env:
   TRANSFERRED: "200"
   # "false" only when a run resumes at this session: see TC-PAY-001 below.
   CHECK_PAYMENT_PUSH: "true"
+  # "true" only when this session runs on the day of the deliver session: the
+  # daily-limit message counts today's visits.
+  DAILY_LIMIT_CHECK: "false"
 ---
 - runFlow: shared_ldvp_signin.yaml
 - runFlow: shared_ldvp_job_list.yaml
@@ -32,7 +35,7 @@ env:
 # so the push went out before this fresh install signed in and never reaches its
 # shade. The server hands a not-yet-delivered notification to the next sign-in's
 # history, and only once: a re-run of this session finds the list empty
-# (prod 2026-11-02), so a resumed run skips the check.
+# so a resumed run skips the check.
 - runFlow:
     when:
       true: ${CHECK_PAYMENT_PUSH == 'true'}
@@ -42,7 +45,7 @@ env:
       - extendedWaitUntil:
           visible:
             # The history list shows the push's body only, not its "Payment
-            # received" title (seen on prod 2026-11-02).
+            # received" title.
             text: "(?s).*(A payment is now available|Payment received).*"
           timeout: 120000
       - back
@@ -61,6 +64,19 @@ env:
     visible:
       id: "connect_delivery_home_tabs"
     timeout: 30000
+
+# --- TC-DSH-006: the daily limit was reached today ---
+# connect_progress_warning_daily_max_reached_single. The auto chain makes 3 visits
+# against a total of 4, so the "maximum reached" message does not outrank it.
+- runFlow:
+    when:
+      true: ${DAILY_LIMIT_CHECK == 'true'}
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "progress_card_info_text"
+            text: "You have reached the maximum number of visits for today.*"
+          timeout: 30000
 
 # --- TC-VER-001: the approved visits ---
 # V1 and V2 were auto-approved; had the over-limit V3 been counted, the

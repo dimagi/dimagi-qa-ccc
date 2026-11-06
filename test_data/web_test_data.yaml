@@ -184,19 +184,14 @@ WORKER_DELIVER_FILTERS:
   yes_no_options: ["---------", "Yes", "No"]
 
 # LDVP end to end (CCCT-2670, playwright_web/tests/test_e2e_ldvp.py). A fresh
-# opportunity per run under a fresh program, the same way the OLP regression test
-# builds one, because a worker learns and takes the assessment once per
+# opportunity per run, because a worker learns and takes the assessment once per
 # opportunity. The payment unit limits are low on purpose: max_daily 2 makes the
 # third visit of the day Over Limit (TC-DLV-005) within one device session.
 # Overrides OLP_2 for the payment unit; OLP_1 / OLP_3 are used as they are.
 LDVP:
   # A program with the Network Manager handshake already complete; each run adds
-  # its own fresh opportunity to it. Both were made by the first setup run that
-  # got through the handshake on that environment (2026-10-29); if one is ever
-  # deleted or ends, remove the key and the next run creates and prints a new one.
-  # Both start 2026-10-31 (made before LDVP programs started on the day they are
-  # created), so an LDVP opportunity - which starts the day it is made - cannot be
-  # created in them before then.
+  # its own opportunity to it. If one is deleted or ends, remove the key and the
+  # next run creates and prints a new one.
   program_name: "Demo Program_29-Oct-2026 : 16:14"
   program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
   # Each run's opportunity is "<opportunity_name>_<date : time>".
@@ -215,24 +210,19 @@ LDVP:
   assessment_pass_score: "90"
   reject_reason: "LDVP automation - no location"
   # How long web waits for Connect to process a device submission (learn module,
-  # assessment, visit) before the next device session. Instant on prod; staging
-  # can take a long while - a learn module went uncounted for 50+ minutes on
-  # 2026-10-29.
+  # assessment, visit) before the next device session. Instant on prod, slow on
+  # staging; the workflow's job timeout caps a whole run.
   sync_timeout_seconds: 300
-  sync_timeout_seconds_staging: 5400
+  sync_timeout_seconds_staging: 1800
   second_payment: "50"
-  # Reusable manual-review opportunity for approve/reject (prod), made 2026-11-02
-  # from copies of the master apps in its own program, running to 2029-10-27.
-  # Payment unit: 100 per visit, 20 a day (raised from 5 on 2026-11-02 so it can
-  # run more than once a day), 100 in total. Automatic visit
-  # verification switched off by the devs (2026-11-02). The LDVP worker is
-  # invited to it; it learns there once and is reused from then on.
+  # Reusable manual-review opportunity for approve/reject (prod), from copies of
+  # the master apps in its own program, running about three years. Payment unit:
+  # 100 per visit, 20 a day, 100 in total. Automatic visit verification is
+  # switched off (needs the devs). The LDVP worker learns there once and is reused.
   manual_opportunity_id: "1cc912d6-1043-417d-be1e-3809020c6142"
   manual_opportunity_name: "LDVP Manual Review_02-Nov-2026 : 13:14"
   manual_program_name: "LDVP Manual Program_02-Nov-2026 : 13:12"
-  # The staging twin, made 2026-11-03 the same way (about 3 years). Automatic visit
-  # verification has to be switched off by the devs before the manual test can
-  # use it.
+  # The staging twin, made the same way.
   manual_opportunity_id_staging: "69eec75f-36d2-4d12-91f0-961326b98163"
   manual_opportunity_name_staging: "LDVP Manual Review_03-Nov-2026 : 18:47"
   manual_program_name_staging: "LDVP Manual Program_03-Nov-2026 : 18:44"

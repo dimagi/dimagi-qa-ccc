@@ -4,7 +4,7 @@ from flows.ldvp_values import assert_percent
 
 
 def test_percent_accepts_connects_decimal_form():
-    # Prod's Learn tab shows "100.0%" (2026-10-29), not "100%".
+    # Connect's Learn tab shows "100.0%", not "100%".
     assert_percent("100.0%", 100, "Modules completed")
     assert_percent(" 100% ", 100, "Modules completed")
 

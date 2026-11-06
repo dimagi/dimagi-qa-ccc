@@ -407,8 +407,7 @@ MAESTRO_RECOVERY_FIXTURE:
 # SEEDING: the invited worker must be registered BEFORE it is ever invited -
 # Connect resolves an invite only when it is sent, so an invite to a number
 # PersonalID does not know stays "User not found" even after the number signs up.
-# Run seed_ldvp_worker.yaml once per environment on a 2.65 build (staging's was
-# registered on 2026-10-29). The uninvited worker needs no seeding: it is never
+# Run seed_ldvp_worker.yaml once per environment on a 2.65 build. The uninvited worker needs no seeding: it is never
 # invited, so its first ldvp_uninvited run registers it in-flow
 # (shared_ldvp_signin.yaml takes the Confirm-code branch).
 #

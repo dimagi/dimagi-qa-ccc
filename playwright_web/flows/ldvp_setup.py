@@ -73,13 +73,20 @@ def create_ldvp_opportunity(page, config, settings, test_data):
         opportunities.opp_full_name = None
         try:
             ConnectProgramsPage(connect_page).open_create_opportunity_form(program_name, olp1_data["network_manager"])
-            opportunity_name = opportunities.create_opportunity_in_connect_page(
+            # fill_opportunity_form directly, not create_opportunity_in_connect_page:
+            # that one re-submits once on its own, with no duplicate check.
+            connect_page.wait_for_timeout(5000)
+            opportunity_name = opportunities.fill_opportunity_form(
                 opp_data, learn_app_name, delivery_app_name, env, network_manager=olp1_data["network_manager_slug"]
             )
+            connect_page.wait_for_timeout(3000)
             break
         except PlaywrightTimeoutError:
             # Staging HQ is sometimes slow to fill the app dropdowns. The form
-            # submits inside this call, so retry only if nothing was created.
+            # submits inside the call, so retry only if nothing was created - after
+            # giving an in-flight submit time to land.
+            if opportunities.opp_full_name:
+                connect_page.wait_for_timeout(15000)
             if opportunities.opp_full_name and _opportunity_exists(connect_page, org_url, opportunities.opp_full_name):
                 raise AssertionError(
                     f"Opportunity {opportunities.opp_full_name!r} was created but its setup timed out - finish "

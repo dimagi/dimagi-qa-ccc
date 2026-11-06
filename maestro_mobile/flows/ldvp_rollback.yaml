@@ -26,9 +26,8 @@ env:
 
 # --- TC-PAY-004: the rollback notification in the app's notification history ---
 # Connect's payment_delete sends "Payment updated" / "There has been an
-# adjustment to your earnings for <opportunity>." - it never says rollback. On
-# prod 2026-11-02 a fresh sign-in found the list empty after 2 minutes of plain
-# waiting, so tap the screen's cloud sync (notification_cloud_sync, which
+# adjustment to your earnings for <opportunity>." - it never says rollback. A
+# fresh sign-in can find the list empty for minutes, so tap the screen's cloud sync (notification_cloud_sync, which
 # reloads from the server) while waiting.
 - tapOn:
     id: "action_bell"
