@@ -156,7 +156,7 @@ WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34:
   seed_location: "Hyderabad"
   # Pending visits to keep available for the reject/approve tests, plus how many extra to
   # NM-approve up front so VV_33/34/35 (which need NM-approved, PM-review-pending visits)
-  # have items to act on. Each run seeds only the shortfall (P1 allows 200 visits/day).
+  # have items to act on. Each run seeds only the shortfall (daily/total caps per env: see the GROWTH note below).
   seed_pending_target: 6
   seed_pm_review_items: 4
   # GROWTH: every opt-in run submits up to ~10 visits (pool top-up: seed_pending_target +

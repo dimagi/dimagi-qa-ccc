@@ -132,6 +132,6 @@ class WebAppsPage(BasePage):
         except PlaywrightTimeoutError:
             # No confirmation: the submit may not have reached HQ. Warn so a dropped final visit
             # is visible in the report here, not only later as a pending-count failure.
-            print(f"WARNING [WebAppsPage] No submit confirmation within 20s at {self.page.url}; "
-                  "the visit may not have been sent")
+            self._step(f"WARNING: no submit confirmation within 20s at {self.page.url}; "
+                       "the visit may not have been sent")
             self.page.wait_for_load_state("networkidle")
