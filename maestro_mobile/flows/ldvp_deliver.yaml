@@ -1,0 +1,356 @@
+# LDVP deliver session (CCCT-2670), after web saw the assessment Passed. Starts
+# on the learn-complete view - TC-LRN-005 device half (certificate) and TC-DLV-001
+# (delivery details) - claims the job, then downloads the deliver app and
+# submits its visits - TC-DLV-002 (V1, with location), TC-DLV-003 (V2, no location),
+# TC-DLV-004 (V1 again, identical: the duplicate - manual-review opportunity
+# only, SUBMIT_DUPLICATE) and TC-DLV-005 (V3, over the daily limit). Web reads
+# every verdict afterwards; this session only has to get them submitted in order.
+#
+# The visit block is the one worker_blocked_visit.yaml uses (Start -> Case List
+# -> Registration Form -> name -> next -> id -> walk past the rest), repeated
+# inline per visit because runFlow with per-call env is unproven on Maestro
+# 1.39.13 and every experiment costs a full device run. Keep the four in step by
+# hand. A visit "with location" taps RECORD LOCATION on the GPS question, as the
+# Appium DeliveryAppPage.submit_form(record_loc=True) does; setLocation below
+# gives the device a fix to record.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  PASS_SCORE: "90"
+  MAX_DAILY: "2"
+  MAX_TOTAL: "4"
+  VISIT_MODULE: "Case List"
+  VISIT_FORM: "[Rr]egistration [Ff]orm"
+  # Injected per run by flows/ldvp_values.py; defaults only matter by hand.
+  VISIT_NAME_V1: "LDVP-V1-000000"
+  VISIT_ID_V1: "0000001"
+  VISIT_NAME_V2: "LDVP-V2-000000"
+  VISIT_ID_V2: "0000002"
+  VISIT_NAME_V1_DUP: "LDVP-V1-000000"
+  VISIT_ID_V1_DUP: "0000001"
+  VISIT_NAME_V3: "LDVP-V3-000000"
+  VISIT_ID_V3: "0000003"
+  # "true" on the manual-review opportunity only - see the duplicate block.
+  SUBMIT_DUPLICATE: "false"
+---
+- setLocation:
+    latitude: 28.6139
+    longitude: 77.2090
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+- tapOn:
+    text: "${OPPORTUNITY}"
+# A passed but unclaimed job opens the learn-complete view; a job already
+# claimed (a resumed run, LDVP_RESUME_OPP_ID) opens the delivery dashboard.
+- extendedWaitUntil:
+    visible:
+      id: "learn_complete_completed_on|learn_progress_sync_card|connect_delivery_home_tabs"
+    timeout: 60000
+
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_delivery_home_tabs"
+    commands:
+      # --- TC-LRN-005: the certificate ---
+      # Web has already seen Connect record the pass; this sync only brings it down.
+      - repeat:
+          while:
+            notVisible:
+              id: "learn_complete_completed_on"
+          times: 6
+          commands:
+            - tapOn:
+                id: "learn_progress_sync_card"
+                optional: true
+            - extendedWaitUntil:
+                visible:
+                  id: "learn_complete_completed_on"
+                timeout: 20000
+                optional: true
+      - assertVisible:
+          id: "learn_complete_completed_on"
+          text: "Completed on .*"
+      # The certificate is collapsed by default. The opportunity name, the worker's
+      # name and the score make it discriminate: a stale certificate from another run
+      # would name a different opportunity.
+      - tapOn:
+          id: "certificate_header"
+      # On prod the first tap was recorded but the section stayed collapsed - the view
+      # was still settling after the sync - so tap the chevron as well if
+      # the certificate has not opened.
+      - extendedWaitUntil:
+          visible:
+            id: "cert_subject_text"
+          timeout: 10000
+          optional: true
+      - runFlow:
+          when:
+            notVisible:
+              id: "cert_subject_text"
+          commands:
+            - tapOn:
+                id: "certificate_chevron"
+            - extendedWaitUntil:
+                visible:
+                  id: "cert_subject_text"
+                timeout: 10000
+      - assertVisible:
+          id: "cert_subject_text"
+          text: ".*${OPPORTUNITY}.*"
+      - assertVisible:
+          id: "cert_person_text"
+          text: ".*${USERNAME}.*"
+      - assertVisible:
+          id: "cert_score_text"
+          text: ".*${PASS_SCORE}.*"
+      - assertVisible:
+          id: "cert_date_text"
+
+      # --- TC-DLV-001: the delivery details match the payment unit set up on web ---
+      - scrollUntilVisible:
+          element:
+            id: "card_max_earnings"
+          direction: DOWN
+          timeout: 20000
+      - assertVisible:
+          id: "info_card_value_text"
+          text: "${MAX_TOTAL}"
+          childOf:
+            id: "card_total_visits"
+      - assertVisible:
+          id: "info_card_subtitle_text"
+          text: "Up to ${MAX_DAILY} per day"
+          childOf:
+            id: "card_total_visits"
+      # --- Claim the job ---
+      # Download App claims it and downloads the Delivery App on this same
+      # screen, then opens the app - there is no delivery screen in between.
+      - tapOn:
+          id: "cta_button"
+          text: "(?i)download app"
+
+# --- Resumed run: the job is claimed; the dashboard's button downloads and opens
+# the Delivery App the same way ---
+- runFlow:
+    when:
+      visible:
+        id: "connect_delivery_home_tabs"
+    commands:
+      - tapOn:
+          id: "cta_button"
+
+# Either way the Delivery App opens on its home screen. Allow a real download.
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 600000
+
+# --- V1: with location (TC-DLV-002) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V1}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V1}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    text: "RECORD LOCATION"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 30000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- V2: no location (TC-DLV-003) ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V2}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V2}"
+- tapOn:
+    id: "nav_btn_next"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000
+
+# --- V1 again, identical: the duplicate (TC-DLV-004) ---
+# Only on the manual-review opportunity. On an auto-verified one Connect cannot
+# flag a duplicate, approves and pays it, and the app then counts it differently
+# from web (a known behaviour), so the auto chain leaves it out.
+- runFlow:
+    when:
+      true: ${SUBMIT_DUPLICATE == 'true'}
+    commands:
+      - tapOn: "Start"
+      - tapOn: "${VISIT_MODULE}"
+      - scrollUntilVisible:
+          element:
+            text: "${VISIT_FORM}"
+          direction: DOWN
+          timeout: 20000
+      - tapOn: "${VISIT_FORM}"
+      - extendedWaitUntil:
+          visible:
+            id: "nav_btn_next"
+          timeout: 60000
+      - tapOn:
+          point: "50%,32%"
+      - inputText: "${VISIT_NAME_V1_DUP}"
+      - tapOn:
+          id: "nav_btn_next"
+      - tapOn:
+          point: "50%,32%"
+      - inputText: "${VISIT_ID_V1_DUP}"
+      - tapOn:
+          id: "nav_btn_next"
+      - tapOn:
+          text: "RECORD LOCATION"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "nav_btn_next"
+          timeout: 30000
+      - repeat:
+          times: 6
+          commands:
+            - tapOn:
+                id: "nav_btn_next"
+                optional: true
+      - tapOn:
+          id: "nav_btn_finish"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            text: "Sync with Server"
+          timeout: 120000
+      - assertVisible:
+          text: ".*form sent to server.*"
+      - tapOn: "Sync with Server"
+      - extendedWaitUntil:
+          visible:
+            text: ".*Sync Successful.*|.*form sent to server.*"
+          timeout: 180000
+
+# --- V3: over the daily limit (TC-DLV-005): the third counted visit against a
+# max of 2 on the auto chain, the fourth against 3 with the duplicate ---
+- tapOn: "Start"
+- tapOn: "${VISIT_MODULE}"
+- scrollUntilVisible:
+    element:
+      text: "${VISIT_FORM}"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "${VISIT_FORM}"
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 60000
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_NAME_V3}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    point: "50%,32%"
+- inputText: "${VISIT_ID_V3}"
+- tapOn:
+    id: "nav_btn_next"
+- tapOn:
+    text: "RECORD LOCATION"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "nav_btn_next"
+    timeout: 30000
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Sync with Server"
+- extendedWaitUntil:
+    visible:
+      text: ".*Sync Successful.*|.*form sent to server.*"
+    timeout: 180000

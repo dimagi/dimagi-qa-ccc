@@ -149,9 +149,11 @@ class BasePage:
             f"Failed to set date. Expected '{formatted}', but got '{actual_value}'"
         )
 
-    def generate_date_range(self, days_to_add):
+    def generate_date_range(self, days_to_add, start_offset_days=2):
+        # Starts two days out by default. Pass 0 for an opportunity that has to be
+        # deliverable today - one that has not started yet earns nothing.
         today = datetime.today()
-        start = today + timedelta(days=2)
+        start = today + timedelta(days=start_offset_days)
         end = start + timedelta(days=days_to_add)
         return start.strftime("%d-%m-%Y"), end.strftime("%d-%m-%Y")
 

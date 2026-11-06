@@ -17,6 +17,7 @@ class DeliveryAppPage(BasePage):
     ID_INPUT = locators.get("delivery_app_page", "id_input")
     RECORD_LOCATION_BTN = locators.get("delivery_app_page", "record_location_btn")
     VIEW_JOB_STATUS_BTN = locators.get("delivery_app_page", "view_job_status_btn")
+    VISITS_TAB = locators.get("delivery_app_page", "delivery_visits_tab")
 
     PU_TITLE_TXT = locators.get("delivery_app_page", "pu_title_txt")
     PAYMENT_APPROVED_COUNT_TXT = locators.get("delivery_app_page", "payment_approved_count_txt")
@@ -86,7 +87,9 @@ class DeliveryAppPage(BasePage):
         self.sync_with_server()
         self.nav_to_view_job()
         time.sleep(2)
-        self.scroll_to_end()
+        # 2.65: the payment-unit rows moved to the Visits tab.
+        self.click_element(self.VISITS_TAB)
+        time.sleep(2)
         assert self.is_displayed(self.PU_TITLE_TXT), "PU title is not displayed"
         assert self.is_displayed(self.PAYMENT_APPROVED_COUNT_TXT), "Approved count is not displayed"
         assert self.is_displayed(self.PAYMENT_AMOUNT_TXT), "Payment amount is not displayed"

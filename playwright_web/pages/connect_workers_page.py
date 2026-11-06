@@ -646,18 +646,26 @@ class ConnectWorkersPage(BasePage):
         self._step(f"Worker '{worker}' username: {username}")
         return username
 
-    def _last_paid_text(self, worker):
+    def table_cell(self, worker, header_prefix):
+        """Text of the worker's cell, in the current workers-page tab, under the
+        column whose header starts with `header_prefix` (case-insensitive) - e.g.
+        Payments 'Accrued' / 'Confirm', Learn 'Modules completed' / 'Assessment'.
+        Prefix match because the currency columns are suffixed ('Accrued (INR)')."""
         headers = self._header_texts()
-        idx = next((i for i, h in enumerate(headers) if h.lower().startswith("last paid")), None)
-        assert idx is not None, f"'Last paid' column not found in {headers}"
+        idx = next((i for i, h in enumerate(headers) if h.lower().startswith(header_prefix.lower())), None)
+        assert idx is not None, f"'{header_prefix}' column not found in {headers}"
         cell = self._payments_row(worker).locator(self.ROW_CELLS).nth(idx)
         return cell.inner_text().strip()
 
-    def make_payment_for_worker(self, worker, amount=1):
+    def _last_paid_text(self, worker):
+        return self.table_cell(worker, "last paid")
+
+    def make_payment_for_worker(self, worker, amount=1, paid_on=None):
         """Payment Processing_2 - import a payment for the worker and confirm the
         success message. Builds a one-row workbook in a temp file (leaving the
         committed test_data/make_payment.xlsx untouched) with the headers the
-        importer expects; only username/amount/date are used to match and apply."""
+        importer expects; only username/amount/date are used to match and apply.
+        paid_on (a date) defaults to today."""
         import os
         import tempfile
         from datetime import date
@@ -672,7 +680,7 @@ class ConnectWorkersPage(BasePage):
         # Phone is not used for matching (import keys on username); a reserved-block
         # placeholder keeps the row well-formed.
         ws.append([username, worker_ref["payment_import_placeholder_phone"], worker, str(amount),
-                   date.today().isoformat(), None, None])
+                   (paid_on or date.today()).isoformat(), None, None])
         path = os.path.join(tempfile.mkdtemp(), "make_payment.xlsx")
         wb.save(path)
 
@@ -752,6 +760,7 @@ class ConnectWorkersPage(BasePage):
     SORT_LINK_BY_LABEL = locators.get("connect_workers_page", "sort_link_by_label")
     NAME_CELL_PS_BY_WORKER = locators.get("connect_workers_page", "name_cell_ps_by_worker")
     STATUS_TOOLTIP_BY_VALUE = locators.get("connect_workers_page", "status_tooltip_by_value")
+    STATUS_TOOLTIP = locators.get("connect_workers_page", "status_tooltip")
     DATA_ROW_BY_P_TEXT = locators.get("connect_workers_page", "data_row_by_p_text")
     DATA_ROW_BY_TEXT = locators.get("connect_workers_page", "data_row_by_text")
     PENDING_INVITE_ROW = locators.get("connect_workers_page", "pending_invite_row")
@@ -810,6 +819,14 @@ class ConnectWorkersPage(BasePage):
             f"Worker '{identifier}' does not show status '{expected_status}' (row: {row.inner_text()!r})"
         )
         self._step(f"Worker '{identifier}' shows status '{expected_status}'")
+
+    def worker_status(self, identifier):
+        """The worker row's status as Connect labels it (the StatusIndicatorColumn
+        x-tooltip.raw), e.g. 'Invite pending', 'User not found', 'Invite accepted'."""
+        self._await_list_table()
+        row = self.page.locator(self.DATA_ROW_BY_TEXT.format(text=identifier)).first
+        row.wait_for(state="visible", timeout=15000)
+        return row.locator(self.STATUS_TOOLTIP).first.get_attribute("x-tooltip.raw")
 
     def verify_not_found_display(self, phone):
         """Connect_worker_06 - a not-found (unregistered) worker shows the status

@@ -30,7 +30,7 @@ TC_5:
   country_code: "+7426"
   phone_number: "7426017"
   username: "Automation User 17"
-  backup_code: "6426617"
+  backup_code: "742617"
   opportunity_name: "test_opp_221225_01"
   org_name: "Automation_Test_01"
   org_name_staging: "PM_Automation_01"
@@ -395,6 +395,42 @@ MAESTRO_RECOVERY_FIXTURE:
   backup_code: "129104"
   phone_number_staging: "1290204"
   backup_code_staging: "129204"
+
+# --- CCCT-2670 LDVP end to end -------------------------------------------------
+#
+# Same reserved block as the web invite test's number (WORKER_INVITES
+# reserved_invite +74267426090) so the chain reads as one: web invites the
+# number, the device takes it from there. 7426090 itself is NOT used - the
+# invite test needs it to stay unregistered (Connect_worker_12 asserts that a
+# resend to it is skipped as "not registered on PersonalID").
+#
+# SEEDING: the invited worker must be registered BEFORE it is ever invited -
+# Connect resolves an invite only when it is sent, so an invite to a number
+# PersonalID does not know stays "User not found" even after the number signs up.
+# Run seed_ldvp_worker.yaml once per environment on a 2.65 build. The uninvited worker needs no seeding: it is never
+# invited, so its first ldvp_uninvited run registers it in-flow
+# (shared_ldvp_signin.yaml takes the Confirm-code branch).
+#
+# Numbers differ per environment for the usual reason: one PersonalID number
+# cannot hold a session on two environments at once.
+
+# Invited to every run's fresh opportunity; learns, delivers and is paid.
+MAESTRO_LDVP_WORKER:
+  country_code: "+7426"
+  phone_number: "7426093"
+  username: "QA LDVP Worker"
+  backup_code: "609300"
+  phone_number_staging: "7426091"
+  backup_code_staging: "609100"
+
+# Never invited to anything - TC-INV-004 checks it cannot see the opportunity.
+MAESTRO_LDVP_UNINVITED:
+  country_code: "+7426"
+  phone_number: "7426094"
+  username: "QA LDVP Uninvited"
+  backup_code: "609400"
+  phone_number_staging: "7426092"
+  backup_code_staging: "609200"
 
 # --- Learn_tab_02 hybrid (worker_learn_module.yaml) ---
 # A worker whose learning is started but not 100% complete, on the opportunity named

@@ -49,6 +49,14 @@ on:
         required: false
         default: false
         type: boolean
+      # Off by default. The LDVP tests (marker ldvp) create an opportunity, app
+      # copies and payments, or review visits, on every run, and take an hour or
+      # more on staging. Ignored when source is post-deploy.
+      include_ldvp:
+        description: "Also run the LDVP end-to-end tests (CCCT-2670); ignored for post-deploy"
+        required: false
+        default: false
+        type: boolean
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -106,6 +114,8 @@ jobs:
       cancel-in-progress: false
     needs: resolve-matrix
     runs-on: ubuntu-latest
+    # A slow staging run must not hold the shared-data queue indefinitely.
+    timeout-minutes: 300
     strategy:
       # Report both environments even when one fails - a prod-only failure is the
       # interesting case and cancelling it would hide it.
@@ -126,7 +136,9 @@ jobs:
       # consumes_seed_data tests (they permanently use up seeded prod fixtures) - PR,
       # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
       # include_seed_consuming=true (and source other than post-deploy) runs them.
-      PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data') }}
+      # ldvp tests are likewise excluded unless a non-post-deploy manual dispatch
+      # sets include_ldvp.
+      PYTEST_MARKERS: ${{ format('({0}){1}', github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data'), (github.event_name != 'workflow_dispatch' || inputs.include_ldvp != true || inputs.source == 'post-deploy') && ' and not ldvp' || '') }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.

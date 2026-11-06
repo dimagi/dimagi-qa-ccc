@@ -183,6 +183,56 @@ WORKER_DELIVER_FILTERS:
   last_active_options: ["Any time", "1 day ago", "3 days ago", "7 days ago"]
   yes_no_options: ["---------", "Yes", "No"]
 
+# LDVP end to end (CCCT-2670, playwright_web/tests/test_e2e_ldvp.py). A fresh
+# opportunity per run, because a worker learns and takes the assessment once per
+# opportunity. The payment unit limits are low on purpose: max_daily 2 makes the
+# third visit of the day Over Limit (TC-DLV-005) within one device session.
+# Overrides OLP_2 for the payment unit; OLP_1 / OLP_3 are used as they are.
+LDVP:
+  # A program with the Network Manager handshake already complete; each run adds
+  # its own opportunity to it. If one is deleted or ends, remove the key and the
+  # next run creates and prints a new one.
+  program_name: "Demo Program_29-Oct-2026 : 16:14"
+  program_name_staging: "Demo Program_29-Oct-2026 : 13:57"
+  # Each run's opportunity is "<opportunity_name>_<date : time>".
+  opportunity_name: "LDVP Opportunity"
+  payment_unit_name: "LDVP Visit"
+  amount: "100"
+  description: "LDVP Visit"
+  max_total: "4"
+  # V1 and V2 fit; V3 is over the limit. The auto chain submits no duplicate.
+  max_daily: "2"
+  days: 30
+  # Budget page shows amount x max_total x workers (OLP_3: 10) = 100 x 4 x 10.
+  total_budget_value: "4000"
+  # The opportunity's passing score is OLP_1.passing_score (40).
+  assessment_fail_score: "10"
+  assessment_pass_score: "90"
+  reject_reason: "LDVP automation - no location"
+  # How long web waits for Connect to process a device submission (learn module,
+  # assessment, visit) before the next device session. Instant on prod, slow on
+  # staging; the workflow's job timeout caps a whole run.
+  sync_timeout_seconds: 300
+  sync_timeout_seconds_staging: 1800
+  second_payment: "50"
+  # Reusable manual-review opportunity for approve/reject (prod), from copies of
+  # the master apps in its own program, running about three years. Payment unit:
+  # 100 per visit, 20 a day, 100 in total. Automatic visit verification is
+  # switched off (needs the devs). The LDVP worker learns there once and is reused.
+  manual_opportunity_id: "1cc912d6-1043-417d-be1e-3809020c6142"
+  manual_opportunity_name: "LDVP Manual Review_02-Nov-2026 : 13:14"
+  manual_program_name: "LDVP Manual Program_02-Nov-2026 : 13:12"
+  # The staging twin, made the same way.
+  manual_opportunity_id_staging: "69eec75f-36d2-4d12-91f0-961326b98163"
+  manual_opportunity_name_staging: "LDVP Manual Review_03-Nov-2026 : 18:47"
+  manual_program_name_staging: "LDVP Manual Program_03-Nov-2026 : 18:44"
+  # Its payment unit, for the delivery details the first run checks.
+  manual_max_daily: "20"
+  manual_max_total: "100"
+  # Location Distance flag (metres) the manual test sets: every visit comes from
+  # the same mock point, so each is within this of an earlier beneficiary's.
+  manual_location_distance_m: "50"
+
 # Self-generated invite lifecycle (Connect_worker_02/03/05/08/12). reserved_invite
 # is an unregistered reserved automation number; the test invites and deletes it.
 WORKER_INVITES:

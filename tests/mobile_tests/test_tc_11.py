@@ -28,23 +28,6 @@ from utils.test_data_gen import fresh_backup_code, fresh_phone_number
  - an [email] section in settings.cfg (see settings-sample.cfg)
  """)
 @pytest.mark.mobile
-@pytest.mark.skip(
-    reason="SE_10 needs the unreleased 2.65 build - re-enable when 2.65 ships. "
-    "See the comment below."
-)
-# SKIPPED, 2026-09-10: this case passes, on prod and on staging, but only
-# against the 2.64+ signup email step as built in the unreleased 2.65 APK that
-# was used to write it. Keeping it running would mean pinning the whole mobile
-# suite to 2.65, and the rest of the suite is the stable regression set - it
-# should stay on the released build.
-#
-# Nothing else depends on this test. It registers its own account from a cleared
-# app and shares no fixture or account with any other case, so skipping it
-# changes no other test's starting state.
-#
-# TO RE-ENABLE once 2.65 is released: delete the skip marker above, and add
-# signup_email_add.yaml / signup_email_verify.yaml back to TEST_FLOWS in
-# maestro_mobile/scripts/run_on_browserstack.py (SE_08 and SE_09, same gap).
 def test_11_signup_email_verification(mobile_driver, settings, config):
     pid = PersonalIDPage(mobile_driver)
     home = HomePage(mobile_driver)

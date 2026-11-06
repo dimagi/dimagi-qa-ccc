@@ -63,7 +63,11 @@ connect_home_page:
   login_link: "//nav[@id='primary-nav']//a[@href='/accounts/login/']"
   signin_link: "log-in-link"
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
-  authorize_button: "//input[@type='submit' and @name='allow']"
+  # HQ's OAuth consent screen ("Authorize Commcare Connect?"). Authorize stays
+  # disabled until a project space is chosen, hence Select all. Kept in step with
+  # playwright_web/locators/web_locators.yaml.
+  authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
+  authorize_select_all: "//a[normalize-space()='Select all'] | //button[normalize-space()='Select all']"
   opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
   programs_navbar_item: "//a[contains(@href, '/program/')]"
   my_organization_navbar_item: "//i[contains(@class, 'fa-building')]"

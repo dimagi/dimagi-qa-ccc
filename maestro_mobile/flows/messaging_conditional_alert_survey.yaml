@@ -101,10 +101,20 @@ env:
     direction: DOWN
     timeout: 20000
 
-# Learning is already complete for this worker, so the card offers Resume, which
-# downloads the deliver app on a fresh install. Allow for a real download.
+# Learning is already complete for this worker, so opening the deliver app
+# downloads it on a fresh install. Allow for a real download.
+# 2.65 (CCCT-2785 redesign) dropped the card's Resume button: the whole card is
+# the tap target and opens the delivery home screen, whose bottom bar button
+# (cta_button - "Download app" on a fresh install, "Start" once installed)
+# downloads and launches the deliver app.
 - tapOn:
-    id: "btn_resume"
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "cta_button"
+    timeout: 30000
+- tapOn:
+    id: "cta_button"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"

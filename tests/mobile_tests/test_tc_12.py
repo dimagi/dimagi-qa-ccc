@@ -85,7 +85,7 @@ def test_12_manage_profile_email(mobile_driver, settings, config, test_data):
         profile.set_email(new_email)
         requested_at = time.time()
         profile.save()
-        profile.confirm_send_code()
+        profile.confirm_send_code(fixture["backup_code"])
 
     with allure.step("MP_13: read the code and enter it"):
         try:

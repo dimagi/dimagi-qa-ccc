@@ -1,0 +1,80 @@
+# LDVP rollback session (CCCT-2670, TC-PAY-004), after web rolled back the
+# 50 payment. The rollback is listed in the notification history, the
+# transferred total is back to the first payment alone and the unconfirmed row
+# is gone.
+#
+# Ids and strings are from commcare-android at tag commcare_2.65.0
+# (fragment_connect_delivery_home.xml, ConnectDeliveryPaymentFragment): the
+# delivery home has tabs Dashboard / Payment / Visits / More
+# (connect_delivery_home_tabs). The Payment tab shows payment_earned_amount and
+# payment_transferred_amount over one row per payment. An unconfirmed row reads
+# "Transferred" (tv_payment_status) and shows a `confirm` control, which opens a
+# "Confirm Transferred Payment" dialog (tv_payment_amount, ri_yes / ri_no); a
+# confirmed row reads "Received" and hides `confirm`. 2.65 has no "Ask me
+# later" card - confirmation is per row.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  TRANSFERRED: "100"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+
+# --- TC-PAY-004: the rollback notification in the app's notification history ---
+# Connect's payment_delete sends "Payment updated" / "There has been an
+# adjustment to your earnings for <opportunity>." - it never says rollback. A
+# fresh sign-in can find the list empty for minutes, so tap the screen's cloud sync (notification_cloud_sync, which
+# reloads from the server) while waiting.
+- tapOn:
+    id: "action_bell"
+- repeat:
+    while:
+      notVisible:
+        text: "(?is).*(Payment updated|adjustment to your earnings).*"
+    times: 6
+    commands:
+      - tapOn:
+          id: "notification_cloud_sync"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            text: "(?is).*(Payment updated|adjustment to your earnings).*"
+          timeout: 20000
+          optional: true
+- assertVisible:
+    text: "(?is).*(Payment updated|adjustment to your earnings).*"
+- back
+
+# --- TC-PAY-004: the rollback reflected in the transferred total ---
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+- tapOn:
+    text: "Payment"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_transferred_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_transferred_amount"
+    text: "(?s).*\\b${TRANSFERRED}\\b.*"
+- assertNotVisible:
+    id: "confirm"
