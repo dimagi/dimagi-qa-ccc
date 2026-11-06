@@ -25,6 +25,7 @@ import time
 from urllib.parse import urlsplit
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from flows.olp_setup import PM_ORG
 from flows.seed_visits import seed_review_visits
@@ -120,8 +121,12 @@ def review_pool(connect, test_data, config, settings):
             if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"], only_status="pending"):
                 break
             approved += 1
-        except AssertionError:
-            connect_page.wait_for_timeout(5000)  # the approve did not stick yet: re-open and retry
+        except (AssertionError, PlaywrightTimeoutError):
+            # Not ready yet: the approve did not stick (AssertionError), or a freshly seeded
+            # visit's details panel did not load while Connect is still processing it
+            # (PlaywrightTimeoutError, seen on staging 2026-11-06 once the fixed settle sleep
+            # was gone). Re-open and retry until the deadline.
+            connect_page.wait_for_timeout(5000)
     if approved < wanted:
         pytest.fail(
             f"Only {approved} of {wanted} NM approvals stuck within {APPROVE_STICK_SECONDS}s, so "
