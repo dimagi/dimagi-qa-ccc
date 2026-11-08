@@ -316,14 +316,7 @@ class WorkerVisitsPage(BasePage):
         2026-10-15: reject/approve landed on a different visit than the one the test
         thought it had opened. Each row click fires exactly one user_visit_details
         GET, so wait on that response, then let the htmx/Alpine swap settle."""
-        panel_before = self.page.evaluate(
-            "id => document.getElementById(id)?.innerHTML ?? ''", self.VISIT_DETAILS_CONTAINER
-        )
         visit_id = row.get_attribute("data-visit-id")
-        # Re-opening the visit that is already shown (e.g. after a modal closes) swaps in
-        # identical HTML, so "content differs" can never hold - only wait for a change
-        # when a different visit is being opened.
-        same_visit = visit_id is not None and visit_id == getattr(self, "_opened_visit_id", None)
         with self.page.expect_response(
             lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
         ):
@@ -331,12 +324,15 @@ class WorkerVisitsPage(BasePage):
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
-        # The old panel stays rendered until the swap lands, so when a different visit
-        # was opened wait for its content to differ from what was there before the click.
-        if not same_visit:
+        # The old panel stays rendered until the swap lands, so wait until the panel shows THIS
+        # row's entity name. That holds whether or not the panel HTML changed (re-opening the
+        # visit already shown swaps in identical HTML, and a "content differs from before" wait
+        # timed out on staging 2026-11-06 for every approve attempt), so no same-visit special case.
+        entity_name = row.locator("td").nth(1).inner_text().strip()
+        if entity_name:
             self.page.wait_for_function(
-                "([id, before]) => (document.getElementById(id)?.innerHTML ?? '') !== before",
-                arg=[self.VISIT_DETAILS_CONTAINER, panel_before],
+                "([id, name]) => (document.getElementById(id)?.innerText ?? '').includes(name)",
+                arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
                 timeout=15000,
             )
         self._opened_visit_id = visit_id
