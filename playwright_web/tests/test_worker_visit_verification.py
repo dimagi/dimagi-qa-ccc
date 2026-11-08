@@ -121,11 +121,13 @@ def review_pool(connect, test_data, config, settings):
             if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"], only_status="pending"):
                 break
             approved += 1
-        except (AssertionError, PlaywrightTimeoutError):
+        except (AssertionError, PlaywrightTimeoutError) as exc:
             # Not ready yet: the approve did not stick (AssertionError), or a freshly seeded
             # visit's details panel did not load while Connect is still processing it
             # (PlaywrightTimeoutError, seen on staging 2026-11-06 once the fixed settle sleep
             # was gone). Re-open and retry until the deadline.
+            print(f"STEP [review_pool] approve attempt failed ({approved}/{wanted} stuck so far): "
+                  f"{type(exc).__name__}: {str(exc)[:400]}")
             connect_page.wait_for_timeout(5000)
     if approved < wanted:
         pytest.fail(
