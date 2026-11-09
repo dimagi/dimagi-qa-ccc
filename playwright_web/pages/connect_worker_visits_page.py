@@ -333,13 +333,13 @@ class WorkerVisitsPage(BasePage):
         if entity_name:
             try:
                 self.page.wait_for_function(
-                    "([id, name]) => (document.getElementById(id)?.innerText ?? '').includes(name)",
+                    "([sel, name]) => (document.querySelector(sel)?.innerText ?? '').includes(name)",
                     arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
                     timeout=15000,
                 )
             except PlaywrightTimeoutError:
                 shown = self.page.evaluate(
-                    "id => (document.getElementById(id)?.innerText ?? '(none)').slice(0, 200)",
+                    "sel => (document.querySelector(sel)?.innerText ?? '(none)').slice(0, 200)",
                     self.VISIT_DETAILS_CONTAINER,
                 )
                 raise AssertionError(
