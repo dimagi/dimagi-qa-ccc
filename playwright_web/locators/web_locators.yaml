@@ -479,6 +479,8 @@ worker_visits_page:
   visit_row_by_id: "(//table[contains(@class,'base-table')])[2]//tbody//tr[@data-visit-id='{visit_id}']"
   # Action-bar buttons live directly under #visit-actions (not inside a .modal).
   visit_action_reject: "//div[@id='visit-actions']//button[normalize-space()='Reject'][not(ancestor::div[contains(@class,'modal')])]"
+  # Any action-bar button outside the modals: present once the bar has been swapped in.
+  visit_action_bar_button: "//div[@id='visit-actions']//button[normalize-space()][not(ancestor::div[contains(@class,'modal')])]"
   visit_action_approve: "//div[@id='visit-actions']//button[normalize-space()='Approve'][not(ancestor::div[contains(@class,'modal')])]"
   # Scoped to #visit-actions: the page also carries a hidden "suspend user" modal whose
   # textarea is ALSO name='reason' and comes first in the DOM, so an unscoped

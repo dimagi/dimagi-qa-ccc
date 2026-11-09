@@ -44,6 +44,7 @@ class WorkerVisitsPage(BasePage):
     VISIT_ROW_BY_ID = locators.get("worker_visits_page", "visit_row_by_id")
     VISIT_ACTION_REJECT = locators.get("worker_visits_page", "visit_action_reject")
     VISIT_ACTION_APPROVE = locators.get("worker_visits_page", "visit_action_approve")
+    VISIT_ACTION_BAR_BUTTON = locators.get("worker_visits_page", "visit_action_bar_button")
     VISIT_REJECT_MODAL_REASON = locators.get("worker_visits_page", "visit_reject_modal_reason")
     VISIT_REJECT_MODAL_SUBMIT = locators.get("worker_visits_page", "visit_reject_modal_submit")
     VISIT_APPROVE_MODAL_JUSTIFICATION = locators.get("worker_visits_page", "visit_approve_modal_justification")
@@ -330,11 +331,20 @@ class WorkerVisitsPage(BasePage):
         # timed out on staging 2026-11-06 for every approve attempt), so no same-visit special case.
         entity_name = row.locator("td").nth(1).inner_text().strip()
         if entity_name:
-            self.page.wait_for_function(
-                "([id, name]) => (document.getElementById(id)?.innerText ?? '').includes(name)",
-                arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
-                timeout=15000,
-            )
+            try:
+                self.page.wait_for_function(
+                    "([id, name]) => (document.getElementById(id)?.innerText ?? '').includes(name)",
+                    arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
+                    timeout=15000,
+                )
+            except PlaywrightTimeoutError:
+                shown = self.page.evaluate(
+                    "id => (document.getElementById(id)?.innerText ?? '(none)').slice(0, 200)",
+                    self.VISIT_DETAILS_CONTAINER,
+                )
+                raise AssertionError(
+                    f"Clicked visit '{entity_name}' (id {visit_id}) but the details panel still shows: {shown!r}"
+                )
         self._opened_visit_id = visit_id
 
     def _open_row_at(self, index):
@@ -385,6 +395,13 @@ class WorkerVisitsPage(BasePage):
             if only_status and rows.nth(i).get_attribute("data-visit-status") != only_status:
                 continue
             self._open_row_at(i)
+            # The action bar is swapped in after the details; checking it before it has rendered
+            # reads "no action" and the scan moves on to the next row while this one is still
+            # settling. Wait (briefly) for the bar to hold a button before deciding.
+            try:
+                self.page.locator(self.VISIT_ACTION_BAR_BUTTON).first.wait_for(state="attached", timeout=8000)
+            except PlaywrightTimeoutError:
+                pass  # no buttons for this visit (terminal state, auto-verify): handled below
             btn = self.page.locator(action_locator).first
             if btn.count() > 0 and btn.is_enabled():
                 self._step(f"Visit {visit_id} (row {i}) offers the requested review action")
