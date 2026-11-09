@@ -9,7 +9,7 @@ the page" xpath used elsewhere in the suite applies to either tab.
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader, with_page_size
+from utils.helpers import LocatorLoader, with_page_number, with_page_size
 
 locators = LocatorLoader()
 
@@ -91,8 +91,26 @@ class InvoiceListPage(BasePage):
     def is_empty(self):
         return self.page.locator(self.EMPTY_TEXT).count() > 0
 
+    MAX_PAGES_SEARCHED = 20
+
     def row_by_invoice_number(self, invoice_number):
-        row = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).first
+        """Row for an invoice. The list is oldest-first and page_size tops out at 100
+        (larger values fall back to 20), and every run adds invoices that nothing
+        cleans up, so a freshly created invoice sits on a later page - confirmed live
+        2026-11-09: 144 invoices in the month, this run's on page 2. Walk the pages
+        until the row is found."""
+        locator = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number))
+        self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+        for page_no in range(1, self.MAX_PAGES_SEARCHED + 1):
+            if page_no > 1:
+                self.page.goto(with_page_number(self.page.url, page_no))
+                self.page.wait_for_load_state("load")
+                self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+            if locator.count() > 0:
+                break
+            if self.row_count() == 0:
+                break
+        row = locator.first
         row.wait_for(state="visible", timeout=15000)
         return row
 
