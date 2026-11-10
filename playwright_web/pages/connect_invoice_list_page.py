@@ -93,29 +93,37 @@ class InvoiceListPage(BasePage):
 
     MAX_PAGES_SEARCHED = 20
 
-    def row_by_invoice_number(self, invoice_number):
-        """Row for an invoice. The list is oldest-first and page_size tops out at 100
-        (larger values fall back to 20), and every run adds invoices that nothing
-        cleans up, so a freshly created invoice sits on a later page - confirmed live
-        2026-11-09: 144 invoices in the month, this run's on page 2. Walk the pages
-        until the row is found."""
+    def _find_invoice_page(self, invoice_number):
+        """Walk the list pages (from page 1) until the invoice's row is present; True
+        and left on that page if found, False and left on page 1 if not.
+
+        The list is oldest-first and page_size tops out at 100 (larger values fall
+        back to 20), and every run adds invoices that nothing cleans up, so a freshly
+        created invoice sits on a later page - confirmed live 2026-11-09: 144
+        invoices in the month, this run's on page 2."""
         locator = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number))
         self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
         for page_no in range(1, self.MAX_PAGES_SEARCHED + 1):
-            if page_no > 1:
+            if page_no > 1 or "page=" in self.page.url:
                 self.page.goto(with_page_number(self.page.url, page_no))
                 self.page.wait_for_load_state("load")
                 self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
             if locator.count() > 0:
-                break
+                return True
             if self.row_count() == 0:
                 break
-        row = locator.first
+        self.page.goto(with_page_number(self.page.url, 1))
+        self.page.wait_for_load_state("load")
+        return False
+
+    def row_by_invoice_number(self, invoice_number):
+        self._find_invoice_page(invoice_number)
+        row = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).first
         row.wait_for(state="visible", timeout=15000)
         return row
 
     def has_invoice(self, invoice_number):
-        return self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).count() > 0
+        return self._find_invoice_page(invoice_number)
 
     def row_status(self, invoice_number, status_column):
         headers = self.column_headers()
