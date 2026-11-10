@@ -976,7 +976,10 @@ class ConnectWorkersPage(BasePage):
         row that is still there after the wait is a real failure, not retried."""
         import time
 
-        if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
+        # Always reload the list: right after a resend the URL can still read /workers/ while
+        # the redirect to the dashboard is in flight, so the row looked absent and the delete
+        # was skipped (staging run 42637106775: "Invite still present after delete").
+        if getattr(self, "_workers_url", None):
             self._goto_workers_list()
         if not self.worker_row_present(phone):
             self._step(f"No invite row for {phone} to delete")
