@@ -318,22 +318,31 @@ class WorkerVisitsPage(BasePage):
         thought it had opened. Each row click fires exactly one user_visit_details
         GET, so wait on that response, then let the htmx/Alpine swap settle."""
         visit_id = row.get_attribute("data-visit-id")
+        # The row's hx-get is user_visit_details/<uuid>/, unique to this visit, so only THIS
+        # visit's response satisfies the wait (not one from an earlier, slower click).
+        details_path = row.get_attribute("hx-get")
         with self.page.expect_response(
-            lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
+            lambda r: r.request.method == "GET"
+            and ("user_visit_details" in r.url if not details_path else details_path in r.url),
+            timeout=20000,
         ):
             row.click()
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
-        # The old panel stays rendered until the swap lands, so wait until the panel shows THIS
-        # row's entity name. That holds whether or not the panel HTML changed (re-opening the
-        # visit already shown swaps in identical HTML, and a "content differs from before" wait
-        # timed out on staging 2026-11-06 for every approve attempt), so no same-visit special case.
-        entity_name = row.locator("td").nth(1).inner_text().strip()
+        # The old panel stays rendered until the swap lands, so wait until the panel's Entity Name
+        # IS this row's entity name (exact, not a substring: "...-1" must not match "...-10").
+        # Entity Name is found by its column header, not a fixed td index.
+        entity_name = self._entity_name_of(row)
         if entity_name:
             try:
                 self.page.wait_for_function(
-                    "([sel, name]) => (document.querySelector(sel)?.innerText ?? '').includes(name)",
+                    r"""([sel, name]) => {
+                        const lines = (document.querySelector(sel)?.innerText ?? '')
+                            .split('\n').map(l => l.trim()).filter(Boolean);
+                        const i = lines.indexOf('Entity Name');
+                        return i >= 0 && lines[i + 1] === name;
+                    }""",
                     arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
                     timeout=15000,
                 )
@@ -345,7 +354,13 @@ class WorkerVisitsPage(BasePage):
                 raise AssertionError(
                     f"Clicked visit '{entity_name}' (id {visit_id}) but the details panel still shows: {shown!r}"
                 )
-        self._opened_visit_id = visit_id
+
+    def _entity_name_of(self, row):
+        """The row's Entity Name cell text, located by its column header."""
+        headers = [h.strip() for h in row.locator("xpath=ancestor::table[1]//thead//th").all_inner_texts()]
+        if "Entity Name" not in headers:
+            return ""
+        return row.locator("td").nth(headers.index("Entity Name")).inner_text().strip()
 
     def _open_row_at(self, index):
         """Open the visit row at `index` and wait for its details panel to populate."""
@@ -395,14 +410,16 @@ class WorkerVisitsPage(BasePage):
             if only_status and rows.nth(i).get_attribute("data-visit-status") != only_status:
                 continue
             self._open_row_at(i)
-            # The action bar is swapped in after the details; checking it before it has rendered
-            # reads "no action" and the scan moves on to the next row while this one is still
-            # settling. Wait (briefly) for the bar to hold a button before deciding.
-            try:
-                self.page.locator(self.VISIT_ACTION_BAR_BUTTON).first.wait_for(state="attached", timeout=8000)
-            except PlaywrightTimeoutError:
-                pass  # no buttons for this visit (terminal state, auto-verify): handled below
             btn = self.page.locator(action_locator).first
+            if not (btn.count() > 0 and btn.is_enabled()):
+                # The panel is confirmed to be THIS visit's (entity-name wait above), so a missing
+                # button is normally final (terminal state, auto-verify). Allow a short bounded grace
+                # for a bar that renders a beat after the details instead of 8s on every such row.
+                try:
+                    self.page.locator(self.VISIT_ACTION_BAR_BUTTON).first.wait_for(state="visible", timeout=2000)
+                except PlaywrightTimeoutError:
+                    pass
+                btn = self.page.locator(action_locator).first
             if btn.count() > 0 and btn.is_enabled():
                 self._step(f"Visit {visit_id} (row {i}) offers the requested review action")
                 return visit_id
