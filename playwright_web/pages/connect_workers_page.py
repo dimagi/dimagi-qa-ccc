@@ -970,7 +970,7 @@ class ConnectWorkersPage(BasePage):
         self.select_worker_row(phone)
         return self.resend_selected_invite()
 
-    def delete_worker_invite(self, phone, timeout_seconds=120):
+    def delete_worker_invite(self, phone, timeout_seconds=120, must_exist=False):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
         confirm modal, and wait for it to disappear. The delete is submitted once: a
         row that is still there after the wait is a real failure, not retried."""
@@ -982,6 +982,9 @@ class ConnectWorkersPage(BasePage):
         if getattr(self, "_workers_url", None):
             self._goto_workers_list()
         if not self.worker_row_present(phone):
+            # must_exist: the caller just created/resent this invite, so a missing row is the failure
+            # itself - raise here instead of letting the test fail later with "still present".
+            assert not must_exist, f"No invite row for {phone} to delete on the workers list ({self.page.url})"
             self._step(f"No invite row for {phone} to delete")
             return
         deadline = time.monotonic() + timeout_seconds
