@@ -6,6 +6,8 @@ Both tabs render exactly one django-tables2 base-table
 the page" xpath used elsewhere in the suite applies to either tab.
 """
 
+from urllib.parse import parse_qs, urlsplit
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
@@ -103,17 +105,29 @@ class InvoiceListPage(BasePage):
         invoices in the month, this run's on page 2."""
         locator = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number))
         self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+        # A page past the end shows the LAST page again (django-tables2 default; checked on staging
+        # with ?page=99), so row_count never reaches 0: stop when a page repeats the one before it.
+        # `page_size=` also contains "page=", hence the query-param check rather than a substring.
+        on_page = 1 if "page" not in parse_qs(urlsplit(self.page.url).query) else None
+        previous_first = None
         for page_no in range(1, self.MAX_PAGES_SEARCHED + 1):
-            if page_no > 1 or "page=" in self.page.url:
+            if on_page != page_no:
                 self.page.goto(with_page_number(self.page.url, page_no))
                 self.page.wait_for_load_state("load")
                 self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+                on_page = page_no
             if locator.count() > 0:
                 return True
-            if self.row_count() == 0:
+            rows = self.page.locator(self.TABLE_ROWS)
+            if rows.count() == 0:
                 break
-        self.page.goto(with_page_number(self.page.url, 1))
-        self.page.wait_for_load_state("load")
+            first = rows.first.inner_text().strip()
+            if first == previous_first:
+                break
+            previous_first = first
+        if on_page != 1:
+            self.page.goto(with_page_number(self.page.url, 1))
+            self.page.wait_for_load_state("load")
         return False
 
     def row_by_invoice_number(self, invoice_number):
