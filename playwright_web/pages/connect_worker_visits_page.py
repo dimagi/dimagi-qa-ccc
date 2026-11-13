@@ -44,6 +44,7 @@ class WorkerVisitsPage(BasePage):
     VISIT_ROW_BY_ID = locators.get("worker_visits_page", "visit_row_by_id")
     VISIT_ACTION_REJECT = locators.get("worker_visits_page", "visit_action_reject")
     VISIT_ACTION_APPROVE = locators.get("worker_visits_page", "visit_action_approve")
+    VISIT_ACTION_BAR_BUTTON = locators.get("worker_visits_page", "visit_action_bar_button")
     VISIT_REJECT_MODAL_REASON = locators.get("worker_visits_page", "visit_reject_modal_reason")
     VISIT_REJECT_MODAL_SUBMIT = locators.get("worker_visits_page", "visit_reject_modal_submit")
     VISIT_APPROVE_MODAL_JUSTIFICATION = locators.get("worker_visits_page", "visit_approve_modal_justification")
@@ -316,30 +317,50 @@ class WorkerVisitsPage(BasePage):
         2026-10-15: reject/approve landed on a different visit than the one the test
         thought it had opened. Each row click fires exactly one user_visit_details
         GET, so wait on that response, then let the htmx/Alpine swap settle."""
-        panel_before = self.page.evaluate(
-            "id => document.getElementById(id)?.innerHTML ?? ''", self.VISIT_DETAILS_CONTAINER
-        )
         visit_id = row.get_attribute("data-visit-id")
-        # Re-opening the visit that is already shown (e.g. after a modal closes) swaps in
-        # identical HTML, so "content differs" can never hold - only wait for a change
-        # when a different visit is being opened.
-        same_visit = visit_id is not None and visit_id == getattr(self, "_opened_visit_id", None)
+        # The row's hx-get is user_visit_details/<uuid>/, unique to this visit, so only THIS
+        # visit's response satisfies the wait (not one from an earlier, slower click).
+        details_path = row.get_attribute("hx-get")
         with self.page.expect_response(
-            lambda r: "user_visit_details" in r.url and r.request.method == "GET", timeout=20000
+            lambda r: r.request.method == "GET"
+            and ("user_visit_details" in r.url if not details_path else details_path in r.url),
+            timeout=20000,
         ):
             row.click()
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
-        # The old panel stays rendered until the swap lands, so when a different visit
-        # was opened wait for its content to differ from what was there before the click.
-        if not same_visit:
-            self.page.wait_for_function(
-                "([id, before]) => (document.getElementById(id)?.innerHTML ?? '') !== before",
-                arg=[self.VISIT_DETAILS_CONTAINER, panel_before],
-                timeout=15000,
-            )
-        self._opened_visit_id = visit_id
+        # The old panel stays rendered until the swap lands, so wait until the panel's Entity Name
+        # IS this row's entity name (exact, not a substring: "...-1" must not match "...-10").
+        # Entity Name is found by its column header, not a fixed td index.
+        entity_name = self._entity_name_of(row)
+        if entity_name:
+            try:
+                self.page.wait_for_function(
+                    r"""([sel, name]) => {
+                        const lines = (document.querySelector(sel)?.innerText ?? '')
+                            .split('\n').map(l => l.trim()).filter(Boolean);
+                        const i = lines.indexOf('Entity Name');
+                        return i >= 0 && lines[i + 1] === name;
+                    }""",
+                    arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
+                    timeout=15000,
+                )
+            except PlaywrightTimeoutError:
+                shown = self.page.evaluate(
+                    "sel => (document.querySelector(sel)?.innerText ?? '(none)').slice(0, 200)",
+                    self.VISIT_DETAILS_CONTAINER,
+                )
+                raise AssertionError(
+                    f"Clicked visit '{entity_name}' (id {visit_id}) but the details panel still shows: {shown!r}"
+                )
+
+    def _entity_name_of(self, row):
+        """The row's Entity Name cell text, located by its column header."""
+        headers = [h.strip() for h in row.locator("xpath=ancestor::table[1]//thead//th").all_inner_texts()]
+        if "Entity Name" not in headers:
+            return ""
+        return row.locator("td").nth(headers.index("Entity Name")).inner_text().strip()
 
     def _open_row_at(self, index):
         """Open the visit row at `index` and wait for its details panel to populate."""
@@ -390,6 +411,15 @@ class WorkerVisitsPage(BasePage):
                 continue
             self._open_row_at(i)
             btn = self.page.locator(action_locator).first
+            if not (btn.count() > 0 and btn.is_enabled()):
+                # The panel is confirmed to be THIS visit's (entity-name wait above), so a missing
+                # button is normally final (terminal state, auto-verify). Allow a short bounded grace
+                # for a bar that renders a beat after the details instead of 8s on every such row.
+                try:
+                    self.page.locator(self.VISIT_ACTION_BAR_BUTTON).first.wait_for(state="visible", timeout=2000)
+                except PlaywrightTimeoutError:
+                    pass
+                btn = self.page.locator(action_locator).first
             if btn.count() > 0 and btn.is_enabled():
                 self._step(f"Visit {visit_id} (row {i}) offers the requested review action")
                 return visit_id
