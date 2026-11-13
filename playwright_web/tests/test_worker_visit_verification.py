@@ -22,9 +22,11 @@ WORKER_VISIT_VERIFICATION_PAGE_<VV#> test data, numbered by current MTP VV id).
 """
 
 import time
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from flows.olp_setup import PM_ORG
 from flows.seed_visits import seed_review_visits
@@ -112,7 +114,7 @@ def review_pool(connect, test_data, config, settings):
     # poll the approve itself - a visit whose approve does not stick is retried - until the
     # wanted number of approvals have stuck, or fail the fixture.
     wanted = int(data["seed_pm_review_items"])
-    approved = 0
+    approved = attempts_logged = 0
     deadline = time.monotonic() + APPROVE_STICK_SECONDS
     while approved < wanted and time.monotonic() < deadline:
         visits = _open_review_visits(connect_page, config, data, "nm")
@@ -120,8 +122,28 @@ def review_pool(connect, test_data, config, settings):
             if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"], only_status="pending"):
                 break
             approved += 1
-        except AssertionError:
-            connect_page.wait_for_timeout(5000)  # the approve did not stick yet: re-open and retry
+        except (AssertionError, PlaywrightTimeoutError) as exc:
+            # Not ready yet: the approve did not stick (AssertionError), or a freshly seeded
+            # visit's details panel did not load while Connect is still processing it
+            # (PlaywrightTimeoutError, seen on staging 2026-11-06 once the fixed settle sleep
+            # was gone). Re-open and retry until the deadline.
+            print(f"STEP [review_pool] approve attempt failed ({approved}/{wanted} stuck so far): "
+                  f"{type(exc).__name__}: {str(exc)[:400]}")
+            if attempts_logged < 3:
+                # What the page looks like when the attempt fails, so a stuck fixture can be
+                # told apart: panel never loaded, wrong visit shown, or a different view.
+                attempts_logged += 1
+                try:
+                    panel = connect_page.evaluate(
+                        "() => (document.getElementById('visit-details')?.innerText ?? '(no #visit-details)').slice(0, 300)"
+                    )
+                    print(f"STEP [review_pool] url={connect_page.url!r} panel={panel!r}")
+                    shot = Path("test-results") / f"review_pool_attempt_{attempts_logged}.png"
+                    shot.parent.mkdir(exist_ok=True)
+                    connect_page.screenshot(path=str(shot))
+                except Exception as diag_exc:  # diagnostics must never mask the real failure
+                    print(f"STEP [review_pool] diagnostics failed: {diag_exc!r}")
+            connect_page.wait_for_timeout(5000)
     if approved < wanted:
         pytest.fail(
             f"Only {approved} of {wanted} NM approvals stuck within {APPROVE_STICK_SECONDS}s, so "
