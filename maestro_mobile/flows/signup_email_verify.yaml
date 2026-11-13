@@ -68,9 +68,12 @@ appId: org.commcare.dalvik
     id: "org.commcare.dalvik:id/personalid_resend_countdown_text"
 
 # ---------------------------------------------------------------- SE_08
-# A wrong code is rejected. The field auto-submits on the sixth digit
-# (setCodeCompleteListener), so there is no Verify tap.
+# A wrong code is rejected. 2.65 no longer auto-submits on the sixth digit: a
+# full code only enables VERIFY CODE (personalid_email_verify_button), which has
+# to be tapped after every attempt.
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: ".*wrong 6-digit passcode.*"
@@ -83,24 +86,31 @@ appId: org.commcare.dalvik
 # focus back a box per backspace, clearing the whole code.
 - eraseText
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: ".*wrong 6-digit passcode.*"
     timeout: 30000
 - eraseText
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: "Verification unsuccessful"
     timeout: 30000
+# 2.64 offered Try again / Proceed without email; 2.65 replaced Try again with
+# Wait (a new code is only available after a cooldown). Dialog buttons render
+# upper-case on the device, so both casings are accepted.
 - assertVisible:
-    text: "Try again"
+    text: "TRY AGAIN|Try again|WAIT|Wait"
 - assertVisible:
-    text: "Proceed without email"
+    text: "PROCEED WITHOUT EMAIL|Proceed without email"
 
 # Proceeding without email completes signup and continues to photo capture.
 - tapOn:
-    text: "Proceed without email"
+    text: "PROCEED WITHOUT EMAIL|Proceed without email"
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/take_photo_button"

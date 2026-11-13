@@ -1,3 +1,4 @@
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 import time
 
 from selenium.common import NoSuchElementException
@@ -92,22 +93,32 @@ class OpportunityDashboardPage(BaseWebPage):
                 return True
         return False
 
-    def _navigate_to_opp_in_table(self, opp):
-        """Page through the opportunities table until opp is found and clicked."""
+    def _navigate_to_opp_in_table(self, opp, max_pages=20):
+        """Page through the opportunities table until opp is found and clicked.
+
+        The list opens on default filters (Active, non-test only - CCCT-2882), which
+        hide our test opportunities, so reload it with filtered=1 (show everything)
+        and the largest page size first - the same as the Playwright page's
+        show_all_opportunities. Paging is capped so a missing opportunity fails
+        fast instead of clicking Next forever.
+        """
         time.sleep(5)
-        try:
-            self.select_by_value(self.PAGE_SIZE, "100")
-            time.sleep(5)
-            self.wait_for_page_to_load()
-        except:
-            print("Dropdown not present")
-        while True:
+        parts = urlsplit(self.driver.current_url)
+        query = parse_qs(parts.query)
+        query["filtered"] = ["1"]
+        query["page_size"] = ["100"]
+        self.driver.get(urlunsplit((parts.scheme, parts.netloc, parts.path,
+                                    urlencode(query, doseq=True), parts.fragment)))
+        self.wait_for_page_to_load()
+        time.sleep(3)
+        for _ in range(max_pages):
             if self._find_and_click_opp_in_table(opp):
                 return
             print(f"'{opp}' not on this page, going to next page")
             self.click(self.RIGHT_ARROW)
             time.sleep(5)
             self.wait_for_page_to_load()
+        raise AssertionError(f"Opportunity '{opp}' not found in {max_pages} pages of the list")
 
     def navigate_to_connect_workers(self, opp):
         self._navigate_to_opp_in_table(opp)

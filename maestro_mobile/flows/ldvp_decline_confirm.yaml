@@ -1,0 +1,66 @@
+# LDVP decline session (CCCT-2670, TC-PAY-003), after web paid a second 50.
+# Answering No in the confirmation dialog must leave that payment unconfirmed,
+# while the first one stays Received and the transferred total includes both.
+#
+# Ids and strings are from commcare-android at tag commcare_2.65.0
+# (fragment_connect_delivery_home.xml, ConnectDeliveryPaymentFragment): the
+# delivery home has tabs Dashboard / Payment / Visits / More
+# (connect_delivery_home_tabs). The Payment tab shows payment_earned_amount and
+# payment_transferred_amount over one row per payment. An unconfirmed row reads
+# "Transferred" (tv_payment_status) and shows a `confirm` control, which opens a
+# "Confirm Transferred Payment" dialog (tv_payment_amount, ri_yes / ri_no); a
+# confirmed row reads "Received" and hides `confirm`. 2.65 has no "Ask me
+# later" card - confirmation is per row.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "Demo Opportunity"
+  SECOND_PAYMENT: "50"
+  TRANSFERRED: "150"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+- tapOn:
+    text: "Payment"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_transferred_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_transferred_amount"
+    text: "(?s).*\\b${TRANSFERRED}\\b.*"
+# Only the new payment is unconfirmed, so it is the only row with `confirm`.
+- tapOn:
+    id: "confirm"
+- extendedWaitUntil:
+    visible:
+      id: "tv_payment_confirmation_title"
+    timeout: 15000
+- assertVisible:
+    id: "tv_payment_amount"
+    text: "(?s).*\\b${SECOND_PAYMENT}\\b.*"
+- tapOn:
+    id: "ri_no"
+- extendedWaitUntil:
+    notVisible:
+      id: "tv_payment_confirmation_title"
+    timeout: 15000
+- assertVisible:
+    id: "confirm"
+- assertVisible:
+    id: "tv_payment_status"
+    text: "Transferred"
+- assertVisible:
+    id: "tv_payment_status"
+    text: "Received"

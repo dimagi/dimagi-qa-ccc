@@ -33,6 +33,7 @@ class PersonalIDPage(BasePage):
     EMAIL_IN_USE_MSG = locators.get("login_page", "email_in_use_msg")
     CONFIRM_CODE_INPUT = locators.get("login_page", "confirm_code_input")
     EMAIL_OTP_INPUT = locators.get("otp_page", "email_otp_input")
+    EMAIL_VERIFY_BTN = locators.get("otp_page", "email_verify_btn")
     EMAIL_VERIFY_DESCRIPTION = locators.get("otp_page", "email_verify_description")
     EMAIL_VERIFY_ERROR = locators.get("otp_page", "email_verify_error")
     EMAIL_RESEND_BTN = locators.get("otp_page", "email_resend_btn")
@@ -107,7 +108,7 @@ class PersonalIDPage(BasePage):
         self.wait_for_element(self.BACKUP_CODE_WELCOME_TEXT)
         welcome_text = self.get_text(self.BACKUP_CODE_WELCOME_TEXT)
         assert re.match(
-            rf"Welcome back\s+{name}",
+            rf"Welcome back,?\s+{re.escape(name)}",  # 2.65 added the comma
             welcome_text
         )
 
@@ -121,7 +122,7 @@ class PersonalIDPage(BasePage):
         if not self.is_displayed(self.EMAIL_SKIP_BTN, timeout=15):
             return False
         self.click_element(self.EMAIL_SKIP_BTN)
-        # Confirmation dialog - the buttons reuse the app-linking Yes/No strings.
+        # Confirmation dialog: YES on 2.64, SKIP on 2.65 (see the locator).
         self.click_element(self.EMAIL_SKIP_CONFIRM_YES)
         return True
 
@@ -169,12 +170,13 @@ class PersonalIDPage(BasePage):
         self.click_element(self.EMAIL_RESEND_BTN)
 
     def enter_email_otp(self, code):
-        """Enter the emailed verification code.
+        """Enter the emailed verification code and submit it.
 
-        otp_code_view is a NumericCodeView and auto-submits on the sixth digit
-        (setCodeCompleteListener), so there is no Verify button to press.
+        Since 2.65 a full code only enables VERIFY CODE; it no longer
+        auto-submits on the sixth digit.
         """
         self.type_code(self.EMAIL_OTP_INPUT, code)
+        self.click_when_enabled(self.EMAIL_VERIFY_BTN)
 
     def enter_backup_code_only(self, code):
         """Confirm an EXISTING account's backup code during recovery.

@@ -1,0 +1,107 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow for the LDVP end-to-end sessions (CCCT-2670). Signs the worker in from
+# a cleared app and stops on the setup screen with the nav drawer closed.
+#
+# The LDVP workers sit in the same reserved block as the web invite test's
+# number (+74267426090) and are invited on web before the device ever sees them.
+# So the very first run on an environment REGISTERS the number - the pre-invited
+# signup path (master Integration TC_16) - and every later run recovers it with
+# the backup code. Which one happens is decided by the screen, not by data:
+# registration shows a Confirm code field and recovery shows "Welcome back".
+#
+# Registration needs a 2.65 build: the account only exists once the photo is
+# saved, and Save Photo is enabled without a camera only by the qaAutomation
+# placeholder photo (see shared_seed_registration.yaml).
+#
+# Inputs: COUNTRY_CODE, PHONE_NUMBER, USERNAME, BACKUP_CODE
+
+# permissions/all: Android 13 gates POST_NOTIFICATIONS behind a runtime grant,
+# and the payment sessions wait on real pushes.
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+# The phone screen's CONTINUE enables only once the app has a location fix
+# (PersonalIdPhoneFragment.allowedToContinue: valid phone && consent &&
+# location != null, commcare_2.65.0). A BrowserStack device's own GPS sometimes
+# has none, and then the button stays grey. Give it one. Same point as ldvp_deliver.yaml.
+- setLocation:
+    latitude: 28.6139
+    longitude: 77.2090
+- runFlow: shared_login_signup.yaml
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "backup_code_view"
+    timeout: 60000
+
+# --- First run on this environment: register ---
+- runFlow:
+    when:
+      visible:
+        id: "confirm_code_view"
+    commands:
+      - inputText: "${BACKUP_CODE}"
+      # The Confirm boxes carry no id/text (NumericCodeView builds them at
+      # runtime), so the first one is focused by coordinate - same point as
+      # shared_seed_registration.yaml uses on the Pixel 7 / 2.65 layout.
+      - tapOn:
+          point: "23%,44%"
+      - inputText: "${BACKUP_CODE}"
+      - tapOn:
+          id: "connect_backup_code_button"
+      - extendedWaitUntil:
+          notVisible:
+            id: "org.commcare.dalvik:id/progress_bar"
+          timeout: 40000
+      - tapOn:
+          id: "personalid_email_skip_button"
+          optional: true
+      - tapOn:
+          text: "YES|SKIP"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "save_photo_button"
+          timeout: 30000
+      - tapOn:
+          id: "save_photo_button"
+      - extendedWaitUntil:
+          notVisible:
+            id: "org.commcare.dalvik:id/progress_bar"
+          timeout: 60000
+      - tapOn:
+          text: "OK"
+          optional: true
+
+# --- Every later run: recover with the backup code ---
+- runFlow:
+    when:
+      visible:
+        id: "welcome_back"
+    commands:
+      - runFlow: shared_backup_code.yaml
+
+# Either way the account is now signed in.
+- extendedWaitUntil:
+    visible:
+      id: "header_user_name"
+    timeout: 30000
+
+# completeSignin() opens the drawer. Tap the scrim to close it - Back on the
+# setup screen leaves the app (see shared_open_deliver_app.yaml).
+- runFlow:
+    when:
+      visible:
+        id: "nav_drawer_recycler"
+    commands:
+      - tapOn:
+          point: "92%,50%"
+      - extendedWaitUntil:
+          notVisible:
+            id: "nav_drawer_recycler"
+          timeout: 15000

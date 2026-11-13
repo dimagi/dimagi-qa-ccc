@@ -59,8 +59,9 @@ class LoginPage(BasePage):
         form being absent, rather than inferred from something having gone
         wrong. Anything else raises with the URL it actually landed on.
         """
-        self.page.goto(config.get("cchq_url"))
-        self.page.wait_for_load_state("load")
+        # 90s: HQ can take close to the default 30s to serve the login page.
+        self.page.goto(config.get("cchq_url"), timeout=90000)
+        self.page.wait_for_load_state("load", timeout=90000)
 
         try:
             self.page.locator(self.USERNAME_ELE).first.wait_for(
