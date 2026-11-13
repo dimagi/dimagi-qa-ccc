@@ -6,10 +6,12 @@ Both tabs render exactly one django-tables2 base-table
 the page" xpath used elsewhere in the suite applies to either tab.
 """
 
+from urllib.parse import parse_qs, urlsplit
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
-from utils.helpers import LocatorLoader, with_page_size
+from utils.helpers import LocatorLoader, with_page_number, with_page_size
 
 locators = LocatorLoader()
 
@@ -91,13 +93,51 @@ class InvoiceListPage(BasePage):
     def is_empty(self):
         return self.page.locator(self.EMPTY_TEXT).count() > 0
 
+    MAX_PAGES_SEARCHED = 20
+
+    def _find_invoice_page(self, invoice_number):
+        """Walk the list pages (from page 1) until the invoice's row is present; True
+        and left on that page if found, False and left on page 1 if not.
+
+        The list is oldest-first and page_size tops out at 100 (larger values fall
+        back to 20), and every run adds invoices that nothing cleans up, so a freshly
+        created invoice sits on a later page - confirmed live 2026-11-09: 144
+        invoices in the month, this run's on page 2."""
+        locator = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number))
+        self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+        # A page past the end shows the LAST page again (django-tables2 default; checked on staging
+        # with ?page=99), so row_count never reaches 0: stop when a page repeats the one before it.
+        # `page_size=` also contains "page=", hence the query-param check rather than a substring.
+        on_page = 1 if "page" not in parse_qs(urlsplit(self.page.url).query) else None
+        previous_first = None
+        for page_no in range(1, self.MAX_PAGES_SEARCHED + 1):
+            if on_page != page_no:
+                self.page.goto(with_page_number(self.page.url, page_no))
+                self.page.wait_for_load_state("load")
+                self.page.locator(self.TABLE).first.wait_for(state="visible", timeout=15000)
+                on_page = page_no
+            if locator.count() > 0:
+                return True
+            rows = self.page.locator(self.TABLE_ROWS)
+            if rows.count() == 0:
+                break
+            first = rows.first.inner_text().strip()
+            if first == previous_first:
+                break
+            previous_first = first
+        if on_page != 1:
+            self.page.goto(with_page_number(self.page.url, 1))
+            self.page.wait_for_load_state("load")
+        return False
+
     def row_by_invoice_number(self, invoice_number):
+        self._find_invoice_page(invoice_number)
         row = self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).first
         row.wait_for(state="visible", timeout=15000)
         return row
 
     def has_invoice(self, invoice_number):
-        return self.page.locator(self.ROW_BY_INVOICE_NUMBER.format(invoice_number=invoice_number)).count() > 0
+        return self._find_invoice_page(invoice_number)
 
     def row_status(self, invoice_number, status_column):
         headers = self.column_headers()
