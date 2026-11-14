@@ -324,9 +324,18 @@ class ConnectWorkersPage(BasePage):
         row.wait_for(state="visible", timeout=20000)
         row.click()
         panel = self.page.locator(self.TASK_DETAILS_PANEL).first
-        self.page.wait_for_timeout(2000)  # htmx load
+        # The panel is htmx-swapped: wait for the placeholder to go rather than
+        # sleeping a fixed time (a slow staging response failed that).
+        try:
+            expect(panel).not_to_have_text(
+                re.compile(r"select a task|^\s*$", re.I), timeout=20000
+            )
+        except AssertionError:
+            pass  # the assertion below reports what the panel actually shows
         text = panel.inner_text()
-        assert "select a task" not in text.lower(), "Details panel did not load after row click"
+        assert "select a task" not in text.lower(), (
+            f"Details panel did not load after row click; it shows: {text!r}"
+        )
         self._step("Task details panel loaded")
         return text
 
