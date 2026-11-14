@@ -243,6 +243,7 @@ class OpportunityDashboardPage(BasePage):
     FILTER_SELECT_BY_NAME = locators.get("opportunity_dashboard_page", "filter_select_by_name")
     WORKERS_SEARCH_INPUT = locators.get("opportunity_dashboard_page", "workers_search_input")
     WORKERS_DISPLAYING_COUNT = locators.get("opportunity_dashboard_page", "workers_displaying_count")
+    WORKERS_TABLE_CONTAINER = locators.get("opportunity_dashboard_page", "workers_table_container")
     WORKERS_SEARCH_CLEAR = locators.get("opportunity_dashboard_page", "workers_search_clear")
     WORKERS_TAB_LABEL = locators.get("opportunity_dashboard_page", "workers_tab_label")
 
@@ -637,7 +638,21 @@ class OpportunityDashboardPage(BasePage):
         self.is_displayed(self.WORKERS_SEARCH_INPUT, timeout=15000)
         self.type(self.WORKERS_SEARCH_INPUT, term)
         self.page.locator(self.WORKERS_SEARCH_INPUT).first.press("Enter")
-        self.page.wait_for_timeout(1500)
+        # Let the htmx table swap finish rather than sleeping a fixed time.
+        try:
+            self.page.wait_for_load_state("networkidle", timeout=10000)
+        except PlaywrightTimeoutError:
+            pass
+        self.page.wait_for_timeout(500)
+
+    def workers_search_diagnostics(self):
+        """What the page shows after a search, for failure messages (OD_40 is intermittent)."""
+        try:
+            typed = self.page.locator(self.WORKERS_SEARCH_INPUT).first.input_value()
+            table = self.page.locator(self.WORKERS_TABLE_CONTAINER).first.inner_text(timeout=3000)
+        except Exception as exc:  # diagnostics must never mask the real failure
+            return f"url={self.page.url} (could not read the page: {exc})"
+        return f"url={self.page.url} search_box={typed!r} table_text={' '.join(table.split())[:400]!r}"
 
     def displaying_count_text(self):
         try:
