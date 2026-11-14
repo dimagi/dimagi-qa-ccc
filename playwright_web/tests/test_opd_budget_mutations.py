@@ -22,6 +22,7 @@ import pytest
 
 from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value
+from utils.skips import skip_needs_data, skip_not_applicable
 
 
 def _mutation_opp(test_data, config):
@@ -37,12 +38,12 @@ def _mutation_opp(test_data, config):
 def budget(browser, config, settings, test_data):
     opp_id, name = _mutation_opp(test_data, config)
     if not opp_id and not name:
-        pytest.skip(
+        skip_needs_data(
             "OPD.mutation_opportunity_id/name not set - budget-mutation tests are gated. Point "
             "OPD.mutation_opportunity_id_staging at the dedicated Add Budget opp and re-run."
         )
     if config.env == "prod":
-        pytest.skip("Budget mutations run on staging only (assert-and-skip on prod).")
+        skip_not_applicable("Budget mutations run on staging only (assert-and-skip on prod).")
     yield from dashboard_session(
         browser, config, settings, test_data, opp_id=opp_id, names=[name] if name else None
     )
@@ -51,7 +52,7 @@ def budget(browser, config, settings, test_data):
 def _require_claimed_workers(budget):
     budget.goto_add_budget()
     if not budget.add_budget_has_claimed_workers():
-        pytest.skip("Mutation opportunity has no claimed workers - the visits form is not rendered")
+        skip_needs_data("Mutation opportunity has no claimed workers - the visits form is not rendered")
 
 
 def test_opd_10_add_budget_existing_worker(budget):

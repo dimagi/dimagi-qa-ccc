@@ -35,6 +35,7 @@ from flows.workers_setup import open_connect_workers, open_deliver_tab
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import parse_org_and_opp
+from utils.skips import skip_needs_data, skip_not_applicable
 
 REVIEW_DATA_KEY = "WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34"
 
@@ -50,10 +51,10 @@ def _require_review_data(test_data, config):
     data = test_data.get(REVIEW_DATA_KEY)
     resolved = {k: env_value(data, k, config) for k in data}
     if config.env == "stage" and not data.get("opportunity_id_staging"):
-        pytest.skip(f"{REVIEW_DATA_KEY} has no staging manual-review opportunity - prod only.")
+        skip_not_applicable(f"{REVIEW_DATA_KEY} has no staging manual-review opportunity - prod only.")
     missing = [k for k in ("opportunity_id", "nm_org_slug", "pm_org_slug", "worker_user_id") if not resolved.get(k)]
     if missing:
-        pytest.skip(f"{REVIEW_DATA_KEY} is missing {missing} for env '{config.env}'.")
+        skip_needs_data(f"{REVIEW_DATA_KEY} is missing {missing} for env '{config.env}'.")
     return resolved
 
 
@@ -192,7 +193,7 @@ def test_vv_01_land_and_bulk_approve(connect, test_data):
     visits.verify_worker_visits_tabs_present()
 
     if not visits.has_visit_rows():
-        pytest.skip(
+        skip_needs_data(
             f"No visits to approve for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - nothing to exercise the approve controls."
         )
@@ -254,7 +255,7 @@ def test_vv_05_visit_tabs_render(connect, test_data):
         # table renders, and flag that VV_5 review-tab coverage needs an NM-review opportunity in
         # test data for full coverage.
         visits.verify_worker_visits_table_headers_present()
-        pytest.skip(
+        skip_needs_data(
             f"'{data['opportunity_name']}' / '{data['worker_name']}' exposes no NM-review "
             "sub-tabs - point WORKER_VISIT_VERIFICATION_PAGE_5 at a manual-review "
             "opportunity to cover the Pending NM Review / Approved / Rejected / All tabs."
@@ -279,7 +280,7 @@ def test_vv_09_visit_details_panel(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        pytest.skip(
+        skip_needs_data(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - either no visits, or the user_visit_details "
             "endpoint is erroring for this opportunity (user_visit_details can 500 when the opp lacks a verification-flags row; "
@@ -304,7 +305,7 @@ def test_vv_03_image_carousel(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_with_images():
-        pytest.skip(
+        skip_needs_data(
             f"No image-bearing visit found for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - point WORKER_VISIT_VERIFICATION_PAGE_3 at a "
             "with-photo visit to cover VV_3."
@@ -321,7 +322,7 @@ def test_vv_31_nm_reject_visit(connect, test_data, config, review_pool):
     data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     if not visits.nm_reject_a_visit(data["reject_reason"], data["rejected_status"]):
-        pytest.skip(
+        skip_needs_data(
             f"No rejectable visit for '{data['worker_name']}' - seed a pending "
             "visit to cover VV_31."
         )
@@ -336,7 +337,7 @@ def test_vv_32_nm_approve_visit(connect, test_data, config, review_pool):
     data = review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     if not visits.nm_approve_a_visit(data["approve_justification"], data["approved_status"]):
-        pytest.skip(
+        skip_needs_data(
             f"No approvable visit for '{data['worker_name']}' - seed a pending "
             "visit to cover VV_32."
         )
@@ -351,7 +352,7 @@ def test_vv_33_pm_agree_visit(connect, test_data, config, review_pool):
     data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_agree_a_visit():
-        pytest.skip(
+        skip_needs_data(
             f"No NM-reviewed visit with an enabled Agree for '{data['worker_name']}' "
             "- seed an NM-approved / PM-review-pending visit to cover VV_33."
         )
@@ -365,7 +366,7 @@ def test_vv_34_pm_disagree_visit(connect, test_data, config, review_pool):
     data = review_pool
     visits = _open_review_visits(connect_page, config, data, "pm")
     if not visits.pm_disagree_a_visit():
-        pytest.skip(
+        skip_needs_data(
             f"No NM-reviewed visit with an enabled Disagree for '{data['worker_name']}' "
             "- seed an NM-approved / PM-review-pending visit to cover VV_34."
         )
@@ -387,7 +388,7 @@ def test_gap_w_44_visit_action_bar_gating(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        pytest.skip(
+        skip_needs_data(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - no visits or the user_visit_details endpoint "
             "is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); cannot inspect action-bar gating."
@@ -420,13 +421,13 @@ def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        pytest.skip(
+        skip_needs_data(
             f"Details panel did not open for '{data['worker_name']}' - no visits or the "
             "user_visit_details endpoint is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); "
             "cannot probe the guard."
         )
     if visits.action_bar_button_set():
-        pytest.skip(
+        skip_needs_data(
             f"'{data['opportunity_name']}' is not auto-verify (action bar has controls) "
             "- the manual-verify guard does not apply; point WORKER_VISIT_ACTION_GATING "
             "at an auto-verify opportunity to cover GAP-SRC-W-45."
@@ -524,7 +525,7 @@ def test_gap_w_43_bulk_controls_visible_for_nm(connect, test_data, config):
     data = _require_review_data(test_data, config)
     visits = _open_review_visits(connect_page, config, data, "nm")
     if visits.has_visits_tasks_tabs():
-        pytest.skip(
+        skip_needs_data(
             "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table "
             "has no bulk controls (they belong to the tabbed verification table)."
         )
@@ -551,7 +552,7 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, conf
     # PM (the module's session): manual+PM tab-set.
     visits = _open_review_visits(connect_page, config, data, "pm")
     if visits.has_visits_tasks_tabs() or not visits.has_review_tabs():
-        pytest.skip(
+        skip_needs_data(
             f"Opportunity {data['opportunity_id']} does not render the verification tab-set "
             "(WORKER_VISITS_TASKS switch ON or no NM-review tabs) - GAP-SRC-W-40 needs "
             "the tabbed verification table."
@@ -583,7 +584,7 @@ def test_gap_w_42_reject_requires_reason(connect, test_data, config, review_pool
     visits = _open_review_visits(connect_page, config, data, "nm")
     blocked = visits.nm_reject_blocked_without_reason(data["rejected_status"])
     if blocked is None:
-        pytest.skip(
+        skip_needs_data(
             f"No rejectable visit for '{data['worker_name']}' - seed a pending visit "
             "to cover the reject-requires-reason rule (GAP-SRC-W-42)."
         )
@@ -601,7 +602,7 @@ def test_gap_w_42_approve_requires_justification(connect, test_data, config, rev
     visits = _open_review_visits(connect_page, config, data, "nm")
     blocked = visits.nm_approve_blocked_without_justification(data["approved_status"])
     if blocked is None:
-        pytest.skip(
+        skip_needs_data(
             f"No approvable visit for '{data['worker_name']}' - seed a pending visit "
             "to cover the approve-requires-justification rule (GAP-SRC-W-42)."
         )
@@ -620,7 +621,7 @@ def test_vv_35_agree_then_cannot_disagree(connect, test_data, config, review_poo
 
     cannot_disagree = visits.pm_agree_then_cannot_disagree()
     if cannot_disagree is None:
-        pytest.skip(
+        skip_needs_data(
             f"No PM-reviewable visit with an enabled Agree for '{data['worker_name']}' "
             "- needs an NM-approved / PM-review-pending visit to cover VV_35."
         )
@@ -646,7 +647,7 @@ def test_vv_35_disagree_then_cannot_agree(connect, test_data, config, review_poo
 
     cannot_agree = visits.pm_disagree_then_cannot_agree()
     if cannot_agree is None:
-        pytest.skip(
+        skip_needs_data(
             f"No PM-reviewable visit with an enabled Disagree for '{data['worker_name']}' "
             "- needs an NM-approved / PM-review-pending visit to cover VV_35."
         )
