@@ -23,6 +23,7 @@ from pages.connect_home_page import ConnectHomePage
 from pages.connect_opportunities_page import ConnectOpportunitiesPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_not_applicable
 
 DELIVERY_WINDOW_DAYS = 365
 
@@ -30,7 +31,7 @@ DELIVERY_WINDOW_DAYS = 365
 def test_setup_tasking_opportunity(page, test_data, config, settings):
     # Also guard here: naming the file explicitly bypasses conftest's collection ignore.
     if os.getenv("SETUP_TASKING") != "1":
-        pytest.skip("One-off setup helper - run with SETUP_TASKING=1 to create the opportunity")
+        skip_not_applicable("One-off setup helper - run with SETUP_TASKING=1 to create the opportunity")
 
     tasking = test_data.get("TASKING")
     hybrid = test_data.get("TASKING_HYBRID")

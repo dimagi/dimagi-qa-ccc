@@ -43,6 +43,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_invoice_form_page import InvoiceFormPage
 from pages.connect_invoice_list_page import InvoiceListPage
+from utils.skips import skip_needs_data, skip_not_applicable
 
 # The runner's clock can sit a day either side of the server's (timezone), so the
 # expense date is yesterday (never "in the future" for the server) and the
@@ -60,7 +61,7 @@ non_prod_only = pytest.mark.usefixtures("non_prod")
 @pytest.fixture
 def non_prod(config):
     if config.env == "prod":
-        pytest.skip("Creates/approves/pays invoices - never run on prod")
+        skip_not_applicable("Creates/approves/pays invoices - never run on prod")
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +80,7 @@ def ctx(browser, config, settings, test_data):
         opp_name = env_value(invoice_list, "opportunity_name", config)
         opened = open_invoice_opportunity(connect_page, opp_name) if opp_name else None
         if not opened:
-            pytest.skip(
+            skip_needs_data(
                 f"Invoice opportunity {opp_name!r} (INVOICE_LIST.opportunity_name) not found in the PM's "
                 "opportunity list - check the name in web_test_data.yaml / that the opp still exists"
             )
@@ -119,7 +120,7 @@ def _require_invoice(ctx, key):
     """Invoice number an earlier test stored under `key`, or skip this test."""
     number = ctx["invoices"].get(key)
     if not number:
-        pytest.skip(f"No '{key}' invoice - the earlier test that creates it did not complete")
+        skip_needs_data(f"No '{key}' invoice - the earlier test that creates it did not complete")
     return number
 
 
@@ -458,7 +459,7 @@ def test_invoice_27_create_invoice_after_a_rejected_one(ctx, test_data):
 def test_invoice_list30_pm_sees_all_invoices(ctx):
     created = ctx["invoices"]
     if not created:
-        pytest.skip("No invoices were created in this run - nothing to look for in the PM's list")
+        skip_needs_data("No invoices were created in this run - nothing to look for in the PM's list")
     _as_pm(ctx)
     invoices = InvoiceListPage(ctx["connect_page"])
     invoices.verify_loaded()

@@ -26,6 +26,7 @@ import pytest
 from pages.cchq_home_page import CCHQHomePage
 from pages.cchq_login_page import LoginPage
 from pages.cchq_messaging_page import CCHQMessagingPage
+from utils.skips import skip_needs_data
 
 CONNECT_CONTENT_OPTIONS = ["Connect Message", "Connect Survey"]
 
@@ -117,7 +118,7 @@ def messaging_data(test_data, config):
         data[key] = _env_value(data, key, config)
     missing = [key for key, value in data.items() if not value]
     if missing:
-        pytest.skip(
+        skip_needs_data(
             f"MESSAGING data not configured for env '{config.env}' (missing: {', '.join(missing)}). "
             "The staging recipient ids still have to be read off HQ's recipient picker - see "
             "Messaging_Workflow_Automation_Test_Plan.xlsx, Prerequisites."
@@ -228,7 +229,7 @@ def test_repeat_consent_request_creates_no_duplicate(messaging):
 
     assert banner, "The consent request reported nothing at all - the page or its banner has changed"
     if "no channels created" not in banner.lower():
-        pytest.skip(
+        skip_needs_data(
             f"Consent request reported {banner!r}, i.e. it created channels for workers that had "
             "none. That is a one-off initialisation of this domain; re-run and this becomes the "
             "no-duplicate assertion."

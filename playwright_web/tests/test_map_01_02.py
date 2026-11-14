@@ -22,6 +22,7 @@ from pages.cchq_case_list_map_page import (
     resolve_app_id,
 )
 from pages.cchq_login_page import LoginPage
+from utils.skips import skip_needs_data
 
 # Format labels that must be offered on the Case List tab for the map feature.
 EXPECTED_GEO_LABELS = [
@@ -47,7 +48,7 @@ def case_list_map(browser, config, settings):
     # "[AV] Case List Map" has a copy on stage and prod; skip only on an
     # environment with no known app id (and no MAP_APP_ID override).
     if not resolve_app_id(config.env):
-        pytest.skip(
+        skip_needs_data(
             f"No '[AV] Case List Map' app id for env '{config.env}'. Set MAP_APP_ID to run here."
         )
     context = browser.new_context(ignore_https_errors=True)

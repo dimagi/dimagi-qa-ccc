@@ -17,6 +17,7 @@ from flows.tasking_static import env_value, login_to_connect
 from pages.connect_microplanning_page import CoverageProgressPage, MicroplanningPage
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_needs_data
 
 
 def _opp(test_data, config):
@@ -24,7 +25,7 @@ def _opp(test_data, config):
     opp_id = env_value(opd, "microplanning_opp_id", config)
     slug = env_value(opd, "org_slug", config)
     if not opp_id or not slug:
-        pytest.skip("OPD.microplanning_opp_id/org_slug not configured for this env")
+        skip_needs_data("OPD.microplanning_opp_id/org_slug not configured for this env")
     return opp_id, slug
 
 
@@ -158,7 +159,7 @@ def test_microplanning_27_flw_summary_on_assignee_select(session):
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
     if not options:
-        pytest.skip("No assignees available on this opportunity to select for FLW summary")
+        skip_needs_data("No assignees available on this opportunity to select for FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
 
@@ -168,11 +169,11 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
     if not options:
-        pytest.skip("No assignees available to open FLW summary")
+        skip_needs_data("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
-        pytest.skip("'View summary by FLW' control not present for this assignee")
+        skip_needs_data("'View summary by FLW' control not present for this assignee")
     micro.open_flw_summary_by_flw()
     path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
     assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
@@ -183,11 +184,11 @@ def test_microplanning_29_view_visits_nav(session):
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
     if not options:
-        pytest.skip("No assignees available to open FLW visits")
+        skip_needs_data("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
-        pytest.skip("'View Visits' control not present for this assignee")
+        skip_needs_data("'View Visits' control not present for this assignee")
     micro.open_flw_summary_visits()
     assert "/workers/" in micro.page.url, f"Did not land on the connect workers page: {micro.page.url}"
 
@@ -228,7 +229,7 @@ def test_microplanning_16_select_work_area_section(session, test_data):
     work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
     micro.exit_assignment_mode()
     if work_area is None:
-        pytest.skip("No assignee on this opportunity has any assigned work areas to select")
+        skip_needs_data("No assignee on this opportunity has any assigned work areas to select")
     micro = _home(session)
     micro.select_work_area_via_js(work_area)
     text = micro.select_work_area_section_text()
@@ -246,7 +247,7 @@ def test_microplanning_17_modify_work_area_form_fields(session):
     work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
     micro.exit_assignment_mode()
     if work_area is None:
-        pytest.skip("No assignee on this opportunity has any assigned work areas to select")
+        skip_needs_data("No assignee on this opportunity has any assigned work areas to select")
     micro = _home(session)
     micro.select_work_area_via_js(work_area)
     micro.open_modify_work_area_modal()
@@ -327,7 +328,7 @@ def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data)
     coverage.verify_loaded()
     before = coverage.section_table_body_text(section)
     if not any(c.strip(" %,.0") for c in coverage.section_numeric_cells(section)):
-        pytest.skip("Core Metrics shows no non-zero values to react to a date filter on this opportunity")
+        skip_needs_data("Core Metrics shows no non-zero values to react to a date filter on this opportunity")
     start, end = ui["empty_date_range"]
     coverage.apply_date_filter(start, end)
     coverage.verify_loaded()
@@ -360,7 +361,7 @@ def review_session(browser, config, settings, test_data):
     opp_id = env_value(review, "opportunity_id", config)
     slug = env_value(review, "org_slug", config)
     if not opp_id or not slug:
-        pytest.skip("MICROPLANNING_REVIEW.opportunity_id/org_slug not configured for this env")
+        skip_needs_data("MICROPLANNING_REVIEW.opportunity_id/org_slug not configured for this env")
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
     try:
@@ -392,7 +393,7 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
     work_area_id = env_value(review, key, config)
     work_area_slug = env_value(review, key.replace("_id", "_slug"), config)
     if work_area_id is None and work_area_slug is None:
-        pytest.skip(f"MICROPLANNING_REVIEW.{key} not configured for this env")
+        skip_needs_data(f"MICROPLANNING_REVIEW.{key} not configured for this env")
     work_areas = micro.fetch_all_work_areas(base, slug, opp_id)
     # The key the lookup used, so the reseed hint below names the field to update.
     lookup_key = key if work_area_id is not None else key.replace("_id", "_slug")
@@ -404,7 +405,7 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
     work_area_id = work_area_id if work_area_id is not None else work_area_slug
     if work_area is None or work_area.get("status") != "REQUEST_FOR_INACCESSIBLE":
         status = work_area.get("status") if work_area else "not found"
-        pytest.skip(
+        skip_needs_data(
             f"Work area {work_area_id} on opportunity {opp_id} is no longer REQUEST_FOR_INACCESSIBLE "
             f"(now: {status}). Deny/approve consume it - ask Anshu to reseed that work area (or point "
             f"MICROPLANNING_REVIEW.{lookup_key} at a fresh one)."
@@ -419,7 +420,7 @@ def _require_review_ui(micro):
     frontend button/JS aren't rendered anywhere on the page. See
     MicroplanningPage.review_button_ready's docstring."""
     if not micro.review_button_ready():
-        pytest.skip(
+        skip_needs_data(
             "'Review Inaccessible' UI not deployed on this env yet (backend endpoint "
             "is live, but no trigger button/JS in the rendered page) - re-run once deployed"
         )

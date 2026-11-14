@@ -18,6 +18,7 @@ from flows.olp_setup import PM_ORG
 from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
+from utils.skips import skip_not_applicable
 
 # Invalid upload payloads (Playwright in-memory FilePayloads - no temp files).
 BAD_TYPE_FILE = {"name": "not-a-sheet.txt", "mimeType": "text/plain", "buffer": b"this is not a csv or xlsx"}
@@ -49,7 +50,7 @@ def manual_dashboard(browser, config, settings, test_data):
     skips unless OPD.manual_verify_opp_id[_staging] is set (staging only)."""
     opp_id = env_value(test_data.get("OPD"), "manual_verify_opp_id", config)
     if not opp_id:
-        pytest.skip("OPD.manual_verify_opp_id not set for this env - manual-flow opp only exists on staging")
+        skip_not_applicable("OPD.manual_verify_opp_id not set for this env - manual-flow opp only exists on staging")
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
     try:
