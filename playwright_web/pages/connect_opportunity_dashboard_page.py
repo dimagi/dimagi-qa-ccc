@@ -636,14 +636,25 @@ class OpportunityDashboardPage(BasePage):
     def search_workers(self, term):
         self._step(f"Search workers for {term!r}")
         self.is_displayed(self.WORKERS_SEARCH_INPUT, timeout=15000)
-        self.type(self.WORKERS_SEARCH_INPUT, term)
-        self.page.locator(self.WORKERS_SEARCH_INPUT).first.press("Enter")
-        # Let the htmx table swap finish rather than sleeping a fixed time.
+        box = self.page.locator(self.WORKERS_SEARCH_INPUT).first
+        displaying = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first
+        # fill() sets the value without key events, and the search sometimes never
+        # applied (the box held the term while the table still listed every worker:
+        # OD_40 run 43577709432). Type real keystrokes, and if the filtered
+        # "Displaying" line does not appear, submit once more.
+        for attempt in (1, 2):
+            box.fill("")
+            box.press_sequentially(term, delay=30)
+            box.press("Enter")
+            try:
+                displaying.wait_for(state="visible", timeout=10000)
+                break
+            except PlaywrightTimeoutError:
+                self._step(f"Search for {term!r} not applied after attempt {attempt}")
         try:
             self.page.wait_for_load_state("networkidle", timeout=10000)
         except PlaywrightTimeoutError:
             pass
-        self.page.wait_for_timeout(500)
 
     def workers_search_diagnostics(self):
         """What the page shows after a search, for failure messages (OD_40 is intermittent)."""
