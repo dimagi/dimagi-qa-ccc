@@ -2,7 +2,7 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
 from utils.helpers import LocatorLoader, TestDataLoader
 
@@ -978,13 +978,20 @@ class ConnectWorkersPage(BasePage):
 
         # Always reload the list: right after a resend the URL can still read /workers/ while
         # the redirect to the dashboard is in flight, so the row looked absent and the delete
-        # was skipped (staging run 42637106775: "Invite still present after delete").
+        # was skipped.
         if getattr(self, "_workers_url", None):
             self._goto_workers_list()
+        if must_exist:
+            # The caller just created/resent this invite, so wait for the row rather than
+            # relying on the fixed settle time in _goto_workers_list (slow table).
+            row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+            try:
+                row.wait_for(state="visible", timeout=15000)
+            except PlaywrightTimeoutError:
+                raise AssertionError(
+                    f"No invite row for {phone} to delete on the workers list ({self.page.url})"
+                ) from None
         if not self.worker_row_present(phone):
-            # must_exist: the caller just created/resent this invite, so a missing row is the failure
-            # itself - raise here instead of letting the test fail later with "still present".
-            assert not must_exist, f"No invite row for {phone} to delete on the workers list ({self.page.url})"
             self._step(f"No invite row for {phone} to delete")
             return
         deadline = time.monotonic() + timeout_seconds
