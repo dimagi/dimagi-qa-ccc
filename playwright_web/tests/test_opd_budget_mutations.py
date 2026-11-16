@@ -36,14 +36,14 @@ def _mutation_opp(test_data, config):
 
 @pytest.fixture(scope="module")
 def budget(browser, config, settings, test_data):
+    if config.env == "prod":
+        skip_not_applicable("Budget mutations run on staging only (assert-and-skip on prod).")
     opp_id, name = _mutation_opp(test_data, config)
     if not opp_id and not name:
         skip_needs_data(
             "OPD.mutation_opportunity_id/name not set - budget-mutation tests are gated. Point "
             "OPD.mutation_opportunity_id_staging at the dedicated Add Budget opp and re-run."
         )
-    if config.env == "prod":
-        skip_not_applicable("Budget mutations run on staging only (assert-and-skip on prod).")
     yield from dashboard_session(
         browser, config, settings, test_data, opp_id=opp_id, names=[name] if name else None
     )

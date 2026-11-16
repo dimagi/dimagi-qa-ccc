@@ -24,7 +24,7 @@ from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-from utils.skips import skip_needs_data, skip_not_applicable
+from utils.skips import skip_blocked, skip_needs_data, skip_not_applicable
 
 
 @pytest.fixture(scope="module")
@@ -336,7 +336,7 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
         skip_needs_data("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
     if dash.status_badge_text() != "Ended":
-        skip_needs_data("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
+        skip_blocked("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
     assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
         "'Add Connect Workers' should be hidden for an ended opportunity"
     )

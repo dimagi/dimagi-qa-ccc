@@ -17,7 +17,7 @@ from flows.tasking_static import env_value, login_to_connect
 from pages.connect_microplanning_page import CoverageProgressPage, MicroplanningPage
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_workers_page import ConnectWorkersPage
-from utils.skips import skip_needs_data
+from utils.skips import skip_blocked, skip_needs_data
 
 
 def _opp(test_data, config):
@@ -173,7 +173,7 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
-        skip_needs_data("'View summary by FLW' control not present for this assignee")
+        skip_blocked("'View summary by FLW' control not present for this assignee")
     micro.open_flw_summary_by_flw()
     path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
     assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
@@ -188,7 +188,7 @@ def test_microplanning_29_view_visits_nav(session):
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
     if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
-        skip_needs_data("'View Visits' control not present for this assignee")
+        skip_blocked("'View Visits' control not present for this assignee")
     micro.open_flw_summary_visits()
     assert "/workers/" in micro.page.url, f"Did not land on the connect workers page: {micro.page.url}"
 
@@ -420,7 +420,7 @@ def _require_review_ui(micro):
     frontend button/JS aren't rendered anywhere on the page. See
     MicroplanningPage.review_button_ready's docstring."""
     if not micro.review_button_ready():
-        skip_needs_data(
+        skip_blocked(
             "'Review Inaccessible' UI not deployed on this env yet (backend endpoint "
             "is live, but no trigger button/JS in the rendered page) - re-run once deployed"
         )
