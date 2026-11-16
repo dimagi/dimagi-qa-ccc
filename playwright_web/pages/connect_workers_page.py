@@ -333,7 +333,7 @@ class ConnectWorkersPage(BasePage):
         except AssertionError:
             pass  # the assertion below reports what the panel actually shows
         text = panel.inner_text()
-        assert "select a task" not in text.lower(), (
+        assert text.strip() and "select a task" not in text.lower(), (
             f"Details panel did not load after row click; it shows: {text!r}"
         )
         self._step("Task details panel loaded")
