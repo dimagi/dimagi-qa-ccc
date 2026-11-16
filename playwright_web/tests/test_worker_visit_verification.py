@@ -35,7 +35,7 @@ from flows.workers_setup import open_connect_workers, open_deliver_tab
 from pages.connect_worker_visits_page import WorkerVisitsPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.helpers import parse_org_and_opp
-from utils.skips import skip_needs_data, skip_not_applicable
+from utils.skips import skip_blocked, skip_needs_data, skip_not_applicable
 
 REVIEW_DATA_KEY = "WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34"
 
@@ -280,7 +280,7 @@ def test_vv_09_visit_details_panel(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        skip_needs_data(
+        skip_blocked(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - either no visits, or the user_visit_details "
             "endpoint is erroring for this opportunity (user_visit_details can 500 when the opp lacks a verification-flags row; "
@@ -388,7 +388,7 @@ def test_gap_w_44_visit_action_bar_gating(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        skip_needs_data(
+        skip_blocked(
             f"Details panel did not open for '{data['worker_name']}' in "
             f"'{data['opportunity_name']}' - no visits or the user_visit_details endpoint "
             "is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); cannot inspect action-bar gating."
@@ -421,7 +421,7 @@ def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
         visits.click_tab_by_name("All")
 
     if not visits.open_first_visit_details():
-        skip_needs_data(
+        skip_blocked(
             f"Details panel did not open for '{data['worker_name']}' - no visits or the "
             "user_visit_details endpoint is erroring (user_visit_details can 500 when the opp lacks a verification-flags row); "
             "cannot probe the guard."
