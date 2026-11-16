@@ -638,10 +638,11 @@ class OpportunityDashboardPage(BasePage):
         self.is_displayed(self.WORKERS_SEARCH_INPUT, timeout=15000)
         box = self.page.locator(self.WORKERS_SEARCH_INPUT).first
         displaying = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first
-        # fill() sets the value without key events, and the search sometimes never
-        # applied (the box held the term while the table still listed every worker:
-        # OD_40 run 43577709432). Type real keystrokes, and if the filtered
-        # "Displaying" line does not appear, submit once more.
+        # fill() sets the value without key events, and the search sometimes never applied
+        # (the box held the term while the table still listed every worker). Type real
+        # keystrokes. The one re-submit covers a test-side race (typing before the htmx
+        # handler binds); if the filtered "Displaying" line still does not appear after
+        # the second try, the search is genuinely ignored and the caller's assert fails.
         for attempt in (1, 2):
             box.fill("")
             box.press_sequentially(term, delay=30)
@@ -651,10 +652,6 @@ class OpportunityDashboardPage(BasePage):
                 break
             except PlaywrightTimeoutError:
                 self._step(f"Search for {term!r} not applied after attempt {attempt}")
-        try:
-            self.page.wait_for_load_state("networkidle", timeout=10000)
-        except PlaywrightTimeoutError:
-            pass
 
     def workers_search_diagnostics(self):
         """What the page shows after a search, for failure messages (OD_40 is intermittent)."""
