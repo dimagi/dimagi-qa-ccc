@@ -165,9 +165,9 @@ jobs:
       # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
       # include_seed_consuming=true (and source other than post-deploy) runs them.
       PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data') }}
-      # Connect PR gating (utils/pr_gating.py). Empty means no marked PR counts as
-      # deployed: originals run, pending_prod copies skip. The token only reads the
-      # public commcare-connect repo to compare commits.
+      # Connect PR gating (utils/pr_gating.py). Empty means the suite looks up the
+      # latest commcare-connect GitHub deployment to this environment. The token only
+      # reads the public commcare-connect repo (deployments, PRs, commit compares).
       DEPLOYED_SHA: ${{ inputs.deployed_sha }}
       # A feature run on stage treats its PR as deployed (the caller put it there);
       # on prod it doesn't, so prod still checks the original behaviour.

@@ -17,8 +17,10 @@ Which PRs are deployed comes from, in order:
   1. --deployed-prs / DEPLOYED_PRS   explicit comma-separated PR numbers (manual runs)
   2. --deployed-sha / DEPLOYED_SHA   the deployed commcare-connect commit; each marked
                                      PR is checked against it through the GitHub API
-  3. neither                         no PR counts as deployed: originals run, copies
-                                     skip - the safe default, matching prod before a deploy
+  3. neither                         the commit of the latest GitHub deployment to the
+                                     --env under test (commcare-connect's deploy.yml
+                                     records one per deploy), checked the same way
+  4. no --env either                 no PR counts as deployed: originals run, copies skip
 """
 
 import json
@@ -28,6 +30,8 @@ import urllib.request
 import pytest
 
 CONNECT_REPO = "dimagi/commcare-connect"
+# Suite --env name -> commcare-connect's GitHub deployment environment.
+DEPLOYMENT_ENVIRONMENTS = {"stage": "staging", "prod": "production"}
 PENDING_MARKER = "pending_prod"
 REPLACED_MARKER = "replaced_by_pr"
 
@@ -91,14 +95,29 @@ def pr_in_build(pr, deployed_sha, fetch=None, token=None):
     return False
 
 
-def resolve_deployed_prs(marked_prs, deployed_prs_option=None, deployed_sha=None, fetch=None, token=None):
+def latest_deployed_sha(test_env, fetch=None, token=None):
+    """Commit of the latest commcare-connect deployment to the suite's environment."""
+    fetch = fetch or (lambda path: _github_get(path, token))
+    environment = DEPLOYMENT_ENVIRONMENTS[test_env]
+    deployments = fetch(f"/repos/{CONNECT_REPO}/deployments?environment={environment}&per_page=1")
+    if not deployments:
+        raise ValueError(f"commcare-connect has no GitHub deployment for {environment}")
+    return deployments[0]["sha"]
+
+
+def resolve_deployed_prs(marked_prs, deployed_prs_option=None, deployed_sha=None, test_env=None, fetch=None,
+                         token=None):
     """Return (deployed PR set, human-readable source) for the PRs the suite marks."""
     if deployed_prs_option:
         return parse_pr_list(deployed_prs_option), "--deployed-prs"
+    source = f"deployed SHA {deployed_sha[:12]}" if deployed_sha else None
+    if not deployed_sha and test_env in DEPLOYMENT_ENVIRONMENTS:
+        deployed_sha = latest_deployed_sha(test_env, fetch=fetch, token=token)
+        source = f"latest {DEPLOYMENT_ENVIRONMENTS[test_env]} deployment {deployed_sha[:12]}"
     if deployed_sha:
         deployed = {pr for pr in marked_prs if pr_in_build(pr, deployed_sha, fetch=fetch, token=token)}
-        return deployed, f"deployed SHA {deployed_sha[:12]}"
-    return set(), "default (no deployed SHA given: every marked PR treated as not deployed)"
+        return deployed, source
+    return set(), "default (no deployment known: every marked PR treated as not deployed)"
 
 
 def env_or_option(config, option, env_var):
@@ -122,6 +141,7 @@ def select_tests(config, items, fetch=None):
             marked_prs,
             deployed_prs_option=env_or_option(config, "--deployed-prs", "DEPLOYED_PRS"),
             deployed_sha=env_or_option(config, "--deployed-sha", "DEPLOYED_SHA"),
+            test_env=config.getoption("--env", default=None),
             fetch=fetch,
             token=os.environ.get("GITHUB_TOKEN"),
         )

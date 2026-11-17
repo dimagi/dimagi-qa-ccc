@@ -83,6 +83,57 @@ def test_resolve_defaults_to_nothing_deployed():
     assert deployed == set() and source.startswith("default")
 
 
+def _fake_github_with_deployments(deployments, prs, contained):
+    """deployments: {environment: [sha, ...]}; contained: {deployed_sha: shas in that build}."""
+    calls = []
+
+    def fetch(path):
+        calls.append(path)
+        if "/deployments?" in path:
+            environment = path.split("environment=", 1)[1].split("&", 1)[0]
+            return [{"sha": sha} for sha in deployments.get(environment, [])]
+        if "/pulls/" in path:
+            head, merged, merge_sha = prs[int(path.rsplit("/", 1)[1])]
+            return {"head": {"sha": head}, "merged": merged, "merge_commit_sha": merge_sha}
+        base, deployed = path.rsplit("/", 1)[1].split("...")
+        return {"status": "ahead" if base in contained.get(deployed, ()) else "diverged"}
+
+    return fetch, calls
+
+
+def test_latest_deployed_sha_maps_suite_env_to_deployment_environment():
+    fetch, calls = _fake_github_with_deployments({"staging": ["stg1"], "production": ["prd1"]}, {}, {})
+    assert pr_gating.latest_deployed_sha("stage", fetch=fetch) == "stg1"
+    assert pr_gating.latest_deployed_sha("prod", fetch=fetch) == "prd1"
+    assert calls[0].endswith("/deployments?environment=staging&per_page=1")
+
+
+def test_latest_deployed_sha_without_a_deployment_is_an_error():
+    fetch, _ = _fake_github_with_deployments({}, {}, {})
+    with pytest.raises(ValueError, match="no GitHub deployment for staging"):
+        pr_gating.latest_deployed_sha("stage", fetch=fetch)
+
+
+def test_resolve_looks_up_the_latest_deployment_for_the_env():
+    fetch, _ = _fake_github_with_deployments(
+        {"staging": ["stg1"]},
+        {1406: ("head1406", False, None), 1583: ("head1583", False, None)},
+        {"stg1": {"head1406"}},
+    )
+    deployed, source = pr_gating.resolve_deployed_prs({1406, 1583}, test_env="stage", fetch=fetch)
+    assert deployed == {1406}
+    assert source == "latest staging deployment stg1"
+
+
+def test_explicit_sha_wins_over_the_deployment_lookup():
+    fetch, calls = _fake_github_with_deployments(
+        {"staging": ["stg1"]}, {1406: ("head1406", False, None)}, {"manual": {"head1406"}}
+    )
+    deployed, source = pr_gating.resolve_deployed_prs({1406}, deployed_sha="manual", test_env="stage", fetch=fetch)
+    assert deployed == {1406} and source == "deployed SHA manual"
+    assert not any("/deployments" in call for call in calls)
+
+
 SUITE = """
 import pytest
 
