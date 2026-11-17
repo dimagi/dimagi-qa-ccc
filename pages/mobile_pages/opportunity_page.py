@@ -40,6 +40,7 @@ class OpportunityPage(BasePage):
     OPP_LIST_TYPE = locators.get("opportunity_page", "opp_list_type")
     OPP_LIST_JOB_TYPE = locators.get("opportunity_page", "opp_list_job_type")
     OPP_LIST_RESUME = locators.get("opportunity_page", "opp_list_resume")
+    OPP_CTA_BTN = locators.get("opportunity_page", "opp_cta_btn")
     OPP_LIST_REVIEW = locators.get("opportunity_page", "opp_list_review")
     OPP_LIST_VIEW_INFO = locators.get("opportunity_page", "opp_list_view_info")
 
@@ -168,41 +169,19 @@ class OpportunityPage(BasePage):
         self.click_element(self.SYNC_BTN)
         time.sleep(5)
 
-        button_text = "Resume" if opp_status.lower() == "delivery" else "View Opportunity"
-
-        # Scroll to opportunity
+        # Scroll to the opportunity. Since 2.65 (CCCT-2785) the card itself is the
+        # tap target: a delivery job opens the delivery home screen, a new one the
+        # job intro. Both launch their app from the bottom bar button.
         opportunity = self.scroll_to_text(opp_name)
-
         print(f"Opportunity found: {opportunity.text}")
+        opportunity.click()
 
-        # Find the button near the opportunity
-        button = (
-            AppiumBy.XPATH,
-            f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
-            )
-        # button = self.driver.find_element(
-        #     AppiumBy.XPATH,
-        #     f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Proceed')]"
-        #     )
-        time.sleep(4)
-        # self.driver.execute_script(
-        #     "mobile: clickGesture",
-        #     {"elementId": button.id}
-        #     )
-        if not self.is_present(button):
-            button = (
-                AppiumBy.XPATH,
-                f"//android.widget.TextView[@resource-id='org.commcare.dalvik:id/tvTitle' and contains(@text, '{opp_name}')]//following-sibling::*[contains(@text, '{button_text}') or contains(@text, 'Resume') or contains(@text, 'Proceed')]"
-                )
-        print(button)
-        self.click_element(button)
-
-        time.sleep(2)
-        if button_text.lower() == "resume":
-            try:
-                self.download_learn_app()
-            except:
-                print("No Learn or Delivery app Download button present")
+        self.wait_for_element(self.OPP_CTA_BTN, timeout=30)
+        self.click_when_enabled(self.OPP_CTA_BTN)
+        if opp_status.lower() == "delivery":
+            # "Download app" on a fresh install, then the deliver app opens on
+            # its home screen; allow for a real download.
+            self.wait_for_element(self.LEARN_APP_START_BTN, timeout=600)
 
 
     def click_notification(self):

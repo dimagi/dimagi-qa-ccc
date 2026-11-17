@@ -1,0 +1,41 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow: from the setup screen, open the Connect job list and bring this run's
+# opportunity card on screen. Runs after shared_ldvp_signin.yaml.
+#
+# connect_login_button ("Go to Connect menu") is hidden until the app has Connect
+# access, which a cleared app does not have. "Refresh Opportunities" fetches jobs
+# and turns access on when any come back - same block as shared_open_deliver_app.
+#
+# Inputs: OPPORTUNITY (unique per run: "<name>_<timestamp>")
+- runFlow:
+    when:
+      notVisible:
+        id: "connect_login_button"
+    commands:
+      - tapOn:
+          text: "More options"
+      - tapOn: "Refresh Opportunities"
+      - extendedWaitUntil:
+          visible:
+            id: "connect_login_button"
+          timeout: 120000
+- tapOn:
+    id: "connect_login_button"
+- extendedWaitUntil:
+    visible:
+      id: "rvJobList"
+    timeout: 60000
+# Down first, then back up: a card opened in an earlier session can sit above
+# where the list opens. The second scroll returns at once when the first found it.
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: DOWN
+    timeout: 30000
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: "${OPPORTUNITY}"
+    direction: UP
+    timeout: 30000

@@ -28,6 +28,8 @@ class ManageProfilePage(BasePage):
     EMAIL_INPUT = locators.get("manage_profile", "edit_email_input")
     SAVE_BTN = locators.get("manage_profile", "edit_save_btn")
     CANCEL_BTN = locators.get("manage_profile", "edit_cancel_btn")
+    BACKUP_CODE_INPUT = locators.get("manage_profile", "email_change_backup_code_input")
+    BACKUP_CODE_CONTINUE = locators.get("manage_profile", "email_change_backup_code_continue")
     OTP_CONFIRM_SEND = locators.get("manage_profile", "otp_confirm_send")
 
     def open_from_drawer(self):
@@ -61,8 +63,15 @@ class ManageProfilePage(BasePage):
     def is_save_enabled(self):
         return self.wait_for_element(self.SAVE_BTN).is_enabled()
 
-    def confirm_send_code(self):
-        """Accept the 'Verify your new email' prompt and go to the code screen."""
+    def confirm_send_code(self, backup_code):
+        """After Save on an email change, re-authenticate and send the code.
+
+        2.65 (CCCT-2786) asks for the current backup code before an email change,
+        then shows the Verify Email screen with a Send code button.
+        """
+        self.wait_for_element(self.BACKUP_CODE_INPUT)
+        self.type_code(self.BACKUP_CODE_INPUT, backup_code)
+        self.click_when_enabled(self.BACKUP_CODE_CONTINUE)
         self.wait_for_element(self.OTP_CONFIRM_SEND)
         self.click_element(self.OTP_CONFIRM_SEND)
 

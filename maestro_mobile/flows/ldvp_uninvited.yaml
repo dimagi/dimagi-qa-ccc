@@ -1,0 +1,31 @@
+# TC-INV-004 - a worker who was not invited does not see the opportunity.
+#
+# Worker B (MAESTRO_LDVP_UNINVITED) is never invited to anything, so Refresh
+# Opportunities finds no jobs and Connect access is never turned on: the "Go to
+# Connect menu" button must not appear and the run's opportunity must not be
+# anywhere on screen. Runs in the same BrowserStack build as ldvp_learn.yaml,
+# after Worker A has been invited, so the opportunity exists while this looks.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426092"
+  USERNAME: "QA LDVP Uninvited"
+  BACKUP_CODE: "609200"
+  OPPORTUNITY: "Demo Opportunity"
+---
+- runFlow: shared_ldvp_signin.yaml
+- tapOn:
+    text: "More options"
+- tapOn: "Refresh Opportunities"
+# Give the fetch time to come back before asserting absence - an assertion made
+# while the request is in flight would pass for the wrong reason.
+- extendedWaitUntil:
+    notVisible:
+      id: "org.commcare.dalvik:id/progress_bar"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible:
+    id: "connect_login_button"
+- assertNotVisible:
+    text: "${OPPORTUNITY}"

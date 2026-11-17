@@ -1,0 +1,14 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow (CCCT-2670): sign in and open the run's opportunity on the Connect
+# learn screen - the learning view, or the learn-complete view once passed.
+# Used by every LDVP learn session after the first, which accepted the invite.
+# Inputs: the worker keys and OPPORTUNITY, inherited from the calling flow.
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "learn_progress_sync_card|learn_complete_completed_on"
+    timeout: 60000

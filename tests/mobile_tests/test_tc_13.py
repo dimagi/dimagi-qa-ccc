@@ -78,7 +78,7 @@ def test_13_manage_profile_email_already_used(mobile_driver, settings, config, t
         profile.set_email(already_used)
         requested_at = time.time()
         profile.save()
-        profile.confirm_send_code()
+        profile.confirm_send_code(fixture["backup_code"])
 
     with allure.step("Enter the code and confirm the address is refused"):
         # The rejection happens when the verified address is written to this

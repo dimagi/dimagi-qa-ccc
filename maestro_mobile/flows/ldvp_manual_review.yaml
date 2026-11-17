@@ -1,0 +1,86 @@
+# LDVP manual-review session (CCCT-2670), on the reusable manual-review
+# opportunity after the Network Manager approved V1 and rejected V2 on web.
+# Device halves of TC-VER-001 (approved) and TC-VER-002 (rejected): the rejected
+# visit says so in the visit list, and the earned amount is what web shows as
+# Accrued - the opportunity is reused, so earnings are cumulative and the web
+# value read just before this session is the only fixed point.
+#
+# Ids are from commcare-android at tag commcare_2.65.0 - see ldvp_payment.yaml.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  OPPORTUNITY: "LDVP Manual Review"
+  VISIT_NAME_V1: "LDVP-V1-000000"
+  VISIT_NAME_V2: "LDVP-V2-000000"
+  REJECT_REASON: "LDVP automation - no location"
+  EARNED: "100"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "connect_delivery_home_tabs"
+    timeout: 30000
+
+# --- TC-VER-002: the rejected visit says so ---
+- tapOn:
+    text: "Visits"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "tvApproved"
+    timeout: 30000
+- tapOn:
+    id: "imgArrowForward"
+- extendedWaitUntil:
+    visible:
+      id: "delivery_list"
+    timeout: 30000
+# The list marks a visit by icon only - a red cross for rejected, a green tick
+# for approved - and shows a rejected visit's reason in its status line, never
+# the word "rejected". Its filter chips (All / Approved /
+# Rejected / Pending) are what tell the states apart: being listed under
+# Rejected is the check. Earlier runs left visits of both kinds on this reused
+# opportunity, so each check is by this run's visit name. (The reason line is
+# not delivery_item_status and not nested under the name's row in the view
+# tree, so it is checked only as present on the filtered list.)
+- tapOn:
+    text: "Rejected"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${VISIT_NAME_V2}.*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    text: ".*${REJECT_REASON}.*"
+
+# --- TC-VER-001: the approved visit is listed as approved ---
+- tapOn:
+    text: "Approved"
+- scrollUntilVisible:
+    element:
+      id: "delivery_item_name"
+      text: ".*${VISIT_NAME_V1}.*"
+    direction: DOWN
+    timeout: 30000
+- back
+
+# --- TC-VER-003: only the approved visits are earned ---
+- tapOn:
+    text: "Payment"
+    childOf:
+      id: "connect_delivery_home_tabs"
+- extendedWaitUntil:
+    visible:
+      id: "payment_earned_amount"
+    timeout: 30000
+- assertVisible:
+    id: "payment_earned_amount"
+    text: "(?s).*\\b${EARNED}\\b.*"

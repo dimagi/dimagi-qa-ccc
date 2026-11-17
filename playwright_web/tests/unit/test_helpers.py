@@ -81,3 +81,43 @@ def test_parse_org_and_opp_raises_on_non_opportunity_url():
 
     with pytest.raises(ValueError):
         parse_org_and_opp("https://connect-staging.dimagi.com/a/my-org/program/")
+
+
+def test_poll_until_returns_once_the_check_passes():
+    from utils.helpers import poll_until
+
+    calls = []
+
+    def check():
+        calls.append(1)
+        assert len(calls) >= 3, "not yet"
+        return "done"
+
+    assert poll_until(check, timeout_seconds=5, poll_seconds=0, refresh=lambda: None) == "done"
+    assert len(calls) == 3
+
+
+def test_poll_until_reraises_the_last_failure_on_timeout():
+    import pytest
+
+    from utils.helpers import poll_until
+
+    def check():
+        raise AssertionError("still pending")
+
+    with pytest.raises(AssertionError, match="still pending"):
+        poll_until(check, timeout_seconds=0, poll_seconds=0, refresh=lambda: None)
+
+
+def test_poll_until_refreshes_between_attempts():
+    from utils.helpers import poll_until
+
+    refreshes = []
+    state = {"n": 0}
+
+    def check():
+        state["n"] += 1
+        assert state["n"] > 1
+
+    poll_until(check, timeout_seconds=5, poll_seconds=0, refresh=lambda: refreshes.append(1))
+    assert refreshes == [1]

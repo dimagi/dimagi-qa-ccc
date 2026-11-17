@@ -40,7 +40,7 @@ class ConnectProgramsPage(BasePage):
     RECENT_ACTIVITY_TITLE = locators.get("connect_programs_page", "recent_activity_title")
     RECENT_ACTIVITY_ROWS_BY_TITLE = locators.get("connect_programs_page", "recent_activity_rows_by_title")
 
-    def create_program(self, data):
+    def create_program(self, data, start_offset_days=2, days=365):
         timestamp = datetime.now().strftime("%d-%b-%Y : %H:%M")
         program_name = f"{data['program_name']}_{timestamp}"
 
@@ -54,7 +54,7 @@ class ConnectProgramsPage(BasePage):
         self.page.locator(self.PROGRAM_BUDGET_INPUT).first.fill(data["program_budget"])
         self.select_by_visible_text_forced(self.PROGRAM_CURRENCY_DROPDOWN, data["currency"])
         self.select_by_visible_text_forced(self.PROGRAM_COUNTRY_DROPDOWN, data["country"])
-        start, end = self.generate_date_range(365)
+        start, end = self.generate_date_range(days, start_offset_days)
         self.enter_date(self.PROGRAM_START_DATE_INPUT, start)
         self.enter_date(self.PROGRAM_END_DATE_INPUT, end)
         self.click(self.PROGRAM_SUBMIT_BUTTON)

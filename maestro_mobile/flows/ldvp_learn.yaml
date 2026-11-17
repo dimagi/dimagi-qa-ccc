@@ -1,0 +1,114 @@
+# LDVP learn session 1 (CCCT-2670): accept the invite and complete both learn
+# modules. Covers TC-INV-002 and the device half of TC-LRN-001; web then waits
+# for Connect to count both modules (TC-LRN-001/002 web half).
+#
+# The Connect learn screens are the 2.65 redesign (CCCT-2785). Ids and strings
+# are read from commcare-android at tag commcare_2.65.0:
+#   ConnectLearnProgressView while learning - progress_card_bar_count "N of M",
+#     progress_card_info_text (failed-attempt banner), learn_progress_sync_card,
+#     learn_progress_continue_title, cta_subtitle_text / cta_button
+#   ConnectLearnCompleteView once passed - learn_complete_completed_on,
+#     certificate_header (collapsed) over cert_subject_text / cert_person_text /
+#     cert_score_text / cert_date_text, and the delivery cards card_total_visits
+#     / card_max_earnings (info_card_value_text, info_card_subtitle_text)
+# The learn app itself: module "Surveys" with forms "Learn 1", "Learn 2" and the
+# assessment "Assesss" (one Int question, the score). 2.65 puts the form's FINISH
+# button in its top bar, still id nav_btn_next.
+#
+# Why the learn part is several sessions: a submission travels device ->
+# CommCare HQ -> Connect, which is instant on prod but can take a long while on
+# staging. So each session submits and ends, and test_e2e_ldvp.py polls Connect
+# on web until it has processed the submission before starting the next one.
+# A device-side wait cannot do that: re-syncing inside one session gave up after
+# minutes while staging took far longer.
+appId: org.commcare.dalvik
+env:
+  COUNTRY_CODE: "+7426"
+  PHONE_NUMBER: "7426091"
+  USERNAME: "QA LDVP Worker"
+  BACKUP_CODE: "609100"
+  # The runner injects the run's values; these only matter for a hand run.
+  OPPORTUNITY: "Demo Opportunity"
+---
+- runFlow: shared_ldvp_signin.yaml
+- runFlow: shared_ldvp_job_list.yaml
+
+# --- TC-INV-002: open the invite and accept it ---
+# 2.65: a new opportunity's card opens the job intro, whose bottom bar button
+# (cta_button) accepts it and downloads the Learn App, which then opens on its
+# home screen. Allow for a real download.
+- tapOn:
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "cta_button"
+    timeout: 30000
+- assertVisible:
+    id: "tv_job_title"
+- tapOn:
+    id: "cta_button"
+- tapOn:
+    text: "OK"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "View Job Status"
+    timeout: 600000
+
+# --- TC-LRN-001: submit both modules ---
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Learn 1"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Learn 1"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+# Proof the form was saved and sent, not just closed: CommCare sends it the
+# moment FINISH is tapped. A bare "Sync Successful" also shows when nothing was
+# sent, so it is not accepted here.
+- assertVisible:
+    text: ".*form sent to server.*"
+- tapOn: "Start"
+- tapOn:
+    id: "row_txt"
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: "Learn 2"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Learn 2"
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          id: "nav_btn_next"
+          optional: true
+- tapOn:
+    id: "nav_btn_finish"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Sync with Server"
+    timeout: 120000
+# Proof the form was saved and sent, not just closed: CommCare sends it the
+# moment FINISH is tapped. A bare "Sync Successful" also shows when nothing was
+# sent, so it is not accepted here.
+- assertVisible:
+    text: ".*form sent to server.*"

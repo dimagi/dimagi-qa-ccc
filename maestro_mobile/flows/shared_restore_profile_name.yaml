@@ -1,0 +1,66 @@
+appId: org.commcare.dalvik
+---
+# Sub-flow only - run from onFlowComplete in profile_edit_name.yaml and
+# profile_edit_email.yaml, so it runs whether the flow passed or failed.
+#
+# Puts the fixture account back to its resting name (USERNAME) if a run left it
+# renamed. Recovery is matched on phone number AND name, so an account stranded
+# under the temporary name is treated as a new signup by every later run - which
+# is how the email fixture was lost on 2026-10-09: on 2.65 Save commits the name
+# immediately (before the backup-code step), the flow then failed, and the restore
+# at the end of the flow never ran.
+#
+# Every step is guarded. When the flow already restored the name, or the failure
+# happened before sign-in, this does nothing - it must never turn a passing run
+# into a failing one.
+#
+# Inputs (env from the calling flow): USERNAME
+- launchApp
+- tapOn:
+    text: "Turn on"
+    optional: true
+- tapOn:
+    text: "Open navigation drawer"
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "org.commcare.dalvik:id/header_manage_profile"
+    commands:
+      - tapOn:
+          id: "org.commcare.dalvik:id/header_manage_profile"
+      - extendedWaitUntil:
+          visible:
+            id: "org.commcare.dalvik:id/profile_value_name"
+          timeout: 30000
+      - runFlow:
+          when:
+            visible:
+              id: "org.commcare.dalvik:id/profile_value_name"
+            notVisible:
+              id: "org.commcare.dalvik:id/profile_value_name"
+              text: "${USERNAME}"
+          commands:
+            - tapOn:
+                text: "Edit Profile"
+            - extendedWaitUntil:
+                visible:
+                  id: "org.commcare.dalvik:id/profile_name_edit_text"
+                timeout: 30000
+            # Repeat-to-converge erase: see profile_edit_email.yaml for why one
+            # round leaves a tail behind.
+            - repeat:
+                times: 3
+                commands:
+                  - tapOn:
+                      id: "org.commcare.dalvik:id/profile_name_edit_text"
+                  - eraseText: 60
+            - inputText: "${USERNAME}"
+            - hideKeyboard
+            - tapOn:
+                id: "org.commcare.dalvik:id/btn_save"
+            - extendedWaitUntil:
+                visible:
+                  id: "org.commcare.dalvik:id/profile_value_name"
+                  text: "${USERNAME}"
+                timeout: 30000

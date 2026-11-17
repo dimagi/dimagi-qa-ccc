@@ -85,11 +85,21 @@ appId: org.commcare.dalvik
       - tapOn:
           text: "OK"
           optional: true
-# The card's title is not clickable - its buttons are. With learning already
-# finished the card offers Resume, which downloads the app on a fresh install and
-# then opens its home screen. Allow a long timeout: this is a real download.
+# With learning already finished, opening the deliver app downloads it on a
+# fresh install and then opens its home screen. Allow a long timeout: this is a
+# real download.
+# 2.65 (CCCT-2785 redesign) dropped the card's Resume button: the whole card is
+# the tap target and opens the delivery home screen, whose bottom bar button
+# (cta_button - "Download app" on a fresh install, "Start" once installed)
+# downloads and launches the deliver app.
 - tapOn:
-    id: "btn_resume"
+    text: "${OPPORTUNITY}"
+- extendedWaitUntil:
+    visible:
+      id: "cta_button"
+    timeout: 30000
+- tapOn:
+    id: "cta_button"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"

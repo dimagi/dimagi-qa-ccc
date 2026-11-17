@@ -15,6 +15,7 @@ class ConnectHomePage(BaseWebPage):
     LOGIN_LINK = locators.get("connect_home_page", "login_link")
     LOGIN_WITH_CC_HQ = locators.get("connect_home_page", "login_with_cc_hq")
     AUTHORIZE_BUTTON = locators.get("connect_home_page", "authorize_button")
+    AUTHORIZE_SELECT_ALL = locators.get("connect_home_page", "authorize_select_all")
     OPPORTUNITIES_NAVBAR_LINK = locators.get("connect_home_page", "opportunities_navbar_item")
     PROGRAMS_NAVBAR_LINK = locators.get("connect_home_page", "programs_navbar_item")
     MY_ORGANIZATION_NAVBAR_LINK = locators.get("connect_home_page", "my_organization_navbar_item")
@@ -28,8 +29,22 @@ class ConnectHomePage(BaseWebPage):
 
     def click_login_with_cchq(self):
         self.click_element(self.LOGIN_WITH_CC_HQ)
-        self.click_element(self.AUTHORIZE_BUTTON)
+        self._authorize_if_prompted()
         self.click_organizations_in_sidebar()
+
+    def _authorize_if_prompted(self):
+        """Clear HQ's OAuth consent screen if it appears (same as the Playwright page).
+
+        Authorize stays disabled until at least one project space is chosen, so
+        select all first. When the screen is absent (already authorized) this no-ops.
+        """
+        time.sleep(3)
+        if not self.is_present(self.AUTHORIZE_BUTTON):
+            print("No OAuth consent screen - already authorized")
+            return
+        if self.is_present(self.AUTHORIZE_SELECT_ALL):
+            self.click_element(self.AUTHORIZE_SELECT_ALL)
+        self.click_when_enabled(self.AUTHORIZE_BUTTON)
 
     def signin_to_connect_page_using_cchq(self):
         try:

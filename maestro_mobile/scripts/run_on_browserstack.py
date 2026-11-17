@@ -51,19 +51,12 @@ TEST_FLOWS = [
     "profile_discard.yaml",
     "profile_forget.yaml",
     "recovery_email_prompt.yaml",
-    # SKIPPED, 2026-09-10: signup_email_add.yaml and signup_email_verify.yaml are
-    # held out until the 2.65 APK ships. Between them they cover SE_01-SE_09 and
-    # SE_12 - adding and verifying an email DURING signup - and they pass, but
-    # only against the unreleased 2.65 build they were written on. Running the
-    # suite on 2.65 to keep them green would put every other flow on an
-    # unreleased build too, which is the worse trade: those flows are the stable
-    # regression set.
-    #
-    # Nothing else depends on them. Each registers its own account from a cleared
-    # app, so holding them out changes no other flow's starting state.
-    #
-    # TO RE-ENABLE once 2.65 is released: add the two names here, and drop
-    # @pytest.mark.skip from tests/mobile_tests/test_tc_11.py (SE_10, same gap).
+    # SE_01-SE_09, SE_12: adding and verifying an email DURING signup. Held out
+    # from 2026-09-10 until the suite moved to the 2.65 APK: signup completes only
+    # with the qaAutomation placeholder photo that 2.65 carries. Each registers
+    # its own account from a cleared app, so they share no state with the rest.
+    "signup_email_add.yaml",
+    "signup_email_verify.yaml",
 ]
 POLL_INTERVAL_SECONDS = 15
 
@@ -128,6 +121,21 @@ WORKER_BY_FLOW = {
     "signup_email_add.yaml": "MAESTRO_SIGNUP_EMAIL_ADD",
     "signup_email_verify.yaml": "MAESTRO_SIGNUP_EMAIL_VERIFY",
     "probe_fresh_registration.yaml": "MAESTRO_INTEGRITY_PROBE",
+    # CCCT-2670 LDVP end to end. Every session of the chain is the one invited
+    # worker; only the uninvited check signs in as someone else. Run only by
+    # playwright_web/tests/test_e2e_ldvp.py, never from TEST_FLOWS: each one
+    # needs the opportunity that test creates and the web steps between them.
+    "ldvp_uninvited.yaml": "MAESTRO_LDVP_UNINVITED",
+    # Seeding only - registers the invited worker once per environment.
+    "seed_ldvp_worker.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_learn.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_assess_fail.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_assess_pass.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_deliver.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_payment.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_decline_confirm.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_rollback.yaml": "MAESTRO_LDVP_WORKER",
+    "ldvp_manual_review.yaml": "MAESTRO_LDVP_WORKER",
 }
 # workers-file key -> the Maestro env key the flows read.
 WORKER_ENV_KEYS = {

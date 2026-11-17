@@ -1,6 +1,7 @@
 import configparser
 import os
 import re
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
@@ -122,3 +123,23 @@ class TestDataLoader:
         if tc_id not in self.data:
             raise KeyError(f"No test data found for {tc_id}")
         return self.data[tc_id]
+
+
+def poll_until(check, timeout_seconds, poll_seconds, refresh):
+    """Call `check` until it stops raising AssertionError; return its result.
+
+    For web reads of state a device produced: the submission travels device ->
+    CommCare HQ -> Connect, which takes minutes on staging, so a single read
+    reports lag as a failure. `refresh` (usually a page reload) runs between
+    attempts. On timeout the last assertion is re-raised, so the failure says
+    what was actually seen rather than just "timed out".
+    """
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            return check()
+        except AssertionError:
+            if time.monotonic() >= deadline:
+                raise
+        time.sleep(poll_seconds)
+        refresh()

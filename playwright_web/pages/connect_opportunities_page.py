@@ -11,6 +11,10 @@ locators = LocatorLoader()
 
 class ConnectOpportunitiesPage(BasePage):
     OPP_NAME_INPUT = locators.get("connect_opportunities_page", "name_input")
+    CHECK_DUPLICATES_CHECKBOX = locators.get("connect_opportunities_page", "check_duplicates_checkbox")
+    CHECK_GPS_CHECKBOX = locators.get("connect_opportunities_page", "check_gps_checkbox")
+    LOCATION_DISTANCE_INPUT = locators.get("connect_opportunities_page", "location_distance_input")
+    VERIFICATION_FLAGS_SAVE_BTN = locators.get("connect_opportunities_page", "verification_flags_save_btn")
     OPP_CURRENCY_INPUT = locators.get("connect_opportunities_page", "currency_input")
     OPP_COUNTRY_INPUT = locators.get("connect_opportunities_page", "country_input")
     OPP_SHORT_DESCRIPTION_INPUT = locators.get("connect_opportunities_page", "short_description_input")
@@ -37,6 +41,7 @@ class ConnectOpportunitiesPage(BasePage):
     SETUP_BUDGET_BUTTON = locators.get("connect_opportunities_page", "setup_budget_btn")
     TOTAL_BUDGET_INPUT = locators.get("connect_opportunities_page", "total_budget_input")
     PAGE_SIZE = locators.get("connect_opportunities_page", "page_size")
+    FORM_FIELD_ERRORS = locators.get("connect_opportunities_page", "form_field_errors")
     ORGANIZATION_DROPDOWN = locators.get("connect_opportunities_page", "organization_dropdown")
 
     def __init__(self, page):
@@ -190,14 +195,14 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(3000)
         return opp_name
 
-    def create_payment_unit_in_connect_page(self, data, days=7):
+    def create_payment_unit_in_connect_page(self, data, days=7, start_offset_days=2):
         self.click_add_payment_unit_button()
         self.enter_name_in_opportunity(data["payment_unit_name"])
         self.enter_amount_in_payment_unit_of_opportunity(data["amount"])
         self.enter_description_in_opportunity(data["description"])
         self.enter_max_total_in_payment_unit_of_opportunity(data["max_total"])
         self.enter_max_daily_in_payment_unit_of_opportunity(data["max_daily"])
-        start, end = self.generate_date_range(days)
+        start, end = self.generate_date_range(days, start_offset_days)
         self.enter_start_date_in_payment_unit_of_opportunity(start)
         self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.select_required_deliver_units_checkbox(data["required_deliver_units"])
@@ -205,15 +210,20 @@ class ConnectOpportunitiesPage(BasePage):
         self.page.wait_for_timeout(3000)
         self.verify_payment_unit_present(self.opp_full_name)
 
-    def setup_budget_in_connect_page(self, data, days=7):
+    def setup_budget_in_connect_page(self, data, days=7, start_offset_days=2):
         self.click_setup_budget_button()
-        start, end = self.generate_date_range(days)
+        start, end = self.generate_date_range(days, start_offset_days)
         self.enter_start_date_in_payment_unit_of_opportunity(start)
         self.enter_end_date_in_payment_unit_of_opportunity(end)
         self.enter_max_connect_workers_in_budget(data["no_of_connect_workers"])
         self.verify_total_budget_value(data["total_budget_value"])
         self.click_submit_btn()
         self.page.wait_for_timeout(3000)
+        # A rejected budget re-renders the form with field errors and leaves the
+        # opportunity unfinished; without this check the run carried on and failed
+        # minutes later as an invite that never appeared.
+        errors = [t.strip() for t in self.page.locator(self.FORM_FIELD_ERRORS).all_inner_texts() if t.strip()]
+        assert not errors, f"Budget was not saved: {errors}"
 
     def click_opportunity_in_opportunity(self, value, exact=True):
         """exact=False matches by substring, for data that names a family of rows
@@ -233,3 +243,32 @@ class ConnectOpportunitiesPage(BasePage):
             ConnectOpportunityListPage(self.page).show_all_opportunities()
         self.click(link)
         self.page.wait_for_timeout(3000)
+
+    def ensure_verification_flags(self, base_url, org_slug, opp_id, duplicate, gps, location_m):
+        """Set the opportunity's Check Duplicates, Check GPS and Location Distance
+        (metres, 0 = off) verification flags, saving only if something differs.
+        A flagged visit is never auto-approved, so these hold visits for review.
+        Only opportunities without automatic visit verification offer them."""
+        url = f"{base_url}/a/{org_slug}/opportunity/{opp_id}/verification_flags_config/"
+
+        def current():
+            self.page.goto(url)
+            self.page.wait_for_load_state("load")
+            dup = self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first
+            assert dup.count() > 0, (
+                "No Check Duplicates option - the opportunity still verifies visits automatically")
+            return (dup.is_checked(), self.page.locator(self.CHECK_GPS_CHECKBOX).first.is_checked(),
+                    int(self.page.locator(self.LOCATION_DISTANCE_INPUT).first.input_value() or 0))
+
+        wanted = (duplicate, gps, location_m)
+        if current() == wanted:
+            self._step(f"Verification flags already duplicate/gps/location = {wanted}")
+            return
+        self.page.locator(self.CHECK_DUPLICATES_CHECKBOX).first.set_checked(duplicate)
+        self.page.locator(self.CHECK_GPS_CHECKBOX).first.set_checked(gps)
+        self.page.locator(self.LOCATION_DISTANCE_INPUT).first.fill(str(location_m))
+        self.click(self.VERIFICATION_FLAGS_SAVE_BTN)
+        self.page.wait_for_load_state("load")
+        saved = current()
+        assert saved == wanted, f"Verification flags read {saved} after Save, expected {wanted}"
+        self._step(f"Verification flags set: duplicate/gps/location = {wanted}")

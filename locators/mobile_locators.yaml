@@ -11,7 +11,9 @@ home_page:
   # Material dialog buttons.
   forget_personalid_user_btn: "//android.widget.TextView[contains(@text,'Forget PersonalID')]"
   refresh_opportunities_btn: "//android.widget.TextView[contains(@text,'Refresh Opportunities')]"
-  go_to_connect_btn: "//android.widget.Button[contains(@text,'GO TO CONNECT MENU')]"
+  # By id: 2.65 renders the label in sentence case ("Go to Connect menu"), so the
+  # old upper-case text match stopped finding it.
+  go_to_connect_btn: "org.commcare.dalvik:id/connect_login_button"
 
   opportunities_btn: "//android.widget.TextView[contains(@text,'Opportunities')]/parent::android.widget.LinearLayout"
   commcare_app_btn: "//android.widget.TextView[contains(@text,'CommCare Apps')]/parent::android.widget.LinearLayout"
@@ -55,8 +57,11 @@ login_page:
   email_error_txt: "org.commcare.dalvik:id/personalid_email_error"
   # The skip confirmation reuses the app-linking Yes/No strings, not Skip/Cancel,
   # and Material buttons render them upper-cased - match both spellings.
-  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes']"
-  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No']"
+  # The skip confirmation is "Skip email?" YES/NO on 2.64 and "Protect your
+  # account" SKIP/ADD EMAIL on 2.65. The positive button flips meaning between
+  # them (YES skips on 2.64, ADD EMAIL stays on 2.65), so match labels, not ids.
+  email_skip_confirm_yes: "//android.widget.Button[@text='YES' or @text='Yes' or @text='SKIP' or @text='Skip']"
+  email_skip_confirm_no: "//android.widget.Button[@text='NO' or @text='No' or @text='ADD EMAIL' or @text='Add Email']"
   # StandardAlertDialog renders its message in a plain TextView, NOT in
   # connect_message_message - that id belongs to the full-screen message
   # fragment. Match on the text.
@@ -86,6 +91,9 @@ opportunity_page:
   opp_list_type: "//android.widget.TextView[contains(@text,'Opportunity')]"
   opp_list_view_info: "//android.widget.Button[contains(@text, 'View Info')]"
   opp_list_resume: "//android.widget.Button[contains(@text, 'Resume') or contains(@text, 'Proceed')]"
+  # 2.65 (CCCT-2785): the card has no buttons - tapping it opens the delivery
+  # home screen, whose bottom bar button ("Download app" / "Start") launches the app.
+  opp_cta_btn: "org.commcare.dalvik:id/cta_button"
   opp_list_review: "//android.widget.Button[contains(@text, 'Review') or contains(@text, 'View Opportunity')]"
   opp_list_progress_bar: "//android.view.View[@resource-id='org.commcare.dalvik:id/progressBar']"
 
@@ -163,6 +171,9 @@ delivery_app_page:
   next_btn: "org.commcare.dalvik:id/nav_btn_next"
   finish_btn: "org.commcare.dalvik:id/nav_prog_bar"
 
+  # 2.65 (CCCT-2785): View Job Status opens the tabbed delivery screen on its
+  # Dashboard tab; the payment-unit rows below live on the Visits tab.
+  delivery_visits_tab: "//*[@resource-id='org.commcare.dalvik:id/connect_delivery_home_tabs']//*[@text='Visits']"
   pu_title_txt: "org.commcare.dalvik:id/tvDeliveryTitle"
   payment_approved_count_txt: "org.commcare.dalvik:id/tvApproved"
   payment_amount_txt: "org.commcare.dalvik:id/tvDeliveryTotalAmount"
@@ -220,7 +231,7 @@ otp_page:
 
   # Email verification screen (2.64+). otp_code_view is a NumericCodeView like
   # the backup code fields, so it needs type_code rather than send_keys, and it
-  # auto-submits on the sixth digit - no Verify tap required.
+  # since 2.65 it only enables VERIFY CODE (email_verify_btn), which must be tapped.
   email_otp_input: "org.commcare.dalvik:id/otp_code_view"
   email_verify_btn: "org.commcare.dalvik:id/personalid_email_verify_button"
   email_verify_error: "org.commcare.dalvik:id/personalid_email_verify_error"
@@ -260,5 +271,9 @@ manage_profile:
   edit_save_btn: "org.commcare.dalvik:id/btn_save"
   edit_cancel_btn: "org.commcare.dalvik:id/btn_cancel"
   # The OTP confirmation raised when the email is changed.
-  otp_confirm_send: "//android.widget.Button[contains(@text,'Send Code') or contains(@text,'SEND CODE')]"
+  # 2.65 email change: Save -> Confirm Backup Code -> Verify Email (Send code)
+  # -> code entry. The 2.64 "Verify your new email" confirmation dialog is gone.
+  email_change_backup_code_input: "org.commcare.dalvik:id/backup_code_view"
+  email_change_backup_code_continue: "org.commcare.dalvik:id/connect_backup_code_button"
+  otp_confirm_send: "org.commcare.dalvik:id/send_otp_button"
   save_photo_btn: "org.commcare.dalvik:id/save_photo_button"

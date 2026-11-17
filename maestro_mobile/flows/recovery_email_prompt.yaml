@@ -43,13 +43,14 @@ appId: org.commcare.dalvik
 # ---------------------------------------------------------------- RE_02
 # Skipping completes RECOVERY - the success message, not photo capture. Photo
 # capture is where the registration journey goes, and confirming the difference
-# is the point of this case.
+# is the point of this case. The confirmation is "Skip email?" / YES on 2.64 and
+# "Protect your account" / SKIP on 2.65.
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
 - assertVisible:
-    text: "Skip email?"
+    text: "Skip email[?]|Protect your account"
 - tapOn:
-    text: "YES"
+    text: "YES|SKIP"
 - extendedWaitUntil:
     visible:
       text: "Account Recovered"
