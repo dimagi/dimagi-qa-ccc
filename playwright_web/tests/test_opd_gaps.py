@@ -176,7 +176,10 @@ def test_opd_40_workers_tab_count_and_search(dashboard):
     )
     dashboard.search_workers("zzz-no-such-worker")
     line = dashboard.displaying_count_text()
-    assert "Displaying" in line, f"Search did not produce a 'Displaying X of Y' line (got {line!r})"
+    assert "Displaying" in line, (
+        f"Search did not produce a 'Displaying X of Y' line (got {line!r}); "
+        f"{dashboard.workers_search_diagnostics()}"
+    )
 
 
 def test_opd_42_deliver_filters_present_and_apply(dashboard):
