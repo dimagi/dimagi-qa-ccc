@@ -320,7 +320,8 @@ jobs:
               out.write(f"total_skipped={skipped + not_applicable + needs_data + blocked}\n")
           print(f"status={status} passed={passed} failed={total_failed} "
                 f"skipped={skipped} messaging_excluded={messaging_excluded} "
-                f"not_applicable={not_applicable} needs_data={needs_data}")
+                f"not_applicable={not_applicable} needs_data={needs_data} blocked={blocked} "
+                f"total_skipped={skipped + not_applicable + needs_data + blocked}")
           PY
 
       - name: Send Email Report

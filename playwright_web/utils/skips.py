@@ -16,7 +16,8 @@ Messaging on staging keeps its own [MESSAGING-EXCLUDED] tag (CCCT-2671).
 """
 from typing import NoReturn
 
-import pytest
+# pytest is imported inside the helpers, so classify() and the tags can be used by the
+# CI aggregate step (which runs with always()) with only the standard library.
 
 NOT_APPLICABLE_TAG = "[NOT-APPLICABLE]"
 NEEDS_DATA_TAG = "[NEEDS-DATA]"
@@ -32,18 +33,24 @@ UNLABELLED = "unlabelled"
 def skip_not_applicable(reason: str) -> NoReturn:
     """Skip: this test does not apply on this environment by design."""
     __tracebackhide__ = True
+    import pytest
+
     pytest.skip(f"{NOT_APPLICABLE_TAG} {reason}")
 
 
 def skip_needs_data(reason: str) -> NoReturn:
     """Skip: the fixture, config or live state this test needs is missing."""
     __tracebackhide__ = True
+    import pytest
+
     pytest.skip(f"{NEEDS_DATA_TAG} {reason}")
 
 
 def skip_blocked(reason: str) -> NoReturn:
     """Skip: something upstream failed or looks broken; investigate, it may be a defect."""
     __tracebackhide__ = True
+    import pytest
+
     pytest.skip(f"{BLOCKED_TAG} {reason}")
 
 
