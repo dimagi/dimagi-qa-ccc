@@ -15,6 +15,7 @@ from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from utils.helpers import with_all_opportunities, with_page_size
+from utils.skips import skip_needs_data
 
 
 def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=None, organization=PM_ORG):
@@ -44,7 +45,7 @@ def open_opd_dashboard(page, test_data, config, settings, *, names=None, opp_id=
         olp.verify_loaded()
         name = next((n for n in names if olp.has_opportunity(n, exact=True)), None)
         if name is None:
-            pytest.skip(
+            skip_needs_data(
                 f"OPD opportunity not found by exact name in the {organization} list (looked for {names}) - "
                 "check OPD.* in web_test_data.yaml / that the opportunity still exists"
             )

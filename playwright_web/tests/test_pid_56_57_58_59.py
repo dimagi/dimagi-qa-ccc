@@ -18,6 +18,7 @@ import pytest
 
 from pages.cchq_login_page import LoginPage
 from pages.cchq_mobile_workers_page import MobileWorkersPage
+from utils.skips import skip_needs_data
 
 
 def _login_and_open_workers(page, config, settings):
@@ -94,7 +95,7 @@ def test_pid_59_confirm_unlink_flips_status(workers, config):
 
     target = _pick_linked_target(workers, config)
     if not target:
-        pytest.skip("No worker with an active PersonalID link on this domain to unlink.")
+        skip_needs_data("No worker with an active PersonalID link on this domain to unlink.")
 
     # The restore runs in a finally, not after the assertion. It used to sit
     # after it, which meant any failure in between left the worker unlinked for

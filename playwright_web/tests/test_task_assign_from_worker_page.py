@@ -5,6 +5,7 @@ from flows.tasking_static import login_to_connect, require_static_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_needs_data
 
 
 def test_assign_and_delete_task_from_worker_page(page, test_data, config, settings):
@@ -51,7 +52,7 @@ def test_assign_and_delete_task_from_worker_page(page, test_data, config, settin
     offered = workers.worker_page_task_type_labels()
     sandbox_label = next((label for label in offered if label in sandbox_names), None)
     if sandbox_label is None:
-        pytest.skip(
+        skip_needs_data(
             f"J1's sandbox task type is not assignable (offered: {offered or 'nothing'}). It is "
             "created on first J1 run and left unarchived - run test_task_type_config.py first."
         )

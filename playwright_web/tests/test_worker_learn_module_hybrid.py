@@ -21,6 +21,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect
 from flows.workers_setup import open_connect_workers
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_needs_data
 
 FLOW = "worker_learn_module.yaml"
 # Mobile env values that must be real before the device flow can run.
@@ -44,7 +45,7 @@ def _require_learn_data(test_data, config):
     missing = [f"LEARN_TAB_02_HYBRID.{k}" for k in ("opportunity_name", "worker_name", "total_lessons") if _is_tbd(data.get(k))]
     missing += [f"MAESTRO_LEARN_TAB_02.{k.lower()}" for k in REQUIRED_MOBILE_KEYS if _is_tbd(worker.get(k))]
     if missing:
-        pytest.skip(
+        skip_needs_data(
             "Learn_tab_02 hybrid data not seeded - needs a worker with learning started but not "
             f"complete. Still TBD: {', '.join(missing)}"
         )
@@ -88,7 +89,7 @@ def test_learn_tab_02_modules_completed_updates_after_mobile_submission(page, co
     total = int(data["total_lessons"])
     before = _completed_count(workers.learn_column_value(worker_name, column), total)
     if before >= total:
-        pytest.skip(
+        skip_needs_data(
             f"'{worker_name}' is already at {before}/{total} lessons: re-seed the worker (reset its "
             "learning, see MAESTRO_LEARN_TAB_02 in mobile_workers.yaml) so Resume opens the Learn Progress screen again"
         )

@@ -4,6 +4,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect, require_static_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_home_page import ConnectHomePage
+from utils.skips import skip_needs_data
 
 
 def test_task_permissions_journey(page, test_data, config, settings):
@@ -14,7 +15,7 @@ def test_task_permissions_journey(page, test_data, config, settings):
     """
     tasking = require_static_opp(test_data, config)
     if not tasking.get("static_nm_org") or not tasking.get("static_nm_org_name"):
-        pytest.skip("TASKING.static_nm_org / static_nm_org_name not configured")
+        skip_needs_data("TASKING.static_nm_org / static_nm_org_name not configured")
     connect_page = login_to_connect(page, config, settings, PM_ORG)
     tasks = ConnectAssignedTasksPage(connect_page)
     connect_home = ConnectHomePage(connect_page)

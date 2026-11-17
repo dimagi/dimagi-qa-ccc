@@ -6,6 +6,7 @@ from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect, require_hybrid_opp
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_needs_data
 
 
 # Drives a real device via a BrowserStack Maestro build. Deliberately NOT marked
@@ -90,7 +91,7 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     # and fail with the reason instead of a timeout inside the widget.
     assignable = tasks.create_modal_worker_labels()
     if not any(worker_name in label for label in assignable):
-        pytest.skip(
+        skip_needs_data(
             f"Worker '{worker_name}' is not assignable yet - the opportunity invite has to be "
             f"accepted on the device first. Currently offered: {assignable or 'nobody'}"
         )

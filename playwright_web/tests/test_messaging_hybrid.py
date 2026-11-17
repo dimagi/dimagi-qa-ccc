@@ -47,6 +47,7 @@ from pages.cchq_login_page import LoginPage
 from pages.cchq_messaging_page import CCHQMessagingPage
 from pages.cchq_reports_page import CCHQReportsPage
 from tests.test_messaging_web import _env_value, _skip_while_staging_drops_messages  # noqa: F401
+from utils.skips import skip_needs_data, skip_not_applicable
 
 # Keys whose value differs per environment. Anything left out of this tuple is
 # used verbatim on both, which is fine for genuinely shared values and silently
@@ -72,7 +73,7 @@ def messaging_data(test_data, config):
         data[key] = _env_value(data, key, config)
     missing = [key for key in ENV_SPECIFIC_KEYS if not data.get(key)]
     if missing:
-        pytest.skip(
+        skip_needs_data(
             f"MESSAGING data not configured for env '{config.env}' (missing: {', '.join(missing)})"
         )
     return data
@@ -586,7 +587,7 @@ def test_subscribed_channels_sort_before_unsubscribed(config, messaging_data):
     rather than the movement. It still cannot pass if the app stops partitioning.
     """
     if config.env == "stage":
-        pytest.skip(
+        skip_needs_data(
             "Staging orders its two channels connectqa-automation above connectqa, so the only "
             "safe spare is already last and unsubscribing it moves nothing - the assertion would "
             "hold before the unsubscribe as well as after, proving no sort at all. The channel "
@@ -810,7 +811,7 @@ def test_first_consent_request_creates_a_channel(config, settings, messaging_dat
     while run_flows() blocks here polling BrowserStack.
     """
     if os.getenv("MESSAGING_CHANNEL_SETUP") != "1":
-        pytest.skip(
+        skip_not_applicable(
             "One-shot: the 'New Channel' push fires only the first time a worker gets a channel. "
             "Run with MESSAGING_CHANNEL_SETUP=1 against a worker that has none."
         )
@@ -844,7 +845,7 @@ def test_first_consent_request_creates_a_channel(config, settings, messaging_dat
     # channel already existed, so the push could never have fired and a device
     # failure says nothing about the product.
     if banner and "no channels created" in banner.lower():
-        pytest.skip(
+        skip_needs_data(
             f"Consent request created nothing ({banner!r}) - this worker already has a channel, "
             "so the one-shot push cannot fire again. Use a worker with no channels, which "
             "messaging_empty_state.yaml can confirm."
