@@ -9,6 +9,7 @@ import pytest
 from pytest_html import extras
 from allure_commons.types import AttachmentType
 from utils.helpers import ConfigLoader, SettingsLoader
+from playwright_web.utils import pr_gating
 
 try:
     import matplotlib
@@ -32,6 +33,32 @@ def pytest_addoption(parser):
         default=None,
         help="Environment to run tests against: prod or stage"
     )
+    parser.addoption(
+        "--deployed-prs",
+        action="store",
+        default=None,
+        help="Comma-separated commcare-connect PR numbers whose code is deployed (env DEPLOYED_PRS). "
+        "Overrides --deployed-sha.",
+    )
+    parser.addoption(
+        "--deployed-sha",
+        action="store",
+        default=None,
+        help="Deployed commcare-connect commit (env DEPLOYED_SHA). pending_prod / replaced_by_pr "
+        "tests are picked by whether their PR is in it.",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip each PR's pending_prod copies or replaced_by_pr originals per the deployed build
+    (same rule as the Playwright suite; see playwright_web/utils/pr_gating.py)."""
+    pr_gating.select_tests(config, items)
+
+
+def pytest_terminal_summary(terminalreporter, config):
+    summary = getattr(config, "_pr_gating_summary", None)
+    if summary:
+        terminalreporter.write_line(summary)
 
 
 @pytest.fixture(scope="session")
