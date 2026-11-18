@@ -150,7 +150,8 @@ def find_doc_mentions(changes, root=PLAYWRIGHT_ROOT):
 
 def tests_marked_for_pr(pr, root=PLAYWRIGHT_ROOT):
     """Test files carrying pending_prod / replaced_by_pr markers for this PR."""
-    marker = re.compile(rf"(?:pending_prod|replaced_by_pr)\(\s*(?:pr\s*=\s*)?['\"]?{pr}['\"]?\s*\)")
+    # The PR number is the first argument, positional or pr=; other arguments may follow.
+    marker = re.compile(rf"(?:pending_prod|replaced_by_pr)\(\s*(?:pr\s*=\s*)?['\"]?{pr}(?![0-9])['\"]?\s*[,)]")
     return sorted(
         f"tests/{path.name}"
         for path in (root / "tests").glob("test_*.py")
@@ -202,6 +203,22 @@ def to_markdown(report, pr=None):
     return "\n".join(lines) + "\n"
 
 
+def fetch_pr_diff(pr):
+    """The PR's unified diff via gh. Exits non-zero with a readable message if gh can't
+    produce it (unknown PR, no access, diff over GitHub's size limit), so a feature run
+    fails instead of quietly selecting nothing."""
+    try:
+        return subprocess.run(
+            ["gh", "pr", "diff", str(pr), "--repo", CONNECT_REPO],
+            check=True, capture_output=True, text=True, encoding="utf-8",
+        ).stdout
+    except FileNotFoundError:
+        sys.exit("impact_check: the gh CLI is not installed or not on PATH")
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or "").strip() or f"exit code {exc.returncode}"
+        sys.exit(f"impact_check: could not read the diff of {CONNECT_REPO}#{pr}: {detail}")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     source = parser.add_mutually_exclusive_group(required=True)
@@ -212,10 +229,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.pr:
-        diff_text = subprocess.run(
-            ["gh", "pr", "diff", str(args.pr), "--repo", CONNECT_REPO],
-            check=True, capture_output=True, text=True, encoding="utf-8",
-        ).stdout
+        diff_text = fetch_pr_diff(args.pr)
     else:
         diff_text = args.diff.read_text(encoding="utf-8")
 

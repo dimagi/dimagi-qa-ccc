@@ -84,14 +84,26 @@ def test_resolve_defaults_to_nothing_deployed():
 
 
 def _fake_github_with_deployments(deployments, prs, contained):
-    """deployments: {environment: [sha, ...]}; contained: {deployed_sha: shas in that build}."""
+    """deployments: {environment: [sha or (sha, latest_state), ...]} newest first (a bare sha
+    means "success"); contained: {deployed_sha: shas in that build}."""
     calls = []
+    by_id = {}
+    listed = {}
+    for environment, entries in deployments.items():
+        listed[environment] = []
+        for entry in entries:
+            sha, state = (entry, "success") if isinstance(entry, str) else entry
+            by_id[len(by_id) + 1] = state
+            listed[environment].append({"id": len(by_id), "sha": sha})
 
     def fetch(path):
         calls.append(path)
+        if "/statuses?" in path:
+            state = by_id[int(path.split("/deployments/", 1)[1].split("/", 1)[0])]
+            return [{"state": state}] if state else []
         if "/deployments?" in path:
             environment = path.split("environment=", 1)[1].split("&", 1)[0]
-            return [{"sha": sha} for sha in deployments.get(environment, [])]
+            return listed.get(environment, [])
         if "/pulls/" in path:
             head, merged, merge_sha = prs[int(path.rsplit("/", 1)[1])]
             return {"head": {"sha": head}, "merged": merged, "merge_commit_sha": merge_sha}
@@ -105,12 +117,22 @@ def test_latest_deployed_sha_maps_suite_env_to_deployment_environment():
     fetch, calls = _fake_github_with_deployments({"staging": ["stg1"], "production": ["prd1"]}, {}, {})
     assert pr_gating.latest_deployed_sha("stage", fetch=fetch) == "stg1"
     assert pr_gating.latest_deployed_sha("prod", fetch=fetch) == "prd1"
-    assert calls[0].endswith("/deployments?environment=staging&per_page=1")
+    assert "/deployments?environment=staging&" in calls[0]
 
 
-def test_latest_deployed_sha_without_a_deployment_is_an_error():
+def test_latest_deployed_sha_skips_failed_and_running_deploys():
+    fetch, _ = _fake_github_with_deployments(
+        {"staging": [("newest", "failure"), ("running", "in_progress"), ("no-status", None), "good", "older"]}, {}, {}
+    )
+    assert pr_gating.latest_deployed_sha("stage", fetch=fetch) == "good"
+
+
+def test_latest_deployed_sha_without_a_successful_deployment_is_an_error():
+    fetch, _ = _fake_github_with_deployments({"staging": [("only", "error")]}, {}, {})
+    with pytest.raises(ValueError, match="no successful commcare-connect deployment to staging"):
+        pr_gating.latest_deployed_sha("stage", fetch=fetch)
     fetch, _ = _fake_github_with_deployments({}, {}, {})
-    with pytest.raises(ValueError, match="no GitHub deployment for staging"):
+    with pytest.raises(ValueError, match="no successful commcare-connect deployment to staging"):
         pr_gating.latest_deployed_sha("stage", fetch=fetch)
 
 

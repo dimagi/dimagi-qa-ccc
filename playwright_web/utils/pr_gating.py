@@ -95,14 +95,23 @@ def pr_in_build(pr, deployed_sha, fetch=None, token=None):
     return False
 
 
-def latest_deployed_sha(test_env, fetch=None, token=None):
-    """Commit of the latest commcare-connect deployment to the suite's environment."""
+def latest_deployed_sha(test_env, fetch=None, token=None, look_back=20):
+    """Commit of the latest successful commcare-connect deployment to the suite's environment.
+
+    Deployments are listed newest first, but a failed or still-running deploy is in
+    that list too, so each one's newest status decides: the first whose latest
+    status is "success" is what the environment is serving.
+    """
     fetch = fetch or (lambda path: _github_get(path, token))
     environment = DEPLOYMENT_ENVIRONMENTS[test_env]
-    deployments = fetch(f"/repos/{CONNECT_REPO}/deployments?environment={environment}&per_page=1")
-    if not deployments:
-        raise ValueError(f"commcare-connect has no GitHub deployment for {environment}")
-    return deployments[0]["sha"]
+    deployments = fetch(f"/repos/{CONNECT_REPO}/deployments?environment={environment}&per_page={look_back}")
+    for deployment in deployments:
+        statuses = fetch(f"/repos/{CONNECT_REPO}/deployments/{deployment['id']}/statuses?per_page=1")
+        if statuses and statuses[0]["state"] == "success":
+            return deployment["sha"]
+    raise ValueError(
+        f"no successful commcare-connect deployment to {environment} among the latest {len(deployments)}"
+    )
 
 
 def resolve_deployed_prs(marked_prs, deployed_prs_option=None, deployed_sha=None, test_env=None, fetch=None,

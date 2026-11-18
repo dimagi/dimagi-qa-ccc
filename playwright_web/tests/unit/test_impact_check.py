@@ -122,6 +122,29 @@ def test_tests_marked_for_pr_matches_both_marker_forms_but_not_other_prs(tmp_pat
     assert impact_check.tests_marked_for_pr(1406, root) == ["tests/test_kw.py", "tests/test_pos.py"]
 
 
+def test_tests_marked_for_pr_allows_arguments_after_the_number(tmp_path):
+    root = _fake_suite(tmp_path)
+    (root / "tests" / "test_reason.py").write_text('@pytest.mark.pending_prod(pr=1406, reason="new filter")\n')
+    (root / "tests" / "test_pos_reason.py").write_text("@pytest.mark.replaced_by_pr(1406, reason='old')\n")
+    (root / "tests" / "test_prefix_reason.py").write_text("@pytest.mark.pending_prod(pr=14060, reason='x')\n")
+    assert impact_check.tests_marked_for_pr(1406, root) == ["tests/test_pos_reason.py", "tests/test_reason.py"]
+
+
+def test_fetch_pr_diff_turns_a_gh_failure_into_a_clear_non_zero_exit(monkeypatch):
+    import subprocess
+
+    import pytest
+
+    def failing_run(cmd, **kwargs):
+        raise subprocess.CalledProcessError(1, cmd, stderr="GraphQL: Could not resolve to a PullRequest")
+
+    monkeypatch.setattr(impact_check.subprocess, "run", failing_run)
+    with pytest.raises(SystemExit) as exit_info:
+        impact_check.fetch_pr_diff(999999)
+    assert "could not read the diff of dimagi/commcare-connect#999999" in str(exit_info.value.code)
+    assert "Could not resolve to a PullRequest" in str(exit_info.value.code)
+
+
 def test_runs_against_the_real_suite_without_hits_for_an_empty_diff():
     report = impact_check.analyse("")
     assert report == {"changed_files": [], "locator_hits": [], "doc_mentions": {}, "selected_tests": []}
