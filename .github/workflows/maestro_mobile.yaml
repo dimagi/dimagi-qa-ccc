@@ -1,5 +1,4 @@
 name: CommCare-Connect Maestro Mobile Suite
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('{0} · {1}{2}', (inputs.flows && 'Selected flows' || (inputs.feature && inputs.feature != 'Full suite' && inputs.feature) || 'Full suite'), inputs.environment, inputs.source == 'post-deploy' && ' · post-deploy' || '') || github.event.pull_request.title }}"
 
 env:
   SEND_EMAIL: "true"
@@ -41,23 +40,6 @@ on:
         options:
           - manual
           - post-deploy
-      # Feature run: one app area, picked by each flow's `tags:` header. The flows
-      # input overrides it.
-      feature:
-        description: "What to run"
-        required: false
-        default: "Full suite"
-        type: choice
-        options:
-          - Full suite
-          - Login
-          - Map
-          - Profile
-          - Recovery
-      flows:
-        description: "Or: space-separated flow files to run, e.g. profile_view.yaml (overrides What to run)"
-        required: false
-        default: ""
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.
@@ -123,8 +105,6 @@ jobs:
       max-parallel: 1
 
     env:
-      # What this run covers, shown in Slack, email and the run name.
-      RUN_SCOPE: "${{ inputs.flows && format('Flows: {0}', inputs.flows) || (inputs.feature && inputs.feature != 'Full suite' && inputs.feature) || 'Full suite' }}"
       APP_ENV: ${{ matrix.environment }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
@@ -172,7 +152,6 @@ jobs:
           message = (
               f"⏳ 📊 [{env_name}] CommCare-Connect Maestro Mobile Tests — Run #{run_number}\n"
               f"👤 Triggered by: {actor}\n"
-              f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
               f"🚧 Status: In progress…\n"
               f"🕒 Started: {started_at}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
@@ -208,20 +187,8 @@ jobs:
         # non-zero unless the build status is "passed". Run through
         # forward_signals.sh so a cancelled job stops its BrowserStack build
         # instead of leaving it running on the shared accounts.
-        env:
-          FEATURE: ${{ inputs.feature }}
-          FLOWS_INPUT: ${{ inputs.flows }}
         run: |
-          exec .github/scripts/forward_signals.sh '
-            SELECT_ARGS=()
-            if [ -n "$FLOWS_INPUT" ]; then
-              read -ra FLOW_FILES <<< "$FLOWS_INPUT"
-              SELECT_ARGS=(--flows "${FLOW_FILES[@]}")
-            elif [ -n "$FEATURE" ] && [ "$FEATURE" != "Full suite" ]; then
-              SELECT_ARGS=(--tag "${FEATURE,,}")
-            fi
-            python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" "${SELECT_ARGS[@]}" | tee -i bs_output.log
-          '
+          exec .github/scripts/forward_signals.sh 'python maestro_mobile/scripts/run_on_browserstack.py --app-env "$APP_ENV" | tee -i bs_output.log'
 
       - name: Parse Results
         id: aggregate
@@ -300,7 +267,6 @@ jobs:
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
             <p><b>Triggered by:</b> ${{ env.TRIGGERED_BY }}</p>
-            <p><b>Scope:</b> ${{ env.RUN_SCOPE }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -387,7 +353,6 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
-                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"🚫 Status: Cancelled (superseded by a newer run)"
                   f"{timing_line}\n"
                   f"🔗 Run: <{run_url}|View on GitHub>"
@@ -398,7 +363,6 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
-                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"📱 Mobile → ✅ {passed} | ❌ {failed} | ⏭ {skipped}"
                   f"{timing_line}\n"
                   f"🔗 Run: <{run_url}|View on GitHub>"
