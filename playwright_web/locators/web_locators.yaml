@@ -721,6 +721,12 @@ connect_microplanning_page:
   review_return_to_map_button: "//button[contains(normalize-space(),'Return to Progress Map')]"
   review_deny_button: "//button[@name='action' and @value='deny']"
   review_approve_button: "//button[@name='action' and @value='approve']"
+  # "Clear Data" dropdown (home.html, Connect #1406): Clear Work Areas / Work Area
+  # Groups / Implementation Areas, each with a helper line saying what it clears
+  # or why it is disabled.
+  clear_data_toggle: "//details[contains(@class,'dropdown')]/summary[contains(normalize-space(),'Clear Data')]"
+  clear_data_item_by_label: "//details[contains(@class,'dropdown')][summary[contains(normalize-space(),'Clear Data')]]//button[contains(@class,'dropdown-item')][.//p[normalize-space()='{label}']]"
+  clear_data_item_detail_by_label: "//details[contains(@class,'dropdown')][summary[contains(normalize-space(),'Clear Data')]]//button[contains(@class,'dropdown-item')][.//p[normalize-space()='{label}']]//p[contains(@class,'text-xs')]"
 connect_coverage_progress_page:
   page_title: "//h1[normalize-space()='Coverage Progress Tracker']"
   ward_saturation_label: "//p[contains(normalize-space(),'Ward Saturation Goal')]"
