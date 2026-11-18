@@ -28,6 +28,14 @@ def with_page_size(url, size=OPP_LIST_PAGE_SIZE):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
 
 
+def with_page_number(url, page):
+    """Return `url` with the `page` query param set to `page` (added or replaced)."""
+    parts = urlsplit(url)
+    query = parse_qs(parts.query)
+    query["page"] = [str(page)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
+
+
 def with_all_opportunities(url):
     """Return `url` with the filtered marker (`filtered=1`) set. The Opportunities List opens on default
     filters (Active, non-test only - CCCT-2882) until a filter form is submitted,

@@ -20,10 +20,9 @@ project_connect_opportunity_dashboard memory.
 
 import pytest
 
-from flows.olp_setup import PM_ORG
-from flows.tasking_static import env_value, login_to_connect
-from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
-from pages.connect_opportunity_list_page import ConnectOpportunityListPage
+from flows.opd_setup import dashboard_session
+from flows.tasking_static import env_value
+from utils.skips import skip_needs_data, skip_not_applicable
 
 
 def _mutation_opp(test_data, config):
@@ -35,52 +34,25 @@ def _mutation_opp(test_data, config):
     )
 
 
-def _open_dashboard(page, test_data, config, settings, opp_id, name):
-    connect_page = login_to_connect(page, config, settings, PM_ORG)
-    olp = ConnectOpportunityListPage(connect_page)
-    olp.verify_loaded()
-    dash = OpportunityDashboardPage(connect_page)
-    if opp_id:
-        # Open the dashboard directly by id (the org slug is stable for PM_ORG).
-        connect_page.goto(f"{config.get('connect_url')}/a/pm_automation_01/opportunity/{opp_id}/")
-        connect_page.wait_for_load_state("load")
-    else:
-        if connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-            pytest.skip(f"Mutation opportunity {name!r} not visible to this account/env")
-        olp.open_opportunity(name)
-    dash.verify_loaded()
-    dash.dashboard_url = dash.page.url
-    return dash
-
-
 @pytest.fixture(scope="module")
 def budget(browser, config, settings, test_data):
+    if config.env == "prod":
+        skip_not_applicable("Budget mutations run on staging only (assert-and-skip on prod).")
     opp_id, name = _mutation_opp(test_data, config)
     if not opp_id and not name:
-        pytest.skip(
+        skip_needs_data(
             "OPD.mutation_opportunity_id/name not set - budget-mutation tests are gated. Point "
             "OPD.mutation_opportunity_id_staging at the dedicated Add Budget opp and re-run."
         )
-    if config.env == "prod":
-        pytest.skip("Budget mutations run on staging only (assert-and-skip on prod).")
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    try:
-        try:
-            dash = _open_dashboard(page, test_data, config, settings, opp_id, name)
-        except Exception:
-            page.close()
-            page = context.new_page()
-            dash = _open_dashboard(page, test_data, config, settings, opp_id, name)
-        yield dash
-    finally:
-        context.close()
+    yield from dashboard_session(
+        browser, config, settings, test_data, opp_id=opp_id, names=[name] if name else None
+    )
 
 
 def _require_claimed_workers(budget):
     budget.goto_add_budget()
     if not budget.add_budget_has_claimed_workers():
-        pytest.skip("Mutation opportunity has no claimed workers - the visits form is not rendered")
+        skip_needs_data("Mutation opportunity has no claimed workers - the visits form is not rendered")
 
 
 def test_opd_10_add_budget_existing_worker(budget):

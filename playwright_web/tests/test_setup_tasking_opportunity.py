@@ -3,7 +3,8 @@
 Creates a program + opportunity with a year-long delivery window, configures the
 re-learn task type on it and invites the mobile worker, then prints the values to
 paste into TASKING_HYBRID. Not part of the suite: it only runs when explicitly
-asked for, so CI never creates this data.
+asked for (conftest.py doesn't collect it unless SETUP_TASKING=1), so CI never
+creates this data.
 
     SETUP_TASKING=1 python -m pytest tests/test_setup_tasking_opportunity.py -s
 
@@ -22,13 +23,15 @@ from pages.connect_home_page import ConnectHomePage
 from pages.connect_opportunities_page import ConnectOpportunitiesPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_not_applicable
 
 DELIVERY_WINDOW_DAYS = 365
 
 
 def test_setup_tasking_opportunity(page, test_data, config, settings):
+    # Also guard here: naming the file explicitly bypasses conftest's collection ignore.
     if os.getenv("SETUP_TASKING") != "1":
-        pytest.skip("One-off setup helper - run with SETUP_TASKING=1 to create the opportunity")
+        skip_not_applicable("One-off setup helper - run with SETUP_TASKING=1 to create the opportunity")
 
     tasking = test_data.get("TASKING")
     hybrid = test_data.get("TASKING_HYBRID")

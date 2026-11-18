@@ -44,6 +44,7 @@ class WorkerVisitsPage(BasePage):
     VISIT_ROW_BY_ID = locators.get("worker_visits_page", "visit_row_by_id")
     VISIT_ACTION_REJECT = locators.get("worker_visits_page", "visit_action_reject")
     VISIT_ACTION_APPROVE = locators.get("worker_visits_page", "visit_action_approve")
+    VISIT_ACTION_BAR_BUTTON = locators.get("worker_visits_page", "visit_action_bar_button")
     VISIT_REJECT_MODAL_REASON = locators.get("worker_visits_page", "visit_reject_modal_reason")
     VISIT_REJECT_MODAL_SUBMIT = locators.get("worker_visits_page", "visit_reject_modal_submit")
     VISIT_APPROVE_MODAL_JUSTIFICATION = locators.get("worker_visits_page", "visit_approve_modal_justification")
@@ -307,26 +308,97 @@ class WorkerVisitsPage(BasePage):
     # justification modal) OR PM Agree/Disagree (which post immediately), depending
     # on the org role and the visit's review state; it is absent under auto-verify.
 
-    def _open_row_at(self, index):
-        """Open the visit row at `index` and wait for its details panel to populate."""
-        self.page.locator(self.VISIT_ROW_ANY).nth(index).click()
-        self.page.locator(self.VISIT_DETAILS_CONTAINER).first.wait_for(state="visible", timeout=15000)
+    def _click_row_and_wait_for_details(self, row):
+        """Click a visit row and wait for ITS details to load.
+
+        The #visit-details container and its "Information" heading stay visible from
+        the previously opened visit, so waiting on them returns immediately and the
+        caller reads (or acts on) the PREVIOUS visit's action bar - seen live on prod
+        2026-10-15: reject/approve landed on a different visit than the one the test
+        thought it had opened. Each row click fires exactly one user_visit_details
+        GET, so wait on that response, then let the htmx/Alpine swap settle."""
+        visit_id = row.get_attribute("data-visit-id")
+        # The row's hx-get is user_visit_details/<uuid>/, unique to this visit, so only THIS
+        # visit's response satisfies the wait (not one from an earlier, slower click).
+        details_path = row.get_attribute("hx-get")
+        with self.page.expect_response(
+            lambda r: r.request.method == "GET"
+            and ("user_visit_details" in r.url if not details_path else details_path in r.url),
+            timeout=20000,
+        ):
+            row.click()
         self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
             state="visible", timeout=15000
         )
+        # The old panel stays rendered until the swap lands, so wait until the panel's Entity Name
+        # IS this row's entity name (exact, not a substring: "...-1" must not match "...-10").
+        # Entity Name is found by its column header, not a fixed td index.
+        entity_name = self._entity_name_of(row)
+        if entity_name:
+            try:
+                self.page.wait_for_function(
+                    r"""([sel, name]) => {
+                        const lines = (document.querySelector(sel)?.innerText ?? '')
+                            .split('\n').map(l => l.trim()).filter(Boolean);
+                        const i = lines.indexOf('Entity Name');
+                        return i >= 0 && lines[i + 1] === name;
+                    }""",
+                    arg=[self.VISIT_DETAILS_CONTAINER, entity_name],
+                    timeout=15000,
+                )
+            except PlaywrightTimeoutError:
+                shown = self.page.evaluate(
+                    "sel => (document.querySelector(sel)?.innerText ?? '(none)').slice(0, 200)",
+                    self.VISIT_DETAILS_CONTAINER,
+                )
+                raise AssertionError(
+                    f"Clicked visit '{entity_name}' (id {visit_id}) but the details panel still shows: {shown!r}"
+                )
+
+    def _entity_name_of(self, row):
+        """The row's Entity Name cell text, located by its column header."""
+        headers = [h.strip() for h in row.locator("xpath=ancestor::table[1]//thead//th").all_inner_texts()]
+        if "Entity Name" not in headers:
+            return ""
+        return row.locator("td").nth(headers.index("Entity Name")).inner_text().strip()
+
+    def _open_row_at(self, index):
+        """Open the visit row at `index` and wait for its details panel to populate."""
+        self._click_row_and_wait_for_details(self.page.locator(self.VISIT_ROW_ANY).nth(index))
 
     def _open_row_by_id(self, visit_id):
         """Re-open a visit by its data-visit-id after a table reload (the review post
         triggers reload_table, re-rendering rows) and wait for its details panel."""
         row = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first
         row.wait_for(state="visible", timeout=15000)
-        row.click()
-        self.page.locator(self.VISIT_DETAILS_CONTAINER).first.wait_for(state="visible", timeout=15000)
-        self.page.locator(self.VISIT_DETAILS_SECTION.format(label="Information")).first.wait_for(
-            state="visible", timeout=15000
-        )
+        self._click_row_and_wait_for_details(row)
 
-    def _find_visit_with_enabled_action(self, action_locator, max_rows=15):
+    def _wait_for_visit_status(self, visit_id, expected, attempts=4):
+        """Read a visit's data-visit-status from a freshly loaded table, reloading
+        between attempts, and return the last status seen.
+
+        The review POST (hx-swap="none") does not re-render the visit table in place -
+        observed live on prod 2026-10-15: the action landed (visit changed state, last
+        activity updated) while the already-rendered row kept its old
+        data-visit-status for 20s+. A page reload is the only reliable way to read the
+        new state, so reload (and return to the 'All' tab when the verification
+        tab-set is present, since a reload resets to the default tab)."""
+        status = None
+        for _ in range(attempts):
+            self.page.reload()
+            self.page.wait_for_load_state("load")
+            self._await_table()
+            if self.has_review_tabs():
+                self.click_tab_by_name("All")
+            row = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first
+            if row.count() > 0:
+                status = row.get_attribute("data-visit-status")
+                if status == expected:
+                    return status
+            self.page.wait_for_timeout(2000)
+        return status
+
+    def _find_visit_with_enabled_action(self, action_locator, max_rows=15, only_status=None):
         """Open visits in turn until one exposes `action_locator` present and enabled.
         Returns that visit's data-visit-id, or None if none of the scanned visits
         offer the action (e.g. all already in a terminal state, or auto-verify)."""
@@ -335,15 +407,26 @@ class WorkerVisitsPage(BasePage):
         total = rows.count()
         for i in range(min(total, max_rows)):
             visit_id = rows.nth(i).get_attribute("data-visit-id")
+            if only_status and rows.nth(i).get_attribute("data-visit-status") != only_status:
+                continue
             self._open_row_at(i)
             btn = self.page.locator(action_locator).first
+            if not (btn.count() > 0 and btn.is_enabled()):
+                # The panel is confirmed to be THIS visit's (entity-name wait above), so a missing
+                # button is normally final (terminal state, auto-verify). Allow a short bounded grace
+                # for a bar that renders a beat after the details instead of 8s on every such row.
+                try:
+                    self.page.locator(self.VISIT_ACTION_BAR_BUTTON).first.wait_for(state="visible", timeout=2000)
+                except PlaywrightTimeoutError:
+                    pass
+                btn = self.page.locator(action_locator).first
             if btn.count() > 0 and btn.is_enabled():
                 self._step(f"Visit {visit_id} (row {i}) offers the requested review action")
                 return visit_id
         self._step(f"No visit in the first {min(total, max_rows)} rows offers the requested action")
         return None
 
-    def nm_reject_a_visit(self, reason, max_rows=15):
+    def nm_reject_a_visit(self, reason, rejected_status, max_rows=15):
         """VV_31 (NM): reject a rejectable visit via the Reason-for-Rejection modal,
         then confirm the visit is now rejected. Returns False (caller skips) when no
         scanned visit is rejectable."""
@@ -355,21 +438,18 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_REJECT_MODAL_REASON, reason)
         self.click(self.VISIT_REJECT_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(2000)
-        # reload_table re-rendered the rows; re-open by id and confirm the outcome.
-        self._open_row_by_id(visit_id)
-        status = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
-            "data-visit-status"
+        status = self._wait_for_visit_status(visit_id, rejected_status)
+        assert status == rejected_status, (
+            f"Visit {visit_id} status is {status!r} after reject, expected {rejected_status!r}"
         )
-        assert status == "rejected", f"Visit {visit_id} status is {status!r} after reject, expected 'rejected'"
         self._step(f"NM rejected visit {visit_id} (status now rejected)")
         return True
 
-    def nm_approve_a_visit(self, justification, max_rows=15):
+    def nm_approve_a_visit(self, justification, approved_status, max_rows=15, only_status=None):
         """VV_32 (NM): approve an approvable visit via the Justification-for-Approval
         modal (the justification textarea is required), then confirm it is approved.
         Returns False when no scanned visit is approvable."""
-        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows)
+        visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows, only_status)
         if visit_id is None:
             return False
         self.click(self.VISIT_ACTION_APPROVE)
@@ -377,12 +457,10 @@ class WorkerVisitsPage(BasePage):
         self.type(self.VISIT_APPROVE_MODAL_JUSTIFICATION, justification)
         self.click(self.VISIT_APPROVE_MODAL_SUBMIT)
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(2000)
-        self._open_row_by_id(visit_id)
-        status = self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
-            "data-visit-status"
+        status = self._wait_for_visit_status(visit_id, approved_status)
+        assert status == approved_status, (
+            f"Visit {visit_id} status is {status!r} after approve, expected {approved_status!r}"
         )
-        assert status == "approved", f"Visit {visit_id} status is {status!r} after approve, expected 'approved'"
         self._step(f"NM approved visit {visit_id} (status now approved)")
         return True
 
@@ -484,12 +562,23 @@ class WorkerVisitsPage(BasePage):
     # server rejects it too). These probe that guard without leaving the visit
     # reviewed.
 
+    def visit_status_counts(self):
+        """{status: count} over the visit rows currently rendered (one page)."""
+        self._await_table()
+        statuses = self.page.locator(self.VISIT_ROW_ANY).evaluate_all(
+            "els => els.map(e => e.getAttribute('data-visit-status'))"
+        )
+        counts = {}
+        for st in statuses:
+            counts[st] = counts.get(st, 0) + 1
+        return counts
+
     def _visit_status(self, visit_id):
         return self.page.locator(self.VISIT_ROW_BY_ID.format(visit_id=visit_id)).first.get_attribute(
             "data-visit-status"
         )
 
-    def nm_reject_blocked_without_reason(self, max_rows=15):
+    def nm_reject_blocked_without_reason(self, rejected_status, max_rows=15):
         """Open a rejectable visit, submit the Reject modal with an EMPTY reason, and
         report whether that was blocked (modal stayed open, or the visit did not
         become rejected). Returns None when no scanned visit is rejectable."""
@@ -506,11 +595,11 @@ class WorkerVisitsPage(BasePage):
         # Modal closed - the reason must still have been rejected server-side, so the
         # visit must NOT be rejected.
         self._open_row_by_id(visit_id)
-        blocked = self._visit_status(visit_id) != "rejected"
+        blocked = self._visit_status(visit_id) != rejected_status
         self._step(f"Reject-without-reason blocked (visit not rejected): {blocked}")
         return blocked
 
-    def nm_approve_blocked_without_justification(self, max_rows=15):
+    def nm_approve_blocked_without_justification(self, approved_status, max_rows=15):
         """Counterpart of nm_reject_blocked_without_reason for the Approve modal's
         mandatory justification. Returns None when no scanned visit is approvable."""
         visit_id = self._find_visit_with_enabled_action(self.VISIT_ACTION_APPROVE, max_rows)
@@ -524,7 +613,7 @@ class WorkerVisitsPage(BasePage):
             self._step("Approve blocked client-side (justification required, modal stayed open)")
             return True
         self._open_row_by_id(visit_id)
-        blocked = self._visit_status(visit_id) != "approved"
+        blocked = self._visit_status(visit_id) != approved_status
         self._step(f"Approve-without-justification blocked (visit not approved): {blocked}")
         return blocked
 

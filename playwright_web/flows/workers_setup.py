@@ -38,7 +38,7 @@ def open_opportunity_dashboard(connect_page, opportunity_name, opps_url=None):
     else:
         olp = ConnectOpportunityListPage(connect_page)
         olp.verify_loaded()
-    assert connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=opportunity_name)).count() > 0, (
+    assert connect_page.locator(olp.ROW_LINK_BY_EXACT_NAME.format(name=opportunity_name)).count() > 0, (
         f"Opportunity '{opportunity_name}' is not in the list for this account/environment - "
         f"check the WORKER_* test data against the current env."
     )

@@ -6,6 +6,7 @@ import pytest
 from flows.olp_setup import open_connect_as_org
 from pages.cchq_home_page import CCHQHomePage
 from pages.cchq_login_page import LoginPage
+from utils.skips import skip_needs_data
 
 REQUIRED_KEYS = ["static_opp", "static_opp_id", "static_org", "static_worker", "static_task_type"]
 
@@ -40,7 +41,7 @@ def require_static_opp(test_data, config):
         tasking[key] = env_value(tasking, key, config)
     missing = [key for key in REQUIRED_KEYS if not tasking.get(key)]
     if missing:
-        pytest.skip(
+        skip_needs_data(
             f"Static tasking opportunity not configured for env '{config.env}' (missing: "
             + ", ".join(missing)
             + ") - see Tasking_Workflow_Automation_Test_Plan.xlsx Prerequisites"
@@ -63,7 +64,7 @@ def require_hybrid_opp(test_data, config):
         hybrid[key] = env_value(hybrid, key, config)
     missing = [key for key in HYBRID_REQUIRED_KEYS if not hybrid.get(key)]
     if missing:
-        pytest.skip(
+        skip_needs_data(
             f"Hybrid tasking opportunity not configured for env '{config.env}' "
             f"(missing: {', '.join(missing)}). It needs an opportunity with the re-learn task "
             "type configured and the mobile worker already delivering."

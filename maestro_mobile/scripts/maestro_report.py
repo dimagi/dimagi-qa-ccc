@@ -13,6 +13,10 @@ import datetime
 import json
 from pathlib import Path
 
+from log_masking import mask_sensitive
+
+LOG_TAIL_LINES = 40  # enough to see the failing step and its preceding context
+
 HISTORY_LIMIT = 30  # older runs roll off so the trend stays readable
 STATUS_ORDER = ("passed", "failed", "skipped")
 ROW_SORT_ORDER = ("failed", "skipped", "passed")  # failures first - nobody opens a report for the passes
@@ -46,6 +50,11 @@ def extract_failed_step(log):
             step = line.split(marker, 1)[1].rstrip()
             return step[: -len(" FAILED")].strip()
     return None
+
+
+def failed_log_tail(log):
+    """Masked last LOG_TAIL_LINES lines of a flow's Maestro log."""
+    return "\n".join(mask_sensitive(log or "").splitlines()[-LOG_TAIL_LINES:])
 
 
 def counts_from(summary):
@@ -341,13 +350,17 @@ def write_reports(summary, app_env="stage"):
 
     The JSON keeps its top-level status/passed/failed/skipped keys - the workflow's
     Parse Results step reads them - and drops per-flow logs and screenshots, which
-    belong in the HTML and would bloat the JSON by megabytes.
+    belong in the HTML and would bloat the JSON by megabytes. A failed flow keeps a
+    short MASKED tail of its log as `log_tail`, which is what the AI failure analysis
+    reads (so it needs no BrowserStack call or credentials).
     """
     json_summary = json.loads(json.dumps(summary))
     for session in json_summary.get("sessions", []):
         for flow in session.get("flows", []):
+            log = flow.pop("log", "")
+            if flow.get("status") not in ("passed", "skipped"):
+                flow["log_tail"] = failed_log_tail(log)
             flow.pop("screenshots", None)
-            flow.pop("log", None)
     Path("maestro_report.json").write_text(json.dumps(json_summary, indent=2), encoding="utf-8")
 
     counts = counts_from(summary)

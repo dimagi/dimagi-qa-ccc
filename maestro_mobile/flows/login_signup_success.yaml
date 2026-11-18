@@ -37,16 +37,8 @@ env:
 - inputText: "${BACKUP_CODE}"
 - tapOn:
     id: "connect_backup_code_button"
-# 2.64+ offers an optional email step here, but only while the account has no
-# verified email and the email_otp_verification switch is on - so both steps are
-# optional rather than asserted. The confirm dialog's buttons are Material
-# buttons, which upper-case their labels: YES, not Yes.
-- tapOn:
-    id: "personalid_email_skip_button"
-    optional: true
-- tapOn:
-    text: "YES"
-    optional: true
+# 2.64+ offers an optional email step here; see shared_skip_email_step.yaml.
+- runFlow: shared_skip_email_step.yaml
 
 # "Account Recovered" lands a moment AFTER the code is accepted, so a single tap
 # can run before the dialog exists and then fail - or worse, warn and leave the

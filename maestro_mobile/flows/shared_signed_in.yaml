@@ -29,12 +29,7 @@ appId: org.commcare.dalvik
 # email, so it is optional rather than asserted - the email fixture keeps an
 # address from the previous run and will not be asked. Manage Profile cases that
 # need an email add one through Edit Profile, which is the behaviour under test.
-- tapOn:
-    id: "org.commcare.dalvik:id/personalid_email_skip_button"
-    optional: true
-- tapOn:
-    text: "YES"
-    optional: true
+- runFlow: shared_skip_email_step.yaml
 
 # Recovering an existing account raises "Account Recovered". It lands a moment
 # AFTER the code is accepted, so a single optional tap can run before it exists

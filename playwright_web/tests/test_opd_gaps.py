@@ -20,23 +20,11 @@ add-budget/send-message batch and are not here.
 import pytest
 
 from flows.olp_setup import PM_ORG
+from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-
-
-def _open_dashboard(page, test_data, config, settings, organization=PM_ORG):
-    connect_page = login_to_connect(page, config, settings, organization)
-    olp = ConnectOpportunityListPage(connect_page)
-    olp.verify_loaded()
-    name = env_value(test_data.get("OPD"), "opportunity_name", config)
-    if not name or connect_page.locator(olp.ROW_LINK_BY_NAME.format(name=name)).count() == 0:
-        name = olp.first_row_name()
-    olp.open_opportunity(name)
-    dash = OpportunityDashboardPage(connect_page)
-    dash.verify_loaded()
-    dash.dashboard_url = dash.page.url
-    return dash
+from utils.skips import skip_blocked, skip_needs_data, skip_not_applicable
 
 
 @pytest.fixture(scope="module")
@@ -44,18 +32,7 @@ def dashboard(browser, config, settings, test_data):
     """One authenticated session for the whole module: log in, open the dashboard,
     yield it to every test, then close the context (logout) at the end. The login
     is retried once to absorb the occasional CommCareHQ login flake."""
-    context = browser.new_context(ignore_https_errors=True)
-    page = context.new_page()
-    try:
-        try:
-            dash = _open_dashboard(page, test_data, config, settings)
-        except Exception:
-            page.close()
-            page = context.new_page()
-            dash = _open_dashboard(page, test_data, config, settings)
-        yield dash
-    finally:
-        context.close()
+    yield from dashboard_session(browser, config, settings, test_data)
 
 
 @pytest.fixture(scope="module")
@@ -64,7 +41,7 @@ def session(browser, config, settings, test_data):
     (pm_automation_01 + nm_automation). Yields (dashboard_page, base_url); tests
     navigate to their fixture opp by id. Staging-only fixtures - skips on prod."""
     if config.env == "prod":
-        pytest.skip("Gap-case fixtures exist on staging only")
+        skip_not_applicable("Gap-case fixtures exist on staging only")
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
     try:
@@ -123,7 +100,7 @@ def test_opd_29_map_audit_tasks_panels_present(dashboard):
                 assert href.strip(), f"Panel {title!r} is a link with an empty href"
             dashboard._step(f"Panel {title!r} href: {href}")
     if not present:
-        pytest.skip(f"Map/audit/tasks panels are not enabled for this opportunity on this env: {titles}")
+        skip_needs_data(f"Map/audit/tasks panels are not enabled for this opportunity on this env: {titles}")
     dashboard._step(f"Panels present: {present}")
 
 
@@ -144,7 +121,7 @@ def test_opd_32_worker_progress_bars(dashboard):
     dashboard.goto_dashboard()
     labels = dashboard.worker_progress_labels()
     if not labels:
-        pytest.skip("No worker-progress bars for this opportunity (no deliveries/payments)")
+        skip_needs_data("No worker-progress bars for this opportunity (no deliveries/payments)")
     joined = " | ".join(labels)
     missing = [t for t in dashboard.WORKER_PROGRESS_TITLES if t not in joined]
     assert not missing, f"Missing worker-progress bars {missing}. Present: {labels}"
@@ -194,9 +171,16 @@ def test_opd_40_workers_tab_count_and_search(dashboard):
     dashboard.goto_worker_tab("workers")
     label = dashboard.workers_tab_label_text()
     assert "(" in label and ")" in label, f"Workers tab label has no count: {label!r}"
+    assert "(0)" not in label, (
+        f"Workers tab count is still 0 after waiting ({label!r}); the fixture opportunity has no workers "
+        "or the count did not populate"
+    )
     dashboard.search_workers("zzz-no-such-worker")
     line = dashboard.displaying_count_text()
-    assert "Displaying" in line, f"Search did not produce a 'Displaying X of Y' line (got {line!r})"
+    assert "Displaying" in line, (
+        f"Search did not produce a 'Displaying X of Y' line (got {line!r}); "
+        f"{dashboard.workers_search_diagnostics()}"
+    )
 
 
 def test_opd_42_deliver_filters_present_and_apply(dashboard):
@@ -245,7 +229,7 @@ def test_opd_20_pm_vs_nm_hamburger_menu(session, test_data, config):
     opp_id = _opd(test_data, "nm_view_opp_id", config)
     slug = _opd(test_data, "nm_view_org_slug", config)
     if not opp_id:
-        pytest.skip("OPD.nm_view_opp_id not configured")
+        skip_needs_data("OPD.nm_view_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
     joined = " | ".join(dash.hamburger_options())
     for pm_only in ["Edit Opportunity", "Add Payment Unit", "Verification Rules", "Configure Task Types"]:
@@ -258,11 +242,11 @@ def test_opd_21_viewer_read_only(browser, config, settings):
     viewers). The viewer is a Connect-native account (direct email/password
     sign-in, no CommCareHQ/OAuth) per Anshu 2026-09-04."""
     if config.env == "prod":
-        pytest.skip("Viewer fixture exists on staging only")
+        skip_not_applicable("Viewer fixture exists on staging only")
     vu = settings.get(section="viewer", key="hq_username", env_var="viewer_username")
     vp = settings.get(section="viewer", key="hq_password", env_var="viewer_password")
     if not vu or not vp:
-        pytest.skip("Viewer creds not configured (settings.cfg [viewer])")
+        skip_needs_data("Viewer creds not configured (settings.cfg [viewer])")
 
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
@@ -301,9 +285,9 @@ def test_opd_23_setup_incomplete_redirect(session, test_data, config):
     the Add Payment Units page."""
     dash, base = session
     opp_id = _opd(test_data, "incomplete_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
-        pytest.skip("OPD.incomplete_opp_id not configured")
+        skip_needs_data("OPD.incomplete_opp_id not configured")
     dash.page.goto(f"{base}/a/{slug}/opportunity/{opp_id}/")
     dash.page.wait_for_load_state("load")
     assert "payment_unit" in dash.page.url, (
@@ -315,9 +299,9 @@ def test_opd_26_test_opportunity_badge(session, test_data, config):
     """OD_26: a test opportunity (is_test) shows the 'Test' badge in the header."""
     dash, base = session
     opp_id = _opd(test_data, "test_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
-        pytest.skip("OPD.test_opp_id not configured")
+        skip_needs_data("OPD.test_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
     assert dash.test_badge_present(), "'Test' badge not shown on the is_test opportunity"
 
@@ -327,9 +311,9 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
     is present and its URL is reachable (200)."""
     dash, base = session
     opp_id = _opd(test_data, "microplanning_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
-        pytest.skip("OPD.microplanning_opp_id not configured")
+        skip_needs_data("OPD.microplanning_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
     # The Work Areas tab lives on the worker sub-page tab bar, not the dashboard.
     dash.goto_worker_tab("workers")
@@ -350,12 +334,12 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     until the fixture opp's end date has actually passed (badge reads 'Ended')."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
-    slug = _opd(test_data, "gap_org_slug", config)
+    slug = _opd(test_data, "org_slug", config)
     if not opp_id:
-        pytest.skip("OPD.ended_opp_id not configured")
+        skip_needs_data("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
     if dash.status_badge_text() != "Ended":
-        pytest.skip("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
+        skip_blocked("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
     assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
         "'Add Connect Workers' should be hidden for an ended opportunity"
     )

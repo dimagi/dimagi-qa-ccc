@@ -20,6 +20,7 @@ from flows.workers_setup import (
 )
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from pages.connect_workers_page import ConnectWorkersPage
+from utils.skips import skip_needs_data, skip_not_applicable
 
 @pytest.fixture(scope="module")
 def gaps(test_data):
@@ -123,11 +124,11 @@ def test_src_w_47_viewer_read_only_gating(browser, config, settings):
 
     Uses the Connect-native viewer account (direct sign-in), like OD_21."""
     if config.env == "prod":
-        pytest.skip("Viewer fixture exists on staging only")
+        skip_not_applicable("Viewer fixture exists on staging only")
     vu = settings.get(section="viewer", key="hq_username", env_var="viewer_username")
     vp = settings.get(section="viewer", key="hq_password", env_var="viewer_password")
     if not vu or not vp:
-        pytest.skip("Viewer creds not configured (settings.cfg [viewer])")
+        skip_needs_data("Viewer creds not configured (settings.cfg [viewer])")
 
     context = browser.new_context(ignore_https_errors=True)
     page = context.new_page()
