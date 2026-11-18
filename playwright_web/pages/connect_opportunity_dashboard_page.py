@@ -243,6 +243,7 @@ class OpportunityDashboardPage(BasePage):
     FILTER_SELECT_BY_NAME = locators.get("opportunity_dashboard_page", "filter_select_by_name")
     WORKERS_SEARCH_INPUT = locators.get("opportunity_dashboard_page", "workers_search_input")
     WORKERS_DISPLAYING_COUNT = locators.get("opportunity_dashboard_page", "workers_displaying_count")
+    WORKERS_TABLE_CONTAINER = locators.get("opportunity_dashboard_page", "workers_table_container")
     WORKERS_SEARCH_CLEAR = locators.get("opportunity_dashboard_page", "workers_search_clear")
     WORKERS_TAB_LABEL = locators.get("opportunity_dashboard_page", "workers_tab_label")
 
@@ -635,9 +636,31 @@ class OpportunityDashboardPage(BasePage):
     def search_workers(self, term):
         self._step(f"Search workers for {term!r}")
         self.is_displayed(self.WORKERS_SEARCH_INPUT, timeout=15000)
-        self.type(self.WORKERS_SEARCH_INPUT, term)
-        self.page.locator(self.WORKERS_SEARCH_INPUT).first.press("Enter")
-        self.page.wait_for_timeout(1500)
+        box = self.page.locator(self.WORKERS_SEARCH_INPUT).first
+        displaying = self.page.locator(self.WORKERS_DISPLAYING_COUNT).first
+        # fill() sets the value without key events, and the search sometimes never applied
+        # (the box held the term while the table still listed every worker). Type real
+        # keystrokes. The one re-submit covers a test-side race (typing before the htmx
+        # handler binds); if the filtered "Displaying" line still does not appear after
+        # the second try, the search is genuinely ignored and the caller's assert fails.
+        for attempt in (1, 2):
+            box.fill("")
+            box.press_sequentially(term, delay=30)
+            box.press("Enter")
+            try:
+                displaying.wait_for(state="visible", timeout=10000)
+                break
+            except PlaywrightTimeoutError:
+                self._step(f"Search for {term!r} not applied after attempt {attempt}")
+
+    def workers_search_diagnostics(self):
+        """What the page shows after a search, for failure messages (OD_40 is intermittent)."""
+        try:
+            typed = self.page.locator(self.WORKERS_SEARCH_INPUT).first.input_value()
+            table = self.page.locator(self.WORKERS_TABLE_CONTAINER).first.inner_text(timeout=3000)
+        except Exception as exc:  # diagnostics must never mask the real failure
+            return f"url={self.page.url} (could not read the page: {exc})"
+        return f"url={self.page.url} search_box={typed!r} table_text={' '.join(table.split())[:400]!r}"
 
     def displaying_count_text(self):
         try:

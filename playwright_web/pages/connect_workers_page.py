@@ -2,7 +2,7 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
 from utils.helpers import LocatorLoader, TestDataLoader
 
@@ -324,9 +324,18 @@ class ConnectWorkersPage(BasePage):
         row.wait_for(state="visible", timeout=20000)
         row.click()
         panel = self.page.locator(self.TASK_DETAILS_PANEL).first
-        self.page.wait_for_timeout(2000)  # htmx load
+        # The panel is htmx-swapped: wait for the placeholder to go rather than
+        # sleeping a fixed time (a slow staging response failed that).
+        try:
+            expect(panel).not_to_have_text(
+                re.compile(r"select a task|^\s*$", re.I), timeout=20000
+            )
+        except AssertionError:
+            pass  # the assertion below reports what the panel actually shows
         text = panel.inner_text()
-        assert "select a task" not in text.lower(), "Details panel did not load after row click"
+        assert text.strip() and "select a task" not in text.lower(), (
+            f"Details panel did not load after row click; it shows: {text!r}"
+        )
         self._step("Task details panel loaded")
         return text
 
@@ -413,6 +422,19 @@ class ConnectWorkersPage(BasePage):
             self._step(f"Passed-assessment worker verified (modules={modules}, attempts={attempts}, completed={completed})")
             return
         raise AssertionError("No worker with a 'Passed' assessment found on the Learn tab")
+
+    def learn_column_value(self, worker, column_name):
+        """Learn tab - a named worker's value in an arbitrary column (e.g.
+        'Modules completed'). Used by the hybrid Learn_tab_02 test to read the
+        progress count before/after a device submits a learn module."""
+        headers = self._header_texts()
+        idx = next((i for i, h in enumerate(headers) if h.strip().lower() == column_name.strip().lower()), None)
+        assert idx is not None, f"No '{column_name}' column on the Learn tab: {headers}"
+        row = self.page.locator(self.DATA_ROW_BY_P_TEXT.format(text=worker)).first
+        row.wait_for(state="visible", timeout=15000)
+        value = row.locator(self.ROW_CELLS).nth(idx).inner_text().strip()
+        self._step(f"'{worker}' Learn tab '{column_name}': {value!r}")
+        return value
 
     def verify_assessment_status(self, worker, expected):
         """Learn_tab_03/_04 - a named worker's Assessment column equals `expected`
@@ -957,14 +979,27 @@ class ConnectWorkersPage(BasePage):
         self.select_worker_row(phone)
         return self.resend_selected_invite()
 
-    def delete_worker_invite(self, phone, timeout_seconds=120):
+    def delete_worker_invite(self, phone, timeout_seconds=120, must_exist=False):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
         confirm modal, and wait for it to disappear. The delete is submitted once: a
         row that is still there after the wait is a real failure, not retried."""
         import time
 
-        if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
+        # Always reload the list: right after a resend the URL can still read /workers/ while
+        # the redirect to the dashboard is in flight, so the row looked absent and the delete
+        # was skipped.
+        if getattr(self, "_workers_url", None):
             self._goto_workers_list()
+        if must_exist:
+            # The caller just created/resent this invite, so wait for the row rather than
+            # relying on the fixed settle time in _goto_workers_list (slow table).
+            row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+            try:
+                row.wait_for(state="visible", timeout=15000)
+            except PlaywrightTimeoutError:
+                raise AssertionError(
+                    f"No invite row for {phone} to delete on the workers list ({self.page.url})"
+                ) from None
         if not self.worker_row_present(phone):
             self._step(f"No invite row for {phone} to delete")
             return
