@@ -2,7 +2,7 @@ import re
 import time
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
 from utils.helpers import LocatorLoader, TestDataLoader
 
@@ -324,9 +324,18 @@ class ConnectWorkersPage(BasePage):
         row.wait_for(state="visible", timeout=20000)
         row.click()
         panel = self.page.locator(self.TASK_DETAILS_PANEL).first
-        self.page.wait_for_timeout(2000)  # htmx load
+        # The panel is htmx-swapped: wait for the placeholder to go rather than
+        # sleeping a fixed time (a slow staging response failed that).
+        try:
+            expect(panel).not_to_have_text(
+                re.compile(r"select a task|^\s*$", re.I), timeout=20000
+            )
+        except AssertionError:
+            pass  # the assertion below reports what the panel actually shows
         text = panel.inner_text()
-        assert "select a task" not in text.lower(), "Details panel did not load after row click"
+        assert text.strip() and "select a task" not in text.lower(), (
+            f"Details panel did not load after row click; it shows: {text!r}"
+        )
         self._step("Task details panel loaded")
         return text
 
@@ -970,14 +979,27 @@ class ConnectWorkersPage(BasePage):
         self.select_worker_row(phone)
         return self.resend_selected_invite()
 
-    def delete_worker_invite(self, phone, timeout_seconds=120):
+    def delete_worker_invite(self, phone, timeout_seconds=120, must_exist=False):
         """Connect_worker_08 - select the invite row, delete it via the toolbar +
         confirm modal, and wait for it to disappear. The delete is submitted once: a
         row that is still there after the wait is a real failure, not retried."""
         import time
 
-        if getattr(self, "_workers_url", None) and "/workers/" not in self.page.url:
+        # Always reload the list: right after a resend the URL can still read /workers/ while
+        # the redirect to the dashboard is in flight, so the row looked absent and the delete
+        # was skipped.
+        if getattr(self, "_workers_url", None):
             self._goto_workers_list()
+        if must_exist:
+            # The caller just created/resent this invite, so wait for the row rather than
+            # relying on the fixed settle time in _goto_workers_list (slow table).
+            row = self.page.locator(self.WORKER_ROW_BY_PHONE.format(phone=phone)).first
+            try:
+                row.wait_for(state="visible", timeout=15000)
+            except PlaywrightTimeoutError:
+                raise AssertionError(
+                    f"No invite row for {phone} to delete on the workers list ({self.page.url})"
+                ) from None
         if not self.worker_row_present(phone):
             self._step(f"No invite row for {phone} to delete")
             return

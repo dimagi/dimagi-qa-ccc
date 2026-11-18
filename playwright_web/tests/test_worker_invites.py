@@ -88,5 +88,5 @@ def test_connect_worker_05_12_08_invite_resend_delete(workers_list, test_data):
     )
 
     # _08 - delete the invite; it disappears.
-    workers.delete_worker_invite(reserved)
+    workers.delete_worker_invite(reserved, must_exist=True)
     assert not workers.worker_row_present(reserved), "Invite still present after delete"
