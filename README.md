@@ -357,8 +357,10 @@ Design: the "QA Agent for Connect PRs" doc. When a commcare-connect PR changes b
 | [qa_pending_cleanup.yaml](https://github.com/dimagi/dimagi-qa-ccc/actions/workflows/qa_pending_cleanup.yaml) | For Connect PRs now in production, deletes the `replaced_by_pr` originals and removes the `pending_prod` markers, as one standing PR on `qa-cleanup/release-pending-tests`. | commcare-connect's prod deploy (to be added), and weekdays 03:30 UTC as a fallback |
 
 - **Secrets the agent needs:** `ANTHROPIC_API_KEY`, plus `JIRA_BASE_URL`, `JIRA_EMAIL` and `JIRA_API_TOKEN` to read tickets. Without the Jira ones it works from the PR alone and says so.
+- **How it's contained:** the agent reads untrusted PR text, so it runs in a job with a read-only token and can edit files but not run anything. The impact check and Jira tickets are gathered before it starts. Its changes are checked for the API key, tested in a separate job with no secrets, and pushed by a third job that runs only `git` and `gh`.
+- **Reviewing an agent PR: read every changed `.py` file, not just the summary.** The agent wrote them from untrusted text, and they run with the suites' secrets (HQ, BrowserStack) as soon as a suite is dispatched on that branch. Review the code first, then dispatch.
 - **Locally:** `cd playwright_web && python -m utils.impact_check --pr <n>`, `python -m utils.jira_ticket CCCT-1234`, and `python -m utils.pending_cleanup --dry-run`.
-- PRs opened by these workflows use the workflow token, so the suites don't run on them automatically: dispatch `playwright_web.yaml` on the branch before merging.
+- PRs opened by these workflows use the workflow token, so the suites don't run on them automatically: after reviewing the code, dispatch `playwright_web.yaml` on the branch before merging.
 - Tested cases move from `test_plans/pending/` into the master plans with the skill's finalize mode (`test_plans/README.md`).
 
 ## ⚠️ Mobile Test Execution – Important Considerations
