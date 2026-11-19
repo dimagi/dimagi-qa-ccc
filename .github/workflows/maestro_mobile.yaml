@@ -30,7 +30,7 @@ on:
           - prod
           - both
       prod_apk:
-        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch; 'latest release' = the highest-version commcare-android GitHub release. Committed stays the default until the flows support 2.65 (shared_login_signup fails on 2.65.0)."
+        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch; 'latest release' = the highest-version commcare-android GitHub release. Committed stays the default until releases include a qaAutomation build: the release APK is a plain release build the flows can't drive on BrowserStack."
         required: false
         default: "committed app/ file"
         type: choice
@@ -49,12 +49,12 @@ on:
           - manual
           - post-deploy
 
-  # Mon-Fri 05:00 IST (23:30 UTC the evening before), staging only: the dev/beta build
+  # Mon-Fri 04:00 IST (22:30 UTC the evening before), staging only: the dev/beta build
   # against Connect staging, before anyone is online. A full stage run takes about 40
-  # minutes, so it is done before the CommCare mobile suite takes the shared
-  # BrowserStack slots at 00:30 UTC.
+  # minutes, so even a scheduled start that is half an hour late finishes before the
+  # CommCare mobile suite takes the shared BrowserStack slots at 00:30 UTC.
   schedule:
-    - cron: "30 23 * * 0-4"
+    - cron: "30 22 * * 0-4"
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
 # branch do not cancel one another.

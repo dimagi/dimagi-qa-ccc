@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import struct
 import sys
 import urllib.request
@@ -42,6 +43,9 @@ RELEASES_TO_SCAN = 15
 # commcare-2.63.1-release.apk, app-commcare-release_2.64.1.apk); not lts/staging/connect builds.
 RELEASE_ASSET = re.compile(r"^(app-)?commcare[-_](?!.*(lts|staging|connect)).*\.apk$", re.IGNORECASE)
 RELEASE_TAG = re.compile(r"^commcare_(\d+(?:\.\d+)*)$")
+# Seconds a GitHub request may sit with no data before it fails, so a hung
+# connection stops the job instead of stalling it until the workflow timeout.
+HTTP_TIMEOUT = 60
 
 _RES_STRING_POOL = 0x0001
 _RES_XML_START_ELEMENT = 0x0102
@@ -163,7 +167,7 @@ def _get_json(url):
     token = os.getenv("GITHUB_TOKEN")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as response:
         return json.load(response)
 
 
@@ -189,7 +193,9 @@ def fetch_release_apk(out_path=RELEASE_APK_PATH):
     print(f"Downloading {asset['name']} from {release['tag_name']} ({asset['size']} bytes)...")
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(asset["browser_download_url"], out_path)
+    with urllib.request.urlopen(asset["browser_download_url"], timeout=HTTP_TIMEOUT) as response, \
+            open(out_path, "wb") as out:
+        shutil.copyfileobj(response, out)
     check_apk(out_path, "prod", expected_version=release["tag_name"].removeprefix("commcare_"))
     return release["tag_name"]
 
