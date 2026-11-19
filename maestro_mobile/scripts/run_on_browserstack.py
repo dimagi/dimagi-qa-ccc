@@ -60,6 +60,11 @@ TEST_FLOWS = [
     "signup_email_verify.yaml",
 ]
 POLL_INTERVAL_SECONDS = 15
+# How long the build-status endpoint may keep failing (5xx, or no answer) before the
+# run gives up: 40 polls x 15s = 10 minutes. Long enough for a BrowserStack blip,
+# short enough that a dead endpoint can't hold the job until its timeout.
+MAX_STATUS_ERRORS = 40
+STATUS_REQUEST_TIMEOUT = 60
 
 # Single source of truth for mobile identities, shared with the hybrid web test -
 # a worker defined in two files drifts, and the symptom is a device signing in as
@@ -452,15 +457,27 @@ def stop_build_on_abort(auth):
 
 def poll_build(auth, build_id):
     print("Waiting for build to finish...")
+    errors = 0
     while True:
-        response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth)
-        # A 5xx from the status endpoint says nothing about the build, which keeps
+        # A 5xx or a timed-out request says nothing about the build, which keeps
         # running on BrowserStack: a single 504 here once killed a stage run three
-        # minutes in and threw away the device build. Keep polling through them.
-        if response.status_code >= 500:
-            print(f"Build status returned {response.status_code}; still polling...")
+        # minutes in and threw away the device build. Keep polling through them, but
+        # only MAX_STATUS_ERRORS in a row.
+        try:
+            response = requests.get(f"{BASE_URL}/builds/{build_id}", auth=auth, timeout=STATUS_REQUEST_TIMEOUT)
+            problem = f"returned {response.status_code}" if response.status_code >= 500 else None
+        except (requests.Timeout, requests.ConnectionError) as error:
+            response, problem = None, f"failed ({type(error).__name__})"
+        if problem:
+            errors += 1
+            if errors >= MAX_STATUS_ERRORS:
+                raise RuntimeError(
+                    f"BrowserStack build status {problem} {errors} times in a row; giving up on build {build_id}"
+                )
+            print(f"Build status {problem}; still polling ({errors}/{MAX_STATUS_ERRORS})...")
             time.sleep(POLL_INTERVAL_SECONDS)
             continue
+        errors = 0
         response.raise_for_status()
         data = response.json()
         status = data.get("status")
