@@ -693,3 +693,34 @@ INVOICE_CUSTOM:
 
 INVOICE_VALIDATION:
   future_days_ahead: 5
+
+# --- LLO Directory (LLODir_01-28) ---
+# Mutating tests (create/edit/archive/export) run on staging only; prod gets the read-only
+# checks. Staging's directory is ahead of the sheet (extra Countries/Regions/Test columns,
+# checkbox filters), so every column check is a subset match.
+LLO_DIRECTORY:
+  name_prefix: "AUTO LLO"
+  org_columns: ["Name", "Status", "Primary Sectors", "Org Team Size", "FLWs Managed", "Actions"]
+  contact_columns: ["Organization", "Role / Title", "Email", "Phone", "Actions"]
+  country: "India"
+  sector_index: 1
+  regions: "Region X"
+  msa_link: "https://example.com/msa"
+  work_order_link: "https://example.com/work-order"
+  eoi_links: "https://example.com/eoi-1\nhttps://example.com/eoi-2"
+  statuses: ["Active", "Inactive", "Prospective"]
+  status_definitions: ["1+ open contracts", "0 open contracts, and 1+ previously active contracts"]
+  contact_title: "QA Lead"
+  contact_phone: "+911234567890"
+  earliest_year: 1800
+  messages:
+    org_added: "Organization {name} added."
+    org_updated: "Organization {name} updated."
+    contact_added: "Contact {name} added."
+    contact_archived: "Contact {name} archived."
+    contact_restored: "Contact {name} restored."
+    dup_name: "An organization with this name already exists."
+    required: "This field is required."
+    no_orgs: "No organizations found."
+    no_contacts: "No contacts found."
+    unsupported_format: "Unsupported export format."
