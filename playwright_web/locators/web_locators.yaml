@@ -707,7 +707,8 @@ connect_microplanning_page:
   # The map's Alpine component root; selecting a work area is driven through its state.
   map_controller_root: "//*[@x-data='mapController()']"
   flw_summary_section: "//h3[normalize-space()='FLW Summary']/ancestor::div[contains(@class,'border-t')][1]"
-  flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View summary by FLW')] | //a[contains(normalize-space(),'View summary by FLW')]"
+  # The rendered text is "View Summary by FLW" (capital S); XPath contains() is case-sensitive.
+  flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View Summary by FLW')] | //a[contains(normalize-space(),'View Summary by FLW')]"
   flw_summary_view_visits_btn: "//button[contains(normalize-space(),'View Visits')] | //a[contains(normalize-space(),'View Visits')]"
   select_work_area_section: "//h2[normalize-space()='Select Work Area']/ancestor::aside[1]"
   modify_work_area_button: "//button[contains(normalize-space(),'Modify Work Area')]"
