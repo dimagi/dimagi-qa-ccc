@@ -801,3 +801,41 @@ connect_invoice_form_page:
   modal_certify_checkbox: ".//input[@type='checkbox']"
   modal_certify_button: ".//button[contains(normalize-space(),'Certify')]"
   field_error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist')]"
+
+# --- LLO Directory (LLODir_01-28) ---
+# Source: commcare_connect/organization (views/forms/filters/tables) + templates/organization/directory/*.
+# Add/edit forms open in a [role=dialog] modal and save via htmx; the filter form and the
+# modal both use id_name-style ids (id_status, id_countries), so modal fields are scoped to the dialog.
+connect_llo_directory_page:
+  admin_directory_link: "//a[contains(@href,'/organizations/') and contains(normalize-space(),'LLO Directory')]"
+  # The tabs carry a count; the breadcrumb 'Organizations' link does not, hence the digit check.
+  tab_organizations: "//a[contains(@href,'/organizations/') and not(contains(@href,'/contacts/')) and starts-with(normalize-space(),'Organizations') and translate(normalize-space(),'0123456789','')!=normalize-space()]"
+  tab_contacts: "//a[contains(@href,'/organizations/contacts/') and starts-with(normalize-space(),'Contacts') and translate(normalize-space(),'0123456789','')!=normalize-space()]"
+  # '126 organizations' / '25 contacts' - must start with the number (other text also says 'organizations')
+  result_count_text: "//*[self::p or self::span or self::div][not(*)][contains(normalize-space(),' organization') or contains(normalize-space(),' contact')][translate(substring(normalize-space(),1,1),'0123456789','')='']"
+  table: "(//table)[1]"
+  table_headers: "(//table)[1]//thead//th"
+  table_rows: "(//table)[1]//tbody//tr"
+  row_by_name: "(//table)[1]//tbody//tr[td[1][normalize-space()=\"{name}\"]]"
+  header_sort_link: "(//table)[1]//thead//th//a[normalize-space()=\"{header}\"]"
+  status_info_icon: "(//table)[1]//thead//th[contains(normalize-space(),'Status')]//i | (//table)[1]//thead//th[contains(normalize-space(),'Status')]//*[@x-tooltip or @title]"
+  filter_search: id_search
+  filter_apply: "//*[(self::button or self::input or @role='button') and (normalize-space()='Apply' or @value='Apply')]"
+  filter_reset: "//*[(self::a or self::button or @role='button') and (contains(normalize-space(),'Reset') or contains(normalize-space(),'Clear'))]"
+  add_org_button: "//button[normalize-space()='Add Organization'] | //a[normalize-space()='Add Organization']"
+  add_contact_button: "//button[normalize-space()='Add Contact'] | //a[normalize-space()='Add Contact']"
+  edit_button_by_name: "//*[@aria-label=\"Edit {name}\"]"
+  archive_button_by_name: "//*[@aria-label=\"Archive {name}\"]"
+  restore_button_by_name: "//*[@aria-label=\"Restore {name}\"]"
+  export_open_button: "//*[(self::button or self::a or @role='button') and contains(normalize-space(),'Export contacts')]"
+  export_format: id_format
+  export_submit: "//form[contains(@action,'/contacts/export/')]//button[normalize-space()='Export']"
+  export_download_link: "//a[normalize-space()='Download Export']"
+  modal: "//div[@role='dialog']"
+  modal_close_x: "//div[@role='dialog']//button[@aria-label='Close dialog']"
+  modal_cancel: "//div[@role='dialog']//button[normalize-space()='Cancel']"
+  modal_save: "//div[@role='dialog']//button[normalize-space()='Save' or normalize-space()='Save Changes' or normalize-space()='Create Contact']"
+  archive_confirm: "//div[@role='dialog']//button[normalize-space()='Archive']"
+  modal_text: "//div[@role='dialog']"
+  org_field: "//div[@role='dialog']//*[@id='id_{field}']"
+  contact_org_select: "//div[@role='dialog']//select[@id='id_organization']"
