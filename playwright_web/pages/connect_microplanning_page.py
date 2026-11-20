@@ -182,15 +182,39 @@ class MicroplanningPage(BasePage):
     def flw_summary_text(self):
         return self.page.locator(self.FLW_SUMMARY_SECTION).first.inner_text()
 
+    def flw_summary_control_visible(self, locator, timeout_ms=15000):
+        """Wait for an FLW Summary action link to render. The links sit behind an
+        x-if on "assignee chosen and summary loaded", so they appear after the
+        always-present 'FLW Summary' header; counting them straight after that header
+        shows 0. False only if the control never renders."""
+        try:
+            self.page.locator(locator).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _click_and_follow(self, locator):
+        """Click an FLW Summary link and return the page it lands on. These links are
+        target=_blank, so the destination is a new tab; if the app ever stops opening
+        a tab, the click navigates this page and this page is returned."""
+        try:
+            with self.page.context.expect_page(timeout=10000) as popup_info:
+                self.click(locator)
+            target = popup_info.value
+        except PlaywrightTimeoutError:
+            target = self.page
+        target.wait_for_load_state("load")
+        return target
+
     def open_flw_summary_by_flw(self):
-        self._step("Open 'View summary by FLW'")
-        self.click(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
-        self.page.wait_for_load_state("load")
+        """Click 'View Summary by FLW'; returns the page it opened (caller closes a new tab)."""
+        self._step("Open 'View Summary by FLW'")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
 
     def open_flw_summary_visits(self):
+        """Click 'View Visits'; returns the page it opened (caller closes a new tab)."""
         self._step("Open FLW summary 'View Visits'")
-        self.click(self.FLW_SUMMARY_VIEW_VISITS_BTN)
-        self.page.wait_for_load_state("load")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_VISITS_BTN)
 
     # -- Microplanning_16/17: select/modify a single work area (non-assignment-mode) -
     # No map click needed: mapController()'s single-select state (`selectedFeature`)

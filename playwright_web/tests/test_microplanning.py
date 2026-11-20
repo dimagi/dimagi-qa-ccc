@@ -172,11 +172,15 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
         skip_needs_data("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
-        skip_blocked("'View summary by FLW' control not present for this assignee")
-    micro.open_flw_summary_by_flw()
-    path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
-    assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
+    if not micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN):
+        skip_blocked("'View Summary by FLW' control did not render for this assignee after the summary loaded")
+    target = micro.open_flw_summary_by_flw()
+    try:
+        path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
+        assert path in target.url, f"Did not land on the work-area-assignments page ({path}): {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
 def test_microplanning_29_view_visits_nav(session):
@@ -187,10 +191,14 @@ def test_microplanning_29_view_visits_nav(session):
         skip_needs_data("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
-        skip_blocked("'View Visits' control not present for this assignee")
-    micro.open_flw_summary_visits()
-    assert "/workers/" in micro.page.url, f"Did not land on the connect workers page: {micro.page.url}"
+    if not micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_VISITS_BTN):
+        skip_blocked("'View Visits' control did not render for this assignee after the summary loaded")
+    target = micro.open_flw_summary_visits()
+    try:
+        assert "/workers/" in target.url, f"Did not land on the connect workers page: {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
 # -- Microplanning_33/34: Connect Workers page "Work Area Assignments" tab ------
