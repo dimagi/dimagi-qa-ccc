@@ -17,6 +17,8 @@ OLP_02 skip conventions. Mutating cases (OD_36/44/46) belong with the Tier 2/3
 add-budget/send-message batch and are not here.
 """
 
+from datetime import date
+
 import pytest
 
 from flows.olp_setup import PM_ORG
@@ -331,15 +333,18 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
 
 def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     """OD_37: 'Add Connect Workers' is hidden for an ENDED opportunity. Self-skips
-    until the fixture opp's end date has actually passed (badge reads 'Ended')."""
+    until the fixture opp's end date has actually passed (its badge then reads 'Inactive')."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
     slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         skip_needs_data("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
-    if dash.status_badge_text() != "Ended":
-        skip_blocked("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
+    end = dash.end_date()
+    if end is None:
+        skip_blocked("The fixture opp page shows no End Date - cannot tell whether it has ended")
+    if end >= date.today():
+        skip_needs_data(f"Fixture opp's end date {end} has not passed yet - re-runs green once it does")
     assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
         "'Add Connect Workers' should be hidden for an ended opportunity"
     )
