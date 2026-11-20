@@ -10,6 +10,8 @@ Reuses the OPD.microplanning_opp_id_staging fixture (the "OLP Test opp" already
 used by test_opd_gaps.py::test_opd_28); prod uses its own OLP_Test_Opp (OPD.microplanning_opp_id).
 """
 
+import re
+
 import pytest
 
 from flows.olp_setup import PM_ORG
@@ -253,6 +255,32 @@ def test_microplanning_17_modify_work_area_form_fields(session):
     micro.open_modify_work_area_modal()
     text = micro.modify_work_area_modal_text()
     assert text.strip(), "Modify Work Area modal opened empty"
+
+
+# -- Connect #1406: Clear Data menu (new case, test_plans/pending/connect-pr-1406.yaml)
+
+
+@pytest.mark.pending_prod(pr=1406)
+def test_microplanning_clear_data_menu(session, test_data):
+    """The Clear Data menu lists its three clear actions, and Clear Work Areas is
+    disabled with the reason whenever clearing is blocked. Read-only: it never
+    clicks an enabled entry, so nothing on the shared fixture opp is cleared."""
+    micro = _home(session)
+    ui = test_data.get("MICROPLANNING_UI")
+    entries = micro.clear_data_entries(ui["clear_data_entries"])
+
+    missing = [label for label, entry in entries.items() if not entry["present"]]
+    assert not missing, f"Clear Data menu is missing {missing}"
+
+    work_areas = entries["Clear Work Areas"]
+    if work_areas["disabled"]:
+        assert work_areas["detail"] in ui["clear_work_areas_blocked_reasons"], (
+            f"Disabled Clear Work Areas should say why: {work_areas['detail']!r}"
+        )
+    else:
+        assert re.match(ui["clear_work_areas_enabled_pattern"], work_areas["detail"]), (
+            f"Clear Work Areas should give the record count: {work_areas['detail']!r}"
+        )
 
 
 # -- Microplanning_31/35-40 + unnumbered: Coverage Progress Tracker --------------
