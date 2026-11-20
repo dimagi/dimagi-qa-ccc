@@ -60,3 +60,18 @@ To move the suite to a new release `X.Y.Z`:
    `app/app-commcare-release.apk` and `app/app-cccStaging-release.apk`.
 3. `python maestro_mobile/scripts/apk_check.py check --app-env prod --expect-version X.Y.Z`,
    and the same for `stage`.
+
+## Stage runs on the latest dev build
+
+Stage runs can test the dev build instead of the committed cccStaging APK (QA Plan B1/B3):
+`maestro_mobile/scripts/dev_build.py` takes the `ccc-staging-qaAutomation-release-apk`
+artifact from a commcare-android `master` build. It reuses a build of master's current
+commit, waits for one that is still running, or dispatches one (about 30 minutes, passing
+commcare-core's `master` commit as `commcare_core_sha`). If master's newest build failed, it
+falls back to an older master build and says so in the job summary.
+
+- **Manual runs:** choose `latest dev build` for `stage_apk`.
+- **Weekday schedule:** uses the dev build whenever the `COMMCARE_ANDROID_TOKEN` secret
+  exists, and the committed file until then. The token (requested in the A1 interrupt
+  ticket) must be able to read commcare-android's Actions artifacts and run its workflows.
+- **Locally:** `COMMCARE_ANDROID_TOKEN=$(gh auth token) python maestro_mobile/scripts/dev_build.py --artifact ccc-staging-qaAutomation-release-apk --out app/app-cccStaging-release.apk`
