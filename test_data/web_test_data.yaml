@@ -685,3 +685,47 @@ INVOICE_CUSTOM:
 
 INVOICE_VALIDATION:
   future_days_ahead: 5
+
+# --- Solicitations (Solicitations_01-16) ---
+# Every solicitation a test creates is titled "<title_prefix> <timestamp> ..." so it
+# is recognisable in the (never-cleaned) list. Mutating tests are staging-only.
+SOLICITATIONS:
+  title_prefix: "AUTO Sol"
+  # SolicitationTable columns; staging also renders a "Review Team" column (not in the
+  # repo's table yet), so the list check is a subset match.
+  list_columns: ["Title", "Type", "Visibility", "Status", "Deadline", "Invited", "Responses"]
+  invitation_columns: ["Organization", "Invited by", "Invited on"]
+  steps: ["Details", "Evaluation criteria", "Questions", "Review & publish"]
+  currency: "USD"
+  country: "India"
+  contact_email: "qa-automation@example.com"
+  description: "Automated scope of work"
+  budget_min: "1000"
+  budget_max: "5000"
+  scale: "5,000 households, 3 districts"
+  # Orgs the earlier QA runs already invited on staging (invites email their members).
+  invite_orgs_staging: ["Nitin's Network Manager", "Nitin's Program"]
+  question_types: ["Free text", "Number", "Choice", "File upload", "Date"]
+  # A Connect org the QA user can open that is NOT a Program Manager org (Solicitations_02).
+  non_pm_org_slug: "network-manager"
+  # Solicitations_16 seeds "<title_prefix> closing <solicitation-id>" with a deadline at the next whole
+  # hour; once it passes, the row is Closed and 05/16 verify it (the id in the title is how the
+  # closed row's URLs are reached, since a Closed title is no longer a link).
+  closing_marker: "closing"
+  # Solicitations_04: an Active solicitation seeded with invitations and applications in every status.
+  # Leave title empty until seeded; expected counts are what the seed contains.
+  counts_solicitation_title_staging: ""
+  counts_expected_invited: 0
+  counts_expected_responses: 0
+  messages:
+    saved: "Solicitation saved."
+    published: "Solicitation published."
+    locked_hint: "Criteria and questions can't change once a solicitation is published."
+    budget: "Maximum budget must not be less than the minimum."
+    dates: "End date must be after the start date."
+    choice: "Choice questions need at least one option."
+    deadline_extend_only: "A published deadline can only be extended."
+    publish_blocked_heading: "Fix these before publishing"
+    empty_list: "No solicitations yet."
+    no_invites: "No organizations invited yet."
+    field_required: "This field is required."
