@@ -1,3 +1,5 @@
+import re
+from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
@@ -87,6 +89,16 @@ class OpportunityDashboardPage(BasePage):
         text = badge.inner_text().strip()
         self._step(f"Opportunity status badge: {text}")
         return text
+
+    def end_date(self):
+        """The opportunity's 'End Date' from the details block, or None if it is not shown.
+        Used instead of the status badge, which reads 'Inactive' (not 'Ended') once an
+        opportunity's end date has passed."""
+        text = self.page.locator("body").inner_text()
+        match = re.search(r"End Date\s+(\d{4}-\d{2}-\d{2})", text)
+        end = date.fromisoformat(match.group(1)) if match else None
+        self._step(f"Opportunity end date: {end}")
+        return end
 
     def verify_graphs_present(self):
         """The funnel and worker-progress sections render as their own HTMX
