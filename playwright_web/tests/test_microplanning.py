@@ -183,7 +183,7 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
             target.close()
 
 
-def test_microplanning_29_view_visits_nav(session):
+def test_microplanning_29_view_visits_nav(session, test_data):
     micro = _home(session)
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
@@ -195,7 +195,8 @@ def test_microplanning_29_view_visits_nav(session):
         skip_blocked("'View Visits' control did not render for this assignee after the summary loaded")
     target = micro.open_flw_summary_visits()
     try:
-        assert "/workers/" in target.url, f"Did not land on the connect workers page: {target.url}"
+        path = test_data.get("MICROPLANNING_UI")["flw_visits_path"]
+        assert path in target.url, f"Did not land on the FLW's visits page ({path}): {target.url}"
     finally:
         if target is not micro.page:
             target.close()

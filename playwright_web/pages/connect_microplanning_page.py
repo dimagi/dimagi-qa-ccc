@@ -104,7 +104,9 @@ class MicroplanningPage(BasePage):
 
     def _select_option_labels(self, options_locator):
         options = self.page.locator(options_locator).all_inner_texts()
-        return [o.strip() for o in options if o.strip() and not o.strip().startswith("---")]
+        # Skip the empty placeholders: "---..." and the em-dash "— Select FLW —" style. Without
+        # this, options[0] is the placeholder and callers "select" nothing.
+        return [o.strip() for o in options if o.strip() and not o.strip().startswith(("---", "\u2014"))]
 
     def status_filter_options(self):
         labels = self._select_option_labels(self.FILTER_STATUS_OPTIONS)
