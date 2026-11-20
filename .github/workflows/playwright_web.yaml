@@ -1,4 +1,5 @@
 name: CommCare-Connect Playwright Web Suite
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('{0} · {1}{2}', (inputs.tests && 'Selected tests' || (inputs.feature && inputs.feature != 'Full suite' && !startsWith(inputs.feature, 'Connect PR') && inputs.feature) || (inputs.connect_pr && format('Connect PR #{0}', inputs.connect_pr)) || 'Full suite'), inputs.environment, inputs.source == 'post-deploy' && ' · post-deploy' || '') || github.event.pull_request.title }}"
 
 env:
   SEND_EMAIL: "true"
@@ -49,6 +50,41 @@ on:
         required: false
         default: false
         type: boolean
+      # Feature run: pick an app area, or 'Connect PR' to run only the tests a
+      # commcare-connect PR affects (fill in connect_pr). The tests input overrides both.
+      feature:
+        description: "What to run"
+        required: false
+        default: "Full suite"
+        type: choice
+        options:
+          - Full suite
+          - Connect PR (fill in connect_pr)
+          - Opportunities
+          - Programs
+          - Opportunity dashboard
+          - Workers
+          - Tasks
+          - Messaging
+          - Microplanning
+          - Invoices
+          - PersonalID
+      deployed_sha:
+        description: "Deployed commcare-connect commit; picks pending_prod / replaced_by_pr tests per PR"
+        required: false
+        default: ""
+      deployed_prs:
+        description: "Or: comma-separated Connect PR numbers to treat as deployed (overrides deployed_sha)"
+        required: false
+        default: ""
+      connect_pr:
+        description: "Feature run: only the tests this commcare-connect PR affects. Its updated tests run only if the PR is in the environment's latest successful deployment."
+        required: false
+        default: ""
+      tests:
+        description: "Or: space-separated test files to run, e.g. tests/test_olp_04.py (overrides connect_pr's selection)"
+        required: false
+        default: ""
 
 # A push cancels the previous push's run - newest commit wins - but a manual
 # dispatch is its own group, so dispatching one environment does not kill a run
@@ -113,6 +149,8 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve-matrix.outputs.matrix) }}
 
     env:
+      # What this run covers, shown in Slack, email and the run name.
+      RUN_SCOPE: "${{ inputs.tests && format('Tests: {0}', inputs.tests) || (inputs.feature && inputs.feature != 'Full suite' && !startsWith(inputs.feature, 'Connect PR') && inputs.feature) || (inputs.connect_pr && format('Connect PR #{0}', inputs.connect_pr)) || 'Full suite' }}"
       TEST_ENV: ${{ matrix.environment }}
       hq_username: ${{ secrets.hq_username }}
       hq_password: ${{ secrets.hq_password }}
@@ -127,6 +165,14 @@ jobs:
       # post-deploy and ordinary manual dispatches alike. Only a manual dispatch with
       # include_seed_consuming=true (and source other than post-deploy) runs them.
       PYTEST_MARKERS: ${{ github.event_name == 'pull_request' && 'not on_demand and not consumes_seed_data' || (github.event_name == 'workflow_dispatch' && inputs.include_seed_consuming == true && inputs.source != 'post-deploy' && 'consumes_seed_data or not consumes_seed_data' || 'not consumes_seed_data') }}
+      # Connect PR gating (utils/pr_gating.py). Both empty means the suite looks up
+      # the latest successful commcare-connect deployment to this environment, so a
+      # Connect PR feature run checks whether that PR is really deployed.
+      DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+      DEPLOYED_PRS: ${{ inputs.deployed_prs }}
+      CONNECT_PR: ${{ inputs.connect_pr }}
+      FEATURE: ${{ inputs.feature }}
+      TESTS_INPUT: ${{ inputs.tests }}
       # The hybrid tasking test drives a real device mid-test, so this job needs the
       # same BrowserStack credentials the Maestro workflow uses. It used to
       # self-skip while TASKING_HYBRID was unset, which is why they were not here.
@@ -176,6 +222,7 @@ jobs:
           message = (
               f"⏳ 📊 [{env_name}] CommCare-Connect Playwright Web Tests — Run #{run_number}\n"
               f"👤 Triggered by: {actor}\n"
+              f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
               f"🚧 Status: In progress…\n"
               f"🕒 Started: {started_at}\n"
               f"🔗 Run: <{run_url}|View on GitHub>"
@@ -200,17 +247,78 @@ jobs:
         # HTML report / notifications - those cover the browser tests only.
         run: python -m pytest tests/unit --tb=short
 
+      - name: Select Tests
+        id: select
+        working-directory: playwright_web
+        # Explicit bash turns on pipefail, so an impact check failure fails the step
+        # instead of looking like "nothing to run".
+        shell: bash
+        # Feature runs: an explicit file list, the tests a Connect PR affects
+        # (utils/impact_check.py), or one app area by test file name. Empty output
+        # means the whole suite runs.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SELECTED=""
+          AREA=""
+          case "$FEATURE" in
+            "Opportunities")          AREA="tests/test_olp_*.py" ;;
+            "Programs")               AREA="tests/test_plp_*.py" ;;
+            "Opportunity dashboard")  AREA="tests/test_opd_*.py" ;;
+            "Workers")                AREA="tests/test_worker_*.py" ;;
+            "Tasks")                  AREA="tests/test_task_*.py tests/test_e2e_relearn_lifecycle.py" ;;
+            "Messaging")              AREA="tests/test_messaging_*.py" ;;
+            "Microplanning")          AREA="tests/test_map_*.py tests/test_microplanning*.py" ;;
+            "Invoices")               AREA="tests/test_invoice_*.py" ;;
+            "PersonalID")             AREA="tests/test_pid_*.py" ;;
+          esac
+          if [ -n "$TESTS_INPUT" ]; then
+            read -ra REQUESTED <<< "$TESTS_INPUT"
+            for f in "${REQUESTED[@]}"; do
+              if [[ ! "$f" =~ ^tests/[A-Za-z0-9_./-]+\.py$ || "$f" == *..* ]]; then
+                echo "::error::The tests input takes test files under tests/, e.g. tests/test_olp_04.py - got '$f'."
+                exit 1
+              fi
+            done
+            SELECTED="${REQUESTED[*]}"
+          elif [[ "$FEATURE" == "Connect PR"* || ( -n "$CONNECT_PR" && -z "$AREA" ) ]]; then
+            if [ -z "$CONNECT_PR" ]; then
+              echo "::error::Feature 'Connect PR' needs the connect_pr input (a commcare-connect PR number)."
+              exit 1
+            fi
+            SELECTED="$(python -m utils.impact_check --pr "$CONNECT_PR" --tests | tr '\n' ' ')"
+            if [ -z "${SELECTED// /}" ]; then
+              echo "::notice::No tests map to commcare-connect PR #$CONNECT_PR - nothing to run."
+              echo "none=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -n "$AREA" ]; then
+            shopt -s nullglob
+            SELECTED="$(echo $AREA)"
+            if [ -z "$SELECTED" ] || [ "$SELECTED" = "$AREA" ]; then
+              echo "::error::No test files match $FEATURE ($AREA)."
+              exit 1
+            fi
+          fi
+          echo "Selected: ${SELECTED:-whole suite}"
+          echo "files=$SELECTED" >> "$GITHUB_OUTPUT"
+
       - name: Run Playwright Web Tests
         id: run_tests
+        if: steps.select.outputs.none != 'true'
         working-directory: playwright_web
         # pytest.ini forces --headed for local debugging, so give CI a virtual display.
+        env:
+          SELECTED: ${{ steps.select.outputs.files }}
+          # Read-only: utils/pr_gating.py compares Connect commits on the public repo.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Run through forward_signals.sh so a cancelled job reaches pytest, and a
         # hybrid test stops its BrowserStack build rather than leaving it running.
         run: |
           exec ../.github/scripts/forward_signals.sh '
             MARKER_ARGS=()
             [ -n "$PYTEST_MARKERS" ] && MARKER_ARGS=(-m "$PYTEST_MARKERS")
-            xvfb-run --auto-servernum -- python -m pytest --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
+            read -ra TEST_ARGS <<< "$SELECTED"
+            xvfb-run --auto-servernum -- python -m pytest "${TEST_ARGS[@]}" --ignore=tests/unit "${MARKER_ARGS[@]}" --env=${{ env.TEST_ENV }} --screenshot=only-on-failure --output=test-results --junitxml=reports/playwright-web-${{ env.TEST_ENV }}.xml --html=reports/report-playwright-web-${{ env.TEST_ENV }}.html --self-contained-html --tb=short
           '
 
       - name: Upload JUnit report
@@ -343,6 +451,7 @@ jobs:
             <p><b>Run:</b> #${{ github.run_number }}</p>
             <p><b>Branch:</b> ${{ github.head_ref || github.ref_name }}</p>
             <p><b>Triggered by:</b> ${{ env.TRIGGERED_BY }}</p>
+            <p><b>Scope:</b> ${{ env.RUN_SCOPE }}</p>
             <h3>Results</h3>
             <ul>
               <li><b>Passed:</b> ${{ steps.aggregate.outputs.passed }}</li>
@@ -442,6 +551,7 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
+                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"🚫 Status: Cancelled (superseded by a newer run)"
                   f"{timing_line}\n"
                   f"🔗 Run: <{run_url}|View on GitHub>"
@@ -452,6 +562,7 @@ jobs:
               summary = (
                   f"{header}\n"
                   f"👤 Triggered by: {actor}\n"
+                  f"🎯 Scope: {os.environ.get('RUN_SCOPE') or 'Full suite'}\n"
                   f"🌐 Web → ✅ {passed} | ❌ {failed} | ⏭ {total_skipped}"
                   f"{messaging_line}"
                   f"{skip_line}"

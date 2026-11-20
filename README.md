@@ -336,6 +336,17 @@ The framework can send test execution notifications via email. Follow these step
 - The above screen will open with 3 fields: Branch (select main), Environment (prod or stage or both), Scope (web or mobile or both)
 - Once all fields are selected, click on the green Run workflow button
 
+---
+### 🎯 Feature Runs (run part of the web suite)
+The web suite can run just one area instead of everything. Open [playwright_web.yaml](https://github.com/dimagi/dimagi-qa-ccc/actions/workflows/playwright_web.yaml), click **Run workflow**, pick the branch and environment, then use **What to run**: Full suite, an app area (Opportunities, Programs, Opportunity dashboard, Workers, Tasks, Messaging, Microplanning, Invoices, PersonalID), or **Connect PR**. The `tests` input takes an exact list instead, e.g. `tests/test_olp_04.py tests/test_plp_list_page.py`.
+
+The mobile suite always runs in full: the dev team asked for the complete suite on feature requests rather than partial runs (Mobile Automation QA Plan, "Run scope").
+
+- **Connect PR**: enter a commcare-connect PR number in `connect_pr`. The run covers only the tests that PR affects, worked out from its diff by `playwright_web/utils/impact_check.py`. Locally: `cd playwright_web && python -m utils.impact_check --pr <n> --tests`.
+- **The change must be deployed first.** The suites test a deployed environment (staging or prod), not a branch, so put the feature on staging before a stage run.
+- Areas are picked by test file name (`tests/test_olp_*.py` is Opportunities, etc.), so a new test file joins its area automatically.
+- The Slack card, email and run name say what ran (for example `Programs · stage`), so a partial run isn't mistaken for a full one.
+
 ## ⚠️ Mobile Test Execution – Important Considerations
 
 ### 1. Payment Flow Limitation (TC_6)
