@@ -146,14 +146,15 @@ appId: org.commcare.dalvik
 # screen opens; Confirm does not, so its digits went to the full Code field and
 # were silently discarded.
 #
-# 23%,58% is the centre of Confirm's first box on the Pixel 7 (1080x2400) that
-# BrowserStack runs - box centre (254, 1392) from the observed bounds. If this
+# 23%,44% is the centre of Confirm's first box on the Pixel 7 (1080x2400) that
+# BrowserStack runs - box centre (253, 1066), re-derived from a 2.65.0 failure
+# screenshot. It was 23%,58% (254, 1392) before 2.65 moved the fields up. If this
 # flow starts failing with an empty Confirm field on a different device or after a
 # layout change, this is the line to re-derive.
 - assertVisible:
     id: "org.commcare.dalvik:id/confirm_code_view"
 - tapOn:
-    point: "23%,58%"
+    point: "23%,44%"
 - inputText: "${BACKUP_CODE}"
 
 # Tapped without hiding the keyboard first: the button sits behind it, but a

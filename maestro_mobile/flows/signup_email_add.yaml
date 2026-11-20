@@ -64,28 +64,30 @@ appId: org.commcare.dalvik
     enabled: true
 
 # ---------------------------------------------------------------- SE_04
-# "Skip for now" raises the confirmation; NO returns to the email step.
-# The buttons are Material buttons, which upper-case their labels: YES/NO, even
-# though the string resources read Yes/No.
+# "Skip for now" raises the confirmation; ADD EMAIL returns to the email step.
+# 2.65.0 replaced the "Skip email?" / "Are you sure you want to skip?" (YES/NO)
+# dialog with "Protect your account" (SKIP/ADD EMAIL). The buttons are Material
+# buttons, which upper-case their labels, though the string resources read
+# Skip / Add Email.
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
 - assertVisible:
-    text: "Skip email?"
+    text: "Protect your account"
 - assertVisible:
-    text: "Are you sure you want to skip?"
+    text: "Adding an email strengthens your account security.*"
 - tapOn:
-    text: "NO"
+    text: "ADD EMAIL"
 - assertVisible:
     text: "Add your email (optional)"
 
 # ---------------------------------------------------------------- SE_05
-# YES continues to photo capture - the account is created regardless.
+# SKIP continues to photo capture - the account is created regardless.
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
 - assertVisible:
-    text: "Skip email?"
+    text: "Protect your account"
 - tapOn:
-    text: "YES"
+    text: "SKIP"
 - extendedWaitUntil:
     visible:
       id: "org.commcare.dalvik:id/take_photo_button"

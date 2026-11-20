@@ -68,9 +68,11 @@ appId: org.commcare.dalvik
     id: "org.commcare.dalvik:id/personalid_resend_countdown_text"
 
 # ---------------------------------------------------------------- SE_08
-# A wrong code is rejected. The field auto-submits on the sixth digit
-# (setCodeCompleteListener), so there is no Verify tap.
+# A wrong code is rejected. 2.65.0 no longer auto-submits on the sixth digit:
+# the code is sent by VERIFY CODE (personalid_email_verify_button).
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: ".*wrong 6-digit passcode.*"
@@ -83,18 +85,23 @@ appId: org.commcare.dalvik
 # focus back a box per backspace, clearing the whole code.
 - eraseText
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: ".*wrong 6-digit passcode.*"
     timeout: 30000
 - eraseText
 - inputText: "${WRONG_OTP}"
+- tapOn:
+    id: "org.commcare.dalvik:id/personalid_email_verify_button"
 - extendedWaitUntil:
     visible:
       text: "Verification unsuccessful"
     timeout: 30000
+# 2.65.0 renamed the dialog's retry button from "Try again" to "Wait".
 - assertVisible:
-    text: "Try again"
+    text: "Wait"
 - assertVisible:
     text: "Proceed without email"
 

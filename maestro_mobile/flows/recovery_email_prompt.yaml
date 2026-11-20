@@ -46,10 +46,11 @@ appId: org.commcare.dalvik
 # is the point of this case.
 - tapOn:
     id: "org.commcare.dalvik:id/personalid_email_skip_button"
+# 2.65 replaced "Skip email?" (YES/NO) with "Protect your account" (SKIP/ADD EMAIL).
 - assertVisible:
-    text: "Skip email?"
+    text: "Protect your account"
 - tapOn:
-    text: "YES"
+    text: "SKIP"
 - extendedWaitUntil:
     visible:
       text: "Account Recovered"
