@@ -801,3 +801,72 @@ connect_invoice_form_page:
   modal_certify_checkbox: ".//input[@type='checkbox']"
   modal_certify_button: ".//button[contains(normalize-space(),'Certify')]"
   field_error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'errorlist')]"
+
+# --- Solicitations (Solicitations_01-16) ---
+# Source: commcare_connect/solicitation (views/forms/tables) + templates/solicitation/*.
+# Form fields are bare element ids (LocatorLoader prefixes '#'); formset rows use
+# the Django prefix names (criteria-N-*, questions-N-*) built in the page object.
+connect_solicitations_page:
+  # href-only, like the Programs sidebar item (the collapsed sidebar's markup defeats a text match)
+  sidebar_link: "//a[contains(@href,'/solicitations/')]"
+  sidebar_items: "//a[contains(@class,'rounded-lg')][normalize-space()]"
+  new_button: "//a[normalize-space()='New solicitation']"
+  table: "(//table)[1]"
+  table_headers: "(//table)[1]//thead//th"
+  table_rows: "(//table)[1]//tbody//tr"
+  empty_text: "(//table)[1]//tbody//td[normalize-space()='No solicitations yet.']"
+  row_by_title: "(//table)[1]//tbody//tr[td[normalize-space()=\"{title}\"]]"
+  # Title is column 1, Invited column 6 (the Review Team column on staging sits in between)
+  row_title_link: "./td[1]//a"
+  row_invited_link: "./td[{col}]//a"
+  stepper: "//div[contains(@class,'stepper')]//a"
+  stepper_by_label: "//div[contains(@class,'stepper')]//a[.//span[normalize-space()='{label}']]"
+  stepper_active: "//div[contains(@class,'stepper')]//a[contains(@class,'active')]//span"
+  page_title: "//h1[contains(@class,'title')]"
+  breadcrumb_items: "//nav[contains(@aria-label,'readcrumb')]//li | //ol[contains(@class,'breadcrumb')]//li"
+  toast_by_text: "//*[normalize-space()='{text}' or starts-with(normalize-space(),'{text}')]"
+  field_error_by_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'text-red') or contains(@class,'error') or contains(@id,'error')][contains(normalize-space(),\"{text}\")]"
+  form_title: id_title
+  form_type: id_type
+  form_description: id_description
+  form_budget_min: id_budget_min
+  form_budget_max: id_budget_max
+  form_currency: id_currency
+  form_country: id_country
+  form_scale: id_estimated_scale
+  form_contact_email: id_contact_email
+  form_start_date: id_expected_start_date
+  form_end_date: id_expected_end_date
+  form_deadline: id_application_deadline
+  form_program: id_program
+  form_delivery_type: id_delivery_type
+  form_public: id_public
+  form_hide_scores: id_hide_scores_until_submit
+  deadline_hint: "//*[normalize-space()='Time is in UTC.']"
+  save_and_continue: "//button[normalize-space()='Save and continue']"
+  save_button: "//button[normalize-space()='Save']"
+  cancel_link: "//a[normalize-space()='Cancel']"
+  back_link: "//a[normalize-space()='Back']"
+  add_row_button: "//button[@aria-label='Add']"
+  remove_row_button: "(//button[@aria-label='Remove'])[{n}]"
+  locked_hint: "//*[normalize-space()=\"Criteria and questions can't change once a solicitation is published.\"]"
+  invited_org_button: "//a[normalize-space()='Invited organizations']"
+  publish_button: "//button[normalize-space()='Publish']"
+  publish_alert: "//div[@role='alert']"
+  publish_alert_items: "//div[@role='alert']//li"
+  publish_fix_links: "//div[@role='alert']//li//a[normalize-space()='Fix']"
+  review_text: "//main | //div[contains(@class,'container')]"
+  invite_plus_button: "//button[.//i[contains(@class,'fa-plus')]][not(@aria-label)]"
+  invite_modal: "//div[contains(@class,'modal-backdrop')]"
+  invite_orgs_select: id_organizations
+  invite_submit: "//div[contains(@class,'modal')]//button[normalize-space()='Invite']"
+  invite_required_error: "//div[contains(@class,'modal')]//*[normalize-space()='This field is required.']"
+  remove_invitations_button: "//button[.//i[contains(@class,'fa-trash')]][not(@aria-label)]"
+  confirm_modal_text: "//*[contains(normalize-space(),'invitation(s)? Those organizations will no longer be able to apply.')]"
+  confirm_remove_button: "//button[normalize-space()='Remove' and contains(@class,'bg-red-600')]"
+  confirm_cancel_button: "//button[normalize-space()='Cancel' and contains(@class,'outline-style')]"
+  invitation_rows: "(//table)[1]//tbody//tr[td[2]]"
+  invitation_row_by_org: "(//table)[1]//tbody//tr[td[normalize-space()=\"{org}\"]]"
+  invitation_row_checkbox: "./td[1]//input[@type='checkbox']"
+  invitations_empty: "(//table)[1]//tbody//td[contains(normalize-space(),'No organizations invited yet.')]"
+  invitations_hint: "//p[contains(@class,'hint')]"
