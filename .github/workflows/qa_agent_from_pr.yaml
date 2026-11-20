@@ -88,7 +88,7 @@ jobs:
       # Read-only: this job's token can't push or open PRs.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
-      run: ${{ steps.patch.outputs.run }}
+      run: ${{ steps.check.outputs.run }}
       base: ${{ steps.branch.outputs.base }}
       head: ${{ steps.gate.outputs.head }}
       title: ${{ steps.gate.outputs.title }}
@@ -194,6 +194,14 @@ jobs:
           fi
           npm install --global --silent @anthropic-ai/claude-code
 
+      # The packaging step runs git in a checkout the agent could write to. Record the
+      # repo's git config now, in a step output the agent can't change, so that step
+      # can refuse to run git if the agent added hooks, filters or an fsmonitor to it.
+      - name: Record the git config before the agent runs
+        id: gitcfg
+        if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
+        run: echo "sha=$(sha256sum .git/config | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Run the skill in PR mode
         if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
         env:
@@ -231,12 +239,16 @@ jobs:
             --disallowedTools "Read(//proc/**),Read(//sys/**)" \
             --max-turns 80
 
+      # No secrets here, not even the job's read-only token: git runs in a checkout the
+      # agent could write to, so anything git might execute must not see a secret.
       - name: Package the changes as a patch
         id: patch
         if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
         env:
-          # Only to check it didn't end up in the patch.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ""
+          GIT_CONFIG_GLOBAL: /dev/null
+          GIT_CONFIG_NOSYSTEM: "1"
+          CONFIG_SHA: ${{ steps.gitcfg.outputs.sha }}
         run: |
           out="$RUNNER_TEMP/out"
           mkdir -p "$out"
@@ -245,21 +257,43 @@ jobs:
             echo "Agent stopped at step 1: $(cat "$RUNNER_TEMP/skip.txt")"
             exit 0
           fi
+          if [ "$(sha256sum .git/config | cut -d' ' -f1)" != "$CONFIG_SHA" ]; then
+            echo "::error::The agent changed .git/config; refusing to run git on its checkout."
+            exit 1
+          fi
+          safe_git() {
+            git -c core.fsmonitor= -c core.hooksPath=/dev/null -c diff.external= "$@"
+          }
           # Only the agent's own paths; anything else it touched is dropped.
-          git add -A -- $AGENT_PATHS
-          git diff --cached --binary > "$out/agent.patch"
+          safe_git add -A -- $AGENT_PATHS
+          safe_git diff --cached --binary --no-ext-diff --no-textconv > "$out/agent.patch"
           if [ ! -s "$out/agent.patch" ]; then
             echo "The agent found nothing to change for Connect PR #$PR."
             exit 0
           fi
-          if grep -qF -- "$ANTHROPIC_API_KEY" "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
-            echo "::error::The agent's output contains the API key; refusing to publish it."
-            exit 1
-          fi
+          echo "patched=true" >> "$GITHUB_OUTPUT"
+
+      # Only reads the packaged files; runs no git and nothing from the checkout.
+      - name: Check no secret ended up in the output
+        id: check
+        if: steps.patch.outputs.patched == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          out="$RUNNER_TEMP/out"
+          for name in ANTHROPIC_API_KEY JIRA_API_TOKEN; do
+            value="${!name}"
+            [ -n "$value" ] || continue
+            if grep -qF -- "$value" "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
+              echo "::error::The agent's output contains $name; refusing to publish it."
+              exit 1
+            fi
+          done
           echo "run=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
-        if: steps.patch.outputs.run == 'true'
+        if: steps.check.outputs.run == 'true'
         with:
           name: qa-agent-output
           path: ${{ runner.temp }}/out
