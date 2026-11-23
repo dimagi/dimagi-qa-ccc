@@ -103,10 +103,18 @@ class MicroplanningPage(BasePage):
         return present
 
     def _select_option_labels(self, options_locator):
-        options = self.page.locator(options_locator).all_inner_texts()
-        # Skip the empty placeholders: "---..." and the em-dash "— Select FLW —" style. Without
-        # this, options[0] is the placeholder and callers "select" nothing.
-        return [o.strip() for o in options if o.strip() and not o.strip().startswith(("---", "\u2014"))]
+        """Labels of the real options. The empty placeholder is identified by its empty
+        value attribute (as _option_values does), not by how its text looks, so any
+        placeholder wording or dash style is skipped."""
+        labels = []
+        for option in self.page.locator(options_locator).all():
+            # .value (not the attribute): an <option> without a value attribute reports its text.
+            if not option.evaluate("e => e.value"):
+                continue
+            text = option.inner_text().strip()
+            if text:
+                labels.append(text)
+        return labels
 
     def status_filter_options(self):
         labels = self._select_option_labels(self.FILTER_STATUS_OPTIONS)
@@ -199,12 +207,22 @@ class MicroplanningPage(BasePage):
         """Click an FLW Summary link and return the page it lands on. These links are
         target=_blank, so the destination is a new tab; if the app ever stops opening
         a tab, the click navigates this page and this page is returned."""
+        opened = []
+        def on_page(new_page):
+            opened.append(new_page)
+
+        self.page.context.on("page", on_page)
         try:
-            with self.page.context.expect_page(timeout=10000) as popup_info:
-                self.click(locator)
-            target = popup_info.value
-        except PlaywrightTimeoutError:
-            target = self.page
+            # A click failure is a real failure and must surface; only the popup wait below
+            # decides between "new tab" and "same page".
+            self.click(locator)
+            for _ in range(50):
+                if opened:
+                    break
+                self.page.wait_for_timeout(200)
+        finally:
+            self.page.context.remove_listener("page", on_page)
+        target = opened[0] if opened else self.page
         target.wait_for_load_state("load")
         return target
 
