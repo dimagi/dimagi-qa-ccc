@@ -414,14 +414,12 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
 
 
 def _require_review_ui(micro):
-    """Skip if the 'Review Inaccessibility Requests' link is not shown although the
-    work area is still REQUEST_FOR_INACCESSIBLE: that is unexpected, so it is BLOCKED
-    (investigate), not missing data."""
-    if not micro.review_button_ready():
-        skip_blocked(
-            "'Review Inaccessibility Requests' link not shown although the work area is "
-            "still REQUEST_FOR_INACCESSIBLE - the review entry point may have changed"
-        )
+    """Fail if the 'Review Inaccessibility Requests' link is not shown although the work
+    area was just confirmed REQUEST_FOR_INACCESSIBLE: that is a regression, not missing data."""
+    assert micro.review_button_ready(), (
+        "'Review Inaccessibility Requests' link not shown although the work area is "
+        "still REQUEST_FOR_INACCESSIBLE - the review entry point may have changed"
+    )
 
 
 def test_microplanning_09_review_inaccessibility_details(review_session, test_data, config):
@@ -438,35 +436,25 @@ def test_microplanning_09_review_inaccessibility_details(review_session, test_da
     assert micro.review_reason(), "Reason is empty"
 
 
+@pytest.mark.skip(
+    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the deny steps and "
+    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
+    "Tracking ticket: TBD (to be created)"
+)
 @pytest.mark.consumes_seed_data
 def test_microplanning_10_deny_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Deny -> push notification sent, work
-    area status updates (to NOT_VISITED - see act_on_inaccessibility_request).
-    Consumes MICROPLANNING_REVIEW.deny_work_area_id."""
-    connect_page, base, slug, opp_id = review_session
-    micro = _review_home(review_session)
-    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "deny_work_area_id")
-    skip_blocked(
-        "Review flow moved to ?inaccessible_mode=1 (list + details panel); the post-action "
-        "assertions here still follow the old modal and need rewriting against a fresh "
-        "REQUEST_FOR_INACCESSIBLE work area (this test consumes it)"
-    )
-    micro.deny_inaccessibility_request()
-    assert micro.selected_feature_status() == "NOT_VISITED", "Work area status did not update to NOT_VISITED after deny"
+    area status updates (to NOT_VISITED). Consumes MICROPLANNING_REVIEW.deny_work_area_id.
+    Skipped until rewritten for the new review flow."""
 
 
+@pytest.mark.skip(
+    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the approve steps and "
+    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
+    "Tracking ticket: TBD (to be created)"
+)
 @pytest.mark.consumes_seed_data
 def test_microplanning_11_approve_inaccessibility_request(review_session, test_data, config):
-    """Steps/expected in the MTP: click Approve as Inaccessible -> work area is
-    marked inaccessible (status INACCESSIBLE). Consumes
-    MICROPLANNING_REVIEW.approve_work_area_id."""
-    connect_page, base, slug, opp_id = review_session
-    micro = _review_home(review_session)
-    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "approve_work_area_id")
-    skip_blocked(
-        "Review flow moved to ?inaccessible_mode=1 (list + details panel); the post-action "
-        "assertions here still follow the old modal and need rewriting against a fresh "
-        "REQUEST_FOR_INACCESSIBLE work area (this test consumes it)"
-    )
-    micro.approve_inaccessibility_request()
-    assert micro.selected_feature_status() == "INACCESSIBLE", "Work area status did not update to INACCESSIBLE after approve"
+    """Steps/expected in the MTP: click Approve as Inaccessible -> push notification sent, work
+    area status updates (to INACCESSIBLE). Consumes MICROPLANNING_REVIEW.approve_work_area_id.
+    Skipped until rewritten for the new review flow."""
