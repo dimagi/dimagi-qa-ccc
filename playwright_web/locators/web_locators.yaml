@@ -48,7 +48,7 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
-  org_list_item_by_name: ".//li[(.//p)[1][normalize-space()='{organization_name}']]"
+  org_list_item_by_name: ".//li[.//span[@x-text='item.name'][normalize-space()='{organization_name}']]"
   org_list_items: ".//li"
   authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
   # CommCare HQ's OAuth consent screen requires at least one project space before
@@ -57,7 +57,8 @@ connect_home_page:
   opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
   programs_navbar_item: "//a[contains(@href, '/program/')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
-  organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
+  organization_dropdown: "//header//button[div[@class='text-left']]//i[contains(@class, 'fa-chevron-down')]"
+  organization_apply_button: "//button[normalize-space()='Apply']"
   organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
 
 connect_opportunities_page:
@@ -79,7 +80,7 @@ connect_opportunities_page:
   learn_app_passing_score_input: "id_learn_app_passing_score"
   organization_dropdown: "id_organization"
   submit_button: "submit-id-submit"
-  add_payment_btn: "//button[@type='button']"
+  add_payment_btn: "//button[@type='button'][normalize-space()='Add Payment Unit']"
   amount_input: "id_amount"
   max_total_input: "id_max_total"
   max_daily_input: "id_max_daily"
