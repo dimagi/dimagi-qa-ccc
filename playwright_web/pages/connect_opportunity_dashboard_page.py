@@ -1,5 +1,3 @@
-import re
-from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
@@ -15,6 +13,7 @@ class OpportunityDashboardPage(BasePage):
     OPP_TITLE = locators.get("opportunity_dashboard_page", "opp_title")
     INFO_CARD_BY_LABEL = locators.get("opportunity_dashboard_page", "info_card_by_label")
     STATUS_BADGE = locators.get("opportunity_dashboard_page", "status_badge")
+    END_DATE_VALUE = locators.get("opportunity_dashboard_page", "end_date_value")
     TEST_BADGE = locators.get("opportunity_dashboard_page", "test_badge")
     WORK_AREAS_TAB = locators.get("opportunity_dashboard_page", "work_areas_tab")
     STATS_CONTAINER = locators.get("opportunity_dashboard_page", "stats_container")
@@ -90,15 +89,17 @@ class OpportunityDashboardPage(BasePage):
         self._step(f"Opportunity status badge: {text}")
         return text
 
-    def end_date(self):
-        """The opportunity's 'End Date' from the details block, or None if it is not shown.
-        Used instead of the status badge, which reads 'Inactive' (not 'Ended') once an
-        opportunity's end date has passed."""
-        text = self.page.locator("body").inner_text()
-        match = re.search(r"End Date\s+(\d{4}-\d{2}-\d{2})", text)
-        end = date.fromisoformat(match.group(1)) if match else None
-        self._step(f"Opportunity end date: {end}")
-        return end
+    def end_date_text(self):
+        """Raw text of the 'End Date' value in the details block, or None if not shown."""
+        value = self.page.locator(self.END_DATE_VALUE).first
+        try:
+            value.wait_for(state="visible", timeout=15000)
+        except PlaywrightTimeoutError:
+            self._step("Opportunity end date not shown")
+            return None
+        text = value.inner_text().strip()
+        self._step(f"Opportunity end date: {text}")
+        return text
 
     def verify_graphs_present(self):
         """The funnel and worker-progress sections render as their own HTMX

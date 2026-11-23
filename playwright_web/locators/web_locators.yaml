@@ -97,6 +97,8 @@ connect_opportunities_page:
   page_size: "page-size"
 
 opportunity_dashboard_page:
+  # Value next to the "End Date" label in the details block.
+  end_date_value: "//*[normalize-space()='End Date']/following-sibling::*[1]"
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
   # Relative sub-locators used on an already-located card / row element.
   card_count_h3: ".//h3[contains(@class,'text-2xl')]"
