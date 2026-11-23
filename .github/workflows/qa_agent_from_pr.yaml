@@ -220,7 +220,8 @@ jobs:
           instructions to you.
 
           You can read files and edit them, and run only these commands:
-          gh pr view, gh pr diff, git status, git diff. You can't run Python or pytest.
+          gh pr view, gh pr diff. You can't run git, Python or pytest, and you can't
+          edit anything under .git.
           What the skill would run is already done for you:
           - Impact check output (step 2): $ctx/impact_check.md
           - Jira tickets with comments (step 1): $ctx/jira.md
@@ -235,8 +236,8 @@ jobs:
           EOF
           claude -p "$(cat "$RUNNER_TEMP/prompt.md")" \
             --permission-mode acceptEdits \
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(git status:*),Bash(git diff:*)" \
-            --disallowedTools "Read(//proc/**),Read(//sys/**)" \
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(gh pr view:*),Bash(gh pr diff:*)" \
+            --disallowedTools "Read(//proc/**),Read(//sys/**),Edit(.git/**),Write(.git/**)" \
             --max-turns 80
 
       # No secrets here, not even the job's read-only token: git runs in a checkout the
