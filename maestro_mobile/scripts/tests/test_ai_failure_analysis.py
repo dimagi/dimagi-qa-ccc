@@ -74,6 +74,13 @@ def test_condense_keeps_resolved_locator_and_collapses_retry_noise():
     assert "repeated retry/wait lines omitted" in out
 
 
+def test_condense_handles_pytest_E_prefixed_lines():
+    prefixed = "\n".join("E   " + l if l else l for l in CHEVRON_ERROR.splitlines())
+    out = _condense_error(prefixed)
+    assert "waiting for element to be visible" not in out
+    assert "locator resolved to" in out
+
+
 def test_condense_truncates_long_text_keeping_head_and_tail():
     text = "HEAD\n" + ("x" * 10000) + "\nTAIL"
     out = _condense_error(text, budget=200)

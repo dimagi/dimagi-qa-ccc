@@ -56,7 +56,7 @@ def _load_api_key() -> str:
 
 
 ERROR_BUDGET = 3500  # characters of error text sent per failure
-_RETRY_NOISE = re.compile(r"^\s*(-\s*)?(\d+\s*[x\u00d7]\s*)?(waiting for element to be visible|retrying click action|waiting \d+ms)", re.I)
+_RETRY_NOISE = re.compile(r"^(E\s+)?\s*(-\s*)?(\d+\s*[x\u00d7]\s*)?(waiting for element to be visible|retrying click action|waiting \d+ms)", re.I)
 
 
 def _condense_error(text: str, budget: int = ERROR_BUDGET) -> str:
