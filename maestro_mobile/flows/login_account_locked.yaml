@@ -7,8 +7,16 @@ env:
 - launchApp:
     clearState: true
 - runFlow: shared_login_signup.yaml
-- assertVisible:
-    id: "org.commcare.dalvik:id/connect_message_message"
-    text: ".*Your account has been locked. Please contact support.*"
+# The lock message arrives after a server round-trip that is slow on stage; a bare
+# assertVisible gives up after ~17s. Wait for the spinner to clear, then give the
+# message a longer window.
+- extendedWaitUntil:
+    notVisible: { id: "org.commcare.dalvik:id/progress_bar" }
+    timeout: 40000
+- extendedWaitUntil:
+    visible:
+      id: "org.commcare.dalvik:id/connect_message_message"
+      text: ".*Your account has been locked. Please contact support.*"
+    timeout: 45000
 - tapOn:
     text: "OK"
