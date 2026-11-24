@@ -726,7 +726,9 @@ connect_coverage_progress_page:
   ward_saturation_label: "//p[contains(normalize-space(),'Ward Saturation Goal')]"
   date_from: "id_start"
   date_to: "id_end"
-  apply_button: "//button[normalize-space()='Apply']"
+  # Scoped to the date-filter form: the org-switcher dialog has its own hidden Apply
+  # button that comes first in the DOM.
+  apply_button: "//form//button[normalize-space()='Apply']"
   section_heading_by_text: "//h2[contains(@class,'title') and normalize-space()='{text}']"
   download_button_in_section: "//h2[normalize-space()='{text}']/following-sibling::span[1]//button"
   table_by_section: "//h2[normalize-space()='{text}']/ancestor::section[1]//table"
