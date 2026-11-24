@@ -92,12 +92,15 @@ WORKER_VISIT_VERIFICATION_PAGE_1:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
-# VV_3 - image carousel. Needs a worker whose visit has a photo attachment; the
-# test skips when no scanned visit has a Media section. Point at a seeded
-# with-image visit once Anshu confirms one on staging.
+# VV_3 - image carousel. Needs a visit with a photo attachment. Anshu seeded three on
+# STAGING (test_photo_01/02/03) in the manual-approval opp, worker Add_Budget_user;
+# there is no with-photo visit on prod, so the test skips needs-data there.
+# Unsuffixed keys are prod (left empty); *_staging hold the staging values.
 WORKER_VISIT_VERIFICATION_PAGE_3:
-  opportunity_name: "covid_opp_test"
-  worker_name: "Deb Test 8/12"
+  org_slug_staging: "pm_automation_02"
+  opportunity_id_staging: "a1db58e2-3fc5-4ab1-bb14-a4cb1b26b11e"
+  worker_name: "Add_Budget_user"
+  worker_user_id_staging: "b01fe03f-a852-4f81-b205-13faa445d226"
 
 # VV_4 - suspend a worker + revoke.
 WORKER_VISIT_VERIFICATION_PAGE_4:

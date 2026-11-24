@@ -289,26 +289,27 @@ def test_vv_09_visit_details_panel(connect, test_data):
     visits.verify_visit_details_panel()
 
 
-def test_vv_03_image_carousel(connect, test_data):
+def test_vv_03_image_carousel(connect, test_data, config):
     """VV_3 (MTP Worker Visit Verification Page_3): selecting an image on a visit opens
-    the carousel popup (.popup-content). Skips when none of the scanned visits carry a
-    photo attachment - point WORKER_VISIT_VERIFICATION_PAGE_3 at a seeded with-image visit
-    to exercise it fully."""
-    connect_page, opps_url = connect
+    the carousel popup (.popup-content). Runs on staging, where the manual-approval opp
+    has seeded photo visits (test_photo_01-03); skips needs-data elsewhere."""
+    connect_page, _ = connect
     data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_3")
-    workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
-
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
-    if visits.has_review_tabs():
-        visits.click_tab_by_name("All")
-
-    if not visits.open_first_visit_with_images():
+    opp_id = env_value(data, "opportunity_id", config)
+    if not opp_id:
         skip_needs_data(
-            f"No image-bearing visit found for '{data['worker_name']}' in "
-            f"'{data['opportunity_name']}' - point WORKER_VISIT_VERIFICATION_PAGE_3 at a "
-            "with-photo visit to cover VV_3."
+            "No with-photo visit is seeded on this environment - VV_3 only has one on "
+            "staging (WORKER_VISIT_VERIFICATION_PAGE_3.opportunity_id_staging)."
+        )
+    visits = _open_review_visits(connect_page, config, {
+        "nm_org_slug": env_value(data, "org_slug", config),
+        "opportunity_id": opp_id,
+        "worker_user_id": env_value(data, "worker_user_id", config),
+    }, "nm")
+    if not visits.open_first_visit_with_images():
+        skip_blocked(
+            f"No image-bearing visit found for '{data['worker_name']}' although "
+            "test_photo_01-03 are meant to be seeded - the visits may have been removed."
         )
     visits.open_and_verify_image_carousel()
 
