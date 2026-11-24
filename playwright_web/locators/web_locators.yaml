@@ -60,7 +60,8 @@ connect_home_page:
   programs_navbar_item: "//a[contains(@href, '/program/')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
   organization_dropdown: "//header//button[div[@class='text-left']]//i[contains(@class, 'fa-chevron-down')]"
-  organization_apply_button: "//button[normalize-space()='Apply']"
+  # The switcher's own Apply (Alpine @click="apply()"), so the filter modal's Apply can't match.
+  organization_apply_button: "//button[@*[name()='@click']='apply()'][normalize-space()='Apply']"
   organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
 
 connect_opportunities_page:

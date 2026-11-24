@@ -1,3 +1,5 @@
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base_page import BasePage
 from utils.helpers import LocatorLoader
 
@@ -76,13 +78,20 @@ class ConnectHomePage(BasePage):
         item.click()
         # The new switcher (stage) only marks the choice; the org changes on Apply. The
         # old one (prod) switches on the click itself and has no Apply button.
-        apply_button = self.page.locator(locators.get("connect_home_page", "organization_apply_button")).first
+        apply_selector = locators.get("connect_home_page", "organization_apply_button")
         try:
-            apply_button.wait_for(state="visible", timeout=5000)
-            self.click(locators.get("connect_home_page", "organization_apply_button"))
-        except Exception:
+            self.page.locator(apply_selector).first.wait_for(state="visible", timeout=5000)
+            has_apply = True
+        except PlaywrightTimeoutError:
+            has_apply = False
             print("No Apply button - switcher applied the organization on click")
+        if has_apply:
+            # Outside the try: a failed Apply click must fail here, not be swallowed.
+            self.click(apply_selector)
         self.page.wait_for_load_state("load")
+        assert self.is_org_selected(organization_name), (
+            f"Switching to organisation '{organization_name}' did not take effect"
+        )
         # Apply now lands on the organization settings page; callers expect the
         # opportunity list, which is where picking an org used to land.
         self.click_organizations_in_sidebar()
