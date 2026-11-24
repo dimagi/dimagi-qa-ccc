@@ -74,8 +74,14 @@ class ConnectHomePage(BasePage):
                 f"Organisation '{organization_name}' is not in the switcher. Offered: {offered or 'none'}"
             ) from None
         item.click()
-        # The switcher now only marks the choice; the org changes on Apply.
-        self.click(locators.get("connect_home_page", "organization_apply_button"))
+        # The new switcher (stage) only marks the choice; the org changes on Apply. The
+        # old one (prod) switches on the click itself and has no Apply button.
+        apply_button = self.page.locator(locators.get("connect_home_page", "organization_apply_button")).first
+        try:
+            apply_button.wait_for(state="visible", timeout=5000)
+            self.click(locators.get("connect_home_page", "organization_apply_button"))
+        except Exception:
+            print("No Apply button - switcher applied the organization on click")
         self.page.wait_for_load_state("load")
         # Apply now lands on the organization settings page; callers expect the
         # opportunity list, which is where picking an org used to land.

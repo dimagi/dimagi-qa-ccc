@@ -48,7 +48,9 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
-  org_list_item_by_name: ".//li[.//span[@x-text='item.name'][normalize-space()='{organization_name}']]"
+  # Stage has the new switcher (name in span[x-text=item.name]); prod still renders the
+  # name as the row's FIRST <p> (the role line is the second, so matching any <p> is ambiguous).
+  org_list_item_by_name: ".//li[.//span[@x-text='item.name'][normalize-space()='{organization_name}'] or (.//p)[1][normalize-space()='{organization_name}']]"
   org_list_items: ".//li"
   authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
   # CommCare HQ's OAuth consent screen requires at least one project space before
