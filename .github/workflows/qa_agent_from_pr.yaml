@@ -11,12 +11,18 @@ name: QA Agent - Connect PR
 # The agent reads untrusted PR text, so the jobs are split by what they can reach:
 #   agent    read-only token; the impact check and Jira tickets are gathered BEFORE
 #            Claude starts, and Claude can edit files but not run anything. Its output
-#            is a patch, checked for the API key before it leaves the job.
+#            is a patch, checked for Anthropic tokens and the Jira token before it
+#            leaves the job.
 #   verify   no secrets: applies the patch, runs the unit tests and collection.
 #   publish  write token: applies the patch and pushes. Runs no repository code.
 #
-# Needs repository secrets: ANTHROPIC_API_KEY, and JIRA_BASE_URL / JIRA_EMAIL /
-# JIRA_API_TOKEN so ticket descriptions and comments can be gathered.
+# Claude is reached through workload identity federation, not a stored API key: the
+# agent job swaps GitHub's OIDC token for a short-lived Anthropic token. Needs
+# repository variables ANTHROPIC_FEDERATION_RULE_ID and ANTHROPIC_ORGANIZATION_ID
+# (and ANTHROPIC_WORKSPACE_ID if the rule covers more than one workspace), and a
+# federation rule matching repo:dimagi/dimagi-qa-ccc:ref:refs/heads/main.
+# Needs repository secrets JIRA_BASE_URL / JIRA_EMAIL / JIRA_API_TOKEN so ticket
+# descriptions and comments can be gathered.
 
 on:
   workflow_dispatch:
@@ -84,6 +90,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # Lets the job ask GitHub for an OIDC token to swap for a Claude token.
+      id-token: write
     env:
       # Read-only: this job's token can't push or open PRs.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,14 +193,55 @@ jobs:
 
       - name: Install Claude Code
         if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
+        run: npm install --global --silent @anthropic-ai/claude-code
+
+      # Workload identity federation: no stored API key. claude-token.sh asks GitHub
+      # for a fresh OIDC token and swaps it at /v1/oauth/token for a short-lived
+      # sk-ant-oat01 token. Claude Code runs it as its apiKeyHelper and again on a
+      # timer, so the token stays valid for the whole run. The script and settings sit
+      # in a read-only folder the agent is also denied, so it can't rewrite the helper.
+      - name: Set up Claude credentials (identity federation)
+        if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::ANTHROPIC_API_KEY is not set for this repository; the agent can't run."
+          if [ -z "$ANTHROPIC_FEDERATION_RULE_ID" ] || [ -z "$ANTHROPIC_ORGANIZATION_ID" ]; then
+            echo "::error::Repository variables ANTHROPIC_FEDERATION_RULE_ID and ANTHROPIC_ORGANIZATION_ID must be set; the agent can't reach Claude."
             exit 1
           fi
-          npm install --global --silent @anthropic-ai/claude-code
+          auth="$RUNNER_TEMP/claude-auth"
+          mkdir -p "$auth"
+          cat > "$auth/claude-token.sh" <<'SH'
+          #!/usr/bin/env bash
+          # Prints a short-lived Anthropic token. Every call fetches a new GitHub OIDC
+          # token, since each one can be exchanged only once.
+          set -euo pipefail
+          jwt=$(curl -sSf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value)
+          body=$(jq -n --arg a "$jwt" --arg r "$ANTHROPIC_FEDERATION_RULE_ID" \
+            --arg o "$ANTHROPIC_ORGANIZATION_ID" --arg w "${ANTHROPIC_WORKSPACE_ID:-}" \
+            '{grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: $a,
+              federation_rule_id: $r, organization_id: $o}
+             + (if $w == "" then {} else {workspace_id: $w} end)')
+          token=$(curl -sSf https://api.anthropic.com/v1/oauth/token \
+            -H "content-type: application/json" -d "$body" | jq -r .access_token)
+          case "$token" in
+            sk-ant-*) printf '%s\n' "$token" ;;
+            *) echo "Token exchange returned no access token." >&2; exit 1 ;;
+          esac
+          SH
+          printf '{"apiKeyHelper": "%s"}\n' "$auth/claude-token.sh" > "$auth/settings.json"
+          chmod 0555 "$auth/claude-token.sh"
+          chmod 0444 "$auth/settings.json"
+          chmod 0555 "$auth"
+          # Fail here, with a clear message, rather than inside the agent run.
+          if ! token=$("$auth/claude-token.sh"); then
+            echo "::error::Couldn't get a Claude token through identity federation. Check the federation rule matches repo:dimagi/dimagi-qa-ccc:ref:refs/heads/main and see the Console's authentication history."
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "Identity federation works: got a short-lived Claude token."
 
       # The packaging step runs git in a checkout the agent could write to. Record the
       # repo's git config now, in a step output the agent can't change, so that step
@@ -205,11 +254,17 @@ jobs:
       - name: Run the skill in PR mode
         if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Read by claude-token.sh (the apiKeyHelper); none of these is a secret.
+          ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+          # Fetch a fresh token every 5 minutes; each lasts about 10.
+          CLAUDE_CODE_API_KEY_HELPER_TTL_MS: "300000"
           HEAD_SHA: ${{ steps.gate.outputs.head }}
           EVENT: ${{ inputs.event }}
         run: |
           ctx="$RUNNER_TEMP/context"
+          auth="$RUNNER_TEMP/claude-auth"
           cat > "$RUNNER_TEMP/prompt.md" <<EOF
           Use the qa-ticket-prep skill in PR mode for commcare-connect PR #$PR
           (head commit $HEAD_SHA; triggered by $EVENT). You are on branch $BRANCH.
@@ -235,9 +290,10 @@ jobs:
           write the one-line reason to $RUNNER_TEMP/skip.txt and change no files.
           EOF
           claude -p "$(cat "$RUNNER_TEMP/prompt.md")" \
+            --settings "$auth/settings.json" \
             --permission-mode acceptEdits \
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(gh pr view:*),Bash(gh pr diff:*)" \
-            --disallowedTools "Read(//proc/**),Read(//sys/**),Edit(.git/**),Write(.git/**)" \
+            --disallowedTools "Read(//proc/**),Read(//sys/**),Edit(.git/**),Write(.git/**),Edit(/$auth/**),Write(/$auth/**)" \
             --max-turns 80
 
       # No secrets here, not even the job's read-only token: git runs in a checkout the
@@ -279,18 +335,19 @@ jobs:
         id: check
         if: steps.patch.outputs.patched == 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           out="$RUNNER_TEMP/out"
-          for name in ANTHROPIC_API_KEY JIRA_API_TOKEN; do
-            value="${!name}"
-            [ -n "$value" ] || continue
-            if grep -qF -- "$value" "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
-              echo "::error::The agent's output contains $name; refusing to publish it."
-              exit 1
-            fi
-          done
+          # Claude tokens are short-lived and never stored, so look for the shape of
+          # any Anthropic key or token rather than one value.
+          if grep -qE -- 'sk-ant-[A-Za-z0-9_-]{8,}' "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
+            echo "::error::The agent's output contains an Anthropic key or token; refusing to publish it."
+            exit 1
+          fi
+          if [ -n "$JIRA_API_TOKEN" ] && grep -qF -- "$JIRA_API_TOKEN" "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
+            echo "::error::The agent's output contains JIRA_API_TOKEN; refusing to publish it."
+            exit 1
+          fi
           echo "run=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
