@@ -19,7 +19,7 @@ name: QA Agent - Connect PR
 # Claude is reached through workload identity federation, not a stored API key: the
 # agent job swaps GitHub's OIDC token for a short-lived Anthropic token. Needs
 # repository variables ANTHROPIC_FEDERATION_RULE_ID and ANTHROPIC_ORGANIZATION_ID
-# (and ANTHROPIC_WORKSPACE_ID if the rule covers more than one workspace), and a
+# (plus ANTHROPIC_SERVICE_ACCOUNT_ID and ANTHROPIC_WORKSPACE_ID, sent when set), and a
 # federation rule matching repo:dimagi/dimagi-qa-ccc:ref:refs/heads/main.
 # Needs repository secrets JIRA_BASE_URL / JIRA_EMAIL / JIRA_API_TOKEN so ticket
 # descriptions and comments can be gathered.
@@ -205,6 +205,8 @@ jobs:
         env:
           ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
           ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
         run: |
           if [ -z "$ANTHROPIC_FEDERATION_RULE_ID" ] || [ -z "$ANTHROPIC_ORGANIZATION_ID" ]; then
             echo "::error::Repository variables ANTHROPIC_FEDERATION_RULE_ID and ANTHROPIC_ORGANIZATION_ID must be set; the agent can't reach Claude."
@@ -221,8 +223,10 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" | jq -r .value)
           body=$(jq -n --arg a "$jwt" --arg r "$ANTHROPIC_FEDERATION_RULE_ID" \
             --arg o "$ANTHROPIC_ORGANIZATION_ID" --arg w "${ANTHROPIC_WORKSPACE_ID:-}" \
+            --arg s "${ANTHROPIC_SERVICE_ACCOUNT_ID:-}" \
             '{grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: $a,
               federation_rule_id: $r, organization_id: $o}
+             + (if $s == "" then {} else {service_account_id: $s} end)
              + (if $w == "" then {} else {workspace_id: $w} end)')
           token=$(curl -sSf https://api.anthropic.com/v1/oauth/token \
             -H "content-type: application/json" -d "$body" | jq -r .access_token)
@@ -257,6 +261,7 @@ jobs:
           # Read by claude-token.sh (the apiKeyHelper); none of these is a secret.
           ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
           ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
           ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
           # Fetch a fresh token every 5 minutes; each lasts about 10.
           CLAUDE_CODE_API_KEY_HELPER_TTL_MS: "300000"
