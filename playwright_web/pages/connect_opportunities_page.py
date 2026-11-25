@@ -171,22 +171,45 @@ class ConnectOpportunitiesPage(BasePage):
         self.select_deliver_app_in_opportunity(delivery_app)
         self.enter_learn_app_description_in_opportunity(data["learn_app_description"])
         self.enter_passing_score_in_opportunity(data["passing_score"])
-        self.click_submit_btn()
         return opp_name
+
+    FORM_ATTEMPTS = 3
+
+    def _reopen_opportunity_form(self):
+        """Re-open the form by URL (not reload, so a half-loaded page cannot hang it) and
+        wait until the form is really there before anyone fills it. The app dropdowns are
+        fetched from CommCare HQ on load and can sit on 'Loading...' for minutes; a fresh
+        load is the only thing that retries that fetch. The fill steps then wait for the
+        learn/deliver app dropdowns to have options before selecting from them."""
+        self.page.goto(self.page.url, wait_until="commit", timeout=120000)
+        self.page.wait_for_load_state("domcontentloaded", timeout=120000)
+        self.page.locator(self.OPP_NAME_INPUT).first.wait_for(state="visible", timeout=60000)
 
     def create_opportunity_in_connect_page(self, data, learn_app, delivery_app, env, network_manager=None):
         self.page.wait_for_timeout(5000)
-        try:
-            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
-        except PlaywrightTimeoutError as error:  # only load/timeouts are retried
-            # Log why the first attempt failed: the retry used to hide it, leaving only
-            # the reload timeout in the report. Re-open the form by URL (not reload) so a
-            # half-loaded page cannot hang it, then give the app lists time to load.
-            self._step(f"Opportunity form failed ({type(error).__name__}: {str(error)[:300]}) - re-opening")
-            self.page.goto(self.page.url, wait_until="commit", timeout=120000)
-            self.page.wait_for_load_state("domcontentloaded", timeout=120000)
-            self.page.wait_for_timeout(10000)
-            opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
+        last_error = None
+        for attempt in range(1, self.FORM_ATTEMPTS + 1):
+            try:
+                if attempt > 1:
+                    self._reopen_opportunity_form()
+                opp_name = self.fill_opportunity_form(data, learn_app, delivery_app, env, network_manager)
+                break
+            except PlaywrightTimeoutError as error:  # only load/timeouts are retried
+                # Log why each attempt failed: a retry used to hide it, leaving only the
+                # last timeout in the report.
+                last_error = error
+                self._step(
+                    f"Opportunity form attempt {attempt}/{self.FORM_ATTEMPTS} failed "
+                    f"({type(error).__name__}: {str(error)[:300]})"
+                )
+        else:
+            raise AssertionError(
+                f"Opportunity form could not be filled after {self.FORM_ATTEMPTS} attempts; last error: {last_error}"
+            ) from last_error
+        # Submit once, outside the retry loop: a retry after a submit that went through
+        # would re-open a page that is no longer the form and could create a second
+        # opportunity (this also runs on prod).
+        self.click_submit_btn()
         self.page.wait_for_timeout(3000)
         return opp_name
 
