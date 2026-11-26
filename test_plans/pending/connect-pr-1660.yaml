@@ -1,0 +1,48 @@
+connect_pr: 1660
+title: Guard payment rollback modal when worker has no payment history
+jira: []                   # no Jira key in the PR title, body or branch
+epic: null
+feature_plan: null
+classification: bug_fix
+qa_plan_from_pr: |         # Sentry-generated PR; no "QA Plan" section in the body.
+  From the PR's Technical Summary: rendering worker_payment_history for a worker
+  with no payments made latest_payment None, so the rollback form's
+  {% url 'opportunity:payment_delete' ... pk=latest_payment.payment_id %} reversed
+  to '' and raised NoReverseMatch (HTTP 500). The fix wraps the rollback button and
+  modal in {% if latest_payment %}. Django unit tests cover the component with and
+  without a payment.
+
+# Scenario A: no existing Playwright script breaks. The only script that touches
+# the rollback control, test_worker_payments.py::test_payment_processing_01_02_03_04,
+# imports a payment first, so latest_payment is non-None and the button/modal render
+# exactly as before. The "Rollback Last Payment" locator text is unchanged in the
+# diff, and the impact check found no locator anchors removed. Nothing to copy.
+updated_scripts: []
+
+# Scenario B: the no-payment path is new behaviour no script covers.
+new_cases:
+  - id: TC-PAYMENT-NEW-1
+    plan_tab: Connect workers page
+    description: >-
+      Worker with no payment history opens the payment history without an HTTP 500
+      and shows no Rollback control
+    steps:
+      - Open the Payments tab of the Connect Workers page for an opportunity
+      - Pick a worker who has never been paid (Last paid shows '—')
+      - Open that worker's payment history
+    expected: >-
+      The payment history loads successfully (HTTP 200, no 500 / NoReverseMatch); no
+      "Rollback Last Payment" button and no rollback confirmation modal are shown
+    automation: candidate    # needs a stable no-payment worker on staging and the
+                             # UI entry point for an empty history; existing page
+                             # objects only open history from a populated "Last paid".
+    test: null
+    status: ""
+
+skipped:
+  - commcare_connect/opportunity/tests/test_views.py, the PR's own Django unit tests
+    (worker_payment_history with and without a payment)
+  - >-
+    With-payment rollback regression is already covered by
+    test_worker_payments.py::test_payment_processing_01_02_03_04 and is unaffected by
+    this change, so no new case is added for it.
