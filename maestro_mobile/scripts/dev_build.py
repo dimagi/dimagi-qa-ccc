@@ -17,6 +17,12 @@ What this does, in order:
    allowed), falls back to the newest older master build that still has one, and says
    so - a run on yesterday's code beats no run, as long as nobody mistakes it for today's.
 
+With --release it does the same for the latest commcare-android release tag instead of
+master: Shubham (CI-1069, 26 Nov) prefers QA build the release's qaAutomation APK from
+the PR workflow when needed over attaching it to the public releases page. The tag's
+commcare-core commit is the commcare-core tag of the same name. There is no fallback
+to an older release: testing the wrong release would be worse than no run.
+
 Builds dispatched by bots (commcare-core's cross-repo CI builds master against a
 commcare-core PR) are ignored: they aren't master as it stands.
 
@@ -28,10 +34,13 @@ Usage:
     python maestro_mobile/scripts/dev_build.py --artifact ccc-staging-qaAutomation-release-apk \\
         --out app/app-cccStaging-release.apk
     python maestro_mobile/scripts/dev_build.py --artifact ... --out ... --no-dispatch
+    python maestro_mobile/scripts/dev_build.py --release --artifact commcare-qaAutomation-release-apk \\
+        --out app/app-commcare-release.apk
 """
 import argparse
 import io
 import os
+import re
 import sys
 import time
 import zipfile
@@ -44,6 +53,7 @@ CORE_API = "https://api.github.com/repos/dimagi/commcare-core"
 WORKFLOW = "commcare-android-pr-workflow.yml"
 BRANCH = "master"
 RUNS_TO_SCAN = 50
+RELEASE_TAG = re.compile(r"^commcare_(\d+(?:\.\d+)+)$")
 HTTP_TIMEOUT = 60
 POLL_SECONDS = 60
 # A full PR CI build takes about 25 minutes; the job itself times out at 90.
@@ -87,16 +97,28 @@ class GitHub:
 
 # --------------------------------------------------------------------------- finding builds
 
-def master_head(gh):
-    return gh.get(f"commits/{BRANCH}")["sha"]
+def latest_release_tag(gh):
+    """The highest-version published release tag (not the newest upload: releases go up by hand)."""
+    tags = []
+    for release in gh.get("releases", per_page=30):
+        match = RELEASE_TAG.match(release.get("tag_name") or "")
+        if match and not release.get("draft") and not release.get("prerelease"):
+            tags.append((tuple(int(part) for part in match.group(1).split(".")), release["tag_name"]))
+    if not tags:
+        raise DevBuildError("No published commcare-android release tag found")
+    return max(tags)[1]
 
 
-def master_builds(gh):
+def master_head(gh, ref=BRANCH):
+    return gh.get(f"commits/{ref}")["sha"]
+
+
+def master_builds(gh, ref=BRANCH):
     """Dispatched master runs of the PR CI workflow by people, newest first.
 
     Listed with the branch filter and the event checked here: the event-filtered listing
     has been seen returning a stale set (dimagi-qa-commcare-mobile's fetch_apk.py)."""
-    runs = gh.get(f"actions/workflows/{WORKFLOW}/runs", branch=BRANCH, per_page=RUNS_TO_SCAN)["workflow_runs"]
+    runs = gh.get(f"actions/workflows/{WORKFLOW}/runs", branch=ref, per_page=RUNS_TO_SCAN)["workflow_runs"]
     return sorted(
         (run for run in runs
          if run["event"] == "workflow_dispatch" and not run["actor"]["login"].endswith("[bot]")),
@@ -128,28 +150,28 @@ def wait_for_artifact(gh, run_id, name, minutes):
         gh.sleep(POLL_SECONDS)
 
 
-def dispatch(gh):
+def dispatch(gh, ref=BRANCH):
     """Dispatch a master build and return its run id.
 
     A dispatched run only checks out commcare-core when it is given commcare_core_sha
     (otherwise Gradle stops at "Configuring project ':commcare-core' without an existing
     directory"), so this passes commcare-core's master head."""
-    newest_before = max((run["id"] for run in master_builds(gh)), default=0)
-    core_sha = gh.get_url(f"{CORE_API}/commits/{BRANCH}")["sha"]
-    gh.post(f"actions/workflows/{WORKFLOW}/dispatches", {"ref": BRANCH, "inputs": {"commcare_core_sha": core_sha}})
+    newest_before = max((run["id"] for run in master_builds(gh, ref)), default=0)
+    core_sha = gh.get_url(f"{CORE_API}/commits/{ref}")["sha"]
+    gh.post(f"actions/workflows/{WORKFLOW}/dispatches", {"ref": ref, "inputs": {"commcare_core_sha": core_sha}})
     for _ in range(10):
         gh.sleep(10)
-        new = [run for run in master_builds(gh) if run["id"] > newest_before]
+        new = [run for run in master_builds(gh, ref) if run["id"] > newest_before]
         if new:
             return new[-1]["id"]
     raise DevBuildError("Dispatched a master build but it never appeared in the run list")
 
 
-def replacement_build(gh, head, run_id):
+def replacement_build(gh, head, run_id, ref=BRANCH):
     """A newer build of the same commit, if run_id was cancelled to make way for it."""
     if gh.get(f"actions/runs/{run_id}").get("conclusion") != "cancelled":
         return None
-    newer = [run for run in master_builds(gh) if run["head_sha"] == head and run["id"] > run_id]
+    newer = [run for run in master_builds(gh, ref) if run["head_sha"] == head and run["id"] > run_id]
     if newer:
         print(f"Run {run_id} was cancelled for run {newer[-1]['id']}; waiting for that one")
         return newer[-1]["id"]
@@ -171,11 +193,11 @@ def rerun_failed_jobs(gh, run_id):
     return False
 
 
-def find_build(gh, artifact_name, can_dispatch=True, wait_minutes=DEFAULT_WAIT_MINUTES):
+def find_build(gh, artifact_name, can_dispatch=True, wait_minutes=DEFAULT_WAIT_MINUTES, ref=BRANCH):
     """(run, artifact, current) for master's dev build; current is False on a fallback."""
-    head = master_head(gh)
-    builds = master_builds(gh)
-    print(f"commcare-android {BRANCH} is at {head[:10]}")
+    head = master_head(gh, ref)
+    builds = master_builds(gh, ref)
+    print(f"commcare-android {ref} is at {head[:10]}")
 
     at_head = [run for run in builds if run["head_sha"] == head]
     for run in at_head:
@@ -192,7 +214,7 @@ def find_build(gh, artifact_name, can_dispatch=True, wait_minutes=DEFAULT_WAIT_M
         print(f"The build of {head[:10]} (run {at_head[0]['id']}) finished without {artifact_name}; "
               "not dispatching again")
     elif can_dispatch:
-        run_id = dispatch(gh)
+        run_id = dispatch(gh, ref)
         print(f"Dispatched run {run_id} to build {head[:10]}")
     else:
         run_id = None
@@ -214,7 +236,7 @@ def find_build(gh, artifact_name, can_dispatch=True, wait_minutes=DEFAULT_WAIT_M
             print(f"Run {run_id} failed; re-running its failed jobs once")
             if rerun_failed_jobs(gh, run_id):
                 continue
-        run_id = replacement_build(gh, head, run_id)
+        run_id = replacement_build(gh, head, run_id, ref)
 
     for run in builds:
         if run["head_sha"] == head or run["status"] != "completed":
@@ -225,7 +247,7 @@ def find_build(gh, artifact_name, can_dispatch=True, wait_minutes=DEFAULT_WAIT_M
                   f"on {run['created_at'][:10]} - NOT master's current head {head[:10]}")
             return run, artifact, False
     raise DevBuildError(
-        f"No dispatched {BRANCH} build in the last {RUNS_TO_SCAN} runs has a live {artifact_name} "
+        f"No dispatched {ref} build in the last {RUNS_TO_SCAN} runs has a live {artifact_name} "
         "(qaAutomation artifacts are kept 3 days)"
     )
 
@@ -244,9 +266,11 @@ def extract_apk(archive, out_path):
     return out_path
 
 
-def fetch_dev_build(artifact_name, out_path, token, can_dispatch=True, wait_minutes=DEFAULT_WAIT_MINUTES):
+def fetch_dev_build(artifact_name, out_path, token, can_dispatch=True, wait_minutes=DEFAULT_WAIT_MINUTES,
+                    release=False):
     gh = GitHub(token)
-    run, artifact, current = find_build(gh, artifact_name, can_dispatch, wait_minutes)
+    ref = latest_release_tag(gh) if release else BRANCH
+    run, artifact, current = find_build(gh, artifact_name, can_dispatch, wait_minutes, ref)
     print(f"Downloading {artifact_name} ({artifact['size_in_bytes']} bytes) from run {run['id']}...")
     extract_apk(gh.download(artifact["archive_download_url"]), out_path)
     return {
@@ -255,6 +279,7 @@ def fetch_dev_build(artifact_name, out_path, token, can_dispatch=True, wait_minu
         "head_sha": run["head_sha"],
         "built_on": run["created_at"],
         "current": current,
+        "ref": ref,
     }
 
 
@@ -264,16 +289,17 @@ def main():
     parser.add_argument("--out", required=True, help="where to write the APK")
     parser.add_argument("--no-dispatch", action="store_true", help="only use builds that already exist")
     parser.add_argument("--wait-minutes", type=int, default=DEFAULT_WAIT_MINUTES)
+    parser.add_argument("--release", action="store_true", help="build the latest release tag instead of master")
     args = parser.parse_args()
     token = os.getenv("COMMCARE_ANDROID_TOKEN") or os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN")
     if not token:
         sys.exit("No token: set COMMCARE_ANDROID_TOKEN (artifact downloads need one even on a public repo)")
     try:
-        build = fetch_dev_build(args.artifact, args.out, token, not args.no_dispatch, args.wait_minutes)
+        build = fetch_dev_build(args.artifact, args.out, token, not args.no_dispatch, args.wait_minutes, args.release)
     except (DevBuildError, requests.RequestException) as error:
         sys.exit(f"Dev build fetch failed: {error}")
-    print(f"Dev build ready: {args.out} from {build['run_url']} ({build['head_sha'][:10]}, "
-          f"{'current master' if build['current'] else 'OLDER than master head'})")
+    print(f"Build ready: {args.out} from {build['run_url']} ({build['ref']} @ {build['head_sha'][:10]}, "
+          f"{'current' if build['current'] else 'OLDER than the ref head'})")
     github_output = os.getenv("GITHUB_OUTPUT")
     if github_output:
         with open(github_output, "a", encoding="utf-8") as f:
@@ -283,7 +309,7 @@ def main():
     if summary:
         with open(summary, "a", encoding="utf-8") as f:
             note = "" if build["current"] else " **(fallback: not master's current head)**"
-            f.write(f"Dev APK: [{args.artifact}]({build['run_url']}) built from "
+            f.write(f"APK: [{args.artifact}]({build['run_url']}) built from {build['ref']} "
                     f"`{build['head_sha'][:10]}` on {build['built_on'][:10]}{note}\n")
 
 

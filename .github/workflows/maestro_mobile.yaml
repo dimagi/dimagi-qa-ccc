@@ -30,7 +30,7 @@ on:
           - prod
           - both
       prod_apk:
-        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch (a qaAutomation build of the latest release, 2.65.0); 'latest release' = the qaAutomation APK on the highest-version commcare-android GitHub release, which fails until releases attach one - the flows cannot run on the plain release build."
+        description: "APK for prod runs. 'committed app/ file' = app/app-commcare-release.apk on this branch (a qaAutomation build of 2.65.0); 'latest release' = a qaAutomation build of the highest-version commcare-android release tag, built from its PR CI workflow (reused if one exists, about 30 minutes if not). Needs the COMMCARE_ANDROID_TOKEN secret."
         required: false
         default: "committed app/ file"
         type: choice
@@ -198,19 +198,30 @@ jobs:
         # flow's worker for this environment.
         run: pip install requests pyyaml
 
-      # A manual prod run can fetch the latest commcare-android release instead of the
-      # committed app/ file. Not the default: the flows need a qaAutomation build, and
-      # releases carry only the plain release APK, which stops at biometric setup after
-      # the phone number (PR #70's first run). Until releases attach the qaAutomation
-      # APK, app/ holds one built from the release tag. The script stops the run if
-      # there is no such asset, its versionName doesn't match its release tag, or it
-      # isn't built for Connect prod. Every run (this or a committed APK) is also
+      # A manual prod run can test the latest commcare-android release instead of the
+      # committed app/ file. The flows need a qaAutomation build, and releases carry only
+      # the plain release APK, which stops at biometric setup after the phone number.
+      # The mobile team prefers QA build the qaAutomation APK from the PR CI workflow
+      # when needed rather than attach it to the public releases page (Shubham, CI-1069,
+      # 26 Nov), so dev_build.py --release builds the highest-version release tag (or
+      # reuses a build of it). The check below then stops the run unless the APK's
+      # versionName matches that tag and it is built for Connect prod. Every run is also
       # checked again before upload by run_on_browserstack.py.
-      - name: Fetch latest release APK (prod)
+      - name: Build latest release APK (prod)
+        id: release_build
         if: ${{ matrix.environment == 'prod' && github.event_name == 'workflow_dispatch' && inputs.prod_apk == 'latest release' }}
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python maestro_mobile/scripts/apk_check.py fetch-release
+          COMMCARE_ANDROID_TOKEN: ${{ secrets.COMMCARE_ANDROID_TOKEN }}
+        run: >-
+          python maestro_mobile/scripts/dev_build.py --release
+          --artifact commcare-qaAutomation-release-apk
+          --out app/app-commcare-release.apk
+
+      - name: Check the release APK matches its tag (prod)
+        if: ${{ steps.release_build.outcome == 'success' }}
+        env:
+          RELEASE_REF: ${{ steps.release_build.outputs.ref }}
+        run: python maestro_mobile/scripts/apk_check.py check --app-env prod --expect-version "${RELEASE_REF#commcare_}"
 
       # Stage runs test the dev build (QA Plan B1/B3): the cccStaging qaAutomation APK
       # from commcare-android's master, built by dispatching its PR CI workflow when no

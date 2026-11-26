@@ -6,7 +6,7 @@ import zipfile
 import pytest
 
 from maestro_mobile.scripts import dev_build
-from maestro_mobile.scripts.dev_build import DevBuildError, extract_apk, find_build
+from maestro_mobile.scripts.dev_build import DevBuildError, extract_apk, find_build, latest_release_tag
 
 ARTIFACT = "ccc-staging-qaAutomation-release-apk"
 HEAD = "a" * 40
@@ -21,8 +21,11 @@ def _run(run_id, sha=HEAD, status="completed", actor="kbo001", event="workflow_d
 class FakeGitHub:
     """Stands in for dev_build.GitHub: runs and artifacts by run id, dispatch appends a run."""
 
-    def __init__(self, runs, artifacts=None, on_dispatch=None):
+    def __init__(self, runs, artifacts=None, on_dispatch=None, releases=()):
         self.runs = list(runs)
+        self.releases = list(releases)
+        self.dispatch_payloads = []
+        self.core_refs = []
         self.artifacts = artifacts or {}
         self.on_dispatch = on_dispatch
         self.dispatched = 0
@@ -30,8 +33,10 @@ class FakeGitHub:
         self.reruns = []
 
     def get(self, path, **_params):
-        if path == "commits/master":
+        if path.startswith("commits/"):
             return {"sha": HEAD}
+        if path == "releases":
+            return self.releases
         if path.endswith("/runs"):
             return {"workflow_runs": self.runs}
         if path.endswith("/artifacts"):
@@ -42,7 +47,8 @@ class FakeGitHub:
         return next(run for run in self.runs if run["id"] == run_id)
 
     def get_url(self, url, **_params):
-        assert url.endswith("/commcare-core/commits/master")
+        assert "/commcare-core/commits/" in url
+        self.core_refs.append(url.rsplit("/", 1)[1])
         return {"sha": "c" * 40}
 
     def post(self, path, payload):
@@ -50,7 +56,8 @@ class FakeGitHub:
             self.reruns.append(int(path.split("/")[2]))
             self.on_rerun(self)
             return
-        assert payload == {"ref": "master", "inputs": {"commcare_core_sha": "c" * 40}}
+        assert payload["inputs"] == {"commcare_core_sha": "c" * 40}
+        self.dispatch_payloads.append(payload)
         self.dispatched += 1
         self.on_dispatch(self)
 
@@ -173,6 +180,46 @@ def test_gives_up_when_the_build_never_uploads(monkeypatch):
     gh = FakeGitHub([_run(7, status="in_progress")])
     with pytest.raises(DevBuildError, match="Gave up"):
         find_build(gh, ARTIFACT, wait_minutes=30)
+
+
+def _release(tag, draft=False, prerelease=False):
+    return {"tag_name": tag, "draft": draft, "prerelease": prerelease}
+
+
+def test_latest_release_tag_is_the_highest_version_not_the_newest_upload():
+    gh = FakeGitHub([], releases=[
+        _release("commcare_2.61.5test", draft=True),
+        _release("commcare_2.64.1"),
+        _release("commcare_2.66.0", prerelease=True),
+        _release("commcare_2.65.0"),
+        _release("commcare_2.9.9"),
+    ])
+    assert latest_release_tag(gh) == "commcare_2.65.0"
+
+
+def test_latest_release_tag_fails_without_a_published_release():
+    with pytest.raises(DevBuildError, match="No published"):
+        latest_release_tag(FakeGitHub([], releases=[_release("commcare_2.66.0", draft=True)]))
+
+
+def test_a_release_tag_is_dispatched_with_the_matching_commcare_core_tag():
+    tag = "commcare_2.65.0"
+
+    def add_run(gh):
+        gh.runs.insert(0, _run(9, status="queued"))
+        gh.pending = {9}
+
+    gh = FakeGitHub([], on_dispatch=add_run)
+    run, _, current = find_build(gh, ARTIFACT, ref=tag)
+    assert (run["id"], current) == (9, True)
+    assert gh.dispatch_payloads == [{"ref": tag, "inputs": {"commcare_core_sha": "c" * 40}}]
+    assert gh.core_refs == [tag]
+
+
+def test_an_existing_build_of_the_release_tag_is_reused():
+    gh = FakeGitHub([_run(5)], {5: [ARTIFACT]})
+    run, _, current = find_build(gh, ARTIFACT, ref="commcare_2.65.0")
+    assert (run["id"], current, gh.dispatched) == (5, True, 0)
 
 
 def _zip(**files):
