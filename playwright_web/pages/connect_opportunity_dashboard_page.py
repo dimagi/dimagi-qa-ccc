@@ -12,6 +12,7 @@ class OpportunityDashboardPage(BasePage):
     DASHBOARD_CARD = locators.get("opportunity_dashboard_page", "dashboard_card")
     OPP_TITLE = locators.get("opportunity_dashboard_page", "opp_title")
     INFO_CARD_BY_LABEL = locators.get("opportunity_dashboard_page", "info_card_by_label")
+    INVITE_USERS_FIELD = locators.get("connect_worker_invite_page", "users_field")
     STATUS_BADGE = locators.get("opportunity_dashboard_page", "status_badge")
     TEST_BADGE = locators.get("opportunity_dashboard_page", "test_badge")
     WORK_AREAS_TAB = locators.get("opportunity_dashboard_page", "work_areas_tab")
