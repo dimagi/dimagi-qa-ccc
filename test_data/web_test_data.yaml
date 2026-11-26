@@ -532,10 +532,12 @@ OPD:
   # Prod: OLP_Test_Opp in pm_automation_01 (Anshu, 3 Nov 2026). Like staging's, it has
   # no work areas uploaded, so the cases that need a work area skip themselves.
   microplanning_opp_id: "9c583306-ca43-4d74-a3bd-d0af6c6e57f3"
-  # OD_37 ended opp - end date set to 2026-09-05, so it is past its end date. NOTE: the
-  # fixture is currently DEACTIVATED/ARCHIVED ("Inactive" badge); the "Ended" badge shows
-  # only for an active opp past its end date (dashboard.html), so ask for it to be
-  # reactivated before asserting the badge from test data. Org pm_automation_01.
+  # OD_37 ended opp - end date 2026-09-08, past its end date. Reactivated on 2026-11-26
+  # (it had been deactivated/archived, which shows "Inactive"), so it now shows the "Ended"
+  # badge - that shows only for an active opp past its end date (dashboard.html).
+  # If it is ever deactivated again OD_37's badge assertion fails with the badge it saw.
+  # Org pm_automation_01.
+  ended_status_label: "Ended"   # badge text for an active opp past its end date
   end_date_format: "%Y-%m-%d"   # how the dashboard renders the End Date value
   ended_opp_id_staging: "4c853985-699a-4952-883f-4a91348c9cbe"
   org_slug: "pm_automation_01"   # PM org slug (same on both envs)
