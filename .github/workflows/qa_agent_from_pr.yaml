@@ -161,8 +161,12 @@ jobs:
         with:
           node-version: '20'
 
-      # Everything the agent needs to read is gathered here, by repository code it
-      # hasn't touched. This is the only step that sees the Jira credentials.
+      # Everything the agent needs to read is gathered here. This is the only step
+      # that sees the Jira credentials. The checkout is the QA branch, which holds the
+      # agent's earlier, unreviewed output (including under playwright_web/), and this
+      # job can mint Claude tokens (id-token: write), so none of that branch's code
+      # runs here: pip, the impact check and the Jira lookup run from a clean copy of
+      # the workflow's own commit, extracted outside the checkout.
       - name: Gather the impact check, Jira tickets and plan tabs
         if: steps.gate.outputs.skip != 'true' && steps.branch.outputs.uptodate != 'true'
         env:
@@ -170,6 +174,10 @@ jobs:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
+          trusted="$RUNNER_TEMP/trusted"
+          mkdir -p "$trusted"
+          git archive "$GITHUB_SHA" | tar -x -C "$trusted"
+          cd "$trusted"
           pip install --quiet -r playwright_web/requirements.txt openpyxl pyyaml
           ctx="$RUNNER_TEMP/context"
           mkdir -p "$ctx"
@@ -347,6 +355,11 @@ jobs:
           # any Anthropic key or token rather than one value.
           if grep -qE -- 'sk-ant-[A-Za-z0-9_-]{8,}' "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
             echo "::error::The agent's output contains an Anthropic key or token; refusing to publish it."
+            exit 1
+          fi
+          # A JWT, such as the GitHub OIDC token the federation exchanges.
+          if grep -qE -- 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+' "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
+            echo "::error::The agent's output contains a JWT; refusing to publish it."
             exit 1
           fi
           if [ -n "$JIRA_API_TOKEN" ] && grep -qF -- "$JIRA_API_TOKEN" "$out/agent.patch" "$out/summary.md" 2>/dev/null; then
