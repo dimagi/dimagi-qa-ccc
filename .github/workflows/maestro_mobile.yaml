@@ -57,10 +57,14 @@ on:
     - cron: "30 22 * * 0-4"
 
 # Keyed on the environment as well, so a stage run and a prod run of the same
-# branch do not cancel one another.
+# branch do not cancel one another. Only a newer push to a PR cancels the run in
+# progress (newest commit wins). Dispatched and scheduled runs queue instead, so a
+# post-deploy run never kills a manual prod run that is already going on main.
+# GitHub keeps at most one waiting run per group: a third arrival replaces the
+# waiting one, not the one in progress.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'push' }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   resolve-matrix:

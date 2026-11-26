@@ -98,8 +98,8 @@ jobs:
   # environment=prod). Start the Connect mobile (Maestro) suite against prod too, so the
   # app is checked after every Connect deploy. It starts right away rather than after
   # the web run, as agreed with Shubham (21 Oct: deploy-triggered runs start straight
-  # after the deploy, even mid-day). The mobile workflow's own queue keeps it from
-  # overlapping another prod mobile run, and its results go to the automated-results
+  # after the deploy, even mid-day). If a prod mobile run is already going, this one
+  # waits for it to finish rather than cancelling it, and its results go to the automated-results
   # channel under the post-deploy label.
   start-mobile-suite:
     name: Start the Connect mobile suite (post-deploy)
