@@ -103,8 +103,18 @@ class MicroplanningPage(BasePage):
         return present
 
     def _select_option_labels(self, options_locator):
-        options = self.page.locator(options_locator).all_inner_texts()
-        return [o.strip() for o in options if o.strip() and not o.strip().startswith("---")]
+        """Labels of the real options. The empty placeholder is identified by its empty
+        value attribute (as _option_values does), not by how its text looks, so any
+        placeholder wording or dash style is skipped."""
+        labels = []
+        for option in self.page.locator(options_locator).all():
+            # .value (not the attribute): an <option> without a value attribute reports its text.
+            if not option.evaluate("e => e.value"):
+                continue
+            text = option.inner_text().strip()
+            if text:
+                labels.append(text)
+        return labels
 
     def status_filter_options(self):
         labels = self._select_option_labels(self.FILTER_STATUS_OPTIONS)
@@ -182,15 +192,49 @@ class MicroplanningPage(BasePage):
     def flw_summary_text(self):
         return self.page.locator(self.FLW_SUMMARY_SECTION).first.inner_text()
 
+    def flw_summary_control_visible(self, locator, timeout_ms=15000):
+        """Wait for an FLW Summary action link to render. The links sit behind an
+        x-if on "assignee chosen and summary loaded", so they appear after the
+        always-present 'FLW Summary' header; counting them straight after that header
+        shows 0. False only if the control never renders."""
+        try:
+            self.page.locator(locator).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _click_and_follow(self, locator):
+        """Click an FLW Summary link and return the page it lands on. These links are
+        target=_blank, so the destination is a new tab; if the app ever stops opening
+        a tab, the click navigates this page and this page is returned."""
+        opened = []
+        def on_page(new_page):
+            opened.append(new_page)
+
+        self.page.context.on("page", on_page)
+        try:
+            # A click failure is a real failure and must surface; only the popup wait below
+            # decides between "new tab" and "same page".
+            self.click(locator)
+            for _ in range(50):
+                if opened:
+                    break
+                self.page.wait_for_timeout(200)
+        finally:
+            self.page.context.remove_listener("page", on_page)
+        target = opened[0] if opened else self.page
+        target.wait_for_load_state("load")
+        return target
+
     def open_flw_summary_by_flw(self):
-        self._step("Open 'View summary by FLW'")
-        self.click(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
-        self.page.wait_for_load_state("load")
+        """Click 'View Summary by FLW'; returns the page it opened (caller closes a new tab)."""
+        self._step("Open 'View Summary by FLW'")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
 
     def open_flw_summary_visits(self):
+        """Click 'View Visits'; returns the page it opened (caller closes a new tab)."""
         self._step("Open FLW summary 'View Visits'")
-        self.click(self.FLW_SUMMARY_VIEW_VISITS_BTN)
-        self.page.wait_for_load_state("load")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_VISITS_BTN)
 
     # -- Microplanning_16/17: select/modify a single work area (non-assignment-mode) -
     # No map click needed: mapController()'s single-select state (`selectedFeature`)

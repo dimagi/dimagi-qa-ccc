@@ -600,6 +600,8 @@ MICROPLANNING_UI:
     - "Inaccessible"
     - "Excluded"
   work_area_assignments_path: "workers/work-areas"
+  # "View Visits" in the FLW Summary opens the selected FLW's visits page (user_visits/?user=<id>).
+  flw_visits_path: "user_visits"
   work_area_assignments_headers:
     - "Name"
     - "Last active"

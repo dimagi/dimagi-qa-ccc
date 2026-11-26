@@ -162,6 +162,11 @@ def test_microplanning_27_flw_summary_on_assignee_select(session):
         skip_needs_data("No assignees available on this opportunity to select for FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
+    # The header is always present; the action links render only once an FLW is selected
+    # and its summary has loaded, so this is what proves the selection took effect.
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN), (
+        "FLW Summary did not populate for the selected FLW (no 'View Summary by FLW' link)"
+    )
 
 
 def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
@@ -172,14 +177,19 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
         skip_needs_data("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
-        skip_blocked("'View summary by FLW' control not present for this assignee")
-    micro.open_flw_summary_by_flw()
-    path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
-    assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN), (
+        "'View Summary by FLW' control did not render for the selected assignee after the summary loaded"
+    )
+    target = micro.open_flw_summary_by_flw()
+    try:
+        path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
+        assert path in target.url, f"Did not land on the work-area-assignments page ({path}): {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
-def test_microplanning_29_view_visits_nav(session):
+def test_microplanning_29_view_visits_nav(session, test_data):
     micro = _home(session)
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
@@ -187,10 +197,16 @@ def test_microplanning_29_view_visits_nav(session):
         skip_needs_data("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
-        skip_blocked("'View Visits' control not present for this assignee")
-    micro.open_flw_summary_visits()
-    assert "/workers/" in micro.page.url, f"Did not land on the connect workers page: {micro.page.url}"
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_VISITS_BTN), (
+        "'View Visits' control did not render for the selected assignee after the summary loaded"
+    )
+    target = micro.open_flw_summary_visits()
+    try:
+        path = test_data.get("MICROPLANNING_UI")["flw_visits_path"]
+        assert path in target.url, f"Did not land on the FLW's visits page ({path}): {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
 # -- Microplanning_33/34: Connect Workers page "Work Area Assignments" tab ------
