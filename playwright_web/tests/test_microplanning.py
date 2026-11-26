@@ -363,10 +363,10 @@ def test_microplanning_39_ward_saturation_goal(session):
     assert "%" in text or any(ch.isdigit() for ch in text), f"No percentage shown: {text!r}"
 
 
-def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data):
+def test_microplanning_40_core_metrics_update_on_date_filter(coverage_session, test_data):
     ui = test_data.get("MICROPLANNING_UI")
     section = ui["coverage_sections"]["core_metrics"]
-    micro = _home(session)
+    micro = _home(coverage_session)
     micro.open_coverage_progress()
     coverage = CoverageProgressPage(micro.page)
     coverage.verify_loaded()
@@ -397,6 +397,28 @@ def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data)
 # click "Approve as inaccessible". Followed the steps/expected-result text (the
 # unambiguous part) rather than the titles - not fixing the xlsx here, out of
 # scope for this batch.
+
+
+@pytest.fixture(scope="module")
+def coverage_session(browser, config, settings, test_data):
+    """Opp with real visit activity, so Core Metrics has values a date filter can change."""
+    data = test_data.get("MICROPLANNING_COVERAGE") or {}
+    opp_id = env_value(data, "opportunity_id", config)
+    slug = env_value(data, "org_slug", config)
+    if not opp_id or not slug:
+        skip_needs_data("MICROPLANNING_COVERAGE.opportunity_id/org_slug not configured for this env")
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+    try:
+        connect_page = login_to_connect(page, config, settings, PM_ORG)
+        base = config.get("connect_url")
+        connect_page.goto(f"{base}/a/{slug}/microplanning/{opp_id}/")
+        connect_page.wait_for_load_state("load")
+        micro = MicroplanningPage(connect_page)
+        micro.verify_loaded()
+        yield connect_page, base, slug, opp_id
+    finally:
+        context.close()
 
 
 @pytest.fixture(scope="module")

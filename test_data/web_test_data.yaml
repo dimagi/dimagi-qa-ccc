@@ -588,6 +588,13 @@ MICROPLANNING_REVIEW:
   approve_work_area_id_staging: 36053
 
 # Microplanning page text/URL expectations (Microplanning_01-40).
+# Opp with plenty of visit/coverage data (Anshu, 26 Nov 2026) - used by
+# Microplanning_40, whose date filter needs non-zero Core Metrics. Staging only
+# until a prod equivalent is given.
+MICROPLANNING_COVERAGE:
+  opportunity_id_staging: "98f3ab0b-14c4-48af-a7e6-2ae83c4fbdbc"
+  org_slug_staging: "nitins-program"
+
 MICROPLANNING_UI:
   # WorkAreaStatus.choices (microplanning/models.py) - the MTP's wording is slightly
   # off ("Not Started" isn't a real status), so this follows the product.
