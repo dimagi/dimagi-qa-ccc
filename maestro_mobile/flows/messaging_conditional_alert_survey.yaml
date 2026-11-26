@@ -103,8 +103,30 @@ env:
 
 # Learning is already complete for this worker, so the card offers Resume, which
 # downloads the deliver app on a fresh install. Allow for a real download.
-- tapOn:
-    id: "btn_resume"
+# 2.65 dropped btn_resume and made the whole card (job_card_root) the tap target,
+# so these failed on the 24 Nov post-deploy runs ("Element not found: btn_resume").
+# Same handling as shared_open_deliver_app.yaml: Resume when it exists, otherwise
+# open the card and use its Delivery dashboard footer button.
+- runFlow:
+    when:
+      visible:
+        id: "btn_resume"
+    commands:
+      - tapOn:
+          id: "btn_resume"
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_resume"
+    commands:
+      - tapOn:
+          text: "${OPPORTUNITY}"
+      - extendedWaitUntil:
+          visible:
+            text: "Download App|Start"
+          timeout: 60000
+      - tapOn:
+          text: "Download App|Start"
 - extendedWaitUntil:
     visible:
       text: "Sync with Server"
