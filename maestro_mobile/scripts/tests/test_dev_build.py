@@ -42,7 +42,8 @@ class FakeGitHub:
         if path.endswith("/artifacts"):
             run_id = int(path.split("/")[2])
             return {"artifacts": [{"name": name, "expired": False, "size_in_bytes": 1,
-                                   "archive_download_url": "url"} for name in self.artifacts.get(run_id, [])]}
+                                   "archive_download_url": "url"} for name in self.artifacts.get(run_id, [])]
+}
         run_id = int(path.split("/")[-1])
         return next(run for run in self.runs if run["id"] == run_id)
 
@@ -214,6 +215,27 @@ def test_a_release_tag_is_dispatched_with_the_matching_commcare_core_tag():
     assert (run["id"], current) == (9, True)
     assert gh.dispatch_payloads == [{"ref": tag, "inputs": {"commcare_core_sha": "c" * 40}}]
     assert gh.core_refs == [tag]
+
+
+def test_a_successful_build_whose_artifact_expired_is_built_again():
+    def add_run(gh):
+        gh.runs.insert(0, _run(9, status="queued"))
+        gh.pending = {9}
+
+    old = _run(5)
+    old["conclusion"] = "success"
+    gh = FakeGitHub([old], on_dispatch=add_run)
+    run, *_ = find_build(gh, ARTIFACT)
+    assert (run["id"], gh.dispatched) == (9, 1)
+
+
+def test_an_expired_build_is_not_rebuilt_when_dispatching_is_off():
+    old = _run(5)
+    old["conclusion"] = "success"
+    gh = FakeGitHub([old])
+    with pytest.raises(DevBuildError):
+        find_build(gh, ARTIFACT, can_dispatch=False)
+    assert gh.dispatched == 0
 
 
 def test_an_existing_build_of_the_release_tag_is_reused():
