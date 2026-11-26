@@ -45,7 +45,7 @@ def test_opd_09_add_connect_workers_redirect(dashboard):
         skip_needs_data("Add Connect Workers not offered (opportunity may have ended)")
     dashboard.open_add_connect_workers()
     assert "user_invite" in dashboard.page.url, dashboard.page.url
-    assert dashboard.is_displayed("#id_users", timeout=10000), "Invite page should expose the users input"
+    assert dashboard.is_displayed(dashboard.INVITE_USERS_FIELD, timeout=10000), "Invite page should expose the users input"
 
 
 def test_opd_13_negative_visits_validation(dashboard):
