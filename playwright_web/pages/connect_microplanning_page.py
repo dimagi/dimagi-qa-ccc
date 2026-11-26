@@ -20,6 +20,7 @@ work areas that were seeded directly rather than routed through assignment.
 
 import math
 import re
+import time
 
 import mapbox_vector_tile
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -389,7 +390,6 @@ class MicroplanningPage(BasePage):
         returns the last status seen (so the caller can assert on it). The work-area
         download lives on the main microplanning page, not the review (inaccessible_mode)
         page, so every poll reloads the main page first."""
-        import time
         home = f"{host}/a/{org_slug}/microplanning/{opp_id}/"
         deadline = time.monotonic() + timeout_s
         status = None

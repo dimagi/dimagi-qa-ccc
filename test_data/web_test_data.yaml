@@ -577,10 +577,11 @@ MICROPLANNING_REVIEW:
   # Fresh deny/approve areas from Anshu (23 Nov 2026); KOTA0003/4 were consumed.
   deny_work_area_slug: "KOTA0006"
   approve_work_area_slug: "KOTA0007"
-  # The three seeded REQUEST_FOR_INACCESSIBLE work areas, one per test (deny/approve
-  # permanently consume theirs; the details test only reads). Each test picks its
-  # own by id so a skipped/failed test can never make two tests act on one area.
-  # After a full run 10/11 skip until someone reseeds - the skip message says what.
+  # Seeded REQUEST_FOR_INACCESSIBLE work areas, one per test (deny/approve permanently
+  # consume theirs; the details test only reads). Deny and approve are looked up by code
+  # (the *_slug keys) on both envs, and each test has its own area so a skipped/failed
+  # test can never make two tests act on one area. After a full run 10/11 skip until
+  # someone reseeds - the skip message says what.
   details_work_area_id_staging: 36051
   # Staging deny/approve use fresh areas from Anshu, looked up by code. Used up so far:
   # 36052/36053 and KOTA0004/5 (consumed locally on 24 Nov 2026 while proving 10/11).
