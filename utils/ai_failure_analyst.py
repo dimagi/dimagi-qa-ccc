@@ -55,6 +55,32 @@ def _load_api_key() -> str:
     return ""
 
 
+ERROR_BUDGET = 3500  # characters of error text sent per failure
+_RETRY_NOISE = re.compile(r"^(E\s+)?\s*(-\s*)?(\d+\s*[x\u00d7]\s*)?(waiting for element to be visible|retrying click action|waiting \d+ms)", re.I)
+
+
+def _condense_error(text: str, budget: int = ERROR_BUDGET) -> str:
+    """Shrink a Playwright/pytest error without losing the evidence a diagnosis needs.
+
+    Playwright's call log repeats "waiting for element to be visible ... retrying"
+    dozens of times; cutting the text at N characters kept that noise and dropped
+    the lines that matter (what the locator resolved to, and why the click failed).
+    Collapse the repeated retry lines into a count, keep the head and the tail."""
+    kept, noise = [], 0
+    for line in text.splitlines():
+        if _RETRY_NOISE.match(line):
+            noise += 1
+        else:
+            kept.append(line)
+    if noise:
+        kept.append(f"(+{noise} repeated retry/wait lines omitted - the element stayed in this state)")
+    out = "\n".join(kept)
+    if len(out) <= budget:
+        return out
+    head = budget // 2
+    return out[:head] + "\n...[truncated]...\n" + out[-(budget - head):]
+
+
 def _parse_failures(xml_path: Path) -> list[dict]:
     """Return list of {name, classname, error} for every failed/errored test.
     Skipped tests are deliberately excluded - they're not failures."""
@@ -71,7 +97,7 @@ def _parse_failures(xml_path: Path) -> list[dict]:
                 failures.append({
                     "name":      tc.attrib.get("name", "unknown"),
                     "classname": tc.attrib.get("classname", ""),
-                    "error":     mask_sensitive(node.text or node.attrib.get("message", ""))[:2000],
+                    "error":     _condense_error(mask_sensitive(node.text or node.attrib.get("message", ""))),
                     "tag":       tag,
                 })
                 break
@@ -89,7 +115,7 @@ def _parse_maestro_failures(report_json_path: Path) -> list[dict]:
         return []
     report = json.loads(report_json_path.read_text(encoding="utf-8"))
     return [
-        {"name": f["name"], "classname": "", "error": f.get("log_tail") or "(no log captured)"}
+        {"name": f["name"], "classname": "", "error": _condense_error(f.get("log_tail") or "(no log captured)")}
         for s in report.get("sessions", [])
         for f in s.get("flows", [])
         if f.get("status") not in ("passed", "skipped", None)
@@ -137,24 +163,37 @@ You are a senior QA automation engineer triaging CI failures for a Playwright \
 suite testing a Django web app (CommCare Connect).
 
 Reply with EXACTLY ONE LINE, no markdown, no preamble, in this exact shape:
-<Flaky|Test bug|Product bug|Env> — <root cause in <=12 words> — Fix: <concrete action in <=10 words>
+<Flaky|Test bug|Product bug|Env|Unclear> — <root cause in <=20 words> — Evidence: "<short quote from the log>" — Fix: <concrete action in <=12 words>
 
-"Flaky" = timing/race/staging-availability, nothing to fix in test or product code.
-"Test bug" = a defect in the TEST code (bad locator/assertion/logic) - fix is in this repo.
+"Flaky" = timing/race/staging-availability: the element or state DID appear on some \
+tries, or the log shows a slow response. Nothing to fix in code.
+"Test bug" = a defect in the TEST code (bad/ambiguous locator, wrong assertion or logic) \
+- fix is in this repo.
 "Product bug" = the app behaved wrongly and the test is right - fix is a product ticket, \
 NOT a test change.
 "Env" = external dependency/data/environment issue (seed data, staging outage, \
 expired real-clock state) - not fixable by changing code.
+"Unclear" = the log does not show enough to choose; say what to look at.
 
-If unsure between Test bug and Product bug, say so in the cause rather than guessing.
+Rules:
+- Base the label on the log, and quote the line that supports it in Evidence.
+- If a locator "resolved to" an element and every retry says it is "not visible" for \
+the whole timeout, that is a Test bug (the locator picked the wrong or hidden element), \
+NOT Flaky. A longer timeout will not help; never suggest one for that pattern.
+- Only suggest a longer wait when the log shows the element did become ready or a \
+response was merely slow.
+- A Maestro/BrowserStack failure that only says a flow "did not pass" gives no cause: \
+answer Unclear and name the flow's build to open, do NOT label it a Product bug.
+- Never pair "Flaky" with a code-change fix.
+- If unsure between Test bug and Product bug, answer Unclear rather than guessing.
 Be terse. One line only.
 """
 
 
 def _analyse_failure(client, name: str, error: str) -> str:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        max_tokens=60,
+        model=os.environ.get("AI_ANALYST_MODEL", "gpt-4o"),
+        max_tokens=160,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Test: `{name}`\n\nTraceback:\n```\n{error}\n```"},
