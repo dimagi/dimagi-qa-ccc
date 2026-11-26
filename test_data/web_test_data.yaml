@@ -184,6 +184,16 @@ WORKER_VISIT_ACTION_GATING:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
 
+# GAP-SRC-W-45 needs an AUTO-verify opp. covid_opp_test is not one on staging (its action
+# bar shows Approve/Reject once a visit is opened), so staging uses OLP_Test_Opp, which
+# Anshu confirmed follows auto-verify (24 Nov 2026) - bar stays empty after opening a
+# visit. Unsuffixed keys are prod (unchanged: covid_opp_test).
+WORKER_VISIT_AUTO_VERIFY:
+  opportunity_name: "covid_opp_test"
+  worker_name: "Deb Test 8/12"
+  opportunity_name_staging: "OLP_Test_Opp"
+  worker_name_staging: "OLP_user_01"
+
 # Deliver-tab filter option sets (Delivery_tab_10/11/13/14/16). Expected values
 # match the product source (DeliverFilterSet / YesNoFilter in opportunity/filters.py).
 WORKER_DELIVER_FILTERS:
