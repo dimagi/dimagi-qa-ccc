@@ -335,8 +335,9 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     """OD_37: 'Add Connect Workers' is hidden once the opportunity has ended. The menu
     checks has_ended (end date in the past, compared in UTC by the server), so the guard
     is the End Date, not the badge: 'Inactive' means the opp is deactivated or archived,
-    not ended, and 'Ended' shows only for an active opp past its end date. Skips until
-    the fixture's end date has passed."""
+    not ended, and 'Ended' shows only for an active opp past its end date. The fixture is
+    active and past its end date, so this also asserts the 'Ended' badge. Skips until the
+    fixture's end date has passed."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
     slug = _opd(test_data, "org_slug", config)
@@ -354,6 +355,11 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
         skip_needs_data(f"Fixture opp's end date {end} has not passed yet (UTC) - re-runs green once it does")
     assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
         "'Add Connect Workers' should be hidden for an ended opportunity"
+    )
+    ended_label = test_data.get("OPD")["ended_status_label"]
+    assert dash.status_badge_text() == ended_label, (
+        f"An active opportunity past its end date should show '{ended_label}', "
+        f"got '{dash.status_badge_text()}' - the fixture may have been deactivated again"
     )
 
 
