@@ -17,6 +17,8 @@ OLP_02 skip conventions. Mutating cases (OD_36/44/46) belong with the Tier 2/3
 add-budget/send-message batch and are not here.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 
 from flows.olp_setup import PM_ORG
@@ -24,7 +26,7 @@ from flows.opd_setup import dashboard_session
 from flows.tasking_static import env_value, login_to_connect
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
-from utils.skips import skip_blocked, skip_needs_data, skip_not_applicable
+from utils.skips import skip_needs_data, skip_not_applicable
 
 
 @pytest.fixture(scope="module")
@@ -330,16 +332,26 @@ def test_opd_28_microplanning_work_areas_tab(session, test_data, config):
 
 
 def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
-    """OD_37: 'Add Connect Workers' is hidden for an ENDED opportunity. Self-skips
-    until the fixture opp's end date has actually passed (badge reads 'Ended')."""
+    """OD_37: 'Add Connect Workers' is hidden once the opportunity has ended. The menu
+    checks has_ended (end date in the past, compared in UTC by the server), so the guard
+    is the End Date, not the badge: 'Inactive' means the opp is deactivated or archived,
+    not ended, and 'Ended' shows only for an active opp past its end date. Skips until
+    the fixture's end date has passed."""
     dash, base = session
     opp_id = _opd(test_data, "ended_opp_id", config)
     slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         skip_needs_data("OPD.ended_opp_id not configured")
     dash.goto_opp(base, slug, opp_id)
-    if dash.status_badge_text() != "Ended":
-        skip_blocked("Fixture opp is not Ended yet (end date not passed) - re-runs green once it ends")
+    end_text = dash.end_date_text()
+    assert end_text, "The fixture opp page shows no End Date, so it cannot be told whether it has ended"
+    date_format = test_data.get("OPD")["end_date_format"]
+    try:
+        end = datetime.strptime(end_text, date_format).date()
+    except ValueError:
+        raise AssertionError(f"End Date {end_text!r} does not match the configured format {date_format!r}") from None
+    if end >= datetime.now(timezone.utc).date():
+        skip_needs_data(f"Fixture opp's end date {end} has not passed yet (UTC) - re-runs green once it does")
     assert "Add Connect Workers" not in " | ".join(dash.hamburger_options()), (
         "'Add Connect Workers' should be hidden for an ended opportunity"
     )

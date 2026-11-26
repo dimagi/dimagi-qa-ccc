@@ -13,6 +13,7 @@ class OpportunityDashboardPage(BasePage):
     OPP_TITLE = locators.get("opportunity_dashboard_page", "opp_title")
     INFO_CARD_BY_LABEL = locators.get("opportunity_dashboard_page", "info_card_by_label")
     STATUS_BADGE = locators.get("opportunity_dashboard_page", "status_badge")
+    END_DATE_VALUE = locators.get("opportunity_dashboard_page", "end_date_value")
     TEST_BADGE = locators.get("opportunity_dashboard_page", "test_badge")
     WORK_AREAS_TAB = locators.get("opportunity_dashboard_page", "work_areas_tab")
     STATS_CONTAINER = locators.get("opportunity_dashboard_page", "stats_container")
@@ -86,6 +87,18 @@ class OpportunityDashboardPage(BasePage):
         badge.wait_for(state="visible", timeout=15000)
         text = badge.inner_text().strip()
         self._step(f"Opportunity status badge: {text}")
+        return text
+
+    def end_date_text(self):
+        """Raw text of the 'End Date' value in the details block, or None if not shown."""
+        value = self.page.locator(self.END_DATE_VALUE).first
+        try:
+            value.wait_for(state="visible", timeout=15000)
+        except PlaywrightTimeoutError:
+            self._step("Opportunity end date not shown")
+            return None
+        text = value.inner_text().strip()
+        self._step(f"Opportunity end date: {text}")
         return text
 
     def verify_graphs_present(self):
