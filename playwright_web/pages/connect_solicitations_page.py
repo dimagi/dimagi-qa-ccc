@@ -59,7 +59,8 @@ class SolicitationsPage(BasePage):
         self.page.wait_for_load_state("load")
 
     def sidebar_has_solicitations(self):
-        return self.page.locator(_loc("sidebar_link")).count() > 0
+        # Visible only: the page also carries hidden copies of sidebar links.
+        return self.page.locator(f"{_loc('sidebar_link')} >> visible=true").count() > 0
 
     def sidebar_labels(self):
         return [t.strip() for t in self.page.locator("a").all_inner_texts() if t.strip()]
@@ -233,10 +234,19 @@ class SolicitationsPage(BasePage):
         field.fill(value)
         field.dispatch_event("input")
 
+    SAVE_LOAD_TIMEOUT_MS = 90_000
+
+    def _click_save(self):
+        """Click Save and continue and wait for the page the form posts to. The click's own
+        30s wait for that navigation was too short for a slow save on staging, so the wait is
+        explicit here. It must wrap the click: the old page is already 'loaded', so waiting for
+        load afterwards would return before the save has even started."""
+        with self.page.expect_navigation(wait_until="load", timeout=self.SAVE_LOAD_TIMEOUT_MS):
+            self.click_without_waiting(_loc("save_and_continue"))
+
     def save_and_continue(self):
         self._step("Save and continue")
-        self.click(_loc("save_and_continue"))
-        self.page.wait_for_load_state("load")
+        self._click_save()
 
     def save_and_continue_server_validated(self):
         """Submit past the browser's own min/max/required checks so the SERVER's validation
@@ -244,8 +254,7 @@ class SolicitationsPage(BasePage):
         otherwise block the submit before it reaches the view)."""
         self._step("Save and continue (browser validation off - server rules under test)")
         self.page.evaluate("document.querySelectorAll('form').forEach(f => f.noValidate = true)")
-        self.click(_loc("save_and_continue"))
-        self.page.wait_for_load_state("load")
+        self._click_save()
 
     def save_details_in_place(self):
         self._step("Save (active solicitation details)")

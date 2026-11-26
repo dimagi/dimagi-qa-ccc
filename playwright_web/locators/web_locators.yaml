@@ -818,7 +818,9 @@ connect_invoice_form_page:
 # the Django prefix names (criteria-N-*, questions-N-*) built in the page object.
 connect_solicitations_page:
   # href-only, like the Programs sidebar item (the collapsed sidebar's markup defeats a text match)
-  sidebar_link: "//a[contains(@href,'/solicitations/')]"
+  # Org-scoped (/a/<org>/solicitations/): the public Marketplace link also points at /solicitations/
+  # and shows for every org, so a bare href match found it in orgs with no Solicitations item.
+  sidebar_link: "//a[contains(@href,'/a/')][contains(@href,'/solicitations/')]"
   sidebar_items: "//a[contains(@class,'rounded-lg')][normalize-space()]"
   new_button: "//a[normalize-space()='New solicitation']"
   table: "(//table)[1]"
@@ -861,7 +863,9 @@ connect_solicitations_page:
   remove_row_button: "(//button[@aria-label='Remove'])[{n}]"
   locked_hint: "//*[normalize-space()=\"Criteria and questions can't change once a solicitation is published.\"]"
   invited_org_button: "//a[normalize-space()='Invited organizations']"
-  publish_button: "//button[normalize-space()='Publish']"
+  # The submit toggles between 'Publish now' and 'Schedule' spans (x-show on the schedule
+  # switch), so its own text is both; match the 'Publish now' span.
+  publish_button: "//button[@type='submit'][.//span[normalize-space()='Publish now']]"
   publish_alert: "//div[@role='alert']"
   publish_alert_items: "//div[@role='alert']//li"
   publish_fix_links: "//div[@role='alert']//li//a[normalize-space()='Fix']"

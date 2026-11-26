@@ -29,6 +29,12 @@ class BasePage:
             else:
                 raise
 
+    def click_without_waiting(self, selector):
+        """Click and return as soon as the click is delivered, leaving any navigation it starts
+        to the caller (for slow server saves, where the click's own 30s wait is too short)."""
+        self._step(f"click {selector}")
+        self._locator(selector).click(no_wait_after=True)
+
     def type(self, selector, text):
         self._step(f"fill {selector} with '{text}'")
         try:
