@@ -582,10 +582,12 @@ MICROPLANNING_REVIEW:
   # own by id so a skipped/failed test can never make two tests act on one area.
   # After a full run 10/11 skip until someone reseeds - the skip message says what.
   details_work_area_id_staging: 36051
-  # Staging deny/approve use fresh areas from Anshu (23 Nov 2026) looked up by code;
-  # the old ids 36052/36053 were consumed.
-  deny_work_area_slug_staging: "KOTA0004"
-  approve_work_area_slug_staging: "KOTA0005"
+  # Staging deny/approve use fresh areas from Anshu, looked up by code. Used up so far:
+  # 36052/36053 and KOTA0004/5 (consumed locally on 24 Nov 2026 while proving 10/11).
+  # KOTA0008/9 added by Anshu on 26 Nov 2026. Work-area status can't be reset - each
+  # reseed needs a new inaccessible request submitted from the mobile app.
+  deny_work_area_slug_staging: "KOTA0008"
+  approve_work_area_slug_staging: "KOTA0009"
 
 # Microplanning page text/URL expectations (Microplanning_01-40).
 MICROPLANNING_UI:
