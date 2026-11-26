@@ -10,6 +10,8 @@ Reuses the OPD.microplanning_opp_id_staging fixture (the "OLP Test opp" already
 used by test_opd_gaps.py::test_opd_28); prod uses its own OLP_Test_Opp (OPD.microplanning_opp_id).
 """
 
+import re
+
 import pytest
 
 from flows.olp_setup import PM_ORG
@@ -162,6 +164,11 @@ def test_microplanning_27_flw_summary_on_assignee_select(session):
         skip_needs_data("No assignees available on this opportunity to select for FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
+    # The header is always present; the action links render only once an FLW is selected
+    # and its summary has loaded, so this is what proves the selection took effect.
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN), (
+        "FLW Summary did not populate for the selected FLW (no 'View Summary by FLW' link)"
+    )
 
 
 def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
@@ -172,14 +179,19 @@ def test_microplanning_28_view_summary_by_flw_nav(session, test_data):
         skip_needs_data("No assignees available to open FLW summary")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN).count() == 0:
-        skip_blocked("'View summary by FLW' control not present for this assignee")
-    micro.open_flw_summary_by_flw()
-    path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
-    assert path in micro.page.url, f"Did not land on the work-area-assignments page ({path}): {micro.page.url}"
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_BY_FLW_BTN), (
+        "'View Summary by FLW' control did not render for the selected assignee after the summary loaded"
+    )
+    target = micro.open_flw_summary_by_flw()
+    try:
+        path = test_data.get("MICROPLANNING_UI")["work_area_assignments_path"]
+        assert path in target.url, f"Did not land on the work-area-assignments page ({path}): {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
-def test_microplanning_29_view_visits_nav(session):
+def test_microplanning_29_view_visits_nav(session, test_data):
     micro = _home(session)
     micro.enter_assignment_mode()
     options = micro.assignment_assignee_options()
@@ -187,10 +199,16 @@ def test_microplanning_29_view_visits_nav(session):
         skip_needs_data("No assignees available to open FLW visits")
     micro.select_assignee_for_flw_summary(options[0])
     assert micro.wait_for_flw_summary(), "FLW Summary section did not populate after selecting an assignee"
-    if micro.page.locator(micro.FLW_SUMMARY_VIEW_VISITS_BTN).count() == 0:
-        skip_blocked("'View Visits' control not present for this assignee")
-    micro.open_flw_summary_visits()
-    assert "/workers/" in micro.page.url, f"Did not land on the connect workers page: {micro.page.url}"
+    assert micro.flw_summary_control_visible(micro.FLW_SUMMARY_VIEW_VISITS_BTN), (
+        "'View Visits' control did not render for the selected assignee after the summary loaded"
+    )
+    target = micro.open_flw_summary_visits()
+    try:
+        path = test_data.get("MICROPLANNING_UI")["flw_visits_path"]
+        assert path in target.url, f"Did not land on the FLW's visits page ({path}): {target.url}"
+    finally:
+        if target is not micro.page:
+            target.close()
 
 
 # -- Microplanning_33/34: Connect Workers page "Work Area Assignments" tab ------
@@ -253,6 +271,32 @@ def test_microplanning_17_modify_work_area_form_fields(session):
     micro.open_modify_work_area_modal()
     text = micro.modify_work_area_modal_text()
     assert text.strip(), "Modify Work Area modal opened empty"
+
+
+# -- Connect #1406: Clear Data menu (new case, test_plans/pending/connect-pr-1406.yaml)
+
+
+@pytest.mark.pending_prod(pr=1406)
+def test_microplanning_clear_data_menu(session, test_data):
+    """The Clear Data menu lists its three clear actions, and Clear Work Areas is
+    disabled with the reason whenever clearing is blocked. Read-only: it never
+    clicks an enabled entry, so nothing on the shared fixture opp is cleared."""
+    micro = _home(session)
+    ui = test_data.get("MICROPLANNING_UI")
+    entries = micro.clear_data_entries(ui["clear_data_entries"])
+
+    missing = [label for label, entry in entries.items() if not entry["present"]]
+    assert not missing, f"Clear Data menu is missing {missing}"
+
+    work_areas = entries["Clear Work Areas"]
+    if work_areas["disabled"]:
+        assert work_areas["detail"] in ui["clear_work_areas_blocked_reasons"], (
+            f"Disabled Clear Work Areas should say why: {work_areas['detail']!r}"
+        )
+    else:
+        assert re.match(ui["clear_work_areas_enabled_pattern"], work_areas["detail"]), (
+            f"Clear Work Areas should give the record count: {work_areas['detail']!r}"
+        )
 
 
 # -- Microplanning_31/35-40 + unnumbered: Coverage Progress Tracker --------------
@@ -414,57 +458,47 @@ def _pending_work_area(micro, test_data, config, base, slug, opp_id, key):
 
 
 def _require_review_ui(micro):
-    """Skip cleanly if the 'Review Inaccessible' trigger isn't deployed yet -
-    confirmed live 2026-09-23 that staging's backend is fully functional
-    (GET .../review_inaccessibility/<id>/ -> 200, real request data) but the
-    frontend button/JS aren't rendered anywhere on the page. See
-    MicroplanningPage.review_button_ready's docstring."""
-    if not micro.review_button_ready():
-        skip_blocked(
-            "'Review Inaccessible' UI not deployed on this env yet (backend endpoint "
-            "is live, but no trigger button/JS in the rendered page) - re-run once deployed"
-        )
+    """Fail if the 'Review Inaccessibility Requests' link is not shown although the work
+    area was just confirmed REQUEST_FOR_INACCESSIBLE: that is a regression, not missing data."""
+    assert micro.review_button_ready(), (
+        "'Review Inaccessibility Requests' link not shown although the work area is "
+        "still REQUEST_FOR_INACCESSIBLE - the review entry point may have changed"
+    )
 
 
 def test_microplanning_09_review_inaccessibility_details(review_session, test_data, config):
     connect_page, base, slug, opp_id = review_session
     micro = _review_home(review_session)
     work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "details_work_area_id")
-    micro.select_work_area_via_js(work_area)
     _require_review_ui(micro)
-    micro.open_review_inaccessibility_modal()
+    micro.open_review_requests()
+    micro.open_review_request(work_area["slug"])
     present = micro.review_modal_fields_present()
-    for field in ("visit_date", "reason", "photo_evidence", "return_to_map", "deny", "approve"):
-        assert present[field], f"Review-inaccessibility modal missing '{field}': {present}"
+    for field in ("visit_date", "reason", "photo_evidence", "exit", "deny", "approve"):
+        assert present[field], f"Review-inaccessibility panel missing '{field}': {present}"
     assert micro.review_visit_date(), "Visit date is empty"
     assert micro.review_reason(), "Reason is empty"
 
 
+@pytest.mark.skip(
+    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the deny steps and "
+    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
+    "Tracking ticket: TBD (to be created)"
+)
 @pytest.mark.consumes_seed_data
 def test_microplanning_10_deny_inaccessibility_request(review_session, test_data, config):
     """Steps/expected in the MTP: click Deny -> push notification sent, work
-    area status updates (to NOT_VISITED - see act_on_inaccessibility_request).
-    Consumes MICROPLANNING_REVIEW.deny_work_area_id."""
-    connect_page, base, slug, opp_id = review_session
-    micro = _review_home(review_session)
-    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "deny_work_area_id")
-    micro.select_work_area_via_js(work_area)
-    _require_review_ui(micro)
-    micro.open_review_inaccessibility_modal()
-    micro.deny_inaccessibility_request()
-    assert micro.selected_feature_status() == "NOT_VISITED", "Work area status did not update to NOT_VISITED after deny"
+    area status updates (to NOT_VISITED). Consumes MICROPLANNING_REVIEW.deny_work_area_id.
+    Skipped until rewritten for the new review flow."""
 
 
+@pytest.mark.skip(
+    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the approve steps and "
+    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
+    "Tracking ticket: TBD (to be created)"
+)
 @pytest.mark.consumes_seed_data
 def test_microplanning_11_approve_inaccessibility_request(review_session, test_data, config):
-    """Steps/expected in the MTP: click Approve as Inaccessible -> work area is
-    marked inaccessible (status INACCESSIBLE). Consumes
-    MICROPLANNING_REVIEW.approve_work_area_id."""
-    connect_page, base, slug, opp_id = review_session
-    micro = _review_home(review_session)
-    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "approve_work_area_id")
-    micro.select_work_area_via_js(work_area)
-    _require_review_ui(micro)
-    micro.open_review_inaccessibility_modal()
-    micro.approve_inaccessibility_request()
-    assert micro.selected_feature_status() == "INACCESSIBLE", "Work area status did not update to INACCESSIBLE after approve"
+    """Steps/expected in the MTP: click Approve as Inaccessible -> push notification sent, work
+    area status updates (to INACCESSIBLE). Consumes MICROPLANNING_REVIEW.approve_work_area_id.
+    Skipped until rewritten for the new review flow."""

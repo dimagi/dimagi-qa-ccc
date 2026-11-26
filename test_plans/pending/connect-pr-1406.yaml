@@ -1,0 +1,79 @@
+connect_pr: 1406
+title: Clear Work Areas
+jira: [CCCT-2649]
+epic: null                 # not read: Jira wasn't reachable from this run
+feature_plan: null
+classification: feature
+qa_plan_from_pr: |
+  - None, small ticket. Easy to test locally.
+
+# Scenario A: no existing script uses the controls this PR moves. The standalone
+# "Clear Work Area Groups" and "Clear Implementation Areas" buttons became entries
+# in a new "Clear Data" menu, but no locator or test referenced them.
+updated_scripts: []
+
+# Scenario B: behaviour no existing script covers
+new_cases:
+  - id: TC-MICROPLANNING-NEW-1
+    plan_tab: Microplanning
+    description: Clear Data menu lists the three clear actions with helper text
+    steps:
+      - Open Microplanning for an opportunity with Work Areas uploaded
+      - Open the Clear Data menu
+    expected: >-
+      Clear Work Areas, Clear Work Area Groups and Clear Implementation Areas are listed,
+      each with a helper line. While Work Areas are assigned to FLWs, Clear Work Areas is
+      disabled and says "Work Areas are assigned to FLWs and cannot be cleared."
+    automation: automated
+    test: playwright_web/tests/test_microplanning.py::test_microplanning_clear_data_menu
+    status: ""
+  - id: TC-MICROPLANNING-NEW-2
+    plan_tab: Microplanning
+    description: Clear Work Areas deletes Work Areas and Work Area Groups when none are assigned
+    steps:
+      - Open Microplanning for an opportunity with Work Areas uploaded and none assigned
+      - Open Clear Data, choose Clear Work Areas, confirm in the modal
+    expected: >-
+      "Work Areas and Work Area Groups cleared. You can now upload a new file." is shown,
+      the map has no Work Areas, and the Upload Work Areas button is available again
+    automation: candidate    # needs a disposable opportunity with uploaded, unassigned Work Areas
+    test: null
+    status: ""
+  - id: TC-MICROPLANNING-NEW-3
+    plan_tab: Microplanning
+    description: Cancelling the Clear Work Areas modal keeps the data
+    steps:
+      - Open Clear Data, choose Clear Work Areas
+      - Click Cancel in the modal
+    expected: Modal closes; Work Areas and Work Area Groups are unchanged
+    automation: candidate    # same setup as NEW-2
+    test: null
+    status: ""
+  - id: TC-MICROPLANNING-NEW-4
+    plan_tab: Microplanning
+    description: Clear Work Areas is refused when visits are recorded against the Work Areas
+    steps:
+      - Use an opportunity whose unassigned Work Areas have recorded visits
+      - Open Clear Data, choose Clear Work Areas, confirm
+    expected: >-
+      "Visits have been recorded against these Work Areas. They cannot be cleared." is shown
+      and nothing is deleted
+    automation: manual       # the data state is hard to set up from the UI
+    test: null
+    status: ""
+  - id: TC-MICROPLANNING-NEW-5
+    plan_tab: Microplanning
+    description: Clear Work Area Groups and Clear Implementation Areas still work from the Clear Data menu
+    steps:
+      - Open Clear Data and use Clear Work Area Groups (Work Areas unassigned, clustering run)
+      - Open Clear Data and use Clear Implementation Areas (Implementation Areas uploaded)
+    expected: >-
+      Each clears its data as the old standalone buttons did; a disabled entry shows why
+      ("Clustering has not been run yet." / "No Implementation Areas have been uploaded yet.")
+    automation: candidate    # mutating; needs a disposable opportunity
+    test: null
+    status: ""
+
+skipped:
+  - tailwind/tailwind.css, styling only
+  - microplanning/tests/test_views.py, the PR's own unit tests

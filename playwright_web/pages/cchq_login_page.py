@@ -41,6 +41,8 @@ class LoginPage(BasePage):
     # HQ's login page is occasionally slow to render the form; this is a bounded
     # wait for it to appear, not a guess at how long login takes.
     LOGIN_FORM_TIMEOUT_MS = 30_000
+    CONNECT_GOTO_ATTEMPTS = 3
+    CONNECT_GOTO_TIMEOUT_MS = 60000
 
     def valid_login_cchq(self, config, settings):
         """Log in to CommCare HQ, or confirm an existing session.
@@ -86,7 +88,25 @@ class LoginPage(BasePage):
         connect_url = config.get("connect_url")
         new_page = self.page.context.new_page()
         # The root URL now serves the public marketing site, not the app - go straight to login.
-        new_page.goto(f"{connect_url}/accounts/login/")
+        login_url = f"{connect_url}/accounts/login/"
+        last_error = None
+        for attempt in range(1, self.CONNECT_GOTO_ATTEMPTS + 1):
+            try:
+                # domcontentloaded, not load: the page is usable once the form is parsed, and
+                # waiting for every asset is what timed out on prod (30s default).
+                new_page.goto(login_url, wait_until="domcontentloaded", timeout=self.CONNECT_GOTO_TIMEOUT_MS)
+                break
+            except PlaywrightTimeoutError as error:  # only a slow load is retried
+                last_error = error
+                self._step(
+                    f"Connect login page attempt {attempt}/{self.CONNECT_GOTO_ATTEMPTS} failed "
+                    f"({type(error).__name__}: {str(error)[:200]})"
+                )
+        else:
+            raise AssertionError(
+                f"Connect login page {login_url} did not load after {self.CONNECT_GOTO_ATTEMPTS} "
+                f"attempts; last error: {last_error}"
+            ) from last_error
         assert connect_url in new_page.url
         return new_page
 

@@ -33,7 +33,8 @@ class ConnectWorkersPage(BasePage):
     CREATE_TASK_FORM = locators.get("connect_assigned_tasks_page", "create_task_form")
     CREATE_TASK_SAVE_BTN = locators.get("connect_assigned_tasks_page", "create_task_save_btn")
     TASK_SELECT = locators.get("connect_assigned_tasks_page", "task_select")
-    INVITE_USERS_TEXTAREA = locators.get("connect_worker_invite_page", "users_textarea")
+    INVITE_USERS_FIELD = locators.get("connect_worker_invite_page", "users_field")
+    INVITE_TAG_INPUT = locators.get("connect_worker_invite_page", "tag_input")
     INVITE_SUBMIT_BTN = locators.get("connect_worker_invite_page", "submit_btn")
 
     # -- Worker List View (WLV_1-8): list / Learn / Deliver tables ----------------
@@ -53,6 +54,18 @@ class ConnectWorkersPage(BasePage):
 
     # -- worker invite -------------------------------------------------------
 
+    def _enter_invite_numbers(self, phone_numbers):
+        """Type numbers into the invite form, whichever build is deployed: a textarea takes
+        one number per line; the tag input takes each number followed by Enter."""
+        field = self.page.locator(self.INVITE_USERS_FIELD).first
+        field.wait_for(state="visible", timeout=15000)
+        if self.page.locator(self.INVITE_TAG_INPUT).count():
+            for phone in phone_numbers:
+                field.fill(phone)
+                field.press("Enter")
+        else:
+            field.fill("\n".join(phone_numbers))
+
     def invite_workers(self, base_url, org_slug, opp_id, phone_numbers):
         """Invite workers by full phone number, e.g. '+74267426000'.
 
@@ -64,7 +77,7 @@ class ConnectWorkersPage(BasePage):
         self.page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/user_invite/")
         self.page.wait_for_load_state("load")
         self._step(f"Invite workers: {', '.join(phone_numbers)}")
-        self.page.locator(self.INVITE_USERS_TEXTAREA).first.fill("\n".join(phone_numbers))
+        self._enter_invite_numbers(phone_numbers)
         self.click(self.INVITE_SUBMIT_BTN)
         self.page.wait_for_load_state("load")
 
@@ -746,8 +759,6 @@ class ConnectWorkersPage(BasePage):
     ADD_WORKER_BTN = locators.get("connect_workers_page", "add_worker_btn")
     RESEND_INVITES_BTN = locators.get("connect_workers_page", "resend_invites_btn")
     DELETE_WORKERS_BTN = locators.get("connect_workers_page", "delete_workers_btn")
-    INVITE_USERS_INPUT = locators.get("connect_workers_page", "invite_users_input")
-    INVITE_SUBMIT_BTN = locators.get("connect_workers_page", "invite_submit_btn")
     PENDING_INVITE_INDICATOR = locators.get("connect_workers_page", "pending_invite_indicator")
     WORKER_ROW_BY_PHONE = locators.get("connect_workers_page", "worker_row_by_phone")
     DELETE_INVITES_CONFIRM_BTN = locators.get("connect_workers_page", "delete_invites_confirm_btn")
@@ -887,9 +898,7 @@ class ConnectWorkersPage(BasePage):
         self._workers_url = self.page.url  # we are on /workers/ when inviting
         self._step(f"Invite worker {phone}")
         self.click(self.ADD_WORKER_BTN)
-        field = self.page.locator(self.INVITE_USERS_INPUT).first
-        field.wait_for(state="visible", timeout=15000)
-        field.fill(phone)
+        self._enter_invite_numbers([phone])
         self.click(self.INVITE_SUBMIT_BTN)
         self.page.wait_for_load_state("load")
         self.page.wait_for_timeout(2000)

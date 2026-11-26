@@ -14,7 +14,10 @@ class CCHQHomePage(BasePage):
 
     def select_app_under_applications_tab(self, app):
         self.click(self.APPLICATIONS_TAB)
-        self.page.get_by_role("link", name=app, exact=False).first.click()
+        # no_wait_after: HQ app pages can take >30s to settle, which made click()
+        # itself time out although the click landed; wait for the URL explicitly.
+        self.page.get_by_role("link", name=app, exact=False).first.click(no_wait_after=True)
+        self.page.wait_for_url("**/apps/view/**", timeout=90000)
         self.page.wait_for_load_state("load")
         assert "/apps/view" in self.page.url
 
