@@ -139,12 +139,21 @@ env:
 - swipe:
     start: "50%,1%"
     end: "50%,80%"
+#
+# UPDATE (2026-11-26): Connect no longer pushes this notice once connect-id#373 is
+# deployed (merged 26 Nov; staging first) - commcare-connect 593b6c7f sends it with
+# send_push=False, so it lands only in the app's own Notifications list (the bell).
+# The push is therefore optional: when one arrives it still ends the wait early;
+# without one, the 5-minute wait is the time Connect needs to mark the task
+# complete, and the sync + "pending warning gone" checks below prove it did.
 - extendedWaitUntil:
     visible:
       text: ".*${COMPLETION_NOTIFICATION_TITLE}.*"
-    timeout: 600000
+    timeout: 300000
+    optional: true
 - assertVisible:
     text: ".*${COMPLETION_NOTIFICATION_BODY}.*"
+    optional: true
 # Back closes the shade. An upward swipe does not - inside an open shade a
 # vertical drag scrolls the notification list, so the panel stayed up and every
 # assertion after it failed against system UI instead of the app.
