@@ -172,15 +172,36 @@ env:
     timeout: 180000
 
 # The delivery-progress card is checked first because its own "Click to sync
-# progress" button (btnSync) is what definitively refetches delivery progress -
+# progress" button (btnSync; delivery_sync_card from 2.65) is what definitively refetches delivery progress -
 # neither a CommCare sync nor merely opening the screen is guaranteed to.
 - tapOn: "View Job Status"
+# 2.65: "View Job Status" opens the delivery Dashboard tab, where the sync card
+# ("Press here to sync", delivery_sync_card) replaced btnSync - confirmed on the
+# 24 Nov post-deploy runs, which timed out waiting for btnSync on that tab. Older
+# builds still show btnSync, so handle both.
 - extendedWaitUntil:
     visible:
-      id: "btnSync"
+      id: "connect_delivery_home_tabs|btnSync"
     timeout: 90000
-- tapOn:
-    id: "btnSync"
+- runFlow:
+    when:
+      visible:
+        id: "btnSync"
+    commands:
+      - tapOn:
+          id: "btnSync"
+- runFlow:
+    when:
+      notVisible:
+        id: "btnSync"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "delivery_sync_card"
+          direction: DOWN
+          timeout: 20000
+      - tapOn:
+          id: "delivery_sync_card"
 - extendedWaitUntil:
     notVisible:
       text: ".*${PENDING_WARNING}.*"
