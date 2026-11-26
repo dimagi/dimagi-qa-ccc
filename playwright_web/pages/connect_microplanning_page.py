@@ -71,7 +71,8 @@ class MicroplanningPage(BasePage):
     REVIEW_VISIT_DATE_VALUE = locators.get("connect_microplanning_page", "review_visit_date_value")
     REVIEW_REASON_VALUE = locators.get("connect_microplanning_page", "review_reason_value")
     REVIEW_PHOTO_EVIDENCE_SECTION = locators.get("connect_microplanning_page", "review_photo_evidence_section")
-    REVIEW_RETURN_TO_MAP_BUTTON = locators.get("connect_microplanning_page", "review_return_to_map_button")
+    REVIEW_EXIT_LINK = locators.get("connect_microplanning_page", "review_exit_link")
+    REVIEW_REQUEST_ITEM_BY_SLUG = locators.get("connect_microplanning_page", "review_request_item_by_slug")
     REVIEW_DENY_BUTTON = locators.get("connect_microplanning_page", "review_deny_button")
     REVIEW_APPROVE_BUTTON = locators.get("connect_microplanning_page", "review_approve_button")
 
@@ -349,30 +350,37 @@ class MicroplanningPage(BasePage):
         return self.page.locator(self.MODIFY_WORK_AREA_MODAL).first.inner_text()
 
     # -- Microplanning_09/10/11: review an inaccessible-work-area request ------------
-    # The trigger button is x-show="selectedFeature.status === 'REQUEST_FOR_INACCESSIBLE'"
-    # in the same "Select Work Area" panel select_work_area_via_js populates, so a
-    # REQUEST_FOR_INACCESSIBLE work area selected that way is enough to reach it -
-    # no map click needed here either.
-    #
-    # Confirmed live 2026-09-23 on staging: the backend is fully deployed (GET
-    # .../review_inaccessibility/<id>/ returns 200 with real request data,
-    # Frontline Worker/Date of Visit/Reason) but the FRONTEND trigger isn't -
-    # neither the "Review Inaccessible" button nor Alpine's
-    # openReviewInaccessibilityModal() exist anywhere on the rendered page, even
-    # with a REQUEST_FOR_INACCESSIBLE work area selected. Deployed-vs-repo
-    # divergence, same pattern flagged elsewhere in this codebase, just the
-    # opposite direction (repo ahead of deploy, not behind). review_button_ready()
-    # lets callers skip cleanly instead of a 10s+ timeout hunting a button that
-    # isn't there yet.
+    # Current UI: a page-level "Review Inaccessibility Requests <n>" link opens
+    # ?inaccessible_mode=1, a list of the opportunity's pending requests (slug, age,
+    # assignee). Clicking one loads its details (Frontline Worker, Date of Visit,
+    # Building Count, Expected Visits, Reason, Photo Evidence) and the Deny / Approve
+    # buttons into #review-inaccessibility-fragment; "Exit" leaves the mode. An older
+    # build showed a "Review Inaccessible" button on a selected work area that opened
+    # a modal; the tests no longer use that flow.
 
-    def review_button_ready(self):
-        return self.page.locator(self.REVIEW_INACCESSIBLE_BUTTON).count() > 0
+    def review_button_ready(self, timeout_ms=10000):
+        """Whether the 'Review Inaccessibility Requests' link is shown (it only appears
+        while the opportunity has requests, and renders after the page loads)."""
+        try:
+            self.page.locator(self.REVIEW_INACCESSIBLE_BUTTON).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
 
-    def open_review_inaccessibility_modal(self):
-        self._step("Open 'Review Inaccessible' modal")
+    def open_review_requests(self):
+        """Enter inaccessible mode via the page-level link."""
+        self._step("Open 'Review Inaccessibility Requests'")
         self.click(self.REVIEW_INACCESSIBLE_BUTTON)
+        self.page.wait_for_load_state("load")
+
+    def open_review_request(self, work_area_slug):
+        """Open one request from the list by work-area slug and wait for its Deny button."""
+        self._step(f"Open inaccessibility request for {work_area_slug}")
+        item = self.page.locator(self.REVIEW_REQUEST_ITEM_BY_SLUG.format(slug=work_area_slug)).first
+        item.wait_for(state="visible", timeout=15000)
+        item.click()
         self.page.locator(self.REVIEW_INACCESSIBILITY_FRAGMENT).locator(self.REVIEW_DENY_BUTTON).first.wait_for(
-            state="visible", timeout=10000
+            state="visible", timeout=15000
         )
 
     def review_modal_fields_present(self):
@@ -380,7 +388,7 @@ class MicroplanningPage(BasePage):
             "visit_date": self.page.locator(self.REVIEW_VISIT_DATE_VALUE).count() > 0,
             "reason": self.page.locator(self.REVIEW_REASON_VALUE).count() > 0,
             "photo_evidence": self.page.locator(self.REVIEW_PHOTO_EVIDENCE_SECTION).count() > 0,
-            "return_to_map": self.page.locator(self.REVIEW_RETURN_TO_MAP_BUTTON).count() > 0,
+            "exit": self.page.locator(self.REVIEW_EXIT_LINK).count() > 0,
             "deny": self.page.locator(self.REVIEW_DENY_BUTTON).count() > 0,
             "approve": self.page.locator(self.REVIEW_APPROVE_BUTTON).count() > 0,
         }
