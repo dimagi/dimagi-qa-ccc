@@ -65,6 +65,9 @@ class MicroplanningPage(BasePage):
     SELECT_WORK_AREA_SECTION = locators.get("connect_microplanning_page", "select_work_area_section")
     MODIFY_WORK_AREA_BUTTON = locators.get("connect_microplanning_page", "modify_work_area_button")
     MODIFY_WORK_AREA_MODAL = locators.get("connect_microplanning_page", "modify_work_area_modal")
+    CLEAR_DATA_TOGGLE = locators.get("connect_microplanning_page", "clear_data_toggle")
+    CLEAR_DATA_ITEM_BY_LABEL = locators.get("connect_microplanning_page", "clear_data_item_by_label")
+    CLEAR_DATA_ITEM_DETAIL_BY_LABEL = locators.get("connect_microplanning_page", "clear_data_item_detail_by_label")
     REVIEW_INACCESSIBLE_BUTTON = locators.get("connect_microplanning_page", "review_inaccessible_button")
     REVIEW_INACCESSIBILITY_FRAGMENT = locators.get("connect_microplanning_page", "review_inaccessibility_fragment")
     REVIEW_MODAL_BACKDROP = locators.get("connect_microplanning_page", "review_inaccessibility_modal_backdrop")
@@ -348,6 +351,29 @@ class MicroplanningPage(BasePage):
 
     def modify_work_area_modal_text(self):
         return self.page.locator(self.MODIFY_WORK_AREA_MODAL).first.inner_text()
+
+    # -- Clear Data menu (Connect #1406) ---------------------------------------------
+
+    def clear_data_entries(self, labels):
+        """Open the Clear Data menu and read each entry without clicking it.
+
+        Returns {label: {"present", "disabled", "detail"}}; detail is the helper line
+        under the label (what it clears, or why it is disabled).
+        """
+        self.page.locator(self.CLEAR_DATA_TOGGLE).first.click()
+        entries = {}
+        for label in labels:
+            item = self.page.locator(self.CLEAR_DATA_ITEM_BY_LABEL.format(label=label))
+            present = item.count() > 0
+            entries[label] = {
+                "present": present,
+                "disabled": present and item.first.is_disabled(),
+                "detail": self.page.locator(self.CLEAR_DATA_ITEM_DETAIL_BY_LABEL.format(label=label)).first.inner_text().strip()
+                if present
+                else "",
+            }
+        self.page.locator(self.CLEAR_DATA_TOGGLE).first.click()  # close the menu again
+        return entries
 
     # -- Microplanning_09/10/11: review an inaccessible-work-area request ------------
     # Current UI: a page-level "Review Inaccessibility Requests <n>" link opens

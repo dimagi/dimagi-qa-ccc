@@ -1,0 +1,93 @@
+name: QA Agent - Release pending_prod tests
+
+# Once a commcare-connect PR reaches prod, its pending_prod copies become the tests
+# prod should run and the replaced_by_pr originals are dead. This opens (or updates)
+# one PR that deletes the originals and removes the pending_prod markers, so the
+# change stays reviewable rather than editing tests silently.
+#
+# commcare-connect's running-qa-test job is meant to dispatch this after each prod
+# deploy (QA Agent for Connect PRs doc). Until it does, the weekday schedule below
+# catches up; both read the latest successful production deployment when no SHA is
+# given, so running it twice for one deploy is harmless.
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployed_sha:
+        description: "Production commcare-connect commit (default: the latest successful production deployment)"
+        required: false
+        default: ""
+  schedule:
+    # Weekdays 03:30 UTC (09:00 IST), after the 6am IST suite window.
+    - cron: "30 3 * * 1-5"
+
+concurrency:
+  group: qa-pending-cleanup
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cleanup:
+    name: Release pending_prod tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Collapse pending_prod / replaced_by_pr pairs for PRs in prod
+        id: clean
+        working-directory: playwright_web
+        env:
+          # Read-only use: compares commits on the public commcare-connect repo.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+        run: |
+          python -m utils.pending_cleanup ${DEPLOYED_SHA:+--deployed-sha "$DEPLOYED_SHA"} --summary "$RUNNER_TEMP/summary.md"
+          if [ -s "$RUNNER_TEMP/summary.md" ] && [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            # The summary's first line names the production commit; key the branch on it.
+            echo "sha=$(head -1 "$RUNNER_TEMP/summary.md" | grep -oE '\([0-9a-f]{12}\)' | tr -d '()')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the cleaned tests still collect
+        if: steps.clean.outputs.changed == 'true'
+        working-directory: playwright_web
+        run: |
+          pip install --quiet -r requirements.txt
+          python -m pytest tests/unit -q
+          python -m pytest --collect-only -q --ignore=tests/unit > /dev/null
+
+      - name: Open or update the clean-up PR
+        if: steps.clean.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # One standing branch and PR, rebuilt from main on every run, so a second
+          # prod deploy before the first clean-up merges updates that PR instead of
+          # opening another.
+          BRANCH: qa-cleanup/release-pending-tests
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A playwright_web tests
+          git commit -m "Release pending_prod tests for Connect PRs in prod ${{ steps.clean.outputs.sha }}"
+          git push --force origin "$BRANCH"
+          {
+            echo "Automated by \`qa_pending_cleanup.yaml\`, rebuilt from main on each run. Review like any QA PR, and merge only when green."
+            echo "Opened with the workflow token, so the suites don't run on it automatically: dispatch playwright_web.yaml on this branch before merging."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+          } > "$RUNNER_TEMP/body.md"
+          if gh pr view "$BRANCH" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BRANCH" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base main --head "$BRANCH" \
+              --title "QA agent: release pending_prod tests for Connect PRs now in prod" \
+              --body-file "$RUNNER_TEMP/body.md"
+          fi

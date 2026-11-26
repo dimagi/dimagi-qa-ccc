@@ -617,6 +617,14 @@ MICROPLANNING_UI:
   core_metrics_ward_column: "Ward"
   # A range with no activity, to prove the Core Metrics values react to the date filter.
   empty_date_range: ["2000-01-01", "2000-01-02"]
+  # "Clear Data" menu (Connect #1406): entry labels, and the helper text each shows
+  # (microplanning/views.py get_clear_data_details).
+  clear_data_entries: ["Clear Work Areas", "Clear Work Area Groups", "Clear Implementation Areas"]
+  clear_work_areas_blocked_reasons:
+    - "Work Areas are assigned to FLWs and cannot be cleared."
+    - "No Work Areas have been uploaded yet."
+  # Enabled Clear Work Areas entry: "<n> record(s) — also clears Work Area Groups".
+  clear_work_areas_enabled_pattern: '^\d+ records? — also clears Work Area Groups$'
 
 # Invoices List page (Invoice_01-29, Invoice List_30-37). Runs against the
 # dedicated "Invoice Opp" (a dedicated opp that exists on both envs, owned by
