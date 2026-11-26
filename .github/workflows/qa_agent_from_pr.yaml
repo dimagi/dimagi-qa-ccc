@@ -399,7 +399,9 @@ jobs:
       - name: Unit tests and collection
         working-directory: playwright_web
         run: |
-          pip install --quiet -r requirements.txt
+          # pytest-html too: conftest.py implements its hooks, so pytest refuses to
+          # start without it (playwright_web.yaml installs it the same way).
+          pip install --quiet -r requirements.txt pytest-html
           python -m pytest tests/unit -q
           python -m pytest --collect-only -q --ignore=tests/unit > /dev/null
 
