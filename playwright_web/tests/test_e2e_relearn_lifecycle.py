@@ -155,9 +155,13 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     user_id = workers.worker_user_id(base_url, org, opp, worker_name)
     workers.goto_worker_visits_page(base_url, org, opp, user_id)
     blocked_row = workers.wait_for_visit(blocked_visit_name)
-    assert "reject" in blocked_row.lower(), (
+    # Connect's Visits tab changed by 26 Nov (stage): the row now shows the visit's flag
+    # label ("Pending Task", Flags.PENDING_TASK) instead of the "Rejected" status text.
+    # Either proves the gate fired; a visit that slipped through shows neither.
+    row = blocked_row.lower()
+    assert "reject" in row or "pending task" in row, (
         f"Visit '{blocked_visit_name}' was submitted with a task pending, so it should be "
-        f"rejected. Row reads: {blocked_row!r}"
+        f"rejected (status Rejected or flag Pending Task). Row reads: {blocked_row!r}"
     )
 
     # Session 2: only now complete the task, then submit the allowed visit. That
