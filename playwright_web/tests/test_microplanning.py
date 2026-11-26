@@ -235,36 +235,37 @@ def test_microplanning_34_sort_arrows_present(session, test_data):
 # -- Microplanning_16/17: select/modify a work area, driven via JS (no map click) --
 
 
-def test_microplanning_16_select_work_area_section(session, test_data):
+def test_microplanning_16_select_work_area_section(review_session, test_data):
+    # Runs on the MICROPLANNING_REVIEW opp: the shared OLP Test opp has no work areas at all.
     """Checks the Select Work Area side panel for a work area. The work area is
     selected by setting the map's Alpine state from JS, NOT by clicking it on the
     canvas, so this covers the panel's content, not click-to-select."""
-    connect_page, base, slug, opp_id = session
-    micro = _home(session)
+    connect_page, base, slug, opp_id = review_session
+    micro = _home(review_session)
     micro.enter_assignment_mode()  # cheapest path to a real assignee id
     work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
     micro.exit_assignment_mode()
     if work_area is None:
         skip_needs_data("No assignee on this opportunity has any assigned work areas to select")
-    micro = _home(session)
+    micro = _home(review_session)
     micro.select_work_area_via_js(work_area)
     text = micro.select_work_area_section_text()
     for label in test_data.get("MICROPLANNING_UI")["select_work_area_labels"]:
         assert label in text, f"'{label}' missing from the Select Work Area section: {text!r}"
 
 
-def test_microplanning_17_modify_work_area_form_fields(session):
+def test_microplanning_17_modify_work_area_form_fields(review_session):
     """Opens the Modify Work Area form and checks its fields render - does NOT
     submit/save, so this stays non-mutating against the shared fixture opp. The
     work area is selected via JS state (not a canvas click), as in test 16."""
-    connect_page, base, slug, opp_id = session
-    micro = _home(session)
+    connect_page, base, slug, opp_id = review_session
+    micro = _home(review_session)
     micro.enter_assignment_mode()
     work_area = micro.fetch_a_real_work_area(base, slug, opp_id)
     micro.exit_assignment_mode()
     if work_area is None:
         skip_needs_data("No assignee on this opportunity has any assigned work areas to select")
-    micro = _home(session)
+    micro = _home(review_session)
     micro.select_work_area_via_js(work_area)
     micro.open_modify_work_area_modal()
     text = micro.modify_work_area_modal_text()
@@ -336,6 +337,9 @@ def test_microplanning_39_ward_saturation_goal(session):
 
 
 def test_microplanning_40_core_metrics_update_on_date_filter(session, test_data):
+    # Needs visit activity in the Core Metrics (the work-area counts do not move with a
+    # date range) - the review opp has none, so this stays on the shared opp and skips
+    # needs-data until an opp with visits is seeded.
     ui = test_data.get("MICROPLANNING_UI")
     section = ui["coverage_sections"]["core_metrics"]
     micro = _home(session)
