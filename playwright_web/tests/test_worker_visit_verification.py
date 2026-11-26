@@ -487,20 +487,20 @@ def test_gap_w_41_visit_table_waffle_mode_consistent(connect, test_data):
         pytest.fail(f"Cannot tell the visit table type from its columns: {sorted(headers)}")
 
 
-def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data):
+def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data, config):
     """GAP-SRC-W-43: the bulk Approve All / Reject All controls and the select-all
     checkbox column are template-excluded for a PM (they exist only for a non-viewer
-    NM on a manual-review opp). The module session is the PM, so none must be present."""
-    connect_page, opps_url = connect
-    data = test_data.get("WORKER_VISIT_ACTION_GATING")
-    workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
-
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
-    if visits.has_review_tabs():
-        visits.click_tab_by_name("All")
-
+    NM on a manual-review opp). Opens the manual-review opp under the PM org's slug.
+    (covid_opp_test is no longer used: its PM org is also its NM, so the controls are
+    legitimately shown there.)"""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
+    if visits.has_visits_tasks_tabs():
+        skip_needs_data(
+            "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table "
+            "has no bulk controls to assert absent."
+        )
     approve, reject, select = visits.bulk_controls_present()
     assert not (approve or reject or select), (
         "PM should not see any bulk controls, but found "
@@ -543,7 +543,7 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, conf
 
     # PM (the module's session): manual+PM tab-set.
     visits = _open_review_visits(connect_page, config, data, "pm")
-    if visits.has_visits_tasks_tabs() or not visits.has_review_tabs():
+    if visits.has_visits_tasks_tabs() or not visits.review_tab_labels():
         skip_needs_data(
             f"Opportunity {data['opportunity_id']} does not render the verification tab-set "
             "(WORKER_VISITS_TASKS switch ON or no NM-review tabs) - GAP-SRC-W-40 needs "
