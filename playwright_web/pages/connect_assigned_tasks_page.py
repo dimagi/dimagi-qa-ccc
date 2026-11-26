@@ -43,6 +43,7 @@ class ConnectAssignedTasksPage(BasePage):
     CONFIRM_DELETE_BTN = locators.get("connect_assigned_tasks_page", "confirm_delete_btn")
     SUCCESS_MESSAGE = locators.get("connect_assigned_tasks_page", "success_message")
     ERROR_MESSAGE = locators.get("connect_assigned_tasks_page", "error_message")
+    ERROR_MESSAGE = locators.get("connect_assigned_tasks_page", "error_message")
     FILTER_STATUS_SELECT = locators.get("connect_assigned_tasks_page", "filter_status_select")
     FILTER_TASK_TYPE_SELECT = locators.get("connect_assigned_tasks_page", "filter_task_type_select")
     FILTER_APPLY_BTN = locators.get("connect_assigned_tasks_page", "filter_apply_btn")
@@ -131,9 +132,24 @@ class ConnectAssignedTasksPage(BasePage):
         wrapper = self.page.locator("#create-task-form-wrapper")
         if not wrapper.count():
             return
+        # The field text alone says nothing about *why*, so also report what rejected it:
+        # a Django error banner, server field errors, or the browser's own validation
+        # (e.g. a due date below the input's `min`) that stops the form being submitted.
+        banners = [t.strip() for t in self.page.locator(self.ERROR_MESSAGE).all_inner_texts() if t.strip()]
+        field_errors = [
+            t.strip()
+            for t in wrapper.locator("[class*='error'], [class*='invalid'], .errorlist li, [role='alert']").all_inner_texts()
+            if t.strip()
+        ]
+        invalid_inputs = wrapper.evaluate(
+            "el => [...el.querySelectorAll('input,select,textarea')]"
+            ".filter(e => !e.checkValidity()).map(e => (e.id || e.name) + ': ' + e.validationMessage)"
+        )
         raise AssertionError(
             "Create Task form was not accepted - it is still open showing: "
-            f"{' | '.join(t.strip() for t in wrapper.all_inner_texts())!r}"
+            f"{' | '.join(t.strip() for t in wrapper.all_inner_texts())!r}. "
+            f"Error banners: {banners or 'none'}; field errors: {field_errors or 'none'}; "
+            f"browser-invalid inputs: {invalid_inputs or 'none'}"
         )
 
     def check_past_due_date_cannot_be_selected(self, days_ago=3):
