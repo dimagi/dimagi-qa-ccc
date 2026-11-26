@@ -20,6 +20,7 @@ work areas that were seeded directly rather than routed through assignment.
 
 import math
 import re
+import time
 
 import mapbox_vector_tile
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -427,23 +428,54 @@ class MicroplanningPage(BasePage):
     def review_reason(self):
         return self.page.locator(self.REVIEW_REASON_VALUE).first.inner_text().strip()
 
+    def _submit_review(self, button_locator, action):
+        """Click Deny/Approve and return the form POST's status. The form is an hx-post
+        (hx-swap none) to .../review_inaccessibility/<id>/action/; the response, not a
+        modal closing, is the signal that the review was accepted."""
+        with self.page.expect_response(
+            lambda r: "/review_inaccessibility/" in r.url and r.url.rstrip("/").endswith("/action"),
+            timeout=30000,
+        ) as response_info:
+            self.click(button_locator)
+        status = response_info.value.status
+        self._step(f"{action} request answered with HTTP {status}")
+        return status
+
     def deny_inaccessibility_request(self):
         """Submits the review form with action=deny (server maps this to
         WorkAreaStatus.NOT_VISITED and sends the worker a push notification).
-        The 204 response's HX-Trigger (inaccessibilityReviewed) closes the modal
-        and updates selectedFeature.status client-side - wait on the backdrop
-        (x-show wrapper), not the fragment div, which stays in the DOM."""
+        Returns the POST's HTTP status."""
         self._step("Deny inaccessibility request")
-        self.click(self.REVIEW_DENY_BUTTON)
-        self.page.locator(self.REVIEW_MODAL_BACKDROP).first.wait_for(state="hidden", timeout=15000)
+        return self._submit_review(self.REVIEW_DENY_BUTTON, "Deny")
 
     def approve_inaccessibility_request(self):
         """Submits the review form with action=approve (server maps this to
         WorkAreaStatus.INACCESSIBLE, no notification - approve is the worker's
-        own request being confirmed)."""
+        own request being confirmed). Returns the POST's HTTP status."""
         self._step("Approve inaccessibility request")
-        self.click(self.REVIEW_APPROVE_BUTTON)
-        self.page.locator(self.REVIEW_MODAL_BACKDROP).first.wait_for(state="hidden", timeout=15000)
+        return self._submit_review(self.REVIEW_APPROVE_BUTTON, "Approve")
+
+    def wait_for_work_area_status(self, host, org_slug, opp_id, work_area_slug, expected, timeout_s=45):
+        """Poll the opp's work areas until the one with this code reaches `expected`;
+        returns the last status seen (so the caller can assert on it). The work-area
+        download lives on the main microplanning page, not the review (inaccessible_mode)
+        page, so every poll reloads the main page first."""
+        home = f"{host}/a/{org_slug}/microplanning/{opp_id}/"
+        deadline = time.monotonic() + timeout_s
+        status = None
+        while True:
+            self.page.goto(home)
+            self.page.wait_for_load_state("load")
+            self.verify_loaded()
+            area = next(
+                (wa for wa in self.fetch_all_work_areas(host, org_slug, opp_id) if wa.get("slug") == work_area_slug),
+                None,
+            )
+            status = area.get("status") if area else "not found"
+            if status == expected or time.monotonic() >= deadline:
+                self._step(f"Work area {work_area_slug} status: {status}")
+                return status
+            self.page.wait_for_timeout(3000)
 
     def selected_feature_status(self):
         """The Alpine `selectedFeature.status` after a review action - the same

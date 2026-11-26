@@ -480,25 +480,35 @@ def test_microplanning_09_review_inaccessibility_details(review_session, test_da
     assert micro.review_reason(), "Reason is empty"
 
 
-@pytest.mark.skip(
-    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the deny steps and "
-    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
-    "Tracking ticket: TBD (to be created)"
-)
 @pytest.mark.consumes_seed_data
 def test_microplanning_10_deny_inaccessibility_request(review_session, test_data, config):
-    """Steps/expected in the MTP: click Deny -> push notification sent, work
-    area status updates (to NOT_VISITED). Consumes MICROPLANNING_REVIEW.deny_work_area_id.
-    Skipped until rewritten for the new review flow."""
+    """MTP: click Deny -> push notification sent, work area status updates (to
+    NOT_VISITED). Consumes MICROPLANNING_REVIEW.deny_work_area_*. The status is read back
+    from the opp's work areas, not from the page, so it proves the server applied it."""
+    connect_page, base, slug, opp_id = review_session
+    micro = _review_home(review_session)
+    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "deny_work_area_id")
+    _require_review_ui(micro)
+    micro.open_review_requests()
+    micro.open_review_request(work_area["slug"])
+    http_status = micro.deny_inaccessibility_request()
+    assert http_status < 300, f"Deny was rejected by the server (HTTP {http_status})"
+    status = micro.wait_for_work_area_status(base, slug, opp_id, work_area["slug"], "NOT_VISITED")
+    assert status == "NOT_VISITED", f"Work area {work_area['slug']} is {status} after deny, expected NOT_VISITED"
 
 
-@pytest.mark.skip(
-    reason="Review flow moved to ?inaccessible_mode=1 (list + details panel); the approve steps and "
-    "assertions need rewriting against a fresh REQUEST_FOR_INACCESSIBLE work area. "
-    "Tracking ticket: TBD (to be created)"
-)
 @pytest.mark.consumes_seed_data
 def test_microplanning_11_approve_inaccessibility_request(review_session, test_data, config):
-    """Steps/expected in the MTP: click Approve as Inaccessible -> push notification sent, work
-    area status updates (to INACCESSIBLE). Consumes MICROPLANNING_REVIEW.approve_work_area_id.
-    Skipped until rewritten for the new review flow."""
+    """MTP: click Approve as Inaccessible -> work area is marked inaccessible (status
+    INACCESSIBLE). Consumes MICROPLANNING_REVIEW.approve_work_area_*; status is read
+    back from the opp's work areas."""
+    connect_page, base, slug, opp_id = review_session
+    micro = _review_home(review_session)
+    work_area = _pending_work_area(micro, test_data, config, base, slug, opp_id, "approve_work_area_id")
+    _require_review_ui(micro)
+    micro.open_review_requests()
+    micro.open_review_request(work_area["slug"])
+    http_status = micro.approve_inaccessibility_request()
+    assert http_status < 300, f"Approve was rejected by the server (HTTP {http_status})"
+    status = micro.wait_for_work_area_status(base, slug, opp_id, work_area["slug"], "INACCESSIBLE")
+    assert status == "INACCESSIBLE", f"Work area {work_area['slug']} is {status} after approve, expected INACCESSIBLE"
