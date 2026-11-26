@@ -43,26 +43,30 @@ class LLODirectoryPage(BasePage):
     def url(self, path=""):
         return f"{self.host()}/organizations/{path}"
 
+    # The Organizations/Contacts pages intermittently take over Playwright's 30s default to load
+    # on staging; a slow page is not a failure, a page that never loads is.
+    NAV_TIMEOUT_MS = 90_000
+
     def goto(self, url):
         self._step(f"goto {url}")
         try:
-            response = self.page.goto(url)
+            response = self.page.goto(url, wait_until="domcontentloaded", timeout=self.NAV_TIMEOUT_MS)
         except PlaywrightError as exc:
             # A modal save ends in an htmx redirect; a goto that lands while it is still navigating is aborted.
             if "ERR_ABORTED" not in str(exc):
                 raise
-            self.page.wait_for_load_state("load")
-            response = self.page.goto(url)
-        self.page.wait_for_load_state("load")
+            self.page.wait_for_load_state("load", timeout=self.NAV_TIMEOUT_MS)
+            response = self.page.goto(url, wait_until="domcontentloaded", timeout=self.NAV_TIMEOUT_MS)
+        self.page.wait_for_load_state("load", timeout=self.NAV_TIMEOUT_MS)
         return response
 
     def open_organizations(self, query=""):
         self.goto(self.url() + query)
-        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=20000)
+        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     def open_contacts(self, query=""):
         self.goto(self.url("contacts/") + query)
-        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=20000)
+        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     def status_of(self, url, method="GET", fields=None):
         """HTTP status of a same-origin request (follows redirects)."""
@@ -173,7 +177,7 @@ class LLODirectoryPage(BasePage):
         self._step("Apply filters")
         self.page.locator(_vis("filter_apply")).first.click()
         self.page.wait_for_load_state("load")
-        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=20000)
+        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     def reset_filters(self):
         """Prod has a 'Reset' link; staging has none, so its unfiltered listing is reopened instead."""
@@ -183,7 +187,7 @@ class LLODirectoryPage(BasePage):
             self.page.wait_for_load_state("load")
         else:
             self.goto(self.url("contacts/") if "/contacts/" in self.page.url else self.url())
-        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=20000)
+        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     def has_reset(self):
         return self.page.locator(_vis("filter_reset")).count() > 0
@@ -276,6 +280,16 @@ class LLODirectoryPage(BasePage):
             tag = element.evaluate("e => e.tagName")
             if tag == "SELECT":
                 self._set_select(key, value)
+            elif tag == "TEXTAREA" and not element.is_visible():
+                # Emails and links are tag inputs now (Enter/comma/space per entry) with the real
+                # field hidden behind them. These tests feed raw multi-line text to check the
+                # server's cleaning and validation, so set the field itself, as fill() used to.
+                self._step(f"set hidden #{key} (tag input in front of it)")
+                element.evaluate(
+                    "(e, v) => { e.value = v; e.dispatchEvent(new Event('input', {bubbles: true})); "
+                    "e.dispatchEvent(new Event('change', {bubbles: true})); }",
+                    str(value),
+                )
             else:
                 element.fill(str(value))
 
