@@ -22,8 +22,8 @@ Two jobs, both agreed with the dev team (Mobile Automation QA Plan, tasks B2/B3)
   must match its release tag. Only a qaAutomation asset counts (see above), so this
   finds nothing until releases carry one alongside app-commcare-release.apk.
 
-The staging (cccStaging) APK stays committed in app/ until there is a fixed place to
-fetch dev/beta staging builds from.
+Stage runs can test the latest dev build instead of the committed cccStaging APK:
+dev_build.py fetches it from a commcare-android master build (dispatching one if needed).
 
 Usage:
     python maestro_mobile/scripts/apk_check.py fetch-release          # -> app/app-commcare-release.apk

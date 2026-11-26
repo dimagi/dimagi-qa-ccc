@@ -37,6 +37,14 @@ on:
         options:
           - committed app/ file
           - latest release
+      stage_apk:
+        description: "APK for stage runs. 'committed app/ file' = app/app-cccStaging-release.apk on this branch (a cccStaging qaAutomation build of 2.65.0); 'latest dev build' = the cccStaging qaAutomation APK from a commcare-android master build, dispatched if master has moved (about 30 minutes). Needs the COMMCARE_ANDROID_TOKEN secret."
+        required: false
+        default: "committed app/ file"
+        type: choice
+        options:
+          - committed app/ file
+          - latest dev build
       # Set to post-deploy by the deploy pipeline's dispatch (dev repo). Post-deploy
       # results go to the automated-results channel under a "post-deploy" label;
       # PR and manual runs go to the branch-test channel under the actor's name.
@@ -52,7 +60,9 @@ on:
   # Mon-Fri 04:00 IST (22:30 UTC the evening before), staging only: the dev/beta build
   # against Connect staging, before anyone is online. A full stage run takes about 40
   # minutes, so even a scheduled start that is half an hour late finishes before the
-  # CommCare mobile suite takes the shared BrowserStack slots at 00:30 UTC.
+  # CommCare mobile suite takes the shared BrowserStack slots at 00:30 UTC. Building a
+  # fresh master APK adds about 30 minutes before the first BrowserStack session; the
+  # build runs on commcare-android's runners, not on the shared slots.
   schedule:
     - cron: "30 22 * * 0-4"
 
@@ -125,6 +135,8 @@ jobs:
       APP_ENV: ${{ matrix.environment }}
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      # Secrets can't be tested in a step's if:, so expose whether the token exists.
+      HAS_COMMCARE_ANDROID_TOKEN: ${{ secrets.COMMCARE_ANDROID_TOKEN != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -199,6 +211,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python maestro_mobile/scripts/apk_check.py fetch-release
+
+      # Stage runs test the dev build (QA Plan B1/B3): the cccStaging qaAutomation APK
+      # from commcare-android's master, built by dispatching its PR CI workflow when no
+      # build of master's current commit exists yet. A manual run opts in with
+      # stage_apk; the weekday schedule uses it whenever the COMMCARE_ANDROID_TOKEN
+      # secret exists (the A1 interrupt ticket asks the dev team for that token), and
+      # tests the committed app/ file until then. If master's newest build failed, the
+      # script falls back to an older master build and the job summary says so.
+      - name: Fetch latest dev build (stage)
+        id: dev_build
+        if: >-
+          ${{ matrix.environment == 'stage' && (
+            (github.event_name == 'workflow_dispatch' && inputs.stage_apk == 'latest dev build') ||
+            (github.event_name == 'schedule' && env.HAS_COMMCARE_ANDROID_TOKEN == 'true')) }}
+        env:
+          COMMCARE_ANDROID_TOKEN: ${{ secrets.COMMCARE_ANDROID_TOKEN }}
+        run: >-
+          python maestro_mobile/scripts/dev_build.py
+          --artifact ccc-staging-qaAutomation-release-apk
+          --out app/app-cccStaging-release.apk
 
       # The report's trend line needs the previous runs' pass rates, and reports are
       # artifacts rather than committed files. Cached per environment: stage and prod
