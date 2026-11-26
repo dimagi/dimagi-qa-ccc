@@ -347,6 +347,23 @@ The mobile suite always runs in full: the dev team asked for the complete suite 
 - Areas are picked by test file name (`tests/test_olp_*.py` is Opportunities, etc.), so a new test file joins its area automatically.
 - The Slack card, email and run name say what ran (for example `Programs · stage`), so a partial run isn't mistaken for a full one.
 
+---
+### 🤖 QA Agent for Connect PRs
+Design: the "QA Agent for Connect PRs" doc. When a commcare-connect PR changes behaviour, the agent updates the scripts it breaks and drafts cases for what's new, as a QA PR for review. Updated and new tests carry `@pytest.mark.pending_prod(pr=<n>)` and the originals they replace `@pytest.mark.replaced_by_pr(<n>)`; every run (Playwright and Selenium) picks between them by whether PR `<n>` is in the deployed build (`playwright_web/utils/pr_gating.py`).
+
+| Workflow | What it does | Started by |
+| --- | --- | --- |
+| [qa_agent_from_pr.yaml](https://github.com/dimagi/dimagi-qa-ccc/actions/workflows/qa_agent_from_pr.yaml) | Runs the `qa-ticket-prep` skill's PR mode for one Connect PR and opens or updates the QA PR on `qa-agent/connect-pr-<n>`. Skips drafts, Dependabot, `no-qa` and docs-only PRs, and PRs whose head it has already processed. Closes the QA PR if the Connect PR is closed unmerged. | commcare-connect on ready for review / approved / closed (job still to be added on their side), or by hand with a PR number |
+| [qa_pending_cleanup.yaml](https://github.com/dimagi/dimagi-qa-ccc/actions/workflows/qa_pending_cleanup.yaml) | For Connect PRs now in production, deletes the `replaced_by_pr` originals and removes the `pending_prod` markers, as one standing PR on `qa-cleanup/release-pending-tests`. | commcare-connect's prod deploy (to be added), and weekdays 03:30 UTC as a fallback |
+
+- **How it reaches Claude:** workload identity federation, with no stored API key. The agent job asks GitHub for an OIDC token and swaps it for a short-lived Claude token, refreshed every 5 minutes. It needs repository variables `ANTHROPIC_FEDERATION_RULE_ID` and `ANTHROPIC_ORGANIZATION_ID` (plus `ANTHROPIC_SERVICE_ACCOUNT_ID` and `ANTHROPIC_WORKSPACE_ID`, all set on 24 Nov from the rule Simon created), and a federation rule in the Claude Console for `repo:dimagi/dimagi-qa-ccc:ref:refs/heads/main`.
+- **Secrets the agent needs:** `JIRA_BASE_URL`, `JIRA_EMAIL` and `JIRA_API_TOKEN` to read tickets. Without them it works from the PR alone and says so.
+- **How it's contained:** the agent reads untrusted PR text, so it runs in a job with a read-only token and can edit files but not run anything. The impact check and Jira tickets are gathered before it starts. Its changes are checked for Anthropic tokens and the Jira token, tested in a separate job with no secrets, and pushed by a third job that runs only `git` and `gh`.
+- **Reviewing an agent PR: read every changed `.py` file, not just the summary.** The agent wrote them from untrusted text, and they run with the suites' secrets (HQ, BrowserStack) as soon as a suite is dispatched on that branch. Review the code first, then dispatch.
+- **Locally:** `cd playwright_web && python -m utils.impact_check --pr <n>`, `python -m utils.jira_ticket CCCT-1234`, and `python -m utils.pending_cleanup --dry-run`.
+- PRs opened by these workflows use the workflow token, so the suites don't run on them automatically: after reviewing the code, dispatch `playwright_web.yaml` on the branch before merging.
+- Tested cases move from `test_plans/pending/` into the master plans with the skill's finalize mode (`test_plans/README.md`).
+
 ## ⚠️ Mobile Test Execution – Important Considerations
 
 ### 1. Payment Flow Limitation (TC_6)

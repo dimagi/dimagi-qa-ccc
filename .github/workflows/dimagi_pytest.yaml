@@ -34,6 +34,15 @@ on:
           - mobile
           - both
 
+      deployed_sha:
+        description: "Deployed commcare-connect commit; picks pending_prod / replaced_by_pr tests per PR (default: the environment's latest successful deployment)"
+        required: false
+        default: ""
+      deployed_prs:
+        description: "Or: comma-separated Connect PR numbers to treat as deployed (overrides deployed_sha)"
+        required: false
+        default: ""
+
 # --------------------------------------------------------
 # Resolve Matrix
 # --------------------------------------------------------
@@ -90,6 +99,12 @@ jobs:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Connect PR gating (playwright_web/utils/pr_gating.py, via the root conftest):
+      # with neither set, the run reads the latest successful commcare-connect
+      # deployment to TEST_ENV. GITHUB_TOKEN only reads the public Connect repo.
+      DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+      DEPLOYED_PRS: ${{ inputs.deployed_prs }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
     steps:
@@ -250,6 +265,12 @@ jobs:
       BIOMETRIC_ENABLED: "false"
       RUN_ON: "browserstack"
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Connect PR gating (playwright_web/utils/pr_gating.py, via the root conftest):
+      # with neither set, the run reads the latest successful commcare-connect
+      # deployment to TEST_ENV. GITHUB_TOKEN only reads the public Connect repo.
+      DEPLOYED_SHA: ${{ inputs.deployed_sha }}
+      DEPLOYED_PRS: ${{ inputs.deployed_prs }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4

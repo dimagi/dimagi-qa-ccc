@@ -48,7 +48,9 @@ cchq_application_page:
 
 connect_home_page:
   login_with_cc_hq: "//span[normalize-space()='Login with CommCareHQ']"
-  org_list_item_by_name: ".//li[(.//p)[1][normalize-space()='{organization_name}']]"
+  # Stage has the new switcher (name in span[x-text=item.name]); prod still renders the
+  # name as the row's FIRST <p> (the role line is the second, so matching any <p> is ambiguous).
+  org_list_item_by_name: ".//li[.//span[@x-text='item.name'][normalize-space()='{organization_name}'] or (.//p)[1][normalize-space()='{organization_name}']]"
   org_list_items: ".//li"
   authorize_button: "//button[normalize-space()='Authorize'] | //input[@name='allow']"
   # CommCare HQ's OAuth consent screen requires at least one project space before
@@ -57,7 +59,9 @@ connect_home_page:
   opportunities_navbar_item: "//a[contains(@href, '/opportunity/')]"
   programs_navbar_item: "//a[contains(@href, '/program/')]"
   organization_container: "//ul[contains(@class,'overflow-y-auto')]"
-  organization_dropdown: "//i[contains(@class, 'fa-chevron-down')]"
+  organization_dropdown: "//header//button[div[@class='text-left']]//i[contains(@class, 'fa-chevron-down')]"
+  # The switcher's own Apply (Alpine @click="apply()"), so the filter modal's Apply can't match.
+  organization_apply_button: "//button[@*[name()='@click']='apply()'][normalize-space()='Apply']"
   organization_name: "(//header//button/div[@class='text-left']//p[contains(@class,'medium')])[1]"
 
 connect_opportunities_page:
@@ -79,7 +83,7 @@ connect_opportunities_page:
   learn_app_passing_score_input: "id_learn_app_passing_score"
   organization_dropdown: "id_organization"
   submit_button: "submit-id-submit"
-  add_payment_btn: "//button[@type='button']"
+  add_payment_btn: "//button[@type='button'][normalize-space()='Add Payment Unit']"
   amount_input: "id_amount"
   max_total_input: "id_max_total"
   max_daily_input: "id_max_daily"
@@ -93,6 +97,8 @@ connect_opportunities_page:
   page_size: "page-size"
 
 opportunity_dashboard_page:
+  # Value next to the "End Date" label in the details block.
+  end_date_value: "//*[normalize-space()='End Date']/following-sibling::*[1]"
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"
   # Relative sub-locators used on an already-located card / row element.
   card_count_h3: ".//h3[contains(@class,'text-2xl')]"
@@ -393,8 +399,6 @@ connect_workers_page:
   add_worker_btn: "//a[@x-tooltip.raw='Add Worker'] | //button[@x-tooltip.raw='Add Worker']"
   resend_invites_btn: "//button[@x-tooltip.raw='Resend Invite(s)']"
   delete_workers_btn: "//button[@x-tooltip.raw='Delete Worker(s)']"
-  invite_users_input: "id_users"
-  invite_submit_btn: "submit-id-submit"
   # Status indicators shown in the worker row (StatusIndicatorColumn).
   pending_invite_indicator: "//span[@x-tooltip.raw='Invite pending']"
   # A worker row addressed by the phone number it carries.
@@ -495,8 +499,12 @@ worker_visits_page:
 
 # --- Worker invite + hybrid (Phase 2) ---
 connect_worker_invite_page:
-  users_textarea: "id_users"
-  submit_btn: "submit-id-submit"
+  # The invite page has two builds: a plain #id_users textarea (one number per line, submit
+  # #submit-id-submit) and a tag input (numbers entered with Enter, which hides #id_users;
+  # submit #send-invites). users_field is whichever of the two the user can type in.
+  users_field: "//*[(@id='id_users' and not(@hidden)) or @id='id_users_tag_input']"
+  tag_input: "id_users_tag_input"
+  submit_btn: "//input[@type='submit'][@id='submit-id-submit' or @id='send-invites']"
   form_title: "//*[contains(normalize-space(.),'Invite Connect Workers')]"
   error_text: "//*[contains(@class,'invalid-feedback') or contains(@class,'errorlist')]"
 
@@ -707,20 +715,30 @@ connect_microplanning_page:
   # The map's Alpine component root; selecting a work area is driven through its state.
   map_controller_root: "//*[@x-data='mapController()']"
   flw_summary_section: "//h3[normalize-space()='FLW Summary']/ancestor::div[contains(@class,'border-t')][1]"
-  flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View summary by FLW')] | //a[contains(normalize-space(),'View summary by FLW')]"
+  # The rendered text is "View Summary by FLW" (capital S); XPath contains() is case-sensitive.
+  flw_summary_view_by_flw_btn: "//button[contains(normalize-space(),'View Summary by FLW')] | //a[contains(normalize-space(),'View Summary by FLW')]"
   flw_summary_view_visits_btn: "//button[contains(normalize-space(),'View Visits')] | //a[contains(normalize-space(),'View Visits')]"
   select_work_area_section: "//h2[normalize-space()='Select Work Area']/ancestor::aside[1]"
   modify_work_area_button: "//button[contains(normalize-space(),'Modify Work Area')]"
   modify_work_area_modal: "work-area-form"
-  review_inaccessible_button: "//button[contains(normalize-space(),'Review Inaccessible')]"
+  # Review flow (current UI): a page-level link opens ?inaccessible_mode=1, a list of pending
+  # requests; clicking one loads its details + Deny/Approve into review-inaccessibility-fragment.
+  review_inaccessible_button: "//a[contains(normalize-space(),'Review Inaccessibility Requests')]"
+  review_request_item_by_slug: "//aside//li[contains(concat(' ', normalize-space(), ' '), ' {slug} ')]"
   review_inaccessibility_fragment: "review-inaccessibility-fragment"
   review_inaccessibility_modal_backdrop: "//div[@id='review-inaccessibility-fragment']/ancestor::div[contains(@class,'modal-backdrop')][1]"
   review_visit_date_value: "//dt[normalize-space()='Date of Visit']/following-sibling::dd[1]"
   review_reason_value: "//dt[normalize-space()='Reason']/following-sibling::dd[1]"
   review_photo_evidence_section: "//p[normalize-space()='Photo Evidence']/parent::div"
-  review_return_to_map_button: "//button[contains(normalize-space(),'Return to Progress Map')]"
+  review_exit_link: "//a[normalize-space()='Exit']"
   review_deny_button: "//button[@name='action' and @value='deny']"
   review_approve_button: "//button[@name='action' and @value='approve']"
+  # "Clear Data" dropdown (home.html, Connect #1406): Clear Work Areas / Work Area
+  # Groups / Implementation Areas, each with a helper line saying what it clears
+  # or why it is disabled.
+  clear_data_toggle: "//details[contains(@class,'dropdown')]/summary[contains(normalize-space(),'Clear Data')]"
+  clear_data_item_by_label: "//details[contains(@class,'dropdown')][summary[contains(normalize-space(),'Clear Data')]]//button[contains(@class,'dropdown-item')][.//p[normalize-space()='{label}']]"
+  clear_data_item_detail_by_label: "//details[contains(@class,'dropdown')][summary[contains(normalize-space(),'Clear Data')]]//button[contains(@class,'dropdown-item')][.//p[normalize-space()='{label}']]//p[contains(@class,'text-xs')]"
 connect_coverage_progress_page:
   page_title: "//h1[normalize-space()='Coverage Progress Tracker']"
   ward_saturation_label: "//p[contains(normalize-space(),'Ward Saturation Goal')]"

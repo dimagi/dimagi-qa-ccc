@@ -65,13 +65,17 @@ class MicroplanningPage(BasePage):
     SELECT_WORK_AREA_SECTION = locators.get("connect_microplanning_page", "select_work_area_section")
     MODIFY_WORK_AREA_BUTTON = locators.get("connect_microplanning_page", "modify_work_area_button")
     MODIFY_WORK_AREA_MODAL = locators.get("connect_microplanning_page", "modify_work_area_modal")
+    CLEAR_DATA_TOGGLE = locators.get("connect_microplanning_page", "clear_data_toggle")
+    CLEAR_DATA_ITEM_BY_LABEL = locators.get("connect_microplanning_page", "clear_data_item_by_label")
+    CLEAR_DATA_ITEM_DETAIL_BY_LABEL = locators.get("connect_microplanning_page", "clear_data_item_detail_by_label")
     REVIEW_INACCESSIBLE_BUTTON = locators.get("connect_microplanning_page", "review_inaccessible_button")
     REVIEW_INACCESSIBILITY_FRAGMENT = locators.get("connect_microplanning_page", "review_inaccessibility_fragment")
     REVIEW_MODAL_BACKDROP = locators.get("connect_microplanning_page", "review_inaccessibility_modal_backdrop")
     REVIEW_VISIT_DATE_VALUE = locators.get("connect_microplanning_page", "review_visit_date_value")
     REVIEW_REASON_VALUE = locators.get("connect_microplanning_page", "review_reason_value")
     REVIEW_PHOTO_EVIDENCE_SECTION = locators.get("connect_microplanning_page", "review_photo_evidence_section")
-    REVIEW_RETURN_TO_MAP_BUTTON = locators.get("connect_microplanning_page", "review_return_to_map_button")
+    REVIEW_EXIT_LINK = locators.get("connect_microplanning_page", "review_exit_link")
+    REVIEW_REQUEST_ITEM_BY_SLUG = locators.get("connect_microplanning_page", "review_request_item_by_slug")
     REVIEW_DENY_BUTTON = locators.get("connect_microplanning_page", "review_deny_button")
     REVIEW_APPROVE_BUTTON = locators.get("connect_microplanning_page", "review_approve_button")
 
@@ -103,8 +107,18 @@ class MicroplanningPage(BasePage):
         return present
 
     def _select_option_labels(self, options_locator):
-        options = self.page.locator(options_locator).all_inner_texts()
-        return [o.strip() for o in options if o.strip() and not o.strip().startswith("---")]
+        """Labels of the real options. The empty placeholder is identified by its empty
+        value attribute (as _option_values does), not by how its text looks, so any
+        placeholder wording or dash style is skipped."""
+        labels = []
+        for option in self.page.locator(options_locator).all():
+            # .value (not the attribute): an <option> without a value attribute reports its text.
+            if not option.evaluate("e => e.value"):
+                continue
+            text = option.inner_text().strip()
+            if text:
+                labels.append(text)
+        return labels
 
     def status_filter_options(self):
         labels = self._select_option_labels(self.FILTER_STATUS_OPTIONS)
@@ -182,15 +196,49 @@ class MicroplanningPage(BasePage):
     def flw_summary_text(self):
         return self.page.locator(self.FLW_SUMMARY_SECTION).first.inner_text()
 
+    def flw_summary_control_visible(self, locator, timeout_ms=15000):
+        """Wait for an FLW Summary action link to render. The links sit behind an
+        x-if on "assignee chosen and summary loaded", so they appear after the
+        always-present 'FLW Summary' header; counting them straight after that header
+        shows 0. False only if the control never renders."""
+        try:
+            self.page.locator(locator).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
+
+    def _click_and_follow(self, locator):
+        """Click an FLW Summary link and return the page it lands on. These links are
+        target=_blank, so the destination is a new tab; if the app ever stops opening
+        a tab, the click navigates this page and this page is returned."""
+        opened = []
+        def on_page(new_page):
+            opened.append(new_page)
+
+        self.page.context.on("page", on_page)
+        try:
+            # A click failure is a real failure and must surface; only the popup wait below
+            # decides between "new tab" and "same page".
+            self.click(locator)
+            for _ in range(50):
+                if opened:
+                    break
+                self.page.wait_for_timeout(200)
+        finally:
+            self.page.context.remove_listener("page", on_page)
+        target = opened[0] if opened else self.page
+        target.wait_for_load_state("load")
+        return target
+
     def open_flw_summary_by_flw(self):
-        self._step("Open 'View summary by FLW'")
-        self.click(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
-        self.page.wait_for_load_state("load")
+        """Click 'View Summary by FLW'; returns the page it opened (caller closes a new tab)."""
+        self._step("Open 'View Summary by FLW'")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_BY_FLW_BTN)
 
     def open_flw_summary_visits(self):
+        """Click 'View Visits'; returns the page it opened (caller closes a new tab)."""
         self._step("Open FLW summary 'View Visits'")
-        self.click(self.FLW_SUMMARY_VIEW_VISITS_BTN)
-        self.page.wait_for_load_state("load")
+        return self._click_and_follow(self.FLW_SUMMARY_VIEW_VISITS_BTN)
 
     # -- Microplanning_16/17: select/modify a single work area (non-assignment-mode) -
     # No map click needed: mapController()'s single-select state (`selectedFeature`)
@@ -304,31 +352,61 @@ class MicroplanningPage(BasePage):
     def modify_work_area_modal_text(self):
         return self.page.locator(self.MODIFY_WORK_AREA_MODAL).first.inner_text()
 
+    # -- Clear Data menu (Connect #1406) ---------------------------------------------
+
+    def clear_data_entries(self, labels):
+        """Open the Clear Data menu and read each entry without clicking it.
+
+        Returns {label: {"present", "disabled", "detail"}}; detail is the helper line
+        under the label (what it clears, or why it is disabled).
+        """
+        self.page.locator(self.CLEAR_DATA_TOGGLE).first.click()
+        entries = {}
+        for label in labels:
+            item = self.page.locator(self.CLEAR_DATA_ITEM_BY_LABEL.format(label=label))
+            present = item.count() > 0
+            entries[label] = {
+                "present": present,
+                "disabled": present and item.first.is_disabled(),
+                "detail": self.page.locator(self.CLEAR_DATA_ITEM_DETAIL_BY_LABEL.format(label=label)).first.inner_text().strip()
+                if present
+                else "",
+            }
+        self.page.locator(self.CLEAR_DATA_TOGGLE).first.click()  # close the menu again
+        return entries
+
     # -- Microplanning_09/10/11: review an inaccessible-work-area request ------------
-    # The trigger button is x-show="selectedFeature.status === 'REQUEST_FOR_INACCESSIBLE'"
-    # in the same "Select Work Area" panel select_work_area_via_js populates, so a
-    # REQUEST_FOR_INACCESSIBLE work area selected that way is enough to reach it -
-    # no map click needed here either.
-    #
-    # Confirmed live 2026-09-23 on staging: the backend is fully deployed (GET
-    # .../review_inaccessibility/<id>/ returns 200 with real request data,
-    # Frontline Worker/Date of Visit/Reason) but the FRONTEND trigger isn't -
-    # neither the "Review Inaccessible" button nor Alpine's
-    # openReviewInaccessibilityModal() exist anywhere on the rendered page, even
-    # with a REQUEST_FOR_INACCESSIBLE work area selected. Deployed-vs-repo
-    # divergence, same pattern flagged elsewhere in this codebase, just the
-    # opposite direction (repo ahead of deploy, not behind). review_button_ready()
-    # lets callers skip cleanly instead of a 10s+ timeout hunting a button that
-    # isn't there yet.
+    # Current UI: a page-level "Review Inaccessibility Requests <n>" link opens
+    # ?inaccessible_mode=1, a list of the opportunity's pending requests (slug, age,
+    # assignee). Clicking one loads its details (Frontline Worker, Date of Visit,
+    # Building Count, Expected Visits, Reason, Photo Evidence) and the Deny / Approve
+    # buttons into #review-inaccessibility-fragment; "Exit" leaves the mode. An older
+    # build showed a "Review Inaccessible" button on a selected work area that opened
+    # a modal; the tests no longer use that flow.
 
-    def review_button_ready(self):
-        return self.page.locator(self.REVIEW_INACCESSIBLE_BUTTON).count() > 0
+    def review_button_ready(self, timeout_ms=10000):
+        """Whether the 'Review Inaccessibility Requests' link is shown (it only appears
+        while the opportunity has requests, and renders after the page loads)."""
+        try:
+            self.page.locator(self.REVIEW_INACCESSIBLE_BUTTON).first.wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except PlaywrightTimeoutError:
+            return False
 
-    def open_review_inaccessibility_modal(self):
-        self._step("Open 'Review Inaccessible' modal")
+    def open_review_requests(self):
+        """Enter inaccessible mode via the page-level link."""
+        self._step("Open 'Review Inaccessibility Requests'")
         self.click(self.REVIEW_INACCESSIBLE_BUTTON)
+        self.page.wait_for_load_state("load")
+
+    def open_review_request(self, work_area_slug):
+        """Open one request from the list by work-area slug and wait for its Deny button."""
+        self._step(f"Open inaccessibility request for {work_area_slug}")
+        item = self.page.locator(self.REVIEW_REQUEST_ITEM_BY_SLUG.format(slug=work_area_slug)).first
+        item.wait_for(state="visible", timeout=15000)
+        item.click()
         self.page.locator(self.REVIEW_INACCESSIBILITY_FRAGMENT).locator(self.REVIEW_DENY_BUTTON).first.wait_for(
-            state="visible", timeout=10000
+            state="visible", timeout=15000
         )
 
     def review_modal_fields_present(self):
@@ -336,7 +414,7 @@ class MicroplanningPage(BasePage):
             "visit_date": self.page.locator(self.REVIEW_VISIT_DATE_VALUE).count() > 0,
             "reason": self.page.locator(self.REVIEW_REASON_VALUE).count() > 0,
             "photo_evidence": self.page.locator(self.REVIEW_PHOTO_EVIDENCE_SECTION).count() > 0,
-            "return_to_map": self.page.locator(self.REVIEW_RETURN_TO_MAP_BUTTON).count() > 0,
+            "exit": self.page.locator(self.REVIEW_EXIT_LINK).count() > 0,
             "deny": self.page.locator(self.REVIEW_DENY_BUTTON).count() > 0,
             "approve": self.page.locator(self.REVIEW_APPROVE_BUTTON).count() > 0,
         }
