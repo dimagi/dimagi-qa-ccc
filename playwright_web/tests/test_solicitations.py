@@ -413,7 +413,7 @@ def test_solicitations_08_validation(ctx, sp, data):
     sp.save_and_continue_server_validated()
     assert sp.has_text(msgs["choice"])
     sp.select_question_type(0, "Number")
-    assert not sp.choice_options_visible(0), "Options box must be hidden for non-choice types"
+    assert sp.choice_options_hidden(0), "Options box must be hidden for non-choice types"
     sp.page.locator("#id_questions-0-choice_options").evaluate("e => e.value = 'stale'")
     sp.save_and_continue()
     assert "/publish/" in sp.page.url

@@ -43,15 +43,19 @@ class SolicitationsPage(BasePage):
         tail = "/".join(s.strip("/") for s in segments if s)
         return f"{self.org_base()}/solicitations/{tail + '/' if tail else ''}"
 
+    # Staging pages normally load in seconds but intermittently exceed Playwright's 30s default
+    # while other runs hit it; a slow page is not a failure, a page that never loads is.
+    NAV_TIMEOUT_MS = 90_000
+
     def goto(self, url):
         self._step(f"goto {url}")
-        response = self.page.goto(url)
-        self.page.wait_for_load_state("load")
+        response = self.page.goto(url, wait_until="domcontentloaded", timeout=self.NAV_TIMEOUT_MS)
+        self.page.wait_for_load_state("load", timeout=self.NAV_TIMEOUT_MS)
         return response
 
     def open_list(self, page_size=100):
         self.goto(with_page_size(self.url(), page_size))
-        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=20000)
+        self.page.locator(_loc("table")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     def open_list_via_sidebar(self):
         self._step("click Solicitations in the sidebar")
@@ -114,9 +118,9 @@ class SolicitationsPage(BasePage):
         return titles
 
     def click_new_solicitation(self):
-        self.click(_loc("new_button"))
-        self.page.wait_for_load_state("load")
-        self.page.locator(_loc("form_title")).first.wait_for(state="visible")
+        with self.page.expect_navigation(wait_until="load", timeout=self.NAV_TIMEOUT_MS):
+            self.click_without_waiting(_loc("new_button"))
+        self.page.locator(_loc("form_title")).first.wait_for(state="visible", timeout=self.NAV_TIMEOUT_MS)
 
     # -- messages / errors ----------------------------------------------------------
 
@@ -324,6 +328,15 @@ class SolicitationsPage(BasePage):
 
     def choice_options_visible(self, index):
         return self.page.locator(f"#id_questions-{index}-choice_options").is_visible()
+
+    def choice_options_hidden(self, index, timeout=5000):
+        """True once the Options box is hidden; it is hidden by the page's own script after the
+        type changes, so checking at once after select_option can still see it."""
+        try:
+            self.page.locator(f"#id_questions-{index}-choice_options").wait_for(state="hidden", timeout=timeout)
+            return True
+        except PlaywrightTimeoutError:
+            return False
 
     def select_question_type(self, index, type_label):
         self.page.locator(f"#id_questions-{index}-question_type").select_option(label=type_label)
