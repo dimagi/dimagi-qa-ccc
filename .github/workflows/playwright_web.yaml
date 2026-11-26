@@ -94,6 +94,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Connect's production deploy dispatches only this workflow (source=post-deploy,
+  # environment=prod). Start the Connect mobile (Maestro) suite against prod too, so the
+  # app is checked after every Connect deploy. It starts right away rather than after
+  # the web run, as agreed with Shubham (21 Oct: deploy-triggered runs start straight
+  # after the deploy, even mid-day). If a prod mobile run is already going, this one
+  # waits for it to finish rather than cancelling it, and its results go to the automated-results
+  # channel under the post-deploy label.
+  start-mobile-suite:
+    name: Start the Connect mobile suite (post-deploy)
+    if: github.event_name == 'workflow_dispatch' && inputs.source == 'post-deploy' && (inputs.environment == 'prod' || inputs.environment == 'both')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch maestro_mobile.yaml on prod
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.ref_name }}
+        run: |
+          gh workflow run maestro_mobile.yaml --repo "$GITHUB_REPOSITORY" --ref "$REF" \
+            -f environment=prod -f source=post-deploy
+          echo "Started the Connect mobile suite on prod: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/maestro_mobile.yaml"
+
   resolve-matrix:
     name: Resolve Environment Matrix
     runs-on: ubuntu-latest
