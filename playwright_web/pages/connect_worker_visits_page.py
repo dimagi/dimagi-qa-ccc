@@ -7,6 +7,8 @@ Playwright waits and the individual-row checkbox is anchored on the first data r
 rather than a hard-coded entity name.
 """
 
+import re
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
@@ -100,7 +102,12 @@ class WorkerVisitsPage(BasePage):
         are role-sensitive, so callers assert the mode/role-invariant parts (which
         Pending tab is present, that the set ends with All) rather than exact labels."""
         self.page.locator(self.TABS_CONTAINER).first.wait_for(state="visible", timeout=15000)
-        labels = [t.strip() for t in self.page.locator(self.ALL_TABS).all_inner_texts() if t.strip()]
+        # Tabs show a count after the name ("All (47)"); compare on the name alone.
+        labels = [
+            re.sub(r"\s*\(\d+\)$", "", " ".join(t.split()))
+            for t in self.page.locator(self.ALL_TABS).all_inner_texts()
+            if t.strip()
+        ]
         self._step(f"Verification tab labels: {labels}")
         return labels
 

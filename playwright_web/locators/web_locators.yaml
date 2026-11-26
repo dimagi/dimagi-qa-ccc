@@ -453,7 +453,9 @@ worker_visits_page:
   approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
   reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
   tabs_container: "//div[contains(@class,'tabs')]"
-  tab_item_by_name: "//a[contains(@class,'tab')][normalize-space()='{tab_name}'] | //label[contains(@class,'tab')][normalize-space()='{tab_name}']"
+  # A tab label may carry a count, e.g. "Pending NM Review (6)" - match the name alone
+  # or the name followed by "(".
+  tab_item_by_name: "//a[contains(@class,'tab')][normalize-space()='{tab_name}' or (starts-with(normalize-space(), '{tab_name}') and starts-with(normalize-space(substring-after(normalize-space(), '{tab_name}')), '('))] | //label[contains(@class,'tab')][normalize-space()='{tab_name}' or (starts-with(normalize-space(), '{tab_name}') and starts-with(normalize-space(substring-after(normalize-space(), '{tab_name}')), '('))]"
   # Every tab in the bar, in document order - used to assert the mode x role
   # verification tab-set (GAP-SRC-W-40).
   all_tabs: "//div[contains(@class,'tabs')]//a[contains(@class,'tab')] | //div[contains(@class,'tabs')]//label[contains(@class,'tab')]"

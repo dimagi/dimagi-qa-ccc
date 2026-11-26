@@ -224,42 +224,34 @@ def test_vv_04_suspend_and_revoke(connect, test_data):
     visits.revoke_suspension_for_worker()
 
 
-def test_vv_05_visit_tabs_render(connect, test_data):
-    """VV_5: the worker Visits page exposes its tabs. On manual-review opportunities
-    that is the Pending NM Review / Approved / Rejected / All tab-set (GAP-SRC-W-40,
-    the mode x role tab-set), each rendering the visits table; opportunities without
-    NM review expose only the Visits/Tasks pair, in which case the review-tab
-    coverage is skipped with a pointer to seed a manual-review opportunity."""
-    connect_page, opps_url = connect
-    data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_5")
-    workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
+def test_vv_05_visit_tabs_render(connect, test_data, config):
+    """VV_5: on a manual-review opportunity the worker Visits page exposes the
+    Pending NM Review / Approved / Rejected / All tab-set (GAP-SRC-W-40, the mode x
+    role tab-set), each rendering the visits table.
 
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.verify_deliver_table_headers_present()
-
-    workers.navigate_to_worker_visits(data["worker_name"])
+    Runs as the NM against the seeded manual-review opportunity (the VV_31-35 data;
+    covid_opp_test has no NM review, so it can never show these tabs). Read-only: it
+    only switches tabs."""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "nm")
     visits.verify_worker_visits_tabs_present()
 
-    if visits.has_review_tabs():
-        # Pending NM Review has no Last Activity column.
-        visits.click_tab_by_name("Pending NM Review")
-        visits.verify_worker_visits_table_headers_present(pending=True)
-        # Approved / Rejected / All each render the table.
-        for tab in ("Approved", "Rejected", "All"):
-            visits.click_tab_by_name(tab)
-            visits.verify_worker_visits_table_headers_present()
-    else:
-        # This opportunity/worker has no NM-review sub-tabs (only Visits/Tasks), so
-        # the four review tabs cannot be exercised here. Still assert the Visits
-        # table renders, and flag that VV_5 review-tab coverage needs an NM-review opportunity in
-        # test data for full coverage.
-        visits.verify_worker_visits_table_headers_present()
+    if not visits.has_review_tabs():
         skip_needs_data(
-            f"'{data['opportunity_name']}' / '{data['worker_name']}' exposes no NM-review "
-            "sub-tabs - point WORKER_VISIT_VERIFICATION_PAGE_5 at a manual-review "
-            "opportunity to cover the Pending NM Review / Approved / Rejected / All tabs."
+            f"Opportunity {data['opportunity_id']} shows no NM-review tabs "
+            f"(Visits/Tasks tabs present: {visits.has_visits_tasks_tabs()}) - the "
+            "WORKER_VISITS_TASKS switch is probably ON for it, which replaces the "
+            "verification tab-set with the plain Visits/Tasks pair."
         )
+
+    # Pending NM Review has no Last Activity column.
+    visits.click_tab_by_name("Pending NM Review")
+    visits.verify_worker_visits_table_headers_present(pending=True)
+    # Approved / Rejected / All each render the table.
+    for tab in ("Approved", "Rejected", "All"):
+        visits.click_tab_by_name(tab)
+        visits.verify_worker_visits_table_headers_present()
 
 
 def test_vv_09_visit_details_panel(connect, test_data):
@@ -495,20 +487,20 @@ def test_gap_w_41_visit_table_waffle_mode_consistent(connect, test_data):
         pytest.fail(f"Cannot tell the visit table type from its columns: {sorted(headers)}")
 
 
-def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data):
+def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data, config):
     """GAP-SRC-W-43: the bulk Approve All / Reject All controls and the select-all
     checkbox column are template-excluded for a PM (they exist only for a non-viewer
-    NM on a manual-review opp). The module session is the PM, so none must be present."""
-    connect_page, opps_url = connect
-    data = test_data.get("WORKER_VISIT_ACTION_GATING")
-    workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
-
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
-    if visits.has_review_tabs():
-        visits.click_tab_by_name("All")
-
+    NM on a manual-review opp). Opens the manual-review opp under the PM org's slug.
+    (covid_opp_test is no longer used: its PM org is also its NM, so the controls are
+    legitimately shown there.)"""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
+    if visits.has_visits_tasks_tabs():
+        skip_needs_data(
+            "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table "
+            "has no bulk controls to assert absent."
+        )
     approve, reject, select = visits.bulk_controls_present()
     assert not (approve or reject or select), (
         "PM should not see any bulk controls, but found "
@@ -551,7 +543,7 @@ def test_gap_w_40_verification_tab_set_by_mode_and_role(connect, test_data, conf
 
     # PM (the module's session): manual+PM tab-set.
     visits = _open_review_visits(connect_page, config, data, "pm")
-    if visits.has_visits_tasks_tabs() or not visits.has_review_tabs():
+    if visits.has_visits_tasks_tabs() or not visits.review_tab_labels():
         skip_needs_data(
             f"Opportunity {data['opportunity_id']} does not render the verification tab-set "
             "(WORKER_VISITS_TASKS switch ON or no NM-review tabs) - GAP-SRC-W-40 needs "

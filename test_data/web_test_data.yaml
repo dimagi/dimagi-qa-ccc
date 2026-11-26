@@ -105,10 +105,7 @@ WORKER_VISIT_VERIFICATION_PAGE_4:
   worker_name: "Deb Test 8/12"
   reason: "Suspend user reason"
 
-# VV_5 - Visits/Tasks tabs (and NM-review tab-set on manual-review opps).
-WORKER_VISIT_VERIFICATION_PAGE_5:
-  opportunity_name: "covid_opp_test"
-  worker_name: "Deb Test 8/12"
+# VV_5 uses the manual-review opp (WORKER_VISIT_VERIFICATION_PAGE_31_32_33_34), as the NM.
 
 # VV_9 - clicking a visit opens the details panel (Information / Verification
 # Parameters / Map). Any worker with at least one visit works.
