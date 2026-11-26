@@ -451,7 +451,8 @@ worker_visits_page:
   approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
   reject_button: "(//div[@id='visit-actions']//button[contains(normalize-space(), 'Reject')])[1]"
   tabs_container: "//div[contains(@class,'tabs')]"
-  tab_item_by_name: "//a[contains(@class,'tab')][normalize-space()='{tab_name}'] | //label[contains(@class,'tab')][normalize-space()='{tab_name}']"
+  # Tab labels can carry a count ("Pending NM Review (0)", "All (5)"), so match the start of the label.
+  tab_item_by_name: "//a[contains(@class,'tab')][starts-with(normalize-space(),'{tab_name}')] | //label[contains(@class,'tab')][starts-with(normalize-space(),'{tab_name}')]"
   # Every tab in the bar, in document order - used to assert the mode x role
   # verification tab-set (GAP-SRC-W-40).
   all_tabs: "//div[contains(@class,'tabs')]//a[contains(@class,'tab')] | //div[contains(@class,'tabs')]//label[contains(@class,'tab')]"
