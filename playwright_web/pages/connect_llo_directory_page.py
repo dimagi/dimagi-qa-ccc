@@ -164,8 +164,16 @@ class LLODirectoryPage(BasePage):
         return self.page.locator("body").inner_text()
 
     def hover_status_info(self):
+        """Hover the Status info icon; callers wait for the tooltip text (has_text) rather than a fixed pause."""
         self.page.locator(_loc("status_info_icon")).first.hover()
-        self.page.wait_for_timeout(500)
+
+    def has_mailto_link(self, name, email):
+        """Whether `name`'s row links its email as a mailto: link."""
+        return self.row(name).locator(_loc("mailto_link_by_email").format(email=email)).count() == 1
+
+    def rendered_markup_count(self):
+        """Bold elements inside the table cells: names containing <b> must be shown as text, not rendered."""
+        return self.page.locator(_loc("table_cell_bold")).count()
 
     # -- filters --------------------------------------------------------------------
 
@@ -322,7 +330,20 @@ class LLODirectoryPage(BasePage):
             self.page.evaluate("document.querySelectorAll('form').forEach(f => f.noValidate = true)")
         self._step("Save modal")
         self.page.locator(_vis("modal_save")).first.click()
-        self.page.wait_for_timeout(800)
+        self._wait_htmx_idle()
+
+    def _wait_htmx_idle(self, timeout=15000):
+        """Wait for the save's htmx request and the swap of its response to finish. Nothing to wait
+        for when the browser's own validation blocked the submit (no request was sent)."""
+        try:
+            self.page.wait_for_function(
+                "() => !document.querySelector('.htmx-request, .htmx-swapping, .htmx-settling')", timeout=timeout
+            )
+        except PlaywrightTimeoutError:
+            raise
+        except PlaywrightError:
+            # A save that ends in an HX-Redirect navigates away mid-wait; the next page's load is the signal.
+            self.page.wait_for_load_state("load", timeout=self.NAV_TIMEOUT_MS)
 
     def wait_modal_closed(self, timeout=15000):
         self.page.wait_for_function(
@@ -348,7 +369,11 @@ class LLODirectoryPage(BasePage):
             self.page.keyboard.press("Escape")
         elif how == "outside":
             self.page.mouse.click(5, 5)
-        self.page.wait_for_timeout(600)
+        # Wait for the dialog to go; if it never does, the caller's own check reports which way failed.
+        try:
+            self.page.locator(_vis("modal")).first.wait_for(state="hidden", timeout=5000)
+        except PlaywrightTimeoutError:
+            pass
 
     # -- high level: organizations -------------------------------------------------------
 
@@ -363,7 +388,7 @@ class LLODirectoryPage(BasePage):
 
     # -- high level: contacts ------------------------------------------------------------
 
-    def create_contact(self, name, org_name, email, title="QA Lead", phone="+911234567890", poc=False, notes="n"):
+    def create_contact(self, name, org_name, email, title, phone, notes, poc=False):
         self.open_contacts()
         self.open_add_contact()
         self.fill_modal(name=name, title=title, email=email, phone=phone, notes=notes)
@@ -372,9 +397,13 @@ class LLODirectoryPage(BasePage):
         self.modal_save()
         self.wait_modal_closed()
 
-    def archive_contact(self, name, confirm=True):
+    def open_archive_dialog(self, name):
+        """Click a contact's Archive control and wait for the confirm dialog."""
         self.page.locator(_loc("archive_button_by_name").format(name=name)).first.click()
         self.page.locator(_vis("archive_confirm")).first.wait_for(state="visible", timeout=10000)
+
+    def archive_contact(self, name, confirm=True):
+        self.open_archive_dialog(name)
         if confirm:
             self.page.locator(_vis("archive_confirm")).first.click()
             self.page.wait_for_load_state("load")
@@ -399,7 +428,7 @@ class LLODirectoryPage(BasePage):
     def export(self, fmt, timeout=90000):
         """Run Export contacts in `fmt` ('CSV' / 'Excel') and return the downloaded file's path."""
         self._step(f"Export contacts as {fmt}")
-        button = self.page.get_by_role("button", name=re.compile("Export contacts")).first
+        button = self.page.locator(_vis("export_open_button")).first
         try:
             button.wait_for(state="visible", timeout=15000)
         except PlaywrightTimeoutError:

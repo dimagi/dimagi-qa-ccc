@@ -708,11 +708,24 @@ LLO_DIRECTORY:
   msa_link: "https://example.com/msa"
   work_order_link: "https://example.com/work-order"
   eoi_links: "https://example.com/eoi-1\nhttps://example.com/eoi-2"
-  statuses: ["Active", "Inactive", "Prospective"]
   status_definitions: ["1+ open contracts", "0 open contracts, and 1+ previously active contracts"]
   contact_title: "QA Lead"
   contact_phone: "+911234567890"
+  contact_notes: "Automated"
   earliest_year: 1800
+  added_date_format: "%d-%b-%Y"      # the Added column
+  empty_value: "—"                    # a blank status / Main POC cell
+  has_used_connect_options: ["Yes", "No"]
+  team_size_options: ["1-10", "11-50", "51-200", "201-500", "500+"]
+  org_non_sortable_columns: ["Org Team Size", "Actions"]
+  contact_sortable_columns: ["Organization", "Role / Title", "Email"]
+  contact_non_sortable_columns: ["Phone", "Actions"]
+  # Export: file names, the columns the CSV must carry (Main POC is named differently per build).
+  contact_csv_columns: ["Contact Name", "Organization", "Role / Title", "Email", "Phone", "Notes"]
+  main_poc_csv_columns: ["Main POC", "Main Point of Contact"]
+  csv_formula_columns: ["Contact Name", "Role / Title", "Notes"]
+  csv_filename_prefix: "contacts_"
+  unsupported_export_format: "pdf"
   messages:
     org_added: "Organization {name} added."
     org_updated: "Organization {name} updated."
@@ -720,7 +733,16 @@ LLO_DIRECTORY:
     contact_archived: "Contact {name} archived."
     contact_restored: "Contact {name} restored."
     dup_name: "An organization with this name already exists."
+    contact_updated: "Contact {name} updated."
     required: "This field is required."
     no_orgs: "No organizations found."
     no_contacts: "No contacts found."
-    unsupported_format: "Unsupported export format."
+    invalid_emails: "Invalid email(s): {entries}"
+    invalid_urls: "Invalid URL(s): {entries}"
+    valid_url: "Enter a valid URL."
+    valid_email: "Enter a valid email address."
+    flws_negative: "greater than or equal to 0"
+    year_range: "Year must be between {earliest} and {latest}."
+    email_taken: "This email already belongs to {owner}"
+    email_taken_archived_marker: "(archived)"
+    archive_dialog: "Archive {name}"

@@ -29,10 +29,11 @@ import re
 from urllib.parse import quote_plus
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from flows.olp_setup import PM_ORG
 from flows.tasking_static import login_to_connect
-from pages.connect_llo_directory_page import LLODirectoryPage, slugify
+from pages.connect_llo_directory_page import LLODirectoryPage
 from utils.skips import skip_needs_data, skip_not_applicable
 
 STAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%m%d%H%M%S")
@@ -45,7 +46,7 @@ def ctx(browser, config, settings, test_data):
     try:
         try:
             connect_page = login_to_connect(page, config, settings, PM_ORG)
-        except Exception:
+        except PlaywrightTimeoutError:  # a slow first login is retried once on a fresh page
             page.close()
             page = context.new_page()
             connect_page = login_to_connect(page, config, settings, PM_ORG)
@@ -100,7 +101,8 @@ def _email(tag):
 
 def _make_contact(dp, data, org, tag, poc=False, email=None):
     name = _name(data, f"contact-{tag}")
-    dp.create_contact(name, org, email or _email(tag), data["contact_title"], data["contact_phone"], poc=poc)
+    dp.create_contact(name, org, email or _email(tag), data["contact_title"], data["contact_phone"],
+                      data["contact_notes"], poc=poc)
     return name
 
 
@@ -121,10 +123,12 @@ def test_llodir_01_directory_listed_under_admin(ctx, dp):
     """LLODir_01: Admin shows LLO Directory; the page opens with Organizations and Contacts tabs, each with a count."""
     dp.open_organizations()
     assert dp.admin_link_present(), "Admin group must list LLO Directory"
-    assert dp.tab_count("organizations") > 0
-    assert dp.tab_count("contacts") >= 0
+    organizations, contacts = dp.tab_count("organizations"), dp.tab_count("contacts")
+    assert organizations > 0
     dp.open_contacts()
     assert dp.admin_link_present(), "Admin group stays expanded on the Contacts tab"
+    assert (dp.tab_count("organizations"), dp.tab_count("contacts")) == (organizations, contacts), \
+        "Tab counts must be the same on both tabs"
 
 
 def test_llodir_02_users_without_permission(ctx):
@@ -146,12 +150,12 @@ def test_llodir_03_organization_listing(ctx, dp, data):
     assert dp.result_count() == dp.tab_count("organizations"), "Count text must match the Organizations tab"
     added = dp.header_matching("Added")
     if added:
-        dates = [datetime.datetime.strptime(d, "%d-%b-%Y") for d in dp.column(added) if d and d != "—"]
+        dates = [datetime.datetime.strptime(d, data["added_date_format"]) for d in dp.column(added)
+                 if d and d != data["empty_value"]]
         assert dates == sorted(dates, reverse=True), f"Organizations must be newest first: {dates[:5]}"
     dp.hover_status_info()
     for definition in data["status_definitions"]:
-        assert definition in dp.page.locator("body").inner_text() or dp.page.get_by_text(definition).count() > 0, \
-            f"Status tooltip missing '{definition}'"
+        assert dp.has_text(definition), f"Status tooltip missing '{definition}'"
 
 
 @pytest.mark.consumes_seed_data
@@ -207,7 +211,8 @@ def test_llodir_05_organization_validation(ctx, dp, data, staging):
                   eoi_links="not a url", latest_msa_link="nope", latest_work_order_link="nope")
     dp.modal_save(server_validated=True)
     text = dp.modal_error_text()
-    for expected in ("Invalid email(s): not-an-email", "Invalid URL(s): not a url", "Enter a valid URL."):
+    for expected in (_msg(data, "invalid_emails", entries="not-an-email"), _msg(data, "invalid_urls", entries="not a url"),
+                     data["messages"]["valid_url"]):
         assert expected in text, f"Missing '{expected}'"
 
 
@@ -236,10 +241,10 @@ def test_llodir_06_edit_organization(ctx, dp, data, staging):
     assert new_href.split("?")[0] == href.split("?")[0], "Renaming must keep the organization's URL"
 
     dp.open_edit(renamed)
-    dp.fill_modal(status="—")
+    dp.fill_modal(status=data["empty_value"])
     dp.modal_save()
     dp.wait_modal_closed()
-    assert dp.row_values(renamed)[status_col] in ("—", ""), "Cleared status must show no badge"
+    assert dp.row_values(renamed)[status_col] in (data["empty_value"], ""), "Cleared status must show no badge"
 
     for how in ("cancel", "x", "escape", "outside"):
         dp.open_edit(renamed)
@@ -273,7 +278,8 @@ def test_llodir_07_search_filter_sort_paging(ctx, dp, data):
 
     dp.reset_filters()
     assert dp.result_count() == total, "Reset must clear every filter"
-    assert not dp.sortable("Org Team Size") and not dp.sortable("Actions"), "Org Team Size / Actions must not sort"
+    for header in data["org_non_sortable_columns"]:
+        assert not dp.sortable(header), f"{header} must not sort"
     dp.sort_by("Name")
     # The database ignores punctuation when ordering ("Ajeet's Org" sorts as "ajeets org").
     names = [re.sub(r"[^a-z0-9]", "", n.lower()) for n in dp.column("Name")]
@@ -313,7 +319,8 @@ def test_llodir_08_add_contact(ctx, dp, data, staging):
 
     name = _name(data, "contact-add")
     email = _email("add")
-    dp.fill_modal(name=name, title=data["contact_title"], email=email, phone=data["contact_phone"], notes="n")
+    dp.fill_modal(name=name, title=data["contact_title"], email=email, phone=data["contact_phone"],
+                  notes=data["contact_notes"])
     dp._set_select("organization", org)
     dp._set_select("is_main_poc", "Yes")
     dp.modal_save()
@@ -322,7 +329,7 @@ def test_llodir_08_add_contact(ctx, dp, data, staging):
     _focus(dp, name)
     row = dp.row_values(name)
     assert org in row.values() and data["contact_title"] in row.values() and data["contact_phone"] in row.values()
-    assert dp.row(name).locator(f"a[href='mailto:{email}']").count() == 1, "Email must be a mailto link"
+    assert dp.has_mailto_link(name, email), "Email must be a mailto link"
     assert dp.tab_count("contacts") == before + 1
 
 
@@ -334,23 +341,24 @@ def test_llodir_09_contact_email_unique(ctx, dp, data, staging):
     archived = _make_contact(dp, data, org, "uniq-b")
     _focus(dp, archived)
     dp.archive_contact(archived)
-    for name_taken, owner, archived_note in ((_email("uniq-a"), active, ""), (_email("uniq-b"), archived, "(archived)")):
+    for name_taken, owner, archived_note in ((_email("uniq-a"), active, ""), (_email("uniq-b"), archived, "archived")):
         dp.open_contacts()
         dp.open_add_contact()
         dp.fill_modal(name=_name(data, "contact-dup"), email=name_taken.upper())
         dp._set_select("organization", org)
         dp.modal_save()
-        expected = f"This email already belongs to {owner}" + (f" {archived_note}" if archived_note else "") + f" at {slugify(org)}"
+        marker = data["messages"]["email_taken_archived_marker"]
+        expected = _msg(data, "email_taken", owner=owner) + (f" {marker}" if archived_note else "") + f" at {org}"
         text = dp.modal_error_text()
-        assert f"This email already belongs to {owner}" in text, f"Duplicate email message missing: {text[-300:]}"
-        assert bool(archived_note) == ("(archived)" in text), "Archived marker must appear only for archived contacts"
+        assert expected in text, f"Duplicate email message missing '{expected}': {text[-300:]}"
+        assert bool(archived_note) == (marker in text), "Archived marker must appear only for archived contacts"
         dp.close_modal("cancel")
     _focus(dp, active)
     dp.open_edit(active)
     dp.fill_modal(title="Updated Title")
     dp.modal_save()
     dp.wait_modal_closed()
-    assert dp.has_text(f"Contact {active} updated."), "Editing a contact without changing its email must save"
+    assert dp.has_text(_msg(data, "contact_updated", name=active)), "Editing a contact without changing its email must save"
 
 
 @pytest.mark.consumes_seed_data
@@ -369,7 +377,7 @@ def test_llodir_10_main_poc_and_move(ctx, dp, data, staging):
     dp.wait_modal_closed()
     _focus(dp, term)
     assert dp.row_values(second)[poc_col] == "Yes"
-    assert dp.row_values(first)[poc_col] == "—", "The previous Main POC must be unmarked"
+    assert dp.row_values(first)[poc_col] == data["empty_value"], "The previous Main POC must be unmarked"
 
     dp.open_edit(first)
     dp._set_select("organization", org_b)
@@ -387,8 +395,8 @@ def test_llodir_11_archive_restore_contact(ctx, dp, data, staging):
     _focus(dp, name)
     dp.archive_contact(name, confirm=False)
     assert dp.has_row(name), "Cancel must keep the contact"
-    dp.page.locator("xpath=//*[@aria-label=\"Archive %s\"]" % name).first.click()
-    assert f"Archive {name}" in dp.archive_dialog_text(), "Archive confirm dialog text missing"
+    dp.open_archive_dialog(name)
+    assert _msg(data, "archive_dialog", name=name) in dp.archive_dialog_text(), "Archive confirm dialog text missing"
     dp.close_modal("cancel")
     dp.archive_contact(name)
     assert dp.has_text(_msg(data, "contact_archived", name=name)) and not dp.has_row(name)
@@ -409,6 +417,8 @@ def test_llodir_12_contact_search_and_filters(ctx, dp, data, config):
     dp.open_contacts()
     if dp.row_count() == 0 or dp.has_text(data["messages"]["no_contacts"], timeout=1500):
         skip_needs_data("This environment's directory has no contacts to search")
+    missing = [c for c in data["contact_columns"] if c not in dp.headers()]
+    assert not missing, f"Missing contact columns {missing}; present {dp.headers()}"
     row = dp.rows()[0]
     name = row[dp.header_matching("Name")]
     org = row["Organization"]
@@ -434,12 +444,12 @@ def test_llodir_13_export_contacts(ctx, dp, data, staging):
     name = _make_contact(dp, data, org, "export", poc=False)
     dp.open_contacts(f"?search={name.replace(' ', '+')}")
     download = dp.export("CSV")
-    assert download.suggested_filename.startswith("contacts_") and download.suggested_filename.endswith(".csv")
+    assert download.suggested_filename.startswith(data["csv_filename_prefix"]) and download.suggested_filename.endswith(".csv")
     content = open(download.path(), encoding="utf-8-sig").read()
     rows = list(csv.DictReader(io.StringIO(content)))
-    for column in ("Contact Name", "Organization", "Role / Title", "Email", "Phone", "Notes"):
+    for column in data["contact_csv_columns"]:
         assert column in rows[0], f"CSV column '{column}' missing: {list(rows[0])}"
-    assert any(c in rows[0] for c in ("Main POC", "Main Point of Contact")), f"Main POC column missing: {list(rows[0])}"
+    assert any(c in rows[0] for c in data["main_poc_csv_columns"]), f"Main POC column missing: {list(rows[0])}"
     assert [r["Contact Name"] for r in rows] == [name], "Export must follow the search filter"
     # After an export the button is replaced by "Download Export", so reopen the filtered list.
     dp.open_contacts(f"?search={name.replace(' ', '+')}")
@@ -497,7 +507,7 @@ def test_llodir_17_year_of_establishment(ctx, dp, data, staging):
         "y => { const s = document.querySelector('[role=dialog] #id_year_of_establishment');"
         " s.tomselect.addOption({value: y, text: y}); s.tomselect.setValue(y); }", str(data["earliest_year"] - 1))
     dp.modal_save()
-    expected = f"Year must be between {data['earliest_year']} and {current}."
+    expected = _msg(data, "year_range", earliest=data["earliest_year"], latest=current)
     assert dp.has_text(expected), f"Out-of-range year must be rejected: {dp.modal_error_text()[-300:]}"
 
 
@@ -505,16 +515,16 @@ def test_llodir_18_profile_fields(ctx, dp, data, staging):
     """LLODir_18: website URL, FLWs Managed, team size and Has Used Connect."""
     dp.open_organizations()
     dp.open_add_org()
-    assert dp.modal_options("has_used_connect") == ["Yes", "No"] or set(dp.modal_options("has_used_connect")) == {"Yes", "No"}
-    assert {"1-10", "11-50", "51-200", "201-500", "500+"} <= set(dp.modal_options("team_size"))
+    assert set(dp.modal_options("has_used_connect")) == set(data["has_used_connect_options"])
+    assert set(data["team_size_options"]) <= set(dp.modal_options("team_size"))
     dp.fill_modal(name=_name(data, "fields"), short_name=_short("fl"), regions=data["regions"],
                   website="not a website", flws_managed="-5")
     dp._set_select("countries", [data["country"]])
     dp.select_by_index("primary_sectors", data["sector_index"])
     dp.modal_save(server_validated=True)
     text = dp.modal_error_text()
-    assert "Enter a valid URL." in text, "Invalid website must be rejected"
-    assert "greater than or equal to 0" in text, "Negative FLWs Managed must be rejected"
+    assert data["messages"]["valid_url"] in text, "Invalid website must be rejected"
+    assert data["messages"]["flws_negative"] in text, "Negative FLWs Managed must be rejected"
 
 
 @pytest.mark.consumes_seed_data
@@ -535,7 +545,8 @@ def test_llodir_19_multiline_fields_cleaned(ctx, dp, data, staging):
     dp.fill_modal(contact_emails="bad1\nok@example.com\nbad2", eoi_links="nope1\nhttps://example.com/ok\nnope2")
     dp.modal_save()
     text = dp.modal_error_text()
-    assert "Invalid email(s): bad1, bad2" in text and "Invalid URL(s): nope1, nope2" in text, text[-400:]
+    assert _msg(data, "invalid_emails", entries="bad1, bad2") in text and \
+        _msg(data, "invalid_urls", entries="nope1, nope2") in text, text[-400:]
 
 
 @pytest.mark.consumes_seed_data
@@ -564,14 +575,14 @@ def test_llodir_21_contact_email_format(ctx, dp, data, staging):
     dp.fill_modal(name=_name(data, "contact-fmt"), email="not-an-email")
     dp._set_select("organization", org)
     dp.modal_save(server_validated=True)
-    assert dp.has_text("Enter a valid email address."), "Invalid contact email must be rejected"
+    assert dp.has_text(data["messages"]["valid_email"]), "Invalid contact email must be rejected"
     email = _email("fmt")
     dp.fill_modal(email=f"  {email}  ")
     dp.modal_save(server_validated=True)
     dp.wait_modal_closed()
     name = _name(data, "contact-fmt")
     _focus(dp, name)
-    assert dp.row(name).locator(f"a[href='mailto:{email}']").count() == 1, "Saved email must be trimmed"
+    assert dp.has_mailto_link(name, email), "Saved email must be trimmed"
 
 
 @pytest.mark.consumes_seed_data
@@ -585,14 +596,15 @@ def test_llodir_22_main_poc_reassigned_on_add_and_move(ctx, dp, data, staging):
     term = _name(data, "contact-r")
     _focus(dp, term)
     poc_col = dp.header_matching("Point of Contact", "POC")
-    assert dp.row_values(new_a)[poc_col] == "Yes" and dp.row_values(old_a)[poc_col] == "—"
+    assert dp.row_values(new_a)[poc_col] == "Yes" and dp.row_values(old_a)[poc_col] == data["empty_value"]
     dp.open_edit(new_a)
     dp._set_select("organization", org_b)
     dp.modal_save()
     dp.wait_modal_closed()
     _focus(dp, term)
     assert dp.row_values(new_a)[poc_col] == "Yes", "The moved Main POC keeps POC Yes"
-    assert dp.row_values(old_b)[poc_col] == "—", "The destination organization's previous Main POC is unmarked"
+    assert dp.row_values(old_b)[poc_col] == data["empty_value"], \
+        "The destination organization's previous Main POC is unmarked"
 
 
 @pytest.mark.consumes_seed_data
@@ -620,7 +632,7 @@ def test_llodir_24_counts_versus_result_count(ctx, dp):
     assert dp.result_count() < total, "Result count must follow the search"
 
 
-def test_llodir_25_paging_and_ordering(ctx, dp):
+def test_llodir_25_paging_and_ordering(ctx, dp, data):
     """LLODir_25: page_size 20/30/50/100 only (else 20); contact sort columns."""
     dp.open_organizations("?page_size=100")
     total = dp.row_count()
@@ -631,9 +643,9 @@ def test_llodir_25_paging_and_ordering(ctx, dp):
         assert dp.row_count() == expected, f"page_size={size} should show {expected} rows, got {dp.row_count()}"
     dp.open_contacts()
     name_col = dp.header_matching("Name")
-    for header in (name_col, "Organization", "Role / Title", "Email"):
+    for header in (name_col, *data["contact_sortable_columns"]):
         assert dp.sortable(header), f"{header} should be sortable"
-    for header in ("Phone", "Actions"):
+    for header in data["contact_non_sortable_columns"]:
         assert not dp.sortable(header), f"{header} must not be sortable"
 
 
@@ -648,11 +660,12 @@ def test_llodir_26_export_edge_cases(ctx, dp, data, staging):
     rows = list(csv.DictReader(io.StringIO(open(download.path(), encoding="utf-8-sig").read())))
     mine = [r for r in rows if "SUM(1+1)" in r["Contact Name"]]
     assert mine, "Exported contact missing"
-    for column in ("Contact Name", "Role / Title", "Notes"):
+    for column in data["csv_formula_columns"]:
         assert not mine[0][column].startswith(("=", "+", "-", "@")), f"{column} must not start with a formula character: {mine[0][column]!r}"
     assert "é" in mine[0]["Contact Name"], "Non-ASCII characters must survive"
-    assert (mine[0].get("Main POC") or mine[0].get("Main Point of Contact")) in ("Yes", "No")
-    assert dp.status_of(dp.url("contacts/export/"), "POST", {"export_format": "pdf"}) == 400, "Unsupported format must be 400"
+    assert any(mine[0].get(c) in ("Yes", "No") for c in data["main_poc_csv_columns"]), "Main POC must read Yes or No"
+    assert dp.status_of(dp.url("contacts/export/"), "POST",
+                        {"export_format": data["unsupported_export_format"]}) == 400, "Unsupported format must be 400"
 
 
 @pytest.mark.consumes_seed_data
@@ -661,7 +674,7 @@ def test_llodir_27_html_shown_as_text(ctx, dp, data, staging):
     markup = f"<b>{data['name_prefix']} {STAMP} bold</b>"
     dp.create_org(markup, _short("xs"), data["country"], data["sector_index"], data["regions"])
     assert dp.has_row(markup), "Markup must be displayed literally in the list"
-    assert dp.page.locator("xpath=(//table)[1]//tbody//td//b").count() == 0, "Markup must not render as HTML"
+    assert dp.rendered_markup_count() == 0, "Markup must not render as HTML"
 
 
 def test_llodir_28_staff_without_permission(ctx):

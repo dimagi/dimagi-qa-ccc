@@ -844,8 +844,10 @@ connect_llo_directory_page:
   add_contact_button: "//button[normalize-space()='Add Contact'] | //a[normalize-space()='Add Contact']"
   edit_button_by_name: "//*[@aria-label=\"Edit {name}\"]"
   archive_button_by_name: "//*[@aria-label=\"Archive {name}\"]"
+  mailto_link_by_email: ".//a[@href='mailto:{email}']"
+  table_cell_bold: "(//table)[1]//tbody//td//b"
   restore_button_by_name: "//*[@aria-label=\"Restore {name}\"]"
-  export_open_button: "//*[(self::button or self::a or @role='button') and contains(normalize-space(),'Export contacts')]"
+  export_open_button: "//button[@aria-label='Export contacts']"
   export_format: id_format
   export_submit: "//form[contains(@action,'/contacts/export/')]//button[normalize-space()='Export']"
   export_download_link: "//a[normalize-space()='Download Export']"
