@@ -10,6 +10,11 @@ aware. Tests that create, edit, archive or export data run on staging only - the
 directory holds real organizations; prod runs the read-only checks. Every record a test
 creates is named "<prefix> <timestamp> ...".
 
+The directory has no delete, so every test that creates organizations or contacts is marked
+consumes_seed_data: PR and post-deploy runs deselect them, and they run only on a manual
+dispatch with include_seed_consuming. The unmarked tests are read-only and leave the
+directory unchanged.
+
 Needs outside data (skipped with a reason):
   - LLODir_02 / 28: logins without the permission / a staff login without it. The QA login
     now has the permission, so the no-access half cannot be shown with it.
@@ -149,6 +154,7 @@ def test_llodir_03_organization_listing(ctx, dp, data):
             f"Status tooltip missing '{definition}'"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_04_add_organization(ctx, dp, data, staging):
     """LLODir_04: add with status and agreement links; message, top row, badge, edit shows every value."""
     name = _name(data, "add")
@@ -174,6 +180,7 @@ def test_llodir_04_add_organization(ctx, dp, data, staging):
     dp.close_modal("cancel")
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_05_organization_validation(ctx, dp, data, staging):
     """LLODir_05: required fields, duplicate name (any case), invalid email / URL entries."""
     base = _base_org(ctx, dp, data)
@@ -204,6 +211,7 @@ def test_llodir_05_organization_validation(ctx, dp, data, staging):
         assert expected in text, f"Missing '{expected}'"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_06_edit_organization(ctx, dp, data, staging):
     """LLODir_06: change/clear status, keep URL on rename, discard edits (Cancel / X / Escape / outside)."""
     name = _make_org(dp, data, "edit", status="Active")
@@ -241,7 +249,7 @@ def test_llodir_06_edit_organization(ctx, dp, data, staging):
         assert dp.has_row(renamed) and not dp.has_row(f"{renamed} discarded"), f"{how} must discard edits"
 
 
-def test_llodir_07_search_filter_sort_paging(ctx, dp, data, config):
+def test_llodir_07_search_filter_sort_paging(ctx, dp, data):
     """LLODir_07: case-insensitive search (each org once), filters combine, no-match message, sorting, reset."""
     dp.open_organizations()
     total = dp.result_count()
@@ -271,22 +279,26 @@ def test_llodir_07_search_filter_sort_paging(ctx, dp, data, config):
     names = [re.sub(r"[^a-z0-9]", "", n.lower()) for n in dp.column("Name")]
     assert names == sorted(names), "Sort by Name ascending"
 
-    if config.env != "prod":
-        # Saving an edit returns to the same filtered page.
-        name = _base_org(ctx, dp, data)
-        dp.open_organizations()
-        dp.search(name)
-        url_before = dp.page.url
-        dp.open_edit(name)
-        dp.fill_modal(notes="keeps-filter")
-        dp.modal_save()
-        dp.wait_modal_closed()
-        assert dp.page.url == url_before, f"Edit must return to the filtered page: {dp.page.url} vs {url_before}"
+
+@pytest.mark.consumes_seed_data
+def test_llodir_07b_edit_returns_to_filtered_page(ctx, dp, data, staging):
+    """LLODir_07 (edit half): saving an edit returns to the same filtered page. Creates the shared
+    base organization, so it is opt-in with the other record-creating tests."""
+    name = _base_org(ctx, dp, data)
+    dp.open_organizations()
+    dp.search(name)
+    url_before = dp.page.url
+    dp.open_edit(name)
+    dp.fill_modal(notes="keeps-filter")
+    dp.modal_save()
+    dp.wait_modal_closed()
+    assert dp.page.url == url_before, f"Edit must return to the filtered page: {dp.page.url} vs {url_before}"
 
 
 # -- LLO Directory - Contacts ----------------------------------------------------------------
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_08_add_contact(ctx, dp, data, staging):
     """LLODir_08: required fields, success message, row values, Contacts tab count +1."""
     org = _base_org(ctx, dp, data)
@@ -314,6 +326,7 @@ def test_llodir_08_add_contact(ctx, dp, data, staging):
     assert dp.tab_count("contacts") == before + 1
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_09_contact_email_unique(ctx, dp, data, staging):
     """LLODir_09: email unique across active and archived contacts (any case); own email saves."""
     org = _base_org(ctx, dp, data)
@@ -340,6 +353,7 @@ def test_llodir_09_contact_email_unique(ctx, dp, data, staging):
     assert dp.has_text(f"Contact {active} updated."), "Editing a contact without changing its email must save"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_10_main_poc_and_move(ctx, dp, data, staging):
     """LLODir_10: only one Main POC per organization; moving a contact follows the new organization."""
     org_a = _make_org(dp, data, "poc-a")
@@ -365,6 +379,7 @@ def test_llodir_10_main_poc_and_move(ctx, dp, data, staging):
     assert org_b in dp.row_values(first).values(), "Contact must move to the new organization"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_11_archive_restore_contact(ctx, dp, data, staging):
     """LLODir_11: confirm dialog, Cancel keeps, archive leaves the list, archived view offers Restore only."""
     org = _base_org(ctx, dp, data)
@@ -412,6 +427,7 @@ def test_llodir_12_contact_search_and_filters(ctx, dp, data, config):
     assert dp.row_count() >= 1
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_13_export_contacts(ctx, dp, data, staging):
     """LLODir_13: CSV and Excel exports follow the filters and contain the documented columns."""
     org = _base_org(ctx, dp, data)
@@ -466,6 +482,7 @@ def test_llodir_16_direct_form_urls_and_next(ctx, dp, data, config):
     assert "example.com" not in dp.page.url, "An off-site next must be ignored"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_17_year_of_establishment(ctx, dp, data, staging):
     """LLODir_17: year bounds (earliest..current) and newest-first dropdown."""
     current = datetime.datetime.now(datetime.timezone.utc).year
@@ -500,6 +517,7 @@ def test_llodir_18_profile_fields(ctx, dp, data, staging):
     assert "greater than or equal to 0" in text, "Negative FLWs Managed must be rejected"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_19_multiline_fields_cleaned(ctx, dp, data, staging):
     """LLODir_19: blank lines / spaces dropped from emails and links; all bad entries reported together."""
     name = _name(data, "lines")
@@ -520,6 +538,7 @@ def test_llodir_19_multiline_fields_cleaned(ctx, dp, data, staging):
     assert "Invalid email(s): bad1, bad2" in text and "Invalid URL(s): nope1, nope2" in text, text[-400:]
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_20_organization_name_rules_on_edit(ctx, dp, data, staging):
     """LLODir_20: case-only rename of its own name saves; another organization's name is refused."""
     name = _make_org(dp, data, "names")
@@ -536,6 +555,7 @@ def test_llodir_20_organization_name_rules_on_edit(ctx, dp, data, staging):
     assert dp.has_text(data["messages"]["dup_name"]), "Another organization's name must be refused"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_21_contact_email_format(ctx, dp, data, staging):
     """LLODir_21: invalid email rejected; surrounding spaces trimmed."""
     org = _base_org(ctx, dp, data)
@@ -554,6 +574,7 @@ def test_llodir_21_contact_email_format(ctx, dp, data, staging):
     assert dp.row(name).locator(f"a[href='mailto:{email}']").count() == 1, "Saved email must be trimmed"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_22_main_poc_reassigned_on_add_and_move(ctx, dp, data, staging):
     """LLODir_22: a new Main POC replaces the old one; moving a Main POC into an org that has one replaces it."""
     org_a = _make_org(dp, data, "reassign-a")
@@ -574,6 +595,7 @@ def test_llodir_22_main_poc_reassigned_on_add_and_move(ctx, dp, data, staging):
     assert dp.row_values(old_b)[poc_col] == "—", "The destination organization's previous Main POC is unmarked"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_23_archive_updates_counts_and_keeps_filters(ctx, dp, data, staging):
     """LLODir_23: Contacts count drops/rises, Organizations count unchanged, filters kept."""
     org = _base_org(ctx, dp, data)
@@ -615,6 +637,7 @@ def test_llodir_25_paging_and_ordering(ctx, dp):
         assert not dp.sortable(header), f"{header} must not be sortable"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_26_export_edge_cases(ctx, dp, data, staging):
     """LLODir_26: formula-looking text exported as text, non-ASCII intact, unsupported format 400."""
     org = _base_org(ctx, dp, data)
@@ -632,6 +655,7 @@ def test_llodir_26_export_edge_cases(ctx, dp, data, staging):
     assert dp.status_of(dp.url("contacts/export/"), "POST", {"export_format": "pdf"}) == 400, "Unsupported format must be 400"
 
 
+@pytest.mark.consumes_seed_data
 def test_llodir_27_html_shown_as_text(ctx, dp, data, staging):
     """LLODir_27: markup in names is displayed literally on the listings."""
     markup = f"<b>{data['name_prefix']} {STAMP} bold</b>"
