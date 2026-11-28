@@ -152,9 +152,11 @@ opportunity_dashboard_page:
   # Worker Progress Funnel (opportunity_funnel_progress.html): 7 stages.
   funnel_stage_labels: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xs')]"
   funnel_stage_counts: "//div[@id='opp-funnel-container']//p[contains(@class,'text-xl')]"
-  # Worker-progress bars (opportunity_worker_progress.html): Approved/Rejected/Earned/Paid.
-  worker_progress_labels: "//div[@id='worker-progress-container']//span[contains(@class,'text-sm') and contains(@class,'block')]"
-  worker_progress_bars: "//div[@id='worker-progress-container']//div[contains(@class,'bg-brand-indigo') and contains(@class,'rounded-full')]"
+  # Worker-progress panel (redesigned Nov 2026): Delivery Allocation (Completed/Approved/
+  # Pending/Rejected as dt labels) + Payments to Connect Workers (Earned/Paid as title-sm
+  # spans), each with a progress-track bar.
+  worker_progress_labels: "//div[@id='worker-progress-container']//dt | //div[@id='worker-progress-container']//span[contains(@class,'title-sm')]"
+  worker_progress_bars: "//div[@id='worker-progress-container']//div[contains(@class,'progress-track')]"
   # 24h increment badge (opportunity_delivery_stat.html:57): carries the up-arrow.
   increment_badge: "//div[@id='opp-stats-container']//span[contains(normalize-space(.),'↑')]"
   stat_panel_by_title: "//div[@id='opp-stats-container']//*[self::h3 or self::p][normalize-space()='{title}']"
