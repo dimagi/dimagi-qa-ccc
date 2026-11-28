@@ -1,5 +1,5 @@
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect, require_static_opp
+from flows.tasking_static import login_to_connect, require_static_opp, skip_if_tasks_switch_off
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
@@ -52,7 +52,9 @@ def test_task_views_and_filters_journey(page, test_data, config, settings):
             connect_page.goto(f"{base_url}/a/{org}/opportunity/{opp}/")
             connect_page.wait_for_load_state("load")
             connect_page.wait_for_timeout(3000)  # stats tile arrives via htmx
-            assert task_types.is_tasks_tile_visible()
+            if not task_types.is_tasks_tile_visible():
+                skip_if_tasks_switch_off(connect_page, config, org, opp, user_id)
+                raise AssertionError("Tasks tile missing with an active task type")
     finally:
         # cleanup so reruns start clean even on mid-test failure
         tasks.goto_task_list(base_url, org, opp)

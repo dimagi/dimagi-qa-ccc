@@ -1,7 +1,7 @@
 import pytest
 
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect, require_static_opp
+from flows.tasking_static import login_to_connect, require_static_opp, skip_if_tasks_switch_off
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_task_types_page import ConnectTaskTypesPage
 from pages.connect_workers_page import ConnectWorkersPage
@@ -42,6 +42,9 @@ def test_assign_and_delete_task_from_worker_page(page, test_data, config, settin
     sandbox_names = {tasking["sandbox_name_a"], tasking["sandbox_name_b"], tasking["sandbox_unit_name"]}
 
     user_id = workers.worker_user_id(base_url, org, opp, worker)
+    # Checked up front: this test needs the Tasks dashboard card, and skipping after
+    # assigning the sandbox task would leave it behind and block J1's next archive.
+    skip_if_tasks_switch_off(connect_page, config, org, opp, user_id)
     workers.goto_worker_tasks_page(base_url, org, opp, user_id)
 
     # Clear a leftover from an interrupted run: the sandbox type can only be

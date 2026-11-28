@@ -66,7 +66,17 @@ def verify_task_type_creation(connect_page, config, test_data, setup):
         connect_page.goto(f"{base_url}/a/{org_slug}/opportunity/{opp_id}/")
         connect_page.wait_for_load_state("load")
         connect_page.wait_for_timeout(3000)  # stats tile arrives via htmx
-        assert task_types.is_tasks_tile_visible(), "Tasks tile missing with an active task type"
+        if not task_types.is_tasks_tile_visible():
+            from flows.tasking_static import require_static_opp, skip_if_tasks_switch_off
+            from pages.connect_workers_page import ConnectWorkersPage
+
+            # The switch is global, so probe it on the long-lived static opp's worker.
+            static = require_static_opp(test_data, config)
+            static_user = ConnectWorkersPage(connect_page).worker_user_id(
+                base_url, static["static_org"], static["static_opp_id"], static["static_worker"]
+            )
+            skip_if_tasks_switch_off(connect_page, config, static["static_org"], static["static_opp_id"], static_user)
+            raise AssertionError("Tasks tile missing with an active task type")
 
     task_list.goto_task_list(base_url, org_slug, opp_id)
     task_list.verify_page_loaded()
