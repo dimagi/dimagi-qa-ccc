@@ -23,7 +23,7 @@ import pytest
 
 from flows.olp_setup import PM_ORG
 from flows.opd_setup import dashboard_session
-from flows.tasking_static import env_value, login_to_connect
+from flows.tasking_static import env_value, login_to_connect, require_static_opp
 from pages.connect_opportunity_dashboard_page import OpportunityDashboardPage
 from pages.connect_opportunity_list_page import ConnectOpportunityListPage
 from utils.skips import skip_needs_data, skip_not_applicable
@@ -116,18 +116,24 @@ def test_opd_31_worker_progress_funnel(dashboard):
     assert dashboard.funnel_counts_nonempty(), "Funnel stage counts not all populated"
 
 
-def test_opd_32_worker_progress_bars(dashboard):
+def test_opd_32_worker_progress_bars(dashboard, test_data, config):
     """OD_32: the worker-progress section shows the Approved/Rejected/Earned/Paid
-    bars. The bars are data-gated: an opportunity with no deliveries/payments
-    renders none, so skip in that case (point OPD at a data-rich opp to assert)."""
-    dashboard.goto_dashboard()
-    labels = dashboard.worker_progress_labels()
-    if not labels:
-        skip_needs_data("No worker-progress bars for this opportunity (no deliveries/payments)")
-    joined = " | ".join(labels)
-    missing = [t for t in dashboard.WORKER_PROGRESS_TITLES if t not in joined]
-    assert not missing, f"Missing worker-progress bars {missing}. Present: {labels}"
-    assert dashboard.worker_progress_bar_count() >= 4, "Fewer than 4 progress bars rendered"
+    figures with their bars. They are data-gated (an opportunity with no deliveries or
+    payments renders none), so this opens the long-lived tasking opportunity, which has
+    both, instead of the module's dashboard opportunity."""
+    tasking = require_static_opp(test_data, config)
+    saved_url = dashboard.dashboard_url  # goto_opp repoints it; later tests must keep their own opportunity
+    try:
+        dashboard.goto_opp(config.get("connect_url"), tasking["static_org"], tasking["static_opp_id"])
+        labels = dashboard.worker_progress_labels()
+        if not labels:
+            skip_needs_data("No worker-progress stats on the tasking opportunity (no deliveries/payments)")
+        joined = " | ".join(labels)
+        missing = [t for t in dashboard.WORKER_PROGRESS_TITLES if t not in joined]
+        assert not missing, f"Missing worker-progress figures {missing}. Present: {labels}"
+        assert dashboard.worker_progress_bar_count() >= 4, "Fewer than 4 progress bars rendered"
+    finally:
+        dashboard.dashboard_url = saved_url
 
 
 def test_opd_33_resource_card_counts_and_modal_tab(dashboard):
