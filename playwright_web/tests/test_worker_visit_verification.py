@@ -192,6 +192,11 @@ def test_vv_01_land_and_bulk_approve(connect, test_data):
     visits.verify_worker_visits_table_headers_present()
     visits.verify_worker_visits_tabs_present()
 
+    if visits.has_visits_tasks_tabs():
+        skip_needs_data(
+            "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table has no "
+            "bulk Approve All / Reject All controls (they belong to the tabbed verification table)."
+        )
     if not visits.has_visit_rows():
         skip_needs_data(
             f"No visits to approve for '{data['worker_name']}' in "
@@ -228,8 +233,8 @@ def test_vv_05_visit_tabs_render(connect, test_data):
     """VV_5: the worker Visits page exposes its tabs. On manual-review opportunities
     that is the Pending NM Review / Approved / Rejected / All tab-set (GAP-SRC-W-40,
     the mode x role tab-set), each rendering the visits table; opportunities without
-    NM review expose only the Visits/Tasks pair, in which case the review-tab
-    coverage is skipped with a pointer to seed a manual-review opportunity."""
+    NM review (or with the WORKER_VISITS_TASKS switch ON) expose only the Visits/Tasks
+    pair, which is asserted instead."""
     connect_page, opps_url = connect
     data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_5")
     workers = ConnectWorkersPage(connect_page)
@@ -250,16 +255,12 @@ def test_vv_05_visit_tabs_render(connect, test_data):
             visits.click_tab_by_name(tab)
             visits.verify_worker_visits_table_headers_present()
     else:
-        # This opportunity/worker has no NM-review sub-tabs (only Visits/Tasks), so
-        # the four review tabs cannot be exercised here. Still assert the Visits
-        # table renders, and flag that VV_5 review-tab coverage needs an NM-review opportunity in
-        # test data for full coverage.
+        # No NM-review sub-tabs: the WORKER_VISITS_TASKS switch is ON, so the page shows the
+        # Visits/Tasks pair instead. That is the other valid state of this page, so assert it
+        # (verify_worker_visits_tabs_present already checked the pair) and that the table renders.
+        # The four review tabs need the switch OFF and are covered when it is.
+        assert visits.has_visits_tasks_tabs(), "Neither the NM-review tabs nor the Visits/Tasks pair are shown"
         visits.verify_worker_visits_table_headers_present()
-        skip_needs_data(
-            f"'{data['opportunity_name']}' / '{data['worker_name']}' exposes no NM-review "
-            "sub-tabs - point WORKER_VISIT_VERIFICATION_PAGE_5 at a manual-review "
-            "opportunity to cover the Pending NM Review / Approved / Rejected / All tabs."
-        )
 
 
 def test_vv_09_visit_details_panel(connect, test_data):
@@ -495,20 +496,20 @@ def test_gap_w_41_visit_table_waffle_mode_consistent(connect, test_data):
         pytest.fail(f"Cannot tell the visit table type from its columns: {sorted(headers)}")
 
 
-def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data):
+def test_gap_w_43_bulk_controls_hidden_for_pm(connect, test_data, config):
     """GAP-SRC-W-43: the bulk Approve All / Reject All controls and the select-all
-    checkbox column are template-excluded for a PM (they exist only for a non-viewer
-    NM on a manual-review opp). The module session is the PM, so none must be present."""
-    connect_page, opps_url = connect
-    data = test_data.get("WORKER_VISIT_ACTION_GATING")
-    workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
-
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
-    if visits.has_review_tabs():
-        visits.click_tab_by_name("All")
-
+    checkbox column are template-excluded for the opportunity's PM (they exist only for a
+    non-viewer NM on a manual-review opp). Runs as the PM of the managed manual-review
+    opportunity, viewed under the PM org's slug: on a legacy, non-managed opportunity the
+    account is the opportunity's own org, not its PM, and rightly sees the controls."""
+    connect_page, _ = connect
+    data = _require_review_data(test_data, config)
+    visits = _open_review_visits(connect_page, config, data, "pm")
+    if visits.has_visits_tasks_tabs():
+        skip_needs_data(
+            "WORKER_VISITS_TASKS switch is ON for this opportunity - the plain visit table has no "
+            "bulk controls for anyone, so 'hidden for the PM' would hold trivially."
+        )
     approve, reject, select = visits.bulk_controls_present()
     assert not (approve or reject or select), (
         "PM should not see any bulk controls, but found "
