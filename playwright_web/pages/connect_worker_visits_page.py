@@ -52,6 +52,9 @@ class WorkerVisitsPage(BasePage):
     VISIT_PM_AGREE = locators.get("worker_visits_page", "visit_pm_agree")
     VISIT_PM_DISAGREE = locators.get("worker_visits_page", "visit_pm_disagree")
     ALL_TABS = locators.get("worker_visits_page", "all_tabs")
+    BULK_MODAL_JUSTIFICATION = locators.get("worker_visits_page", "bulk_modal_justification")
+    BULK_MODAL_REASON = locators.get("worker_visits_page", "bulk_modal_reason")
+    BULK_MODAL_BACKDROP = locators.get("worker_visits_page", "bulk_modal_backdrop")
 
     # -- table / tabs ------------------------------------------------------------
 
@@ -159,21 +162,35 @@ class WorkerVisitsPage(BasePage):
         self.page.wait_for_timeout(1000)
         self.verify_approve_and_reject_all_btns_present()
 
-    def click_approve_all_btn(self):
-        self._step("Approve All -> confirm")
+    def _wait_bulk_modal_closed(self):
+        """The modal closes as soon as the form is submitted, but the bulk action is still in flight:
+        wait for its request to finish, then for the table reload that clears the selection.
+        Selecting rows before that reload loses them (the bulk buttons then hide again)."""
+        self.page.locator(f"{self.BULK_MODAL_BACKDROP} >> visible=true").first.wait_for(state="hidden", timeout=20000)
+        self.page.wait_for_function(
+            "() => !document.querySelector('.htmx-request, .htmx-swapping, .htmx-settling')", timeout=30000
+        )
+        self.page.wait_for_timeout(1500)  # the reload_table trigger fires after the response
+
+    def click_approve_all_btn(self, justification):
+        """Approve All -> type the (required) justification -> confirm."""
+        self._step("Approve All -> justification -> confirm")
         self.click(self.APPROVE_ALL_BUTTON)
+        self.page.locator(self.BULK_MODAL_JUSTIFICATION).first.fill(justification)
         self.page.locator(self.APPROVE_POPUP_BUTTON).first.wait_for(state="visible", timeout=10000)
         self.click(self.APPROVE_POPUP_BUTTON)
+        self._wait_bulk_modal_closed()
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(1500)
 
-    def click_reject_all_btn(self):
-        self._step("Reject All -> confirm")
+    def click_reject_all_btn(self, reason):
+        """Reject All -> type the (required) reason -> confirm."""
+        self._step("Reject All -> reason -> confirm")
         self.click(self.REJECT_ALL_BUTTON)
+        self.page.locator(self.BULK_MODAL_REASON).first.fill(reason)
         self.page.locator(self.REJECT_POPUP_BUTTON).first.wait_for(state="visible", timeout=10000)
         self.click(self.REJECT_POPUP_BUTTON)
+        self._wait_bulk_modal_closed()
         self.page.wait_for_load_state("load")
-        self.page.wait_for_timeout(1500)
 
     # -- suspend / revoke (VV_4) -----------------------------------------------
 
