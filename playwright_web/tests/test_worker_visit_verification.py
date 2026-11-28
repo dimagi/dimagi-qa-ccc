@@ -21,6 +21,7 @@ the module logs in once and each test opens its own opportunity/worker (from
 WORKER_VISIT_VERIFICATION_PAGE_<VV#> test data, numbered by current MTP VV id).
 """
 
+import re
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -404,19 +405,21 @@ def test_gap_w_44_visit_action_bar_gating(connect, test_data):
     )
 
 
-def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
+def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data, config):
     """GAP-SRC-W-45: manual-verification endpoints (approve_visits) return HTTP 403 with
     an HX-Trigger: reload_table header on an auto-verify opportunity
     (@require_manual_visit_verification). Auto-verify is inferred from an empty action
     bar; skips on manual-review opps where the guard does not apply. The HX-Trigger
     assertion distinguishes the guard's 403 from a CSRF 403."""
     connect_page, opps_url = connect
-    data = test_data.get("WORKER_VISIT_ACTION_GATING")
+    data = test_data.get("WORKER_VISIT_AUTO_VERIFY")
+    opp_name = env_value(data, "opportunity_name", config)
+    worker_name = env_value(data, "worker_name", config)
     workers = ConnectWorkersPage(connect_page)
     visits = WorkerVisitsPage(connect_page)
 
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.navigate_to_worker_visits(data["worker_name"])
+    open_deliver_tab(connect_page, opp_name, opps_url)
+    workers.navigate_to_worker_visits(worker_name)
     if visits.has_review_tabs():
         visits.click_tab_by_name("All")
 
@@ -429,7 +432,7 @@ def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
     if visits.action_bar_button_set():
         skip_needs_data(
             f"'{data['opportunity_name']}' is not auto-verify (action bar has controls) "
-            "- the manual-verify guard does not apply; point WORKER_VISIT_ACTION_GATING "
+            "- the manual-verify guard does not apply; point WORKER_VISIT_AUTO_VERIFY "
             "at an auto-verify opportunity to cover GAP-SRC-W-45."
         )
 
@@ -439,9 +442,14 @@ def test_gap_w_45_manual_endpoint_403_under_auto_verify(connect, test_data):
     origin = f"{parts.scheme}://{parts.netloc}"
     endpoint = f"{origin}/a/{org_slug}/opportunity/{opp_id}/approve_visits"
 
-    csrftoken = next(
-        (c["value"] for c in connect_page.context.cookies() if c["name"] == "csrftoken"), ""
-    )
+    # Connect's own CSRF token is the one htmx sends on every request, in <body hx-headers>.
+    # (There is no Connect csrftoken cookie in the shared context - the only one there is
+    # CommCare HQ's - so a cookie lookup sends the wrong token and gets a CSRF 403 before
+    # the guard under test is reached.)
+    hx_headers = connect_page.evaluate("() => document.body.getAttribute('hx-headers') || ''")
+    token_match = re.search(r'"X-CSRFToken":\s*"([^"]+)"', hx_headers)
+    assert token_match, f"No X-CSRFToken in the page's hx-headers: {hx_headers!r}"
+    csrftoken = token_match.group(1)
     # Valid CSRF (header + Referer) so the request reaches the decorator rather than
     # being turned back by CSRF - the shared context also sends the csrftoken cookie.
     response = connect_page.request.post(
