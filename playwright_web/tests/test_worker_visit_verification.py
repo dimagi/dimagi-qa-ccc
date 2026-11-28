@@ -292,14 +292,14 @@ def test_vv_09_visit_details_panel(connect, test_data):
 def test_vv_03_image_carousel(connect, test_data, config):
     """VV_3 (MTP Worker Visit Verification Page_3): selecting an image on a visit opens
     the carousel popup (.popup-content). Runs on staging, where the manual-approval opp
-    has seeded photo visits (test_photo_01-03); skips needs-data elsewhere."""
+    has seeded photo visits (test_photo_01-03 on staging, test_photo_1-3 on prod)."""
     connect_page, _ = connect
     data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_3")
     opp_id = env_value(data, "opportunity_id", config)
     if not opp_id:
         skip_needs_data(
-            "No with-photo visit is seeded on this environment - VV_3 only has one on "
-            "staging (WORKER_VISIT_VERIFICATION_PAGE_3.opportunity_id_staging)."
+            "No with-photo visit is configured for this environment "
+            "(WORKER_VISIT_VERIFICATION_PAGE_3.opportunity_id / opportunity_id_staging)."
         )
     visits = _open_review_visits(connect_page, config, {
         "nm_org_slug": env_value(data, "org_slug", config),
