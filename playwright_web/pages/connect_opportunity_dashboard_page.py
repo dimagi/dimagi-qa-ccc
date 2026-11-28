@@ -248,7 +248,6 @@ class OpportunityDashboardPage(BasePage):
     RESOURCE_CARD_BY_NAME = locators.get("opportunity_dashboard_page", "resource_card_by_name")
     FUNNEL_STAGE_LABELS = locators.get("opportunity_dashboard_page", "funnel_stage_labels")
     FUNNEL_STAGE_COUNTS = locators.get("opportunity_dashboard_page", "funnel_stage_counts")
-    WORKER_PROGRESS_LABELS = locators.get("opportunity_dashboard_page", "worker_progress_labels")
     WORKER_PROGRESS_BARS = locators.get("opportunity_dashboard_page", "worker_progress_bars")
     INCREMENT_BADGE = locators.get("opportunity_dashboard_page", "increment_badge")
     STAT_PANEL_BY_TITLE = locators.get("opportunity_dashboard_page", "stat_panel_by_title")
@@ -592,11 +591,15 @@ class OpportunityDashboardPage(BasePage):
 
     # OD_32: worker progress bars
     def worker_progress_labels(self):
-        self.page.locator(self.WORKER_PROGRESS_CONTAINER).first.wait_for(state="visible", timeout=30000)
-        # Bars are HTMX-swapped in after the container; wait for the first label,
-        # then read. An opportunity with no deliveries/payments renders no bars.
-        self.is_displayed(self.WORKER_PROGRESS_LABELS, timeout=15000)
-        labels = [t.strip() for t in self.page.locator(self.WORKER_PROGRESS_LABELS).all_inner_texts() if t.strip()]
+        """Text lines of the worker-progress section once its stats have loaded ([] if they never do:
+        an opportunity with no deliveries or payments renders no bars)."""
+        container = self.page.locator(self.WORKER_PROGRESS_CONTAINER).first
+        container.wait_for(state="visible", timeout=30000)
+        # The stats are htmx-swapped in after the container; the first bar is the signal.
+        if not self.is_displayed(self.WORKER_PROGRESS_BARS, timeout=15000):
+            self._step("Worker-progress stats not shown")
+            return []
+        labels = [line.strip() for line in container.inner_text().splitlines() if line.strip()]
         self._step(f"Worker-progress labels: {labels}")
         return labels
 
