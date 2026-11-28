@@ -13,6 +13,8 @@ class OpportunityDashboardPage(BasePage):
     OPP_TITLE = locators.get("opportunity_dashboard_page", "opp_title")
     INFO_CARD_BY_LABEL = locators.get("opportunity_dashboard_page", "info_card_by_label")
     STATUS_BADGE = locators.get("opportunity_dashboard_page", "status_badge")
+    EDIT_ACTIVE_CHECKBOX = locators.get("opportunity_dashboard_page", "edit_active_checkbox")
+    EDIT_SUBMIT_BUTTON = locators.get("opportunity_dashboard_page", "edit_submit_button")
     END_DATE_VALUE = locators.get("opportunity_dashboard_page", "end_date_value")
     TEST_BADGE = locators.get("opportunity_dashboard_page", "test_badge")
     WORK_AREAS_TAB = locators.get("opportunity_dashboard_page", "work_areas_tab")
@@ -263,6 +265,26 @@ class OpportunityDashboardPage(BasePage):
     FUNNEL_STAGES = ["Invited", "Accepted", "Started Learning", "Completed Learning",
                      "Completed Assessment", "Claimed Job", "Started Delivery"]
     WORKER_PROGRESS_TITLES = ["Approved", "Rejected", "Earned", "Paid"]
+
+    def ensure_active(self, base_url, slug, opp_id, inactive_label):
+        """Make sure a fixture opportunity is active, reactivating it from its Edit page if it was
+        deactivated (the dashboard then reads `inactive_label`). Returns True if it had to change it.
+        Lets a test that needs an active opportunity repair its own fixture instead of waiting for
+        someone to reactivate it by hand."""
+        self.goto_opp(base_url, slug, opp_id)
+        if self.status_badge_text() != inactive_label:
+            return False
+        self._step(f"Opportunity {opp_id} is '{inactive_label}': reactivating it from its Edit page")
+        self.page.goto(f"{base_url}/a/{slug}/opportunity/{opp_id}/edit")
+        self.page.wait_for_load_state("load")
+        self.page.locator(self.EDIT_ACTIVE_CHECKBOX).check()
+        with self.page.expect_navigation(wait_until="load", timeout=90000):
+            self.page.locator(self.EDIT_SUBMIT_BUTTON).first.click(no_wait_after=True)
+        self.goto_opp(base_url, slug, opp_id)
+        assert self.status_badge_text() != inactive_label, (
+            f"Reactivating {opp_id} from its Edit page did not take effect (badge still '{inactive_label}')"
+        )
+        return True
 
     def goto_opp(self, base_url, slug, opp_id):
         """Open any opportunity's dashboard by (org slug, opp id) - used to reach

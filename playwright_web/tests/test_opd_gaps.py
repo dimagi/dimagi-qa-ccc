@@ -343,7 +343,9 @@ def test_opd_37_add_workers_hidden_when_ended(session, test_data, config):
     slug = _opd(test_data, "org_slug", config)
     if not opp_id:
         skip_needs_data("OPD.ended_opp_id not configured")
-    dash.goto_opp(base, slug, opp_id)
+    # Self-seeding: the fixture was deactivated once (badge 'Inactive' instead of 'Ended'); repair it
+    # here rather than waiting for someone to reactivate it by hand.
+    dash.ensure_active(base, slug, opp_id, test_data.get("OPD")["inactive_status_label"])
     end_text = dash.end_date_text()
     assert end_text, "The fixture opp page shows no End Date, so it cannot be told whether it has ended"
     date_format = test_data.get("OPD")["end_date_format"]
