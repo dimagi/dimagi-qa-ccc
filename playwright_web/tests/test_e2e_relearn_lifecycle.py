@@ -3,7 +3,7 @@ import time
 import pytest
 
 from flows.olp_setup import PM_ORG
-from flows.tasking_static import login_to_connect, require_hybrid_opp
+from flows.tasking_static import login_to_connect, require_hybrid_opp, skip_if_tasks_switch_off
 from pages.connect_assigned_tasks_page import ConnectAssignedTasksPage
 from pages.connect_workers_page import ConnectWorkersPage
 from utils.skips import skip_needs_data
@@ -155,6 +155,11 @@ def test_e2e_relearn_lifecycle(page, test_data, config, settings):
     user_id = workers.worker_user_id(base_url, org, opp, worker_name)
     workers.goto_worker_visits_page(base_url, org, opp, user_id)
     blocked_row = workers.wait_for_visit(blocked_visit_name)
+    if "reject" not in blocked_row.lower():
+        # With WORKER_VISITS_TASKS off Connect serves the old Visits table, which does
+        # not show the status the Tasks layout does. Re-running next time clears the
+        # pending task this leaves behind (the check above deletes a leftover first).
+        skip_if_tasks_switch_off(connect_page, config, org, opp, user_id)
     assert "reject" in blocked_row.lower(), (
         f"Visit '{blocked_visit_name}' was submitted with a task pending, so it should be "
         f"rejected. Row reads: {blocked_row!r}"

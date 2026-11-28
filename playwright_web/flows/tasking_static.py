@@ -6,7 +6,7 @@ import pytest
 from flows.olp_setup import open_connect_as_org
 from pages.cchq_home_page import CCHQHomePage
 from pages.cchq_login_page import LoginPage
-from utils.skips import skip_needs_data
+from utils.skips import skip_needs_data, skip_not_applicable
 
 REQUIRED_KEYS = ["static_opp", "static_opp_id", "static_org", "static_worker", "static_task_type"]
 
@@ -80,3 +80,38 @@ def login_to_connect(page, config, settings, organization):
     cchq_home_page.verify_home_page_title("Welcome")
     cchq_login_page.dismiss_guide_popup()
     return open_connect_as_org(page, config, organization=organization)
+
+
+def tasks_switch_is_on(connect_page, config, org, opp, worker_user_id):
+    """Whether Connect's WORKER_VISITS_TASKS switch is on in this environment.
+
+    The switch is global (waffle `switch_is_active`), not per org. On, Connect shows the
+    Tasks dashboard tile and the Visits/Tasks sub-tabs; off, it shows the NM review tabs
+    instead. Read it from the worker's Visits page, where the Visits/Tasks bar is shown
+    exactly when the switch is on.
+    """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+    from pages.connect_worker_visits_page import WorkerVisitsPage
+
+    base_url = config.get("connect_url")
+    connect_page.goto(f"{base_url}/a/{org}/opportunity/{opp}/user_visits/?user={worker_user_id}")
+    connect_page.wait_for_load_state("load")
+    try:
+        return WorkerVisitsPage(connect_page).has_visits_tasks_tabs()
+    except PlaywrightTimeoutError:
+        return False  # no tab bar at all - also not the switch-on layout
+
+
+def skip_if_tasks_switch_off(connect_page, config, org, opp, worker_user_id):
+    """Skip a Tasks-UI test when WORKER_VISITS_TASKS is off here.
+
+    Staging keeps it off so the NM review tabs (VV_05, GAP_W_40/43) can be tested, and
+    prod keeps it on, so Tasks-UI tests run there. Called only when a Tasks-UI
+    expectation is already unmet, so a real regression with the switch on still fails.
+    """
+    if not tasks_switch_is_on(connect_page, config, org, opp, worker_user_id):
+        skip_not_applicable(
+            "Tasks UI is hidden because the WORKER_VISITS_TASKS switch is off on "
+            f"'{config.env}' (it is global). This test runs where the switch is on."
+        )
