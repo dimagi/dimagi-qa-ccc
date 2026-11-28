@@ -97,6 +97,9 @@ connect_opportunities_page:
   page_size: "page-size"
 
 opportunity_dashboard_page:
+  # Edit Opportunity form (/opportunity/<id>/edit): the Active switch and its Submit.
+  edit_active_checkbox: "id_active"
+  edit_submit_button: "submit-id-submit"
   # Value next to the "End Date" label in the details block.
   end_date_value: "//*[normalize-space()='End Date']/following-sibling::*[1]"
   dashboard_card: "//div[contains(@class,'rounded-lg') and .//h3[normalize-space()='{title}'] and .//p[normalize-space()='{subtitle}']]"

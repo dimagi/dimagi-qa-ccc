@@ -538,6 +538,7 @@ OPD:
   # If it is ever deactivated again OD_37's badge assertion fails with the badge it saw.
   # Org pm_automation_01.
   ended_status_label: "Ended"   # badge text for an active opp past its end date
+  inactive_status_label: "Inactive"   # badge text for a deactivated / archived opp (ensure_active repairs it)
   end_date_format: "%Y-%m-%d"   # how the dashboard renders the End Date value
   ended_opp_id_staging: "4c853985-699a-4952-883f-4a91348c9cbe"
   org_slug: "pm_automation_01"   # PM org slug (same on both envs)
