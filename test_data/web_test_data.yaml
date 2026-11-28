@@ -91,6 +91,12 @@ WORKER_LIST_VIEW_8:
 WORKER_VISIT_VERIFICATION_PAGE_1:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
+  approve_justification: "Automation bulk approve justification"
+  # Staging (Anshu, 27 Nov 2026): "LDVP Manual Review" opp with pending visits for
+  # QA LDVP Worker. Its review tabs and approve checkboxes show in the NM org.
+  opportunity_id_staging: "69eec75f-36d2-4d12-91f0-961326b98163"
+  nm_org_slug_staging: "network-manager"
+  worker_user_id_staging: "7a5ed062-9809-4aca-ba09-7d28b59d30cb"
 
 # VV_3 - image carousel. Needs a worker whose visit has a photo attachment; the
 # test skips when no scanned visit has a Media section. Point at a seeded

@@ -441,6 +441,7 @@ worker_visits_page:
   select_all_checkbox: "//tr[.//th[contains(normalize-space(), 'Date')] and .//th[contains(normalize-space(), 'Entity Name')]]//th[1]//input[@type='checkbox']"
   first_row_checkbox: "(//table[contains(@class,'base-table')])[2]//tbody//tr//input[@type='checkbox']"
   approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
+  bulk_approve_modal_justification: "//div[@x-show='showBulkApproveModal']//textarea[@name='justification']"
   approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
   reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
   reject_popup_button: "(//button[contains(normalize-space(), 'Reject') and @type='submit'])[1]"

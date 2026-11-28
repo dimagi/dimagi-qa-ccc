@@ -23,6 +23,7 @@ class WorkerVisitsPage(BasePage):
     FIRST_ROW_CHECKBOX = locators.get("worker_visits_page", "first_row_checkbox")
     APPROVE_ALL_BUTTON = locators.get("worker_visits_page", "approve_all_button")
     APPROVE_POPUP_BUTTON = locators.get("worker_visits_page", "approve_popup_button")
+    BULK_APPROVE_JUSTIFICATION = locators.get("worker_visits_page", "bulk_approve_modal_justification")
     REJECT_ALL_BUTTON = locators.get("worker_visits_page", "reject_all_button")
     REJECT_POPUP_BUTTON = locators.get("worker_visits_page", "reject_popup_button")
     APPROVE_BUTTON = locators.get("worker_visits_page", "approve_button")
@@ -166,10 +167,15 @@ class WorkerVisitsPage(BasePage):
         self.page.wait_for_timeout(1000)
         self.verify_approve_and_reject_all_btns_present()
 
-    def click_approve_all_btn(self):
+    def click_approve_all_btn(self, justification=None):
+        """Approve All -> confirm. The modal asks for a required justification, so a
+        confirm without one is blocked client-side and the modal never closes."""
         self._step("Approve All -> confirm")
         self.click(self.APPROVE_ALL_BUTTON)
         self.page.locator(self.APPROVE_POPUP_BUTTON).first.wait_for(state="visible", timeout=10000)
+        box = self.page.locator(self.BULK_APPROVE_JUSTIFICATION).first
+        if justification and box.is_visible():
+            self.type(self.BULK_APPROVE_JUSTIFICATION, justification)
         self.click(self.APPROVE_POPUP_BUTTON)
         self.page.wait_for_load_state("load")
         self.page.wait_for_timeout(1500)

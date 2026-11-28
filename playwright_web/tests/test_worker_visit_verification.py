@@ -172,7 +172,7 @@ def connect(browser, config, settings):
         context.close()
 
 
-def test_vv_01_land_and_bulk_approve(connect, test_data):
+def test_vv_01_land_and_bulk_approve(connect, test_data, config):
     """VV_1: selecting a worker on the Deliver tab lands on their Visits page and the
     table renders. The individual + bulk Approve All flow also partially exercises
     GAP-SRC-W-42 (in-UI bulk approve).
@@ -183,13 +183,23 @@ def test_vv_01_land_and_bulk_approve(connect, test_data):
     connect_page, opps_url = connect
     data = test_data.get("WORKER_VISIT_VERIFICATION_PAGE_1")
     workers = ConnectWorkersPage(connect_page)
-    visits = WorkerVisitsPage(connect_page)
 
-    open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
-    workers.verify_deliver_table_headers_present()
-
-    workers.navigate_to_worker_visits(data["worker_name"])
-    visits.verify_worker_visits_table_headers_present()
+    opp_id = env_value(data, "opportunity_id", config)
+    if opp_id:
+        # Staging: land straight on the review opp's worker page as the NM.
+        target = {
+            "opportunity_id": opp_id,
+            "nm_org_slug": env_value(data, "nm_org_slug", config),
+            "worker_user_id": env_value(data, "worker_user_id", config),
+        }
+        visits = _open_review_visits(connect_page, config, target, "nm")
+        data = {**data, "opportunity_name": "LDVP Manual Review", "worker_name": "QA LDVP Worker"}
+    else:
+        visits = WorkerVisitsPage(connect_page)
+        open_deliver_tab(connect_page, data["opportunity_name"], opps_url)
+        workers.verify_deliver_table_headers_present()
+        workers.navigate_to_worker_visits(data["worker_name"])
+        visits.verify_worker_visits_table_headers_present()
     visits.verify_worker_visits_tabs_present()
 
     if not visits.has_visit_rows():
@@ -199,13 +209,14 @@ def test_vv_01_land_and_bulk_approve(connect, test_data):
         )
 
     # Individual selection then Approve All.
+    justification = data["approve_justification"]
     visits.select_first_row()
-    visits.click_approve_all_btn()
+    visits.click_approve_all_btn(justification)
 
     # Bulk select-all then Approve All (only if rows remain).
     if visits.has_visit_rows():
         visits.set_select_all_checkbox(True)
-        visits.click_approve_all_btn()
+        visits.click_approve_all_btn(justification)
 
 
 def test_vv_04_suspend_and_revoke(connect, test_data):
