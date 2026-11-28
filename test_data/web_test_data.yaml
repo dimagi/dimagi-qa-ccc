@@ -91,6 +91,7 @@ WORKER_LIST_VIEW_8:
 WORKER_VISIT_VERIFICATION_PAGE_1:
   opportunity_name: "covid_opp_test"
   worker_name: "Deb Test 8/12"
+  bulk_approve_justification: "Automation bulk approve justification"   # the Approve All modal requires one
 
 # VV_3 - image carousel. Needs a worker whose visit has a photo attachment; the
 # test skips when no scanned visit has a Media section. Point at a seeded

@@ -200,12 +200,12 @@ def test_vv_01_land_and_bulk_approve(connect, test_data):
 
     # Individual selection then Approve All.
     visits.select_first_row()
-    visits.click_approve_all_btn()
+    visits.click_approve_all_btn(data["bulk_approve_justification"])
 
     # Bulk select-all then Approve All (only if rows remain).
     if visits.has_visit_rows():
         visits.set_select_all_checkbox(True)
-        visits.click_approve_all_btn()
+        visits.click_approve_all_btn(data["bulk_approve_justification"])
 
 
 def test_vv_04_suspend_and_revoke(connect, test_data):

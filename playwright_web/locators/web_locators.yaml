@@ -446,6 +446,11 @@ worker_visits_page:
   first_row_checkbox: "(//table[contains(@class,'base-table')])[2]//tbody//tr//input[@type='checkbox']"
   approve_all_button: "//button[contains(normalize-space(), 'Approve All')]"
   approve_popup_button: "//button[contains(normalize-space(), 'Approve') and @type='submit']"
+  # The bulk modals' textarea is required (Approve All: justification, Reject All: reason); the
+  # submit does nothing until it has text, and the modal stays open over the page.
+  bulk_modal_justification: "//div[contains(@class,'modal-backdrop')]//textarea[@name='justification']"
+  bulk_modal_reason: "//div[contains(@class,'modal-backdrop')]//textarea[@name='reason']"
+  bulk_modal_backdrop: "//div[contains(@class,'modal-backdrop')]"
   reject_all_button: "//button[contains(normalize-space(), 'Reject All')]"
   reject_popup_button: "(//button[contains(normalize-space(), 'Reject') and @type='submit'])[1]"
   approve_button: "//div[@id='visit-actions']//button[contains(normalize-space(), 'Approve')]"
